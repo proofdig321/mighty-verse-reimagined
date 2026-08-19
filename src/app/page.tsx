@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import Link from "next/link";
 import { getDiscovery } from "@/lib/discovery";
 import { Badge } from "@/components/ui/badge";
