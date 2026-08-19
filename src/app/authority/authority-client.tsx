@@ -45,10 +45,14 @@ export default function AuthorityClient() {
   const [projMasterId, setProjMasterId] = useState("");
   const [projType, setProjType] = useState<string>("experiential");
 
-  // Attach Media form
-  const [mediaProjId, setMediaProjId] = useState("");
-  const [mediaMasterId, setMediaMasterId] = useState("");
-  const [livepeerAssetId, setLivepeerAssetId] = useState("");
+  // Attach Media — upload state
+  const [uploadProjId, setUploadProjId] = useState("");
+  const [uploadMasterId, setUploadMasterId] = useState("");
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [uploadPhase, setUploadPhase] = useState<string | null>(null);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
 
   // Designate Collectible form
   const [colProjId, setColProjId] = useState("");
@@ -153,24 +157,115 @@ export default function AuthorityClient() {
         </CardContent>
       </Card>
 
-      {/* 4. Attach Media Binding */}
+      {/* 4. Attach Media — MP4 upload */}
       <Card>
-        <CardHeader><CardTitle className="text-sm">Attach Media Binding</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">Attach Media</CardTitle></CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-1">
-            <Label htmlFor="mpid">Projection ID</Label>
-            <Input id="mpid" value={mediaProjId} onChange={e => setMediaProjId(e.target.value)} placeholder="projection_id" />
+            <Label htmlFor="uprojsel">Projection</Label>
+            <select
+              id="uprojsel"
+              disabled={uploadBusy}
+              value={uploadProjId}
+              onChange={e => {
+                const proj = projections.find(p => p.projection_id === e.target.value);
+                setUploadProjId(proj?.projection_id ?? "");
+                setUploadMasterId(proj?.master_id ?? "");
+              }}
+              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+            >
+              <option value="">— select projection —</option>
+              {projections.map(p => {
+                const m = masters.find(m => m.master_id === p.master_id);
+                const hasMedia = bindings.some(b => b.projection_id === p.projection_id);
+                return (
+                  <option key={p.projection_id} value={p.projection_id}>
+                    {p.projection_type} · {m?.canonical_type ?? "unknown"}{hasMedia ? " · media attached" : " · awaiting media"}
+                  </option>
+                );
+              })}
+            </select>
+            {uploadProjId && <p className="text-muted-foreground font-mono text-xs">{uploadProjId}</p>}
           </div>
           <div className="space-y-1">
-            <Label htmlFor="mmid">Master ID</Label>
-            <Input id="mmid" value={mediaMasterId} onChange={e => setMediaMasterId(e.target.value)} placeholder="master_id" />
+            <Label htmlFor="mp4file">MP4 file</Label>
+            <input
+              id="mp4file"
+              type="file"
+              accept="video/mp4,video/*"
+              disabled={uploadBusy}
+              onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
+              className="text-foreground text-sm w-full"
+            />
+            {uploadFile && <p className="text-muted-foreground text-xs">{uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
           </div>
-          <div className="space-y-1">
-            <Label htmlFor="laid">Livepeer Asset ID</Label>
-            <Input id="laid" value={livepeerAssetId} onChange={e => setLivepeerAssetId(e.target.value)} placeholder="Livepeer asset ID" />
-          </div>
-          <Button size="sm" disabled={busy || !mediaProjId || !mediaMasterId || !livepeerAssetId} onClick={() => act("Attach Media", "/api/authority/media", { projection_id: mediaProjId, master_id: mediaMasterId, livepeer_asset_id: livepeerAssetId })}>
-            Attach
+          {uploadProgress !== null && (
+            <p className="text-muted-foreground text-xs">Uploading… {uploadProgress}%</p>
+          )}
+          {uploadPhase && uploadPhase !== "ready" && (
+            <p className="text-muted-foreground text-xs">Processing: {uploadPhase}</p>
+          )}
+          {uploadMsg && (
+            <p className={`text-sm ${uploadMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{uploadMsg}</p>
+          )}
+          <Button
+            size="sm"
+            disabled={uploadBusy || !uploadProjId || !uploadMasterId || !uploadFile}
+            onClick={async () => {
+              if (!uploadFile) return;
+              setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null);
+
+              // 1. Create upload session server-side
+              const session = await fetch("/api/authority/media/upload-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: uploadFile.name, projection_id: uploadProjId, master_id: uploadMasterId }),
+              }).then(r => r.json());
+
+              if (session.error) { setUploadMsg(`Error: ${session.error}`); setUploadBusy(false); return; }
+
+              const { upload_url, asset_id } = session;
+
+              // 2. Upload directly to pre-authenticated Livepeer endpoint
+              await new Promise<void>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.upload.onprogress = e => {
+                  if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
+                };
+                xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+                xhr.onerror = () => reject(new Error("Upload network error"));
+                xhr.open("PUT", upload_url);
+                xhr.setRequestHeader("Content-Type", uploadFile.type || "video/mp4");
+                xhr.send(uploadFile);
+              }).catch(err => { setUploadMsg(`Error: ${err.message}`); setUploadBusy(false); throw err; });
+
+              setUploadProgress(100);
+
+              // 3. Poll until ready
+              let phase = "uploading";
+              while (phase !== "ready") {
+                await new Promise(r => setTimeout(r, 3000));
+                const status = await fetch(`/api/authority/media/upload-session/${asset_id}`).then(r => r.json());
+                phase = status.phase ?? "unknown";
+                setUploadPhase(phase);
+                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); setUploadBusy(false); return; }
+              }
+
+              // 4. Attach via existing canonical operation
+              const attach = await fetch("/api/authority/media", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projection_id: uploadProjId, master_id: uploadMasterId, livepeer_asset_id: asset_id }),
+              }).then(r => r.json());
+
+              setUploadBusy(false);
+              if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
+              setUploadMsg("Media attached. World and Moment are now playable.");
+              setUploadFile(null); setUploadProgress(null); setUploadPhase(null);
+              await load();
+            }}
+          >
+            {uploadBusy ? (uploadProgress !== null && uploadProgress < 100 ? `Uploading ${uploadProgress}%` : uploadPhase ? `Processing…` : "Starting…") : "Upload & Attach"}
           </Button>
         </CardContent>
       </Card>
