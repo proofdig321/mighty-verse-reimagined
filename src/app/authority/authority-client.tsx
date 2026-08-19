@@ -194,7 +194,10 @@ export default function AuthorityClient() {
               type="file"
               accept="video/mp4,video/*"
               disabled={uploadBusy}
-              onChange={e => setUploadFile(e.target.files?.[0] ?? null)}
+              onChange={e => {
+                const f = e.target.files?.[0] ?? null;
+                setUploadFile(f);
+              }}
               className="text-foreground text-sm w-full"
             />
             {uploadFile && <p className="text-muted-foreground text-xs">{uploadFile.name} ({(uploadFile.size / 1024 / 1024).toFixed(1)} MB)</p>}
@@ -214,55 +217,59 @@ export default function AuthorityClient() {
             onClick={async () => {
               if (!uploadFile) return;
               setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null);
+              try {
+                // 1. Create upload session server-side
+                const session = await fetch("/api/authority/media/upload-session", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ name: uploadFile.name, projection_id: uploadProjId, master_id: uploadMasterId }),
+                }).then(r => r.json());
 
-              // 1. Create upload session server-side
-              const session = await fetch("/api/authority/media/upload-session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: uploadFile.name, projection_id: uploadProjId, master_id: uploadMasterId }),
-              }).then(r => r.json());
+                if (session.error) { setUploadMsg(`Error: ${session.error}`); return; }
 
-              if (session.error) { setUploadMsg(`Error: ${session.error}`); setUploadBusy(false); return; }
+                const { upload_url, asset_id } = session;
 
-              const { upload_url, asset_id } = session;
+                // 2. Upload directly to pre-authenticated Livepeer endpoint
+                await new Promise<void>((resolve, reject) => {
+                  const xhr = new XMLHttpRequest();
+                  xhr.upload.onprogress = e => {
+                    if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
+                  };
+                  xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+                  xhr.onerror = () => reject(new Error("Upload network error"));
+                  xhr.open("PUT", upload_url);
+                  xhr.setRequestHeader("Content-Type", uploadFile.type || "video/mp4");
+                  xhr.send(uploadFile);
+                });
 
-              // 2. Upload directly to pre-authenticated Livepeer endpoint
-              await new Promise<void>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.upload.onprogress = e => {
-                  if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
-                };
-                xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-                xhr.onerror = () => reject(new Error("Upload network error"));
-                xhr.open("PUT", upload_url);
-                xhr.setRequestHeader("Content-Type", uploadFile.type || "video/mp4");
-                xhr.send(uploadFile);
-              }).catch(err => { setUploadMsg(`Error: ${err.message}`); setUploadBusy(false); throw err; });
+                setUploadProgress(100);
 
-              setUploadProgress(100);
+                // 3. Poll until ready
+                let phase = "uploading";
+                while (phase !== "ready") {
+                  await new Promise(r => setTimeout(r, 3000));
+                  const status = await fetch(`/api/authority/media/upload-session/${asset_id}`).then(r => r.json());
+                  phase = status.phase ?? "unknown";
+                  setUploadPhase(phase);
+                  if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); return; }
+                }
 
-              // 3. Poll until ready
-              let phase = "uploading";
-              while (phase !== "ready") {
-                await new Promise(r => setTimeout(r, 3000));
-                const status = await fetch(`/api/authority/media/upload-session/${asset_id}`).then(r => r.json());
-                phase = status.phase ?? "unknown";
-                setUploadPhase(phase);
-                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); setUploadBusy(false); return; }
+                // 4. Attach via existing canonical operation
+                const attach = await fetch("/api/authority/media", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ projection_id: uploadProjId, master_id: uploadMasterId, livepeer_asset_id: asset_id }),
+                }).then(r => r.json());
+
+                if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
+                setUploadMsg("Media attached. World and Moment are now playable.");
+                setUploadFile(null); setUploadProgress(null); setUploadPhase(null);
+                await load();
+              } catch (err) {
+                setUploadMsg(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+              } finally {
+                setUploadBusy(false);
               }
-
-              // 4. Attach via existing canonical operation
-              const attach = await fetch("/api/authority/media", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projection_id: uploadProjId, master_id: uploadMasterId, livepeer_asset_id: asset_id }),
-              }).then(r => r.json());
-
-              setUploadBusy(false);
-              if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
-              setUploadMsg("Media attached. World and Moment are now playable.");
-              setUploadFile(null); setUploadProgress(null); setUploadPhase(null);
-              await load();
             }}
           >
             {uploadBusy ? (uploadProgress !== null && uploadProgress < 100 ? `Uploading ${uploadProgress}%` : uploadPhase ? `Processing…` : "Starting…") : "Upload & Attach"}
