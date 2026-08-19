@@ -36,12 +36,13 @@ export async function ingestLivepeerAsset(
   const mapped = mapLivepeerAsset(response.asset);
 
   // 2. Insert media_asset
-  // storage_ref = Livepeer asset id (not the playback URL)
+  // storage_ref = Livepeer playback ID (used by LivepeerPlayer as playbackId)
+  const playbackId = response.asset.playbackId ?? mapped.livepeerAssetId;
   const { data: asset, error: assetError } = await supabase
     .from("media_asset")
     .insert({
       asset_type: "streaming-variant",
-      storage_ref: mapped.livepeerAssetId,
+      storage_ref: playbackId,
       integrity_hash: mapped.integrityHash,
       format: mapped.format,
       resolution: mapped.resolution,
