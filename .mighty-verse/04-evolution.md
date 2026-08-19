@@ -7,6 +7,43 @@ This document grows as Mighty Verse Reimagined progresses.
 
 ## Implementation Steps
 
+`CANONICAL` **Step 3 — Constitutionally-valid seed migration** (2026-08-19, complete)
+
+Migration: `supabase/migrations/20260819050000_step3_seed.sql`
+
+Canonical chain established:
+- Participant (Golden Shovel) → IdentityLink (placeholder `seed:golden-shovel-v1`)
+- AuthorityRecord (ultimate, platform scope, 7 capabilities)
+- Master (song-world) + AttributionRecord
+- AttributionEntry: original-artist public=true (I.1.B), director public=true (I.1.C)
+- CanonicalState v1 (authorised) + ProvenanceRecord (canonical-revision, public=true, I.1.A)
+- Projection (experiential) + ProvenanceRecord (projection, public=true, I.1.A)
+- MediaAsset + DeliveryVariant (placeholder storage_ref/endpoint_ref — mutable per A12)
+- ProjectionMediaBinding (primary, access_level=public)
+- CanonicalOperationLog (4 entries)
+
+`CANONICAL` **Integrity hash algorithm** (2026-08-19, first definition)
+
+All `integrity_hash` fields on `canonical_state`, `provenance_record`, and `projection`
+use the following algorithm. Step 4 (/authority) MUST use the same algorithm.
+
+```
+encode(digest(<jsonb_build_object with alphabetically ordered keys>::text, 'sha256'), 'hex')
+```
+
+Defining fields per entity:
+- `canonical_state`: authorisation_state, authorised_by, master_id, parent_state_id, version
+- `provenance_record`: authorised_by, relationship_type, source_id, source_type, subject_id, subject_type
+- `projection`: canonical_state_id, collectible_designated, created_by, master_id, projection_type
+
+All 4 hashes independently verified (stored = recomputed).
+
+`OPEN QUESTION` **Media placeholder replacement** — The seed MediaAsset has
+`storage_ref = 'seed:placeholder:golden-shovel-world-v1'` and
+`endpoint_ref = 'seed:placeholder:golden-shovel-world-v1'`. These must be replaced
+by calling `ingestLivepeerAsset()` once a real asset is uploaded to Livepeer.
+The `/worlds/[masterId]` surface must handle the placeholder gracefully until replaced.
+
 `CANONICAL` **Step 16 — Vercel staging deployment** (2026-08-19, complete)
 
 - Vercel project created and linked: `proofdig321s-projects/mighty-verse-reimagined`
