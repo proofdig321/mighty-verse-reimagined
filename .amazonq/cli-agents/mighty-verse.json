@@ -3,7 +3,19 @@
   "name": "mighty-verse",
   "description": "Mighty Verse Reimagined project agent. Isolated from Platform Core MCP servers.",
   "useLegacyMcpJson": false,
-  "mcpServers": {},
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": ["-y", "@supabase/mcp-server-supabase@latest", "--read-only", "--project-ref", "fjrjyddzmjadeybjlree"],
+      "env": {
+        "SUPABASE_ACCESS_TOKEN": "${SUPABASE_ACCESS_TOKEN}"
+      }
+    },
+    "shadcn": {
+      "command": "npx",
+      "args": ["shadcn@latest", "mcp"]
+    }
+  },
   "tools": [
     "fs_read",
     "fs_write",
