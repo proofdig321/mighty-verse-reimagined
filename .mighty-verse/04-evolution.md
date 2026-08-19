@@ -5,6 +5,26 @@ This document grows as Mighty Verse Reimagined progresses.
 
 ---
 
+## Implementation Steps
+
+`CANONICAL` **Step 16 — Vercel staging deployment** (2026-08-19, complete)
+
+- Vercel project created and linked: `proofdig321s-projects/mighty-verse-reimagined`
+- All environment variables pushed to Vercel preview and production environments
+- Build succeeded: Next.js 16.3.1 / Turbopack, 10 routes, TypeScript clean
+- Staging URL: https://mighty-verse-reimagined.vercel.app (HTTP 200 verified)
+- Inspection URL: https://vercel.com/proofdig321s-projects/mighty-verse-reimagined
+- `.gitignore` corrected: `.env.local`, `.env*.local`, `.next`, `tsconfig.tsbuildinfo` now ignored
+- `.env.local.example` sanitised: all values empty, no real credentials in source control
+- Supabase Auth redirect URLs: not yet updated — must be done before auth flows are tested
+
+`OPEN QUESTION` **Supabase Auth redirect URLs** — The Supabase project's allowed redirect URLs
+must include the staging domain (`https://mighty-verse-reimagined.vercel.app/auth/callback`)
+before sign-in flows can be tested against the deployed app. This is a manual step in the
+Supabase dashboard (Authentication → URL Configuration).
+
+---
+
 ## Architectural Decisions
 
 `ARCHITECTURAL DECISION` **South African primary audience** (2026-08-19, founder-established)
@@ -22,6 +42,75 @@ remain in place. No implementation work is blocked by this deferral.
 `OPEN QUESTION` **Payment provider for SA audience** — Stripe supports ZAR and has SA presence,
 but local alternatives (PayFast, Peach Payments, Ozow) may be more appropriate for the primary
 audience. This must be a founder decision before Step 15 is implemented.
+
+`CANONICAL` **Phase 5 — Product Definition** (2026-08-19, founder-established)
+
+Phase 5 is now closed. The following product-definition decisions are approved and canonical.
+
+**Operating model:**
+- Founder + ChatGPT: product decisions, UX priorities, product experience, unresolved policy decisions
+- mighty-verse agent: constitutional interpretation, domain architecture, backend/application implementation, validation
+- shadcn/ui MCP: UI component discovery and API correctness only — not a product-definition agent
+
+**V1 product surfaces (approved):**
+
+| Surface | V1 | Auth required | Authority required |
+|---|---|---|---|
+| `/` — universe discovery | ✅ | No | No |
+| `/worlds/[masterId]` — World/Mural media experience | ✅ | No (public); Yes (gated) | No |
+| `/moments/[projectionId]` — Creative Moment/Card | ✅ | No (public); Yes (gated) | No |
+| `/auth/sign-in` + `/auth/callback` | ✅ already built | — | — |
+| `/profile` — minimal participant identity | ✅ minimal | Yes | No |
+| `/authority` — canonical lifecycle (V1 minimum) | ✅ | Yes | AuthorityRecord |
+| `/collect/[collectibleId]` | ❌ post-V1 | — | — |
+| `/studio/*` | ❌ post-V1 | — | — |
+
+**V1 authority operations (minimum lifecycle only):**
+- Register a Master
+- Advance canonical state
+- Create/authorise a Projection
+- Attach/verify projection media (ProjectionMediaBinding)
+- Designate a Collectible
+
+Economic corrections, delegation UI, revocation UI, interpretation authorisation: post-V1.
+
+**I.1 — Public provenance defaults** (2026-08-19, founder-established)
+
+A. `provenance_record.public = true` by default for authorised projections: **YES**
+B. `attribution_entry.public = true` by default for canonical creators: **YES**
+C. Director attribution public by default: **YES**
+
+Product principle: for publicly presented canonical work, legitimate provenance and creative
+authorship should be publicly verifiable. This aligns with the constitutional provenance and
+attribution principles in A2 and 03-principles.
+
+Implementation consequence: API routes serving public surfaces filter provenance and attribution
+on `public = true`. Seed data and all subsequent canonical data created through `/authority`
+must set `public = true` on provenance records for authorised projections and on attribution
+entries for canonical creators and Directors. This is a data policy, not a schema change.
+
+**I.2 — Seed data strategy** (2026-08-19, founder-established)
+
+**B — First canonical data seeded directly into Supabase before public surfaces are implemented.**
+
+This is a product/testing decision, not permission to bypass the constitutional model.
+
+Seed constraints (constitutionally mandatory):
+- AuthorityRecord for Golden Shovel must be established first (FK dependency for all canonical ops)
+- Valid Master → CanonicalState → Projection → MediaBinding lineage required
+- Provenance integrity must be maintained (provenance_record per canonical entity)
+- integrity_hash fields must be correctly computed
+- Real Golden Shovel Auth identity used where required; no invented participant identity
+- `provenance_record.public = true` and `attribution_entry.public = true` per I.1 decision
+- Seed does not weaken or bypass A11 AuthorityRecord rules for subsequent operations
+- Seed exists so V1 product surfaces can be developed against real canonical content
+- `/authority` application workflow remains the authorised path for all subsequent canonical operations
+
+**Practical constraint:** The seed migration requires the real Supabase Auth `user_id` for
+Golden Shovel's account. This user_id must be known at seed time. If not yet known, the seed
+uses a placeholder participant record that is linked to the real Auth identity on first login
+via the existing IdentityLink mechanism (A13). This does not bypass A11 — it uses the
+constitutionally-defined identity model correctly.
 
 ---
 
