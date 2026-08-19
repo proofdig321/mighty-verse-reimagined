@@ -7,7 +7,25 @@ This document grows as Mighty Verse Reimagined progresses.
 
 ## Architectural Decisions
 
-`ARCHITECTURAL DECISION` **Q environment isolation** (2026-08-17)
+`ARCHITECTURAL DECISION` **South African primary audience** (2026-08-19, founder-established)
+Mighty Verse is South African based and targets a South African primary audience.
+This has not been previously recorded and must inform product, payment, and distribution decisions.
+
+`TECHNICAL DEBT` **Stripe payment integration deferred** (2026-08-19)
+Stripe is the A14-selected payment provider. However, Stripe's South African availability,
+ZAR currency support, and local payment method coverage (EFT, Ozow, PayFast, etc.) have not
+been evaluated against the SA primary audience requirement. Step 15 (Stripe) is deferred until
+the payment provider decision is revisited with SA context. The economic engine (Step 11),
+settlement state machine (A8), and SettlementRecord schema are payment-provider-agnostic and
+remain in place. No implementation work is blocked by this deferral.
+
+`OPEN QUESTION` **Payment provider for SA audience** — Stripe supports ZAR and has SA presence,
+but local alternatives (PayFast, Peach Payments, Ozow) may be more appropriate for the primary
+audience. This must be a founder decision before Step 15 is implemented.
+
+---
+
+
 Mighty Verse Reimagined operates with its own `.amazonq/` project context on the shared EC2
 instance. The `--agent mighty-verse` flag with `useLegacyMcpJson: false` ensures Platform Core
 MCP servers are not loaded in Mighty Verse sessions. The global `~/.aws/amazonq/mcp.json` is
