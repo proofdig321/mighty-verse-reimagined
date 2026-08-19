@@ -59,9 +59,9 @@ export function LivepeerPlayer({
   );
 
   return (
-    <Player.Root src={src} playbackId={playbackId} onPlaybackEvents={handlePlaybackEvents}>
-      <Player.Container>
-        <Player.Video />
+    <Player.Root src={src} onPlaybackEvents={handlePlaybackEvents}>
+      <Player.Container style={{ width: "100%", aspectRatio: "16/9", background: "#000" }}>
+        <Player.Video style={{ width: "100%", height: "100%" }} />
         <Player.Controls>
           <Player.PlayPauseTrigger />
           <Player.MuteTrigger />
