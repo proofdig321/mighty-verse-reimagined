@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { recordSecondaryTransferEvent } from "@/lib/economic/events";
 
 function getServiceClient() {
   return createClient(
@@ -9,12 +10,15 @@ function getServiceClient() {
 
 type TransferResult = {
   transfer_id: string;
+  economic_event_id: string | null;
 };
 
 export async function transferCollectible(
   collectible_id: string,
   to_participant_id: string,
-  transfer_basis: string
+  transfer_basis: string,
+  economic_basis?: number,
+  currency = "USD"
 ): Promise<TransferResult> {
   const supabase = getServiceClient();
 
@@ -57,5 +61,10 @@ export async function transferCollectible(
     throw new Error(`Failed to update current_owner_ref: ${updateError.message}`);
   }
 
-  return { transfer_id: transfer.transfer_id };
+  return {
+    transfer_id: transfer.transfer_id,
+    economic_event_id: economic_basis != null
+      ? await recordSecondaryTransferEvent(transfer.transfer_id, collectible_id, economic_basis, currency)
+      : null,
+  };
 }

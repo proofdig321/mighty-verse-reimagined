@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import type { CollectibleIssuanceInput } from "./types";
+import { recordPrimaryIssuanceEvent } from "@/lib/economic/events";
 
 function getServiceClient() {
   return createClient(
@@ -11,10 +12,11 @@ function getServiceClient() {
 type IssueResult = {
   collectible_id: string;
   entitlement_bundle_id: string;
+  economic_event_id: string;
 };
 
 export async function issueCollectible(
-  input: CollectibleIssuanceInput
+  input: CollectibleIssuanceInput & { economic_basis: number; currency?: string }
 ): Promise<IssueResult> {
   const supabase = getServiceClient();
 
@@ -96,5 +98,10 @@ export async function issueCollectible(
   return {
     collectible_id: collectible.collectible_id,
     entitlement_bundle_id: bundle.entitlement_bundle_id,
+    economic_event_id: await recordPrimaryIssuanceEvent(
+      collectible.collectible_id,
+      input.economic_basis,
+      input.currency ?? "USD"
+    ),
   };
 }
