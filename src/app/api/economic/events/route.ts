@@ -1,11 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { recordConsumptionEvent } from "@/lib/economic/events";
+import { processSignalAttribution } from "@/lib/media/attribution";
 
 // POST /api/economic/events
 // Body: { signal_id: string }
-// Called by n8n (Step 14) or directly during testing.
-// Authenticated or service_role only — no anonymous economic event creation.
+// Called by n8n webhook or directly. Authenticated or service_role only.
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -19,8 +18,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "signal_id required" }, { status: 400 });
     }
 
-    const event_id = await recordConsumptionEvent(signal_id);
-    return NextResponse.json({ event_id });
+    const result = await processSignalAttribution(signal_id);
+    return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : "Internal server error";
     return NextResponse.json({ error: message }, { status: 500 });

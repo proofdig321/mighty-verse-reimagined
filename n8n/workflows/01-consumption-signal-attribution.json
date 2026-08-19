@@ -1,0 +1,66 @@
+{
+  "name": "ConsumptionSignal → EconomicEvent",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "consumption-signal",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook — ConsumptionSignal",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MIGHTY_VERSE_API_URL }}/api/economic/events",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "signal_id",
+              "value": "={{ $json.body.signal_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-economic-event",
+      "name": "POST /api/economic/events",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — ConsumptionSignal": {
+      "main": [[{ "node": "POST /api/economic/events", "type": "main", "index": 0 }]]
+    },
+    "POST /api/economic/events": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Receives a ConsumptionSignal webhook from Supabase and triggers economic event attribution via the Mighty Verse application API. n8n does not write directly to the database — all writes go through the application layer per A14."
+  }
+}

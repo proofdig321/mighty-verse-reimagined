@@ -1,0 +1,78 @@
+{
+  "name": "OwnershipTransfer → Secondary Economic Event",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ownership-transfer",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook — OwnershipTransfer",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.MIGHTY_VERSE_API_URL }}/api/collectibles/transfer",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "collectible_id",
+              "value": "={{ $json.body.collectible_id }}"
+            },
+            {
+              "name": "to_participant_id",
+              "value": "={{ $json.body.to_participant_id }}"
+            },
+            {
+              "name": "transfer_basis",
+              "value": "={{ $json.body.transfer_basis }}"
+            },
+            {
+              "name": "economic_basis",
+              "value": "={{ $json.body.economic_basis }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-transfer",
+      "name": "POST /api/collectibles/transfer",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}"
+      },
+      "id": "respond",
+      "name": "Respond",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [680, 300]
+    }
+  ],
+  "connections": {
+    "Webhook — OwnershipTransfer": {
+      "main": [[{ "node": "POST /api/collectibles/transfer", "type": "main", "index": 0 }]]
+    },
+    "POST /api/collectibles/transfer": {
+      "main": [[{ "node": "Respond", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "description": "Triggers collectible transfer + secondary economic event via application API. n8n does not write directly to the database per A14."
+  }
+}
