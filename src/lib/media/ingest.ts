@@ -33,11 +33,79 @@ export async function ingestLivepeerAsset(
   if (!response.asset) {
     throw new Error(`Livepeer asset not found: ${livepeerAssetId}`);
   }
+
+  // 2. Require playbackId — never fall back to asset UUID as storage_ref
+  const playbackId = response.asset.playbackId;
+  if (!playbackId) {
+    throw new Error(`Livepeer asset ${livepeerAssetId} has no playbackId — asset may still be processing`);
+  }
+
   const mapped = mapLivepeerAsset(response.asset);
 
-  // 2. Insert media_asset
-  // storage_ref = Livepeer playback ID (used by LivepeerPlayer as playbackId)
-  const playbackId = response.asset.playbackId ?? mapped.livepeerAssetId;
+  // 3. Idempotency check: find any media_asset already stored for this playbackId
+  const { data: existingAssets } = await supabase
+    .from("media_asset")
+    .select("asset_id")
+    .eq("storage_ref", playbackId);
+
+  if (existingAssets && existingAssets.length > 0) {
+    const existingAssetIds = existingAssets.map((a) => a.asset_id);
+
+    // Check whether one of those assets is already bound to this projection
+    const { data: existingBinding } = await supabase
+      .from("projection_media_binding")
+      .select("binding_id, asset_id")
+      .eq("projection_id", projectionId)
+      .in("asset_id", existingAssetIds)
+      .maybeSingle();
+
+    if (existingBinding) {
+      // Same asset already bound to this projection — return existing, no inserts
+      const { data: existingVariant } = await supabase
+        .from("delivery_variant")
+        .select("variant_id")
+        .eq("asset_id", existingBinding.asset_id)
+        .maybeSingle();
+
+      return {
+        asset_id: existingBinding.asset_id,
+        variant_id: existingVariant?.variant_id ?? "",
+        binding_id: existingBinding.binding_id,
+      };
+    }
+
+    // Asset exists but not bound to this projection — reuse asset, create only the binding
+    const reuseAssetId = existingAssetIds[0];
+    const { data: existingVariant } = await supabase
+      .from("delivery_variant")
+      .select("variant_id")
+      .eq("asset_id", reuseAssetId)
+      .maybeSingle();
+
+    const { data: newBinding, error: bindingError } = await supabase
+      .from("projection_media_binding")
+      .insert({
+        projection_id: projectionId,
+        asset_id: reuseAssetId,
+        binding_type: bindingType,
+        access_level: accessLevel,
+        created_by: participantId,
+      })
+      .select("binding_id")
+      .single();
+
+    if (bindingError || !newBinding) {
+      throw new Error(`Failed to insert projection_media_binding: ${bindingError?.message}`);
+    }
+
+    return {
+      asset_id: reuseAssetId,
+      variant_id: existingVariant?.variant_id ?? "",
+      binding_id: newBinding.binding_id,
+    };
+  }
+
+  // 4. No existing media_asset for this playbackId — full creation sequence
   const { data: asset, error: assetError } = await supabase
     .from("media_asset")
     .insert({
@@ -55,8 +123,6 @@ export async function ingestLivepeerAsset(
     throw new Error(`Failed to insert media_asset: ${assetError?.message}`);
   }
 
-  // 3. Insert delivery_variant
-  // endpoint_ref = HLS playback URL
   const { data: variant, error: variantError } = await supabase
     .from("delivery_variant")
     .insert({
@@ -71,7 +137,6 @@ export async function ingestLivepeerAsset(
     throw new Error(`Failed to insert delivery_variant: ${variantError?.message}`);
   }
 
-  // 4. Insert projection_media_binding
   const { data: binding, error: bindingError } = await supabase
     .from("projection_media_binding")
     .insert({
