@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 type AuthorityData = {
@@ -15,24 +14,25 @@ type AuthorityData = {
   bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string }[];
 };
 
-const CANONICAL_TYPES: { value: string; label: string }[] = [
-  { value: "song-world", label: "Song World" },
-  { value: "creative-moment", label: "Creative Moment" },
-  { value: "mural", label: "Mural" },
-  { value: "interpretation", label: "Interpretation" },
-  { value: "other", label: "Other" },
-];
+const WORK_TYPE_LABELS: Record<string, string> = {
+  "song-world": "Song World",
+  "creative-moment": "Creative Moment",
+  "mural": "Mural",
+  "interpretation": "Interpretation",
+  "other": "Other",
+};
 
-const PROJECTION_TYPES: { value: string; label: string }[] = [
-  { value: "experiential", label: "Experiential" },
-  { value: "distributional", label: "Distributional" },
-  { value: "archival", label: "Archival" },
-  { value: "other", label: "Other" },
-];
+const EXPERIENCE_TYPE_LABELS: Record<string, string> = {
+  "experiential": "Experiential",
+  "distributional": "Distributional",
+  "archival": "Archival",
+  "other": "Other",
+};
 
-function shortId(id: string) {
-  return id.slice(0, 8);
-}
+const CANONICAL_TYPES = ["song-world", "creative-moment", "mural", "interpretation", "other"] as const;
+const PROJECTION_TYPES = ["experiential", "distributional", "archival", "other"] as const;
+
+function shortId(id: string) { return id.slice(0, 8); }
 
 async function api(path: string, body?: unknown) {
   const res = await fetch(path, {
@@ -43,26 +43,141 @@ async function api(path: string, body?: unknown) {
   return res.json();
 }
 
-export default function AuthorityClient() {
-  const [data, setData] = useState<AuthorityData | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+// ─── Step indicator ──────────────────────────────────────────────────────────
 
-  // Register New Work
-  const [canonicalType, setCanonicalType] = useState<string>("song-world");
+function Step({ done, label, detail }: { done: boolean; label: string; detail?: string }) {
+  return (
+    <div className="flex items-start gap-2">
+      <span className={`mt-0.5 text-xs font-medium w-4 shrink-0 ${done ? "text-foreground" : "text-muted-foreground"}`}>
+        {done ? "✓" : "○"}
+      </span>
+      <div>
+        <span className={`text-sm ${done ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
+        {detail && <span className="text-muted-foreground text-xs ml-2">{detail}</span>}
+      </div>
+    </div>
+  );
+}
 
-  // Advance Work State
-  const [stateMasterId, setStateMasterId] = useState("");
+// ─── Work card ───────────────────────────────────────────────────────────────
 
-  // Create Projection
-  const [projStateId, setProjStateId] = useState("");
-  const [projMasterId, setProjMasterId] = useState("");
-  const [projType, setProjType] = useState<string>("experiential");
+type WorkCardProps = {
+  master: AuthorityData["masters"][number];
+  state: AuthorityData["states"][number] | undefined;
+  projection: AuthorityData["projections"][number] | undefined;
+  binding: AuthorityData["bindings"][number] | undefined;
+  onAuthorise: (masterId: string) => Promise<void>;
+  onCreateExperience: (stateId: string, masterId: string, type: string) => Promise<void>;
+  onAttachVideo: (projId: string, masterId: string) => void;
+  onDesignate: (projId: string, masterId: string) => Promise<void>;
+  busy: boolean;
+};
 
-  // Attach Media
-  const [uploadProjId, setUploadProjId] = useState("");
-  const [uploadMasterId, setUploadMasterId] = useState("");
+function WorkCard({
+  master, state, projection, binding,
+  onAuthorise, onCreateExperience, onAttachVideo, onDesignate,
+  busy,
+}: WorkCardProps) {
+  const [expType, setExpType] = useState("experiential");
+  const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
+
+  const hasState = !!state;
+  const hasProjection = !!projection;
+  const hasMedia = !!binding;
+  const isCollectible = projection?.collectible_designated ?? false;
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-3">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <span className="text-foreground text-sm font-medium">{typeLabel}</span>
+          <span className="text-muted-foreground font-mono text-xs cursor-default" title={master.master_id}>{shortId(master.master_id)}…</span>
+        </div>
+
+        {/* Journey steps */}
+        <div className="space-y-1.5">
+          <Step done label="Registered" />
+          <Step
+            done={hasState}
+            label={hasState ? "Authorised" : "Needs authorisation"}
+            detail={hasState ? `v${state!.version} · ${shortId(state!.canonical_state_id)}…` : undefined}
+          />
+          {hasState && (
+            <Step
+              done={hasProjection}
+              label={hasProjection ? "Experience created" : "Needs experience"}
+              detail={hasProjection ? EXPERIENCE_TYPE_LABELS[projection!.projection_type] ?? projection!.projection_type : undefined}
+            />
+          )}
+          {hasProjection && (
+            <Step
+              done={hasMedia}
+              label={hasMedia ? "Video attached · playable" : "Needs video"}
+            />
+          )}
+          {hasProjection && (
+            <Step
+              done={isCollectible}
+              label={isCollectible ? "Collectible" : "Not yet collectible"}
+            />
+          )}
+        </div>
+
+        {/* Single next action */}
+        {!hasState && (
+          <Button size="sm" disabled={busy} onClick={() => onAuthorise(master.master_id)}>
+            Authorise Work
+          </Button>
+        )}
+
+        {hasState && !hasProjection && (
+          <div className="space-y-2">
+            <select
+              value={expType}
+              onChange={e => setExpType(e.target.value)}
+              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+            >
+              {PROJECTION_TYPES.map(t => (
+                <option key={t} value={t}>{EXPERIENCE_TYPE_LABELS[t]}</option>
+              ))}
+            </select>
+            <Button size="sm" disabled={busy} onClick={() => onCreateExperience(state!.canonical_state_id, master.master_id, expType)}>
+              Create Experience
+            </Button>
+          </div>
+        )}
+
+        {hasProjection && !hasMedia && (
+          <Button size="sm" disabled={busy} onClick={() => onAttachVideo(projection!.projection_id, master.master_id)}>
+            Attach Video
+          </Button>
+        )}
+
+        {hasProjection && hasMedia && !isCollectible && (
+          <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id)}>
+            Designate as Collectible
+          </Button>
+        )}
+
+        {hasProjection && hasMedia && isCollectible && (
+          <p className="text-muted-foreground text-xs">Complete</p>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Attach Video panel ───────────────────────────────────────────────────────
+
+type AttachVideoPanelProps = {
+  projId: string;
+  masterId: string;
+  onDone: () => void;
+  onCancel: () => void;
+};
+
+function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPanelProps) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadPhase, setUploadPhase] = useState<string | null>(null);
@@ -70,9 +185,155 @@ export default function AuthorityClient() {
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Designate Collectible
-  const [colProjId, setColProjId] = useState("");
-  const [colMasterId, setColMasterId] = useState("");
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <span className="text-foreground text-sm font-medium">Attach Video</span>
+          {!uploadBusy && (
+            <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
+          )}
+        </div>
+
+        {/* File picker */}
+        <div className="space-y-1">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Choose video</p>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/mp4,video/*"
+            disabled={uploadBusy}
+            onChange={e => { setUploadFile(e.target.files?.[0] ?? null); setUploadMsg(null); }}
+            className="sr-only"
+          />
+          <button
+            type="button"
+            disabled={uploadBusy}
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-full rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors
+              ${uploadFile ? "border-border bg-muted/30" : "border-border hover:border-foreground/30 hover:bg-muted/20 cursor-pointer"}
+              disabled:pointer-events-none disabled:opacity-50`}
+          >
+            {uploadFile ? (
+              <div className="space-y-0.5">
+                <p className="text-foreground text-sm font-medium">{uploadFile.name}</p>
+                <p className="text-muted-foreground text-xs">{(uploadFile.size / 1024 / 1024).toFixed(1)} MB</p>
+              </div>
+            ) : (
+              <div className="space-y-1">
+                <p className="text-foreground text-sm">＋ Choose MP4 video</p>
+                <p className="text-muted-foreground text-xs">MP4 · Full video · Uploads directly to Mighty Verse</p>
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* Progress */}
+        {uploadBusy && (
+          <div className="space-y-2">
+            {uploadProgress !== null && uploadProgress < 100 ? (
+              <>
+                <p className="text-foreground text-sm">Uploading video…</p>
+                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                  <div className="h-full rounded-full bg-foreground transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                </div>
+                <p className="text-muted-foreground text-xs">{uploadProgress}%</p>
+              </>
+            ) : (
+              <>
+                <p className="text-foreground text-sm">Processing video…</p>
+                <p className="text-muted-foreground text-xs">Livepeer is preparing your video for playback.</p>
+              </>
+            )}
+          </div>
+        )}
+
+        {uploadMsg && (
+          <p className={`text-sm ${uploadMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>
+            {uploadMsg.startsWith("Error") ? uploadMsg : "✓ " + uploadMsg}
+          </p>
+        )}
+
+        <Button
+          size="sm"
+          disabled={uploadBusy || !uploadFile}
+          onClick={async () => {
+            if (!uploadFile) return;
+            setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null);
+            try {
+              const session = await fetch("/api/authority/media/upload-session", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name: uploadFile.name, projection_id: projId, master_id: masterId }),
+              }).then(r => r.json());
+
+              if (session.error) { setUploadMsg(`Error: ${session.error}`); return; }
+
+              const { upload_url, asset_id } = session;
+
+              await new Promise<void>((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.upload.onprogress = e => {
+                  if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
+                };
+                xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
+                xhr.onerror = () => reject(new Error("Upload network error"));
+                xhr.open("PUT", upload_url);
+                // Do NOT set Content-Type — Livepeer's pre-signed URL handles it
+                xhr.send(uploadFile);
+              });
+
+              setUploadProgress(100);
+
+              let phase = "uploading";
+              while (phase !== "ready") {
+                await new Promise(r => setTimeout(r, 3000));
+                const status = await fetch(`/api/authority/media/upload-session/${asset_id}`).then(r => r.json());
+                phase = status.phase ?? "unknown";
+                setUploadPhase(phase);
+                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); return; }
+              }
+
+              const attach = await fetch("/api/authority/media", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ projection_id: projId, master_id: masterId, livepeer_asset_id: asset_id }),
+              }).then(r => r.json());
+
+              if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
+              setUploadMsg("Video attached. World and Moment are now playable.");
+              setUploadFile(null); setUploadProgress(null); setUploadPhase(null);
+              if (fileInputRef.current) fileInputRef.current.value = "";
+              onDone();
+            } catch (err) {
+              setUploadMsg(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+            } finally {
+              setUploadBusy(false);
+            }
+          }}
+        >
+          Upload & Attach Video
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
+
+export default function AuthorityClient() {
+  const [data, setData] = useState<AuthorityData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  // Register New Work
+  const [showRegister, setShowRegister] = useState(false);
+  const [canonicalType, setCanonicalType] = useState<string>("song-world");
+
+  // Attach Video panel — which projection is currently open
+  const [attachingProjId, setAttachingProjId] = useState<string | null>(null);
+  const [attachingMasterId, setAttachingMasterId] = useState<string | null>(null);
 
   async function load() {
     const d = await api("/api/authority");
@@ -96,325 +357,135 @@ export default function AuthorityClient() {
 
   const { authority, masters, states, projections, bindings } = data;
 
+  // Derive per-master relationships
+  function getState(masterId: string) {
+    return states.find(s => s.master_id === masterId);
+  }
+  function getProjection(masterId: string) {
+    return projections.find(p => p.master_id === masterId);
+  }
+  function getBinding(projectionId: string) {
+    return bindings.find(b => b.projection_id === projectionId);
+  }
+
   return (
     <div className="mx-auto max-w-3xl space-y-6 p-6">
+
+      {/* Header */}
       <div>
         <h1 className="text-foreground text-lg font-semibold">Authority</h1>
-        <p className="text-muted-foreground text-xs">
-          {authority.authority_type} · {authority.scope_type}
-        </p>
+        <p className="text-muted-foreground text-xs">You have full authority over this catalogue.</p>
       </div>
 
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
+      {msg && (
+        <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>
+      )}
 
-      <Separator />
-
-      {/* 1. Register New Work */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Register New Work</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="ctype">Work type</Label>
-            <select
-              id="ctype"
-              value={canonicalType}
-              onChange={e => setCanonicalType(e.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-            >
-              {CANONICAL_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </div>
-          <Button size="sm" disabled={busy} onClick={() => act("Register Work", "/api/authority/masters", { canonical_type: canonicalType })}>
-            Register Work
+      {/* Register New Work */}
+      <div>
+        {!showRegister ? (
+          <Button size="sm" variant="outline" onClick={() => setShowRegister(true)}>
+            + Register New Work
           </Button>
-        </CardContent>
-      </Card>
+        ) : (
+          <Card>
+            <CardContent className="pt-4 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-foreground text-sm font-medium">Register New Work</span>
+                <button type="button" onClick={() => setShowRegister(false)} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
+              </div>
+              <select
+                value={canonicalType}
+                onChange={e => setCanonicalType(e.target.value)}
+                className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+              >
+                {CANONICAL_TYPES.map(t => (
+                  <option key={t} value={t}>{WORK_TYPE_LABELS[t]}</option>
+                ))}
+              </select>
+              <Button
+                size="sm"
+                disabled={busy}
+                onClick={async () => {
+                  await act("Register Work", "/api/authority/masters", { canonical_type: canonicalType });
+                  setShowRegister(false);
+                }}
+              >
+                Register Work
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+      </div>
 
-      {/* 2. Advance Work State */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Advance Work State</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="smid">Work</Label>
-            <select
-              id="smid"
-              value={stateMasterId}
-              onChange={e => setStateMasterId(e.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="">— select work —</option>
-              {masters.map(m => (
-                <option key={m.master_id} value={m.master_id}>
-                  {CANONICAL_TYPES.find(t => t.value === m.canonical_type)?.label ?? m.canonical_type} · {shortId(m.master_id)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <Button size="sm" disabled={busy || !stateMasterId} onClick={() => act("Advance State", "/api/authority/states", { master_id: stateMasterId })}>
-            Advance State
-          </Button>
-        </CardContent>
-      </Card>
+      {/* Work cards */}
+      {masters.length === 0 && (
+        <p className="text-muted-foreground text-sm">No works registered yet. Register your first work above.</p>
+      )}
 
-      {/* 3. Create Projection */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Create Projection</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="psid">State</Label>
-            <select
-              id="psid"
-              value={projStateId}
-              onChange={e => {
-                const s = states.find(s => s.canonical_state_id === e.target.value);
-                setProjStateId(s?.canonical_state_id ?? "");
-                setProjMasterId(s?.master_id ?? "");
-              }}
-              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="">— select state —</option>
-              {states.map(s => {
-                const m = masters.find(m => m.master_id === s.master_id);
-                return (
-                  <option key={s.canonical_state_id} value={s.canonical_state_id}>
-                    {CANONICAL_TYPES.find(t => t.value === m?.canonical_type)?.label ?? m?.canonical_type ?? "Unknown"} · v{s.version} · {shortId(s.canonical_state_id)}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <div className="space-y-1">
-            <Label htmlFor="ptype">Projection type</Label>
-            <select
-              id="ptype"
-              value={projType}
-              onChange={e => setProjType(e.target.value)}
-              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-            >
-              {PROJECTION_TYPES.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-            </select>
-          </div>
-          <Button size="sm" disabled={busy || !projStateId || !projMasterId} onClick={() => act("Create Projection", "/api/authority/projections", { canonical_state_id: projStateId, master_id: projMasterId, projection_type: projType })}>
-            Create Projection
-          </Button>
-        </CardContent>
-      </Card>
+      {masters.map(master => {
+        const state = getState(master.master_id);
+        const projection = getProjection(master.master_id);
+        const binding = projection ? getBinding(projection.projection_id) : undefined;
 
-      {/* 4. Attach Media */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Attach Media</CardTitle></CardHeader>
-        <CardContent className="space-y-4">
-
-          {/* Step 1 */}
-          <div className="space-y-1">
-            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">1 · Select projection</p>
-            <select
-              disabled={uploadBusy}
-              value={uploadProjId}
-              onChange={e => {
-                const proj = projections.find(p => p.projection_id === e.target.value);
-                setUploadProjId(proj?.projection_id ?? "");
-                setUploadMasterId(proj?.master_id ?? "");
-                setUploadFile(null);
-                setUploadMsg(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
-              }}
-              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="">— select projection —</option>
-              {projections.map(p => {
-                const m = masters.find(m => m.master_id === p.master_id);
-                const hasMedia = bindings.some(b => b.projection_id === p.projection_id);
-                return (
-                  <option key={p.projection_id} value={p.projection_id}>
-                    {PROJECTION_TYPES.find(t => t.value === p.projection_type)?.label ?? p.projection_type} · {CANONICAL_TYPES.find(t => t.value === m?.canonical_type)?.label ?? m?.canonical_type ?? "Unknown"}{hasMedia ? " · media attached" : ""}
-                  </option>
-                );
-              })}
-            </select>
-            {uploadProjId && (
-              <p className="text-muted-foreground font-mono text-xs" title={uploadProjId}>{shortId(uploadProjId)}…</p>
-            )}
-          </div>
-
-          {/* Step 2 */}
-          <div className="space-y-1">
-            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">2 · Choose video</p>
-            <input
-              ref={fileInputRef}
-              id="mp4file"
-              type="file"
-              accept="video/mp4,video/*"
-              disabled={uploadBusy}
-              onChange={e => {
-                const f = e.target.files?.[0] ?? null;
-                setUploadFile(f);
-                setUploadMsg(null);
-              }}
-              className="sr-only"
-            />
-            <button
-              type="button"
-              disabled={uploadBusy}
-              onClick={() => fileInputRef.current?.click()}
-              className={`w-full rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors
-                ${uploadFile
-                  ? "border-border bg-muted/30"
-                  : "border-border hover:border-foreground/30 hover:bg-muted/20 cursor-pointer"
-                }
-                disabled:pointer-events-none disabled:opacity-50`}
-            >
-              {uploadFile ? (
-                <div className="space-y-0.5">
-                  <p className="text-foreground text-sm font-medium">{uploadFile.name}</p>
-                  <p className="text-muted-foreground text-xs">{(uploadFile.size / 1024 / 1024).toFixed(1)} MB</p>
-                </div>
-              ) : (
-                <div className="space-y-1">
-                  <p className="text-foreground text-sm">＋ Choose MP4 video</p>
-                  <p className="text-muted-foreground text-xs">MP4 · Full video · Uploads directly to Mighty Verse</p>
-                </div>
-              )}
-            </button>
-          </div>
-
-          {/* Step 3 — progress / status */}
-          {uploadBusy && (
-            <div className="space-y-2">
-              {uploadProgress !== null && uploadProgress < 100 ? (
-                <>
-                  <p className="text-foreground text-sm">Uploading video…</p>
-                  <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                    <div
-                      className="h-full rounded-full bg-foreground transition-all duration-300"
-                      style={{ width: `${uploadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-muted-foreground text-xs">{uploadProgress}%</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-foreground text-sm">Processing video…</p>
-                  <p className="text-muted-foreground text-xs">Livepeer is preparing your video for playback.</p>
-                </>
-              )}
-            </div>
-          )}
-
-          {uploadMsg && (
-            <p className={`text-sm ${uploadMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>
-              {uploadMsg.startsWith("Error") ? uploadMsg : "✓ " + uploadMsg}
-            </p>
-          )}
-
-          <Button
-            size="sm"
-            disabled={uploadBusy || !uploadProjId || !uploadMasterId || !uploadFile}
-            onClick={async () => {
-              if (!uploadFile) return;
-              setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null);
-              try {
-                const session = await fetch("/api/authority/media/upload-session", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ name: uploadFile.name, projection_id: uploadProjId, master_id: uploadMasterId }),
-                }).then(r => r.json());
-
-                if (session.error) { setUploadMsg(`Error: ${session.error}`); return; }
-
-                const { upload_url, asset_id } = session;
-
-                await new Promise<void>((resolve, reject) => {
-                  const xhr = new XMLHttpRequest();
-                  xhr.upload.onprogress = e => {
-                    if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
-                  };
-                  xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-                  xhr.onerror = () => reject(new Error("Upload network error"));
-                  xhr.open("PUT", upload_url);
-                  // Do NOT set Content-Type — Livepeer's pre-signed URL handles it
-                  xhr.send(uploadFile);
-                });
-
-                setUploadProgress(100);
-
-                let phase = "uploading";
-                while (phase !== "ready") {
-                  await new Promise(r => setTimeout(r, 3000));
-                  const status = await fetch(`/api/authority/media/upload-session/${asset_id}`).then(r => r.json());
-                  phase = status.phase ?? "unknown";
-                  setUploadPhase(phase);
-                  if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); return; }
-                }
-
-                const attach = await fetch("/api/authority/media", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ projection_id: uploadProjId, master_id: uploadMasterId, livepeer_asset_id: asset_id }),
-                }).then(r => r.json());
-
-                if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
-                setUploadMsg("Video attached. World and Moment are now playable.");
-                setUploadFile(null); setUploadProgress(null); setUploadPhase(null);
-                if (fileInputRef.current) fileInputRef.current.value = "";
+        // If this work's projection is currently in the attach video flow, show the panel instead
+        if (attachingProjId === projection?.projection_id) {
+          return (
+            <AttachVideoPanel
+              key={master.master_id}
+              projId={attachingProjId}
+              masterId={attachingMasterId!}
+              onDone={async () => {
+                setAttachingProjId(null);
+                setAttachingMasterId(null);
                 await load();
-              } catch (err) {
-                setUploadMsg(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
-              } finally {
-                setUploadBusy(false);
-              }
-            }}
-          >
-            Upload & Attach Video
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* 5. Designate Collectible */}
-      <Card>
-        <CardHeader><CardTitle className="text-sm">Designate Collectible</CardTitle></CardHeader>
-        <CardContent className="space-y-3">
-          <div className="space-y-1">
-            <Label htmlFor="cpid">Projection</Label>
-            <select
-              id="cpid"
-              value={colProjId}
-              onChange={e => {
-                const proj = projections.find(p => p.projection_id === e.target.value);
-                setColProjId(proj?.projection_id ?? "");
-                setColMasterId(proj?.master_id ?? "");
               }}
-              className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-            >
-              <option value="">— select projection —</option>
-              {projections.map(p => {
-                const m = masters.find(m => m.master_id === p.master_id);
-                return (
-                  <option key={p.projection_id} value={p.projection_id}>
-                    {PROJECTION_TYPES.find(t => t.value === p.projection_type)?.label ?? p.projection_type} · {CANONICAL_TYPES.find(t => t.value === m?.canonical_type)?.label ?? m?.canonical_type ?? "Unknown"}{p.collectible_designated ? " · collectible" : ""}
-                  </option>
-                );
-              })}
-            </select>
-          </div>
-          <Button size="sm" disabled={busy || !colProjId || !colMasterId} onClick={() => act("Designate Collectible", "/api/authority/collectibles", { projection_id: colProjId, master_id: colMasterId })}>
-            Designate as Collectible
-          </Button>
-        </CardContent>
-      </Card>
+              onCancel={() => {
+                setAttachingProjId(null);
+                setAttachingMasterId(null);
+              }}
+            />
+          );
+        }
+
+        return (
+          <WorkCard
+            key={master.master_id}
+            master={master}
+            state={state}
+            projection={projection}
+            binding={binding}
+            busy={busy}
+            onAuthorise={masterId => act("Authorise Work", "/api/authority/states", { master_id: masterId })}
+            onCreateExperience={(stateId, masterId, type) =>
+              act("Create Experience", "/api/authority/projections", { canonical_state_id: stateId, master_id: masterId, projection_type: type })
+            }
+            onAttachVideo={(projId, masterId) => {
+              setAttachingProjId(projId);
+              setAttachingMasterId(masterId);
+            }}
+            onDesignate={(projId, masterId) =>
+              act("Designate Collectible", "/api/authority/collectibles", { projection_id: projId, master_id: masterId })
+            }
+          />
+        );
+      })}
 
       <Separator />
 
-      {/* Canonical Chain */}
+      {/* Canonical Record — secondary technical view */}
       <div className="space-y-4">
-        <h2 className="text-foreground text-sm font-medium">Canonical Chain</h2>
+        <div>
+          <h2 className="text-foreground text-sm font-medium">Canonical Record</h2>
+          <p className="text-muted-foreground text-xs">Technical verification of the canonical chain.</p>
+        </div>
 
-        {masters.length === 0 && <p className="text-muted-foreground text-xs">No works registered yet.</p>}
+        {masters.length === 0 && <p className="text-muted-foreground text-xs">No records yet.</p>}
 
         {masters.map(m => {
           const mStates = states.filter(s => s.master_id === m.master_id);
           const mProjs = projections.filter(p => p.master_id === m.master_id);
-          const typeLabel = CANONICAL_TYPES.find(t => t.value === m.canonical_type)?.label ?? m.canonical_type;
+          const typeLabel = WORK_TYPE_LABELS[m.canonical_type] ?? m.canonical_type;
           return (
             <Card key={m.master_id}>
               <CardContent className="pt-4 space-y-2">
@@ -422,6 +493,7 @@ export default function AuthorityClient() {
                   <Badge variant="outline">{typeLabel}</Badge>
                   <span className="text-muted-foreground font-mono text-xs cursor-default" title={m.master_id}>{shortId(m.master_id)}…</span>
                 </div>
+                {mStates.length === 0 && <p className="text-muted-foreground text-xs pl-4">No authorised state.</p>}
                 {mStates.map(s => (
                   <div key={s.canonical_state_id} className="pl-4 border-l border-border space-y-1">
                     <div className="flex items-center gap-2">
@@ -431,7 +503,7 @@ export default function AuthorityClient() {
                     </div>
                     {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).map(p => {
                       const pBindings = bindings.filter(b => b.projection_id === p.projection_id);
-                      const projLabel = PROJECTION_TYPES.find(t => t.value === p.projection_type)?.label ?? p.projection_type;
+                      const projLabel = EXPERIENCE_TYPE_LABELS[p.projection_type] ?? p.projection_type;
                       return (
                         <div key={p.projection_id} className="pl-4 border-l border-border space-y-1">
                           <div className="flex items-center gap-2 flex-wrap">
@@ -439,6 +511,7 @@ export default function AuthorityClient() {
                             {p.collectible_designated && <Badge variant="secondary">collectible</Badge>}
                             <span className="text-muted-foreground font-mono text-xs cursor-default" title={p.projection_id}>{shortId(p.projection_id)}…</span>
                           </div>
+                          {pBindings.length === 0 && <p className="text-muted-foreground text-xs pl-4">No media.</p>}
                           {pBindings.map(b => (
                             <div key={b.binding_id} className="pl-4 flex items-center gap-2">
                               <Badge variant="outline">{b.binding_type}</Badge>
@@ -449,6 +522,9 @@ export default function AuthorityClient() {
                         </div>
                       );
                     })}
+                    {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).length === 0 && (
+                      <p className="text-muted-foreground text-xs pl-4">No experience.</p>
+                    )}
                   </div>
                 ))}
               </CardContent>
