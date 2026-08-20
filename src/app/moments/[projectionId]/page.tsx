@@ -7,6 +7,21 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
 
+const TYPE_LABELS: Record<string, string> = {
+  "song-world": "Song World",
+  "creative-moment": "Creative Moment",
+  "mural": "Mural",
+  "interpretation": "Interpretation",
+  "other": "Work",
+};
+
+const PROJ_LABELS: Record<string, string> = {
+  "experiential": "Experiential",
+  "distributional": "Distributional",
+  "archival": "Archival",
+  "other": "Moment",
+};
+
 async function getMoment(projectionId: string): Promise<MomentData | null> {
   const svc = getServiceClient();
 
@@ -79,10 +94,6 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
   };
 }
 
-function label(s: string) {
-  return s.replace(/-/g, " ");
-}
-
 export default async function MomentPage({
   params,
 }: {
@@ -94,9 +105,13 @@ export default async function MomentPage({
 
   const { projection, canonical_state, master, provenance, attribution, media } = moment;
 
+  const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
+  const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
+
   return (
     <main className="min-h-screen bg-background">
-      {/* Media — primary visual element */}
+
+      {/* Media */}
       <section className="w-full bg-black">
         <ProjectionMediaPlayer
           media={media}
@@ -106,59 +121,61 @@ export default async function MomentPage({
         />
       </section>
 
-      <section className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
 
-        {/* Projection identity */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="secondary" className="capitalize">{label(projection.projection_type)}</Badge>
-            <Badge variant="outline">v{canonical_state.version}</Badge>
-            <Badge className="capitalize">{canonical_state.authorisation_state}</Badge>
-            {projection.collectible_designated && <Badge variant="outline">collectible</Badge>}
-          </div>
-          <p className="text-muted-foreground text-xs font-mono">{projection.projection_id}</p>
-        </div>
-
-        {/* Link to parent World */}
+        {/* Back to World */}
         <Link
           href={`/worlds/${master.master_id}`}
-          className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
-          <span className="capitalize">{label(master.canonical_type)}</span>
-          <span>→</span>
-          <span className="font-mono truncate max-w-[200px]">{master.master_id}</span>
+          <span>←</span>
+          <span>Back to {parentTypeLabel}</span>
         </Link>
 
-        <Separator />
-
-        {/* Attribution */}
-        {attribution.roles.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-foreground text-xs font-medium uppercase tracking-wider">Created by</p>
-            <div className="flex gap-2 flex-wrap">
-              {attribution.roles.map((r) => (
-                <Badge key={r.role_type} variant="secondary" className="capitalize">
-                  {label(r.role_type)}
-                </Badge>
-              ))}
-            </div>
+        {/* Moment identity */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-foreground text-lg font-semibold">{projTypeLabel} Moment</span>
+            {projection.collectible_designated && (
+              <Badge variant="outline">collectible</Badge>
+            )}
           </div>
-        )}
+          {attribution.roles.length > 0 && (
+            <p className="text-muted-foreground text-sm capitalize">
+              {attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")}
+            </p>
+          )}
+        </div>
 
+        {/* Canonical Record — secondary */}
         <Separator />
-
-        {/* Provenance */}
-        {provenance.relationship_type && (
-          <div className="space-y-2">
-            <p className="text-foreground text-xs font-medium uppercase tracking-wider">Provenance</p>
-            <div className="flex items-start gap-3 text-xs">
-              <span className="text-muted-foreground w-24 shrink-0 capitalize">{label(provenance.relationship_type)}</span>
-              <p className="text-muted-foreground font-mono break-all">{provenance.integrity_hash}</p>
+        <details className="group">
+          <summary className="text-muted-foreground text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors">
+            Canonical Record
+          </summary>
+          <div className="mt-4 space-y-3 text-xs">
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground w-24 shrink-0">Moment</span>
+              <span className="text-muted-foreground font-mono break-all">{projection.projection_id}</span>
             </div>
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground w-24 shrink-0">World</span>
+              <span className="text-muted-foreground font-mono break-all">{master.master_id}</span>
+            </div>
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground w-24 shrink-0">State</span>
+              <span className="text-muted-foreground font-mono break-all">{canonical_state.canonical_state_id}</span>
+            </div>
+            {provenance.integrity_hash && (
+              <div className="flex items-start gap-3">
+                <span className="text-muted-foreground w-24 shrink-0">Hash</span>
+                <span className="text-muted-foreground font-mono break-all">{provenance.integrity_hash}</span>
+              </div>
+            )}
           </div>
-        )}
+        </details>
 
-      </section>
+      </div>
     </main>
   );
 }

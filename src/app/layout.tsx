@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import Nav from "@/components/nav";
 
 export const metadata: Metadata = {
   title: "Mighty Verse",
-  description: "Mighty Verse Reimagined",
+  description: "Mighty Verse",
 };
 
 export default function RootLayout({
@@ -13,7 +14,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <Nav />
+        {children}
+      </body>
     </html>
   );
 }

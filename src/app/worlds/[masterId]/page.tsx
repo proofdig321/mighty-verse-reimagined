@@ -1,11 +1,35 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { WorldData } from "@/app/api/worlds/[masterId]/route";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import WorldMedia from "./world-media";
 import { getServiceClient } from "@/lib/authority/validate";
 
-async function getWorld(masterId: string): Promise<WorldData | null> {
+const TYPE_LABELS: Record<string, string> = {
+  "song-world": "Song World",
+  "creative-moment": "Creative Moment",
+  "mural": "Mural",
+  "interpretation": "Interpretation",
+  "other": "Work",
+};
+
+const PROJ_LABELS: Record<string, string> = {
+  "experiential": "Experiential",
+  "distributional": "Distributional",
+  "archival": "Archival",
+  "other": "Moment",
+};
+
+type MomentRow = {
+  projection_id: string;
+  projection_type: string;
+  collectible_designated: boolean;
+};
+
+type WorldPageData = WorldData & { moments: MomentRow[] };
+
+async function getWorld(masterId: string): Promise<WorldPageData | null> {
   const svc = getServiceClient();
 
   const { data: master } = await svc
@@ -23,12 +47,16 @@ async function getWorld(masterId: string): Promise<WorldData | null> {
     .single();
   if (!cs) return null;
 
-  const { data: proj } = await svc
+  // Fetch all projections for this canonical state — used for Moments section
+  // Relationship: projection.canonical_state_id = cs.canonical_state_id (safe, explicit)
+  const { data: allProjections } = await svc
     .from("projection")
     .select("projection_id, projection_type, collectible_designated, integrity_hash")
     .eq("canonical_state_id", cs.canonical_state_id)
-    .eq("projection_type", "experiential")
-    .single();
+    .order("created_at", { ascending: true });
+
+  // The primary experiential projection for the player
+  const proj = (allProjections ?? []).find((p) => p.projection_type === "experiential") ?? null;
   if (!proj) return null;
 
   const { data: provRecords } = await svc
@@ -103,11 +131,12 @@ async function getWorld(masterId: string): Promise<WorldData | null> {
     },
     attribution: { roles: (attrEntries ?? []).map((e) => ({ role_type: e.role_type })) },
     media,
+    moments: (allProjections ?? []).map((p) => ({
+      projection_id: p.projection_id,
+      projection_type: p.projection_type,
+      collectible_designated: p.collectible_designated,
+    })),
   };
-}
-
-function label(type: string) {
-  return type.replace(/-/g, " ");
 }
 
 export default async function WorldPage({
@@ -119,70 +148,93 @@ export default async function WorldPage({
   const world = await getWorld(masterId);
   if (!world) notFound();
 
-  const { master, canonical_state, projection, provenance, attribution, media } = world;
+  const { master, canonical_state, projection, provenance, attribution, media, moments } = world;
+
+  const typeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
 
   return (
     <main className="min-h-screen bg-background">
-      {/* Media zone — full-width, media-first */}
-      <section className="relative w-full bg-black">
+
+      {/* Media — full-width, media-first */}
+      <section className="w-full bg-black">
         <WorldMedia media={media} projection={projection} master={master} canonicalState={canonical_state} />
       </section>
 
-      {/* Identity + provenance */}
-      <section className="mx-auto max-w-2xl px-4 py-8 space-y-6">
+      <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
 
         {/* World identity */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <Badge variant="outline" className="capitalize">{label(master.canonical_type)}</Badge>
-            <Badge variant="secondary" className="capitalize">{label(projection.projection_type)}</Badge>
-            <Badge variant="outline">v{canonical_state.version}</Badge>
-            <Badge className="capitalize">{canonical_state.authorisation_state}</Badge>
+            <span className="text-foreground text-lg font-semibold">{typeLabel}</span>
+            {projection.collectible_designated && (
+              <Badge variant="outline">collectible</Badge>
+            )}
           </div>
-          <p className="text-muted-foreground text-xs font-mono">{master.master_id}</p>
+          {attribution.roles.length > 0 && (
+            <p className="text-muted-foreground text-sm capitalize">
+              {attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")}
+            </p>
+          )}
         </div>
 
-        <Separator />
-
-        {/* Attribution — public roles only */}
-        {attribution.roles.length > 0 && (
-          <div className="space-y-1">
-            <p className="text-foreground text-xs font-medium uppercase tracking-wider">Created by</p>
-            <div className="flex gap-2 flex-wrap">
-              {attribution.roles.map((r) => (
-                <Badge key={r.role_type} variant="secondary" className="capitalize">
-                  {label(r.role_type)}
-                </Badge>
-              ))}
-            </div>
-          </div>
+        {/* Moments */}
+        {moments.length > 0 && (
+          <>
+            <Separator />
+            <section className="space-y-3">
+              <h2 className="text-foreground text-xs font-medium uppercase tracking-wider">Moments</h2>
+              <div className="space-y-2">
+                {moments.map((m) => (
+                  <Link
+                    key={m.projection_id}
+                    href={`/moments/${m.projection_id}`}
+                    className="flex items-center justify-between gap-3 px-3 py-3 rounded-md border border-border hover:border-foreground/20 hover:bg-muted/30 transition-colors group"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-foreground text-sm">
+                        {PROJ_LABELS[m.projection_type] ?? m.projection_type.replace(/-/g, " ")} Moment
+                      </span>
+                      {m.collectible_designated && (
+                        <Badge variant="outline" className="text-xs py-0">collectible</Badge>
+                      )}
+                    </div>
+                    <span className="text-muted-foreground text-xs group-hover:text-foreground transition-colors">→</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </>
         )}
 
+        {/* Canonical Record — secondary */}
         <Separator />
-
-        {/* Provenance — public records only */}
-        <div className="space-y-3">
-          <p className="text-foreground text-xs font-medium uppercase tracking-wider">Provenance</p>
-
-          <div className="space-y-2 text-xs">
+        <details className="group">
+          <summary className="text-muted-foreground text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors">
+            Canonical Record
+          </summary>
+          <div className="mt-4 space-y-3 text-xs">
             <div className="flex items-start gap-3">
-              <span className="text-muted-foreground w-28 shrink-0">Canonical state</span>
-              <div className="space-y-0.5">
-                <p className="text-foreground capitalize">{label(provenance.canonical_state.relationship_type)}</p>
-                <p className="text-muted-foreground font-mono break-all">{provenance.canonical_state.integrity_hash}</p>
-              </div>
+              <span className="text-muted-foreground w-24 shrink-0">Work</span>
+              <span className="text-muted-foreground font-mono break-all">{master.master_id}</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-muted-foreground w-28 shrink-0">Projection</span>
-              <div className="space-y-0.5">
-                <p className="text-foreground capitalize">{label(provenance.projection.relationship_type)}</p>
-                <p className="text-muted-foreground font-mono break-all">{provenance.projection.integrity_hash}</p>
-              </div>
+              <span className="text-muted-foreground w-24 shrink-0">State</span>
+              <span className="text-muted-foreground font-mono break-all">{canonical_state.canonical_state_id}</span>
             </div>
+            <div className="flex items-start gap-3">
+              <span className="text-muted-foreground w-24 shrink-0">Version</span>
+              <span className="text-muted-foreground">v{canonical_state.version} · {canonical_state.authorisation_state}</span>
+            </div>
+            {provenance.canonical_state.integrity_hash && (
+              <div className="flex items-start gap-3">
+                <span className="text-muted-foreground w-24 shrink-0">Hash</span>
+                <span className="text-muted-foreground font-mono break-all">{provenance.canonical_state.integrity_hash}</span>
+              </div>
+            )}
           </div>
-        </div>
+        </details>
 
-      </section>
+      </div>
     </main>
   );
 }
