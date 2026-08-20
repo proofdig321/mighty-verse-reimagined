@@ -238,7 +238,7 @@ export default function AuthorityClient() {
                   xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
                   xhr.onerror = () => reject(new Error("Upload network error"));
                   xhr.open("PUT", upload_url);
-                  xhr.setRequestHeader("Content-Type", uploadFile.type || "video/mp4");
+                  // Do NOT set Content-Type — Livepeer's pre-signed URL handles it
                   xhr.send(uploadFile);
                 });
 
