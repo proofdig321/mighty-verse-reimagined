@@ -14,6 +14,7 @@ export type MomentData = {
     canonical_state_id: string;
     version: number;
     authorisation_state: string;
+    content_refs: Record<string, unknown> | null;
   };
   master: {
     master_id: string;
@@ -48,7 +49,7 @@ export async function GET(
 
   const { data: cs } = await svc
     .from("canonical_state")
-    .select("canonical_state_id, version, authorisation_state")
+    .select("canonical_state_id, version, authorisation_state, content_refs")
     .eq("canonical_state_id", proj.canonical_state_id)
     .single();
 
@@ -85,7 +86,7 @@ export async function GET(
   // Media binding
   const { data: binding } = await svc
     .from("projection_media_binding")
-    .select("binding_type, access_level, asset_id")
+    .select("binding_type, access_level, asset_id, start_ms, end_ms")
     .eq("projection_id", projectionId)
     .eq("binding_type", "primary")
     .eq("access_level", "public")
@@ -115,6 +116,8 @@ export async function GET(
       delivery_format: variant?.delivery_format ?? "hls",
       playback_id: isPlaceholder ? null : (asset?.storage_ref ?? null),
       is_placeholder: isPlaceholder,
+      start_ms: binding.start_ms ?? null,
+      end_ms: binding.end_ms ?? null,
     };
   }
 
@@ -130,6 +133,7 @@ export async function GET(
       canonical_state_id: cs?.canonical_state_id ?? proj.canonical_state_id,
       version: cs?.version ?? 0,
       authorisation_state: cs?.authorisation_state ?? "unknown",
+      content_refs: (cs?.content_refs as Record<string, unknown> | null) ?? null,
     },
     master: {
       master_id: master?.master_id ?? proj.master_id,

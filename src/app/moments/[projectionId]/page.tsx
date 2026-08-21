@@ -34,7 +34,7 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
   if (!proj) return null;
 
   const [{ data: cs }, { data: master }, { data: prov }, { data: masterFull }] = await Promise.all([
-    svc.from("canonical_state").select("canonical_state_id, version, authorisation_state").eq("canonical_state_id", proj.canonical_state_id).single(),
+    svc.from("canonical_state").select("canonical_state_id, version, authorisation_state, content_refs").eq("canonical_state_id", proj.canonical_state_id).single(),
     svc.from("master").select("master_id, canonical_type").eq("master_id", proj.master_id).single(),
     svc.from("provenance_record").select("relationship_type, integrity_hash").eq("subject_id", projectionId).eq("subject_type", "projection").eq("public", true).single(),
     svc.from("master").select("attribution_ref").eq("master_id", proj.master_id).single(),
@@ -46,7 +46,7 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
 
   const { data: binding } = await svc
     .from("projection_media_binding")
-    .select("binding_type, access_level, asset_id")
+    .select("binding_type, access_level, asset_id, start_ms, end_ms")
     .eq("projection_id", projectionId)
     .eq("binding_type", "primary")
     .eq("access_level", "public")
@@ -70,6 +70,8 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
       delivery_format: variant?.delivery_format ?? "hls",
       playback_id: isPlaceholder ? null : (asset?.storage_ref ?? null),
       is_placeholder: isPlaceholder,
+      start_ms: binding.start_ms ?? null,
+      end_ms: binding.end_ms ?? null,
     };
   }
 
@@ -85,6 +87,7 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
       canonical_state_id: cs?.canonical_state_id ?? proj.canonical_state_id,
       version: cs?.version ?? 0,
       authorisation_state: cs?.authorisation_state ?? "unknown",
+      content_refs: (cs?.content_refs as Record<string, unknown> | null) ?? null,
     },
     master: {
       master_id: master?.master_id ?? proj.master_id,
@@ -145,7 +148,13 @@ export default async function MomentPage({
   const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
   const parentLabel = worldTitle ?? parentTypeLabel;
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
+  const isScene = master.canonical_type === "scene";
   const title = presentation?.title ?? `${projTypeLabel} Moment`;
+
+  // Scene extraction metadata from content_refs
+  const extractionBounds = isScene
+    ? (canonical_state.content_refs as { extraction_bounds?: { semantic_identity?: string; spatial_description?: string } } | null)?.extraction_bounds ?? null
+    : null;
 
   const credit = presentation?.description
     ?? m.worldDescription
@@ -174,12 +183,30 @@ export default async function MomentPage({
         masterId={master.master_id}
         canonicalStateId={canonical_state.canonical_state_id}
         title={title}
-        typeLabel={projTypeLabel}
+        typeLabel={isScene ? "Scene" : projTypeLabel}
         credit={credit}
         collectible={projection.collectible_designated}
       />
 
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+
+        {/* Scene extraction identity — only for scene canonical type */}
+        {isScene && extractionBounds && (
+          <section className="space-y-2">
+            {extractionBounds.semantic_identity && (
+              <p className="text-sm text-foreground font-medium"
+                style={{ fontFamily: "var(--font-display, inherit)" }}>
+                {extractionBounds.semantic_identity}
+              </p>
+            )}
+            {extractionBounds.spatial_description && (
+              <p className="text-xs text-muted-foreground">{extractionBounds.spatial_description}</p>
+            )}
+            <p className="text-xs text-muted-foreground italic">
+              Scene extracted from the Super Hero Ego Mural · media realization plays the Scene&apos;s portion of the Mural animation
+            </p>
+          </section>
+        )}
 
         {/* World relationship */}
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -202,11 +229,11 @@ export default async function MomentPage({
           </summary>
           <div className="mt-4 space-y-3 text-xs">
             <div className="flex items-start gap-3">
-              <span className="text-muted-foreground w-24 shrink-0">Moment</span>
+              <span className="text-muted-foreground w-24 shrink-0">{isScene ? "Scene" : "Moment"}</span>
               <span className="text-muted-foreground font-mono break-all">{projection.projection_id}</span>
             </div>
             <div className="flex items-start gap-3">
-              <span className="text-muted-foreground w-24 shrink-0">World</span>
+              <span className="text-muted-foreground w-24 shrink-0">Master</span>
               <span className="text-muted-foreground font-mono break-all">{master.master_id}</span>
             </div>
             <div className="flex items-start gap-3">

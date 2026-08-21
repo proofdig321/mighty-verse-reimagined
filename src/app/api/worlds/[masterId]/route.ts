@@ -33,6 +33,8 @@ export type WorldData = {
     // null when placeholder — never expose storage_ref or raw asset internals
     playback_id: string | null;
     is_placeholder: boolean;
+    start_ms: number | null;
+    end_ms: number | null;
   } | null;
 };
 
@@ -100,7 +102,7 @@ export async function GET(
   // Media binding — public only
   const { data: binding } = await svc
     .from("projection_media_binding")
-    .select("binding_type, access_level, asset_id")
+    .select("binding_type, access_level, asset_id, start_ms, end_ms")
     .eq("projection_id", proj.projection_id)
     .eq("binding_type", "primary")
     .eq("access_level", "public")
@@ -126,9 +128,10 @@ export async function GET(
       binding_type: binding.binding_type,
       access_level: binding.access_level,
       delivery_format: variant?.delivery_format ?? "hls",
-      // Only expose playback_id when it's a real Livepeer asset (storage_ref = Livepeer asset id)
       playback_id: isPlaceholder ? null : (asset?.storage_ref ?? null),
       is_placeholder: isPlaceholder,
+      start_ms: binding.start_ms ?? null,
+      end_ms: binding.end_ms ?? null,
     };
   }
 

@@ -32,6 +32,8 @@ export default function MediaSmokeTestPage() {
           projectionId={PROJECTION_ID}
           masterId={MASTER_ID}
           canonicalStateId={CANONICAL_STATE_ID}
+          startMs={null}
+          endMs={null}
         />
       )}
 

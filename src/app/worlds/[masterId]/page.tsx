@@ -91,7 +91,7 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
       .eq("attribution_id", master.attribution_ref)
       .eq("public", true),
     svc.from("projection_media_binding")
-      .select("binding_type, access_level, asset_id")
+      .select("binding_type, access_level, asset_id, start_ms, end_ms")
       .eq("projection_id", proj.projection_id)
       .eq("binding_type", "primary")
       .eq("access_level", "public")
@@ -116,6 +116,8 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
       delivery_format: variant?.delivery_format ?? "hls",
       playback_id: isPlaceholder ? null : (asset?.storage_ref ?? null),
       is_placeholder: isPlaceholder,
+      start_ms: binding.start_ms ?? null,
+      end_ms: binding.end_ms ?? null,
     };
   }
 

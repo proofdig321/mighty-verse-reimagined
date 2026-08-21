@@ -8,6 +8,8 @@ export type ProjectionMedia = {
   delivery_format: string;
   playback_id: string | null;
   is_placeholder: boolean;
+  start_ms: number | null;
+  end_ms: number | null;
 };
 
 type Props = {
@@ -37,6 +39,8 @@ export default function ProjectionMediaPlayer({ media, projectionId, masterId, c
       projectionId={projectionId}
       masterId={masterId}
       canonicalStateId={canonicalStateId}
+      startMs={media.start_ms}
+      endMs={media.end_ms}
     />
   );
 }
