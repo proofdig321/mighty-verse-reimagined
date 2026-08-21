@@ -858,3 +858,100 @@ For each candidate, the following must be established before any Scene record is
 it expresses, if any. Do not invent extraction bounds from repository data.
 
 `OPEN QUESTION` **mural_moment_context schema** — Deferred until real Scene data exists.
+
+---
+
+## Build 13 — Evidence Review & Ontology Refinement (2026-08-21, DISCOVERY CONTINUES)
+
+`CANONICAL` **Scene definition — refined** (2026-08-21, founder-established)
+
+> A Scene is an independently addressable canonical visual/spatial unit of a Mural,
+> designated by the canonical authority.
+
+A Scene is not required to be a geometric region. It may be a **canonical visual entity
+with spatial manifestation** — a semantically meaningful unit that also has a location
+within the Mural's visual surface.
+
+`CANONICAL` **Scene ≠ Creative Moment — now evidence-supported** (2026-08-21, founder-established)
+
+External evidence (Golden Shovel official article, 2025-10-30, goldenshovel.co.za) confirms
+the Super Hero Ego animation contains four distinct animated warrior identities:
+
+- Golden Shovel — the powerhouse
+- Mothipa — the dark knight
+- ProVerb — the hand-to-hand specialist
+- Reason — the sword master
+
+The animation contains four visual character identities. The repository currently has three
+Creative Moments (ProVerb, Reason, Mothipa). Golden Shovel's own visual manifestation is a
+candidate Scene with no corresponding Creative Moment. This confirms that Scene and Creative
+Moment are not one-to-one and that Scenes are not required to correspond to Creative Moments.
+
+```
+Candidate Scene
+    ├── may express Creative Moment
+    └── may have no Creative Moment counterpart
+```
+
+`CANONICAL` **Creative Moment vs Scene — locked definitions** (2026-08-21, founder-established)
+
+| Concept | Meaning |
+|---|---|
+| Creative Moment | Contributor-centered canonical creative unit belonging to the World |
+| Scene | Visual/spatial canonical unit of the Mural, designated by canonical authority |
+| Relationship | A Scene may express, depict, or contextualize one or more Creative Moments — but does not require one |
+| Media | A video/timecode is a realization of a Scene, not the Scene itself |
+| Geometry | Spatial bounds describe the Scene's manifestation within a specific Mural canonical state |
+| Semantics | A Scene should have a meaningful semantic identity in addition to spatial bounds |
+| Tokenization | A Scene may become tokenizable via its own canonical-state → projection → collectible chain |
+
+`CANONICAL` **2.5D principle — confirmed** (2026-08-21, founder-established)
+
+The source statement "2.5D is the idea of creative moments becoming spatial objects" now maps
+cleanly to the architecture:
+
+```
+World
+  ├── Creative Moment: ProVerb  (creative/contributor identity)
+  └── Mural
+        └── Scene: ProVerb warrior manifestation  (visual/spatial canonical identity)
+                   └── expresses Creative Moment: ProVerb  (via future mural_moment_context)
+```
+
+`CANONICAL` **Animation production context** (2026-08-21, founder-established)
+
+External evidence identifies the animation production context:
+
+- Animation: The'Main Man (founder, World Wide Studios)
+- Golden Shovel commissioned the visual realization
+
+This does not change `bda79051.rights_holder_ref = 866390ff` (Golden Shovel controls the
+animation/visual realization). It provides production provenance that can eventually be
+recorded in a `media_realization` record without conflating animator attribution with
+rights control. Build 10's rights architecture correctly anticipated this distinction.
+
+`CANONICAL` **First Scene candidates — expanded** (2026-08-21, founder-established)
+
+The candidate set is not limited to the three existing Creative Moments. Candidates include:
+
+- Golden Shovel warrior manifestation
+- Mothipa warrior manifestation (dark knight / gargoyle)
+- ProVerb warrior manifestation (hand-to-hand specialist)
+- Reason warrior manifestation (sword master)
+- City / environment elements
+- Alien threat / antagonist elements
+- Other recurring visual motifs
+
+These are candidates only. None are canonical records. Exact Scene boundaries require
+visual inspection of the actual animation.
+
+`OPEN QUESTION` **Visual ontology audit required** — Before any Scene record is created,
+the founder must examine the actual Super Hero Ego animation and establish:
+(1) what visually constitutes a distinct canonical unit;
+(2) which units recur and whether recurrence means one Scene or multiple;
+(3) which units are characters, environments, or symbolic elements;
+(4) which correspond to existing Creative Moments;
+(5) what spatial bounds define each candidate;
+(6) what should remain part of the Mural rather than becoming a Scene.
+
+**Build 13 status: DISCOVERY CONTINUES. No implementation. No Scene records.**
