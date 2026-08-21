@@ -27,6 +27,7 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
     .from("master")
     .select("master_id, canonical_type, current_state_id, attribution_ref")
     .not("current_state_id", "is", null)
+    .is("parent_master_id", null)
     .order("created_at", { ascending: false });
 
   if (!masters?.length) return [];

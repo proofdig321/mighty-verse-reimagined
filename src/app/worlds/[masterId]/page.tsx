@@ -31,8 +31,14 @@ type MomentRow = {
   has_media: boolean;
 };
 
+type MuralRow = {
+  master_id: string;
+  title: string | null;
+};
+
 type WorldPageData = WorldData & {
   moments: MomentRow[];
+  murals: MuralRow[];
   presentation: { title: string; description: string | null } | null;
 };
 
@@ -162,6 +168,24 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
       title: (projPresentations ?? []).find((pp) => pp.projection_id === p.projection_id)?.title ?? null,
       has_media: projHasMedia.get(p.projection_id) ?? false,
     })),
+    murals: await (async () => {
+      const { data: muralMasters } = await svc
+        .from("master")
+        .select("master_id")
+        .eq("parent_master_id", masterId)
+        .eq("canonical_type", "mural")
+        .not("current_state_id", "is", null);
+      if (!muralMasters?.length) return [];
+      const muralIds = muralMasters.map((m) => m.master_id);
+      const { data: muralPresentations } = await svc
+        .from("work_presentation")
+        .select("master_id, title")
+        .in("master_id", muralIds);
+      return muralMasters.map((m) => ({
+        master_id: m.master_id,
+        title: (muralPresentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
+      }));
+    })(),
     presentation: presentationRow ?? null,
   };
 }
@@ -197,7 +221,7 @@ export default async function WorldPage({
   const world = await getWorld(masterId);
   if (!world) notFound();
 
-  const { master, canonical_state, projection, provenance, attribution, media, moments, presentation } = world;
+  const { master, canonical_state, projection, provenance, attribution, media, moments, murals, presentation } = world;
 
   const typeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
   const title = presentation?.title ?? typeLabel;
@@ -223,6 +247,23 @@ export default async function WorldPage({
       />
 
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+
+        {/* Murals — only rendered when authorised Mural records exist */}
+        {murals.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Mural</h2>
+            <div className="space-y-2">
+              {murals.map((m) => (
+                <div key={m.master_id} className="px-5 py-4 rounded-lg border border-border bg-card">
+                  <p className="text-sm font-medium text-foreground"
+                    style={{ fontFamily: "var(--font-display, inherit)" }}>
+                    {m.title ?? "Mural"}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Moments */}
         {moments.length > 0 && (

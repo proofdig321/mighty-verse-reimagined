@@ -7,16 +7,33 @@ export type OperationResult<T> = { data: T } | { error: string };
 // ---------------------------------------------------------------------------
 export async function registerMaster(
   participantId: string,
-  canonicalType: "song-world" | "creative-moment" | "mural" | "interpretation" | "other"
+  canonicalType: "song-world" | "creative-moment" | "mural" | "interpretation" | "other",
+  parentMasterId?: string
 ): Promise<OperationResult<{ master_id: string; attribution_id: string }>> {
   const auth = await validateAuthority(participantId, "create-canonical-state", null);
   if ("error" in auth) return { error: auth.error };
 
   const supabase = getServiceClient();
 
+  const insertPayload: Record<string, unknown> = { canonical_type: canonicalType, created_by: participantId };
+  if (parentMasterId) {
+    if (canonicalType === "mural") {
+      const { data: parentMaster } = await supabase
+        .from("master")
+        .select("canonical_type")
+        .eq("master_id", parentMasterId)
+        .single();
+      if (!parentMaster) return { error: `Parent master not found: ${parentMasterId}` };
+      if (parentMaster.canonical_type !== "song-world") {
+        return { error: `A Mural parent must be a song-world (got: ${parentMaster.canonical_type})` };
+      }
+    }
+    insertPayload.parent_master_id = parentMasterId;
+  }
+
   const { data: master, error: mErr } = await supabase
     .from("master")
-    .insert({ canonical_type: canonicalType, created_by: participantId })
+    .insert(insertPayload)
     .select("master_id")
     .single();
   if (mErr || !master) return { error: `Failed to create master: ${mErr?.message}` };
