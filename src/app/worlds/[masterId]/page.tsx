@@ -16,19 +16,9 @@ const TYPE_LABELS: Record<string, string> = {
   "other": "Work",
 };
 
-const PROJ_LABELS: Record<string, string> = {
-  "experiential": "Experiential",
-  "distributional": "Distributional",
-  "archival": "Archival",
-  "other": "Moment",
-};
-
 type MomentRow = {
-  projection_id: string;
-  projection_type: string;
-  collectible_designated: boolean;
+  master_id: string;
   title: string | null;
-  has_media: boolean;
 };
 
 type MuralRow = {
@@ -69,15 +59,11 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
   const proj = (allProjections ?? []).find((p) => p.projection_type === "experiential") ?? null;
   if (!proj) return null;
 
-  const projectionIds = (allProjections ?? []).map((p) => p.projection_id);
-
   const [
     { data: provRecords },
     { data: attrEntries },
     { data: binding },
     { data: presentationRow },
-    { data: projPresentations },
-    { data: mediaBindings },
   ] = await Promise.all([
     svc.from("provenance_record")
       .select("subject_id, subject_type, relationship_type, integrity_hash")
@@ -97,34 +83,10 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
       .select("title, description")
       .eq("master_id", masterId)
       .maybeSingle(),
-    projectionIds.length
-      ? svc.from("projection_presentation").select("projection_id, title").in("projection_id", projectionIds)
-      : Promise.resolve({ data: [] }),
-    projectionIds.length
-      ? svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", projectionIds).eq("access_level", "public")
-      : Promise.resolve({ data: [] }),
   ]);
 
   const provCS = provRecords?.find((p) => p.subject_type === "canonical-state");
   const provProj = provRecords?.find((p) => p.subject_type === "projection");
-
-  const boundAssetIds = (mediaBindings ?? []).map((b) => b.asset_id);
-  let mediaSet = new Set<string>();
-  if (boundAssetIds.length) {
-    const { data: assets } = await svc
-      .from("media_asset")
-      .select("asset_id, storage_ref")
-      .in("asset_id", boundAssetIds);
-    mediaSet = new Set(
-      (assets ?? [])
-        .filter((a) => !a.storage_ref?.startsWith("seed:placeholder:"))
-        .map((a) => a.asset_id)
-    );
-  }
-  const projHasMedia = new Map<string, boolean>();
-  for (const b of mediaBindings ?? []) {
-    projHasMedia.set(b.projection_id, mediaSet.has(b.asset_id));
-  }
 
   let media: WorldData["media"] = null;
   if (binding) {
@@ -161,13 +123,22 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
     },
     attribution: { roles: (attrEntries ?? []).map((e) => ({ role_type: e.role_type })) },
     media,
-    moments: (allProjections ?? []).map((p) => ({
-      projection_id: p.projection_id,
-      projection_type: p.projection_type,
-      collectible_designated: p.collectible_designated,
-      title: (projPresentations ?? []).find((pp) => pp.projection_id === p.projection_id)?.title ?? null,
-      has_media: projHasMedia.get(p.projection_id) ?? false,
-    })),
+    moments: await (async () => {
+      const { data: momentMasters } = await svc
+        .from("master")
+        .select("master_id")
+        .eq("parent_master_id", masterId)
+        .eq("canonical_type", "creative-moment")
+        .not("current_state_id", "is", null);
+      if (!momentMasters?.length) return [];
+      const momentIds = momentMasters.map((m) => m.master_id);
+      const { data: momentPresentations } = await svc
+        .from("work_presentation").select("master_id, title").in("master_id", momentIds);
+      return momentMasters.map((m) => ({
+        master_id: m.master_id,
+        title: (momentPresentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
+      }));
+    })(),
     murals: await (async () => {
       const { data: muralMasters } = await svc
         .from("master")
@@ -265,19 +236,18 @@ export default async function WorldPage({
           </section>
         )}
 
-        {/* Moments */}
+        {/* Moments — canonical Creative Moment masters belonging to this World */}
         {moments.length > 0 && (
           <section className="space-y-3">
             <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Moments</h2>
             <div className="space-y-2">
               {moments.map((m) => (
                 <MomentCard
-                  key={m.projection_id}
-                  projectionId={m.projection_id}
+                  key={m.master_id}
                   title={m.title}
-                  typeLabel={PROJ_LABELS[m.projection_type] ?? m.projection_type.replace(/-/g, " ")}
-                  hasMedia={m.has_media}
-                  collectible={m.collectible_designated}
+                  typeLabel="Creative Moment"
+                  hasMedia={false}
+                  collectible={false}
                 />
               ))}
             </div>
