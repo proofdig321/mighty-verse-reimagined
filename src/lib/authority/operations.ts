@@ -297,6 +297,13 @@ export async function attachMediaBinding(
 
 // ---------------------------------------------------------------------------
 // 5. Designate a Collectible
+//
+// Rights-safety invariant (Build 10, 2026-08-21):
+//   Unknown rights (rights_holder_ref = null) are a rights-risk state and block
+//   collectible designation. This is a minimum safety floor — it does not
+//   automatically authorise third-party-owned assets for collectible use.
+//   Establishing rights_holder_ref is necessary but not sufficient for collectible
+//   eligibility; usage authorisation is a separate determination.
 // ---------------------------------------------------------------------------
 export async function designateCollectible(
   participantId: string,
@@ -307,6 +314,19 @@ export async function designateCollectible(
   if ("error" in auth) return { error: auth.error };
 
   const supabase = getServiceClient();
+
+  // Rights-safety check: all bound media assets must have a known rights_holder_ref
+  const { data: bindings } = await supabase
+    .from("projection_media_binding")
+    .select("asset_id, media_asset(rights_holder_ref)")
+    .eq("projection_id", projectionId);
+
+  for (const b of bindings ?? []) {
+    const asset = (b.media_asset as unknown) as { rights_holder_ref: string | null } | null;
+    if (!asset?.rights_holder_ref) {
+      return { error: `Collectible designation blocked: media asset ${b.asset_id} has unknown rights holder. Establish rights before designating as collectible.` };
+    }
+  }
 
   const { error } = await supabase
     .from("projection")

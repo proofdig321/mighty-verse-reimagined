@@ -644,3 +644,70 @@ the World projection and the Mural projection. Before `rights_holder_ref` is ass
 this asset, the founder must confirm who actually controls that recording.
 
 Full discovery report: `.mighty-verse/build10-discovery.md`
+
+---
+
+## Build 10 — Media Realization & Rights Architecture (2026-08-21, CLOSED)
+
+`CANONICAL` **Founder fact: bda79051 rights** (2026-08-21, founder-established)
+
+The animation/visual realization represented by `bda79051` (Livepeer `5a112ddzzuvlq3a5`, ~4:15,
+the Super Hero Ego animated video) is owned by Golden Shovel.
+`rights_holder_ref = 866390ff`, `rights_basis = 'Golden Shovel — animation/visual realization'`.
+
+This establishes ownership of the animation/visual realization only. It does not establish
+ownership of the underlying audio recording/master, which is a separate rights object not yet
+formally recorded. Livepeer is delivery infrastructure only — not evidence of rights ownership.
+
+`CANONICAL` **Unknown rights ≠ authorised rights** (2026-08-21, founder-established)
+
+`media_asset.rights_holder_ref = NULL` means the rights holder has not been recorded.
+It must never be interpreted as canonical authority ownership, Mighty Verse ownership,
+or any other implicit authorisation. Unknown rights are a rights-risk state that blocks
+collectible designation.
+
+`CANONICAL` **media_realization is not a canonical Master** (2026-08-21, founder-established)
+
+A `media_realization` record represents a real-world production/performance/broadcast context.
+It has no `canonical_state`, no `provenance_record` in the canonical lineage, and no
+`integrity_hash` in the canonical sense. It sits outside the canonical domain.
+
+`CANONICAL` **Collectible designation rights-safety invariant** (2026-08-21, founder-established)
+
+`designateCollectible()` now enforces: all media assets bound to a projection must have a
+known `rights_holder_ref` before collectible designation is permitted. This check is at the
+application layer in `src/lib/authority/operations.ts`.
+
+`CANONICAL` **Build 10 schema changes** (2026-08-21)
+
+| Change | Detail |
+|---|---|
+| `media_asset.rights_holder_ref` | Nullable FK → participant. NULL = unknown (rights-risk). |
+| `media_asset.rights_basis` | Nullable text. Describes the basis of rights. |
+| `media_realization` | New table. realization_id, master_id, realization_type, rights_holder_ref, rights_basis, production_notes, created_at, created_by. |
+| `projection_media_binding.realization_id` | Nullable FK → media_realization. NULL = no realization context. |
+
+`CANONICAL` **bda79051 annotation** (2026-08-21)
+
+`media_asset` row `bda79051` updated:
+- `rights_holder_ref = 866390ff` (Golden Shovel)
+- `rights_basis = 'Golden Shovel — animation/visual realization'`
+
+This records ownership of the animation/visual realization specifically.
+Audio recording/master rights are a separate object — not established by this fact.
+No other existing rows modified. World/Mural projections and canonical states unchanged.
+
+`CANONICAL` **Super Hero Ego realization model** (2026-08-21, founder-established)
+
+Super Hero Ego may have multiple independent media realizations:
+- existing ~4:15 animated video (`bda79051`) — Golden Shovel, animation/visual realization
+- audio recording/master — rights holder not yet formally recorded
+- live performance recording — rights holder TBD
+- SABC 1 broadcast/performance — rights holder TBD
+- future visualizations — rights holder TBD
+
+These are not collapsed into one generic asset. Each realization has its own rights context.
+The canonical World, Mural, and future Scenes remain independent of any particular realization's rights.
+
+**Migration:** `supabase/migrations/20260821020000_media_realization.sql`  
+**Commit:** TBD (pending review)
