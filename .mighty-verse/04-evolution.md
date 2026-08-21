@@ -575,3 +575,72 @@ This audit must be conducted by the founder against the actual Super Hero Ego ma
 `CANONICAL` **Mural does not own any Creative Moments** (2026-08-21, founder-established)
 
 The Super Hero Ego Mural currently has no Creative Moment relationships. This is correct — not missing data. The expressive composition graph between Mural and Moments is deferred until the Creative Moment ontology audit is complete.
+
+---
+
+## Build 10 — Media Realization, Performance & Rights Architecture Discovery (2026-08-21, OPEN)
+
+`CANONICAL` **Media realization is not a projection** (2026-08-21, founder-established)
+
+A media realization (animated video, live performance, broadcast recording) is a production
+artifact that depicts a canonical work. It is not a canonical state. It is not a projection.
+A projection is authorised by the canonical authority. A realization is produced by whoever
+produced it, and its rights belong to that party — not automatically to the canonical authority.
+
+`CANONICAL` **Canonical work authority ≠ recording rights** (2026-08-21, founder-established)
+
+Ownership/authority over the canonical work (master, canonical_state) does not imply
+ownership or control of every media realization that depicts it. These are distinct domains
+and must not be conflated in the schema, in application logic, or in collectible issuance.
+
+`CANONICAL` **Tokenized Scene must not inherit media rights** (2026-08-21, founder-established)
+
+A collectible issued against a tokenized Scene derives its rights from the canonical
+projection of that Scene — not from any particular video or performance in which the Scene
+appears. The collectible's provenance chain must be traceable to the canonical work without
+passing through any independently-owned media asset.
+
+`CANONICAL` **Build 10 architectural gaps identified** (2026-08-21, founder-established)
+
+Six gaps confirmed by discovery:
+
+- Gap A: `media_asset` has no rights_holder_ref — cannot assert who controls a recording
+- Gap B: No production provenance for media files
+- Gap C: No semantic distinction between canonical-authority-controlled and third-party-owned assets bound to projections
+- Gap D: No entity for a performance/realization as a distinct concept
+- Gap E: No licence/permission record for asset use
+- Gap F: No mechanism to enforce that a collectible-designated projection uses only canonical-authority-controlled media
+
+`CANONICAL` **Build 10 minimum implementation** (2026-08-21, founder-established)
+
+1. Add `rights_holder_ref` (nullable participant FK) and `rights_basis` (nullable text) to `media_asset`
+2. Create `media_realization` table (realization_id, master_id, realization_type, rights_holder_ref, rights_basis, production_notes, created_at, created_by)
+3. Add `realization_id` (nullable FK) to `projection_media_binding`
+
+`CANONICAL` **Null rights_holder_ref means unknown — not canonical authority** (2026-08-21, founder-established)
+
+Null on `media_asset.rights_holder_ref` means the rights holder has not been recorded.
+It must never be treated as implicit canonical authority ownership. Application logic must
+treat null as unknown.
+
+`CANONICAL` **Required sequence before tokenization** (2026-08-21, founder-established)
+
+```
+Build 10 (media_realization + rights_holder_ref)
+  → Founder decision: who controls the existing Super Hero Ego recording (bda79051)?
+  → Creative Moment ontology audit
+  → mural_moment_context schema design
+  → Scene extraction model
+  → Tokenization
+```
+
+Do not begin Scene extraction or tokenization until Build 10 is implemented and the
+Creative Moment ontology audit is complete.
+
+`OPEN QUESTION` **Who controls the existing Super Hero Ego recording (bda79051)?**
+
+The Livepeer asset `5a112ddzzuvlq3a5` / media_asset `bda79051` is currently bound to both
+the World projection and the Mural projection. Before `rights_holder_ref` is assigned to
+this asset, the founder must confirm who actually controls that recording.
+
+Full discovery report: `.mighty-verse/build10-discovery.md`
