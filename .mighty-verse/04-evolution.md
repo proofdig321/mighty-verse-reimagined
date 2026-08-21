@@ -780,3 +780,81 @@ Mural material before any Scene record is created.
 
 **Migration:** `supabase/migrations/20260821030000_scene_canonical_type.sql`
 **Commit:** TBD (pending review)
+
+---
+
+## Build 13 — Scene Ontology Decision (2026-08-21, DISCOVERY ONLY)
+
+`CANONICAL` **Scene definition — Definition 2 adopted** (2026-08-21, founder-established)
+
+**Scene = an independently addressable canonical visual/spatial unit of a Mural.**
+
+The Build 09 vocabulary entry (`Scene = contextual visual appearance of a Creative Moment
+within a particular Mural`) is superseded by this decision. Scene is a canonical entity,
+not a relationship record.
+
+`CANONICAL` **Product ontology** (2026-08-21, founder-established)
+
+```
+World
+  ├── Creative Moment  (who / creative contribution)
+  │     ├── Proverb
+  │     ├── Reason
+  │     └── Mothipa
+  └── Mural
+        └── Scene  (where / visual-spatial canonical unit)
+```
+
+- Creative Moment = who / creative contribution
+- Scene = where / visual-spatial canonical unit
+- Mural = the complete visual expression
+- World = the overarching canonical work
+
+A Creative Moment can appear within a Scene but does not become the Scene.
+
+`CANONICAL` **mural_moment_context is a relationship, not the Scene** (2026-08-21, founder-established)
+
+`mural_moment_context`, when eventually introduced, represents:
+
+> "This Creative Moment is expressed/represented within this particular Scene."
+
+It is a relationship between Scene and Creative Moment. It is not the Scene itself.
+It must be designed after real Scene data exists — not speculatively.
+
+`CANONICAL` **start_ms/end_ms are media-realization context** (2026-08-21, founder-established)
+
+The Build 09 `start_ms`/`end_ms` interpretation is superseded. Temporal bounds belong to
+the media realization/deployment context, not to canonical Scene identity.
+
+```
+Scene ≠ video clip
+Scene ≠ time segment
+Scene ≠ UI crop
+```
+
+`CANONICAL` **Scene identity is semantic + spatial** (2026-08-21, founder-established)
+
+Scene identity should be semantic + spatial where established. Example:
+
+```
+semantic: "Proverb's visual presence"
+spatial:  { ...bounds within Mural... }
+```
+
+The semantic identity must not be reduced to coordinates. Coordinates describe where;
+the semantic identity describes what canonical unit was designated.
+
+`CANONICAL` **No Scene records created** (2026-08-21)
+
+Build 13 is discovery and product decision only. Zero Scene master records, canonical
+states, provenance records, projections, media bindings, collectibles, or tokens were
+created. No schema changes were made.
+
+`OPEN QUESTION` **First Scene identification** — The actual Super Hero Ego animation must
+be examined by the founder/product authority to identify and define the first Scene(s).
+Candidate set: the three artist-associated visual presences (Proverb, Reason, Mothipa).
+For each candidate, the following must be established before any Scene record is created:
+(1) semantic identity, (2) visual bounds within the Mural, (3) which Creative Moment(s)
+it expresses, if any. Do not invent extraction bounds from repository data.
+
+`OPEN QUESTION` **mural_moment_context schema** — Deferred until real Scene data exists.
