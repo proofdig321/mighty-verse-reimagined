@@ -27,6 +27,8 @@ export type MomentData = {
     roles: { role_type: string }[];
   };
   media: ProjectionMedia | null;
+  presentation: { title: string; description: string | null } | null;
+  worldTitle: string | null;
 };
 
 export async function GET(
@@ -89,6 +91,11 @@ export async function GET(
     .eq("access_level", "public")
     .single();
 
+  const [{ data: projPresentation }, { data: worldPresentation }] = await Promise.all([
+    svc.from("projection_presentation").select("title, description").eq("projection_id", projectionId).maybeSingle(),
+    svc.from("work_presentation").select("title").eq("master_id", proj.master_id).maybeSingle(),
+  ]);
+
   let media: ProjectionMedia | null = null;
   if (binding) {
     const { data: asset } = await svc
@@ -136,6 +143,8 @@ export async function GET(
       roles: (attrEntries ?? []).map((e) => ({ role_type: e.role_type })),
     },
     media,
+    presentation: projPresentation ?? null,
+    worldTitle: worldPresentation?.title ?? null,
   };
 
   return NextResponse.json(moment);

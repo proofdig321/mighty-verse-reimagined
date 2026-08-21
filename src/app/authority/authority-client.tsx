@@ -12,6 +12,8 @@ type AuthorityData = {
   states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
   projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
   bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string }[];
+  presentations: { master_id: string; title: string; description: string | null }[];
+  projectionPresentations: { projection_id: string; title: string; description: string | null }[];
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -66,16 +68,21 @@ type WorkCardProps = {
   state: AuthorityData["states"][number] | undefined;
   projection: AuthorityData["projections"][number] | undefined;
   binding: AuthorityData["bindings"][number] | undefined;
+  presentation: AuthorityData["presentations"][number] | undefined;
+  projectionPresentation: AuthorityData["projectionPresentations"][number] | undefined;
   onAuthorise: (masterId: string) => Promise<void>;
   onCreateExperience: (stateId: string, masterId: string, type: string) => Promise<void>;
   onAttachVideo: (projId: string, masterId: string) => void;
   onDesignate: (projId: string, masterId: string) => Promise<void>;
+  onEditPresentation: (masterId: string) => void;
+  onEditProjectionPresentation: (projId: string, masterId: string) => void;
   busy: boolean;
 };
 
 function WorkCard({
-  master, state, projection, binding,
+  master, state, projection, binding, presentation, projectionPresentation,
   onAuthorise, onCreateExperience, onAttachVideo, onDesignate,
+  onEditPresentation, onEditProjectionPresentation,
   busy,
 }: WorkCardProps) {
   const [expType, setExpType] = useState("experiential");
@@ -91,8 +98,24 @@ function WorkCard({
       <CardContent className="pt-4 space-y-3">
         {/* Header */}
         <div className="flex items-center justify-between">
-          <span className="text-foreground text-sm font-medium">{typeLabel}</span>
-          <span className="text-muted-foreground font-mono text-xs cursor-default" title={master.master_id}>{shortId(master.master_id)}…</span>
+          <div className="space-y-0.5 min-w-0">
+            <span className="text-foreground text-sm font-medium block truncate">
+              {presentation?.title ?? typeLabel}
+            </span>
+            {presentation?.title && (
+              <span className="text-muted-foreground text-xs">{typeLabel}</span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => onEditPresentation(master.master_id)}
+              className="text-muted-foreground text-xs hover:text-foreground transition-colors"
+            >
+              {presentation ? "Edit title" : "Set title"}
+            </button>
+            <span className="text-muted-foreground font-mono text-xs cursor-default" title={master.master_id}>{shortId(master.master_id)}…</span>
+          </div>
         </div>
 
         {/* Journey steps */}
@@ -146,6 +169,16 @@ function WorkCard({
               Create Experience
             </Button>
           </div>
+        )}
+
+        {hasProjection && (
+          <button
+            type="button"
+            onClick={() => onEditProjectionPresentation(projection!.projection_id, master.master_id)}
+            className="text-muted-foreground text-xs hover:text-foreground transition-colors"
+          >
+            {projectionPresentation ? "Edit moment title" : "Set moment title"}
+          </button>
         )}
 
         {hasProjection && !hasMedia && (
@@ -319,6 +352,130 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
   );
 }
 
+// ─── Presentation panel ───────────────────────────────────────────────────────
+
+type PresentationPanelProps = {
+  masterId: string;
+  existing: { title: string; description: string | null } | undefined;
+  onDone: () => void;
+  onCancel: () => void;
+};
+
+function PresentationPanel({ masterId, existing, onDone, onCancel }: PresentationPanelProps) {
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-foreground text-sm font-medium">Presentation</span>
+          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
+        </div>
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="Title"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            disabled={busy}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            disabled={busy}
+            rows={3}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none"
+          />
+        </div>
+        {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
+        <Button
+          size="sm"
+          disabled={busy || !title.trim()}
+          onClick={async () => {
+            setBusy(true); setMsg(null);
+            const res = await api("/api/authority/presentation", { master_id: masterId, title, description: description || null });
+            setBusy(false);
+            if (res.error) { setMsg(`Error: ${res.error}`); return; }
+            onDone();
+          }}
+        >
+          Save
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Projection presentation panel ───────────────────────────────────────────
+
+type ProjectionPresentationPanelProps = {
+  projectionId: string;
+  masterId: string;
+  existing: { title: string; description: string | null } | undefined;
+  onDone: () => void;
+  onCancel: () => void;
+};
+
+function ProjectionPresentationPanel({ projectionId, masterId, existing, onDone, onCancel }: ProjectionPresentationPanelProps) {
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [description, setDescription] = useState(existing?.description ?? "");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-foreground text-sm font-medium">Moment Presentation</span>
+          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
+        </div>
+        <div className="space-y-2">
+          <input
+            type="text"
+            placeholder="Title"
+            value={title}
+            onChange={e => setTitle(e.target.value)}
+            disabled={busy}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+          />
+          <textarea
+            placeholder="Description (optional)"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+            disabled={busy}
+            rows={3}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none"
+          />
+        </div>
+        {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
+        <Button
+          size="sm"
+          disabled={busy || !title.trim()}
+          onClick={async () => {
+            setBusy(true); setMsg(null);
+            const res = await api("/api/authority/projection-presentation", {
+              projection_id: projectionId,
+              master_id: masterId,
+              title,
+              description: description || null,
+            });
+            setBusy(false);
+            if (res.error) { setMsg(`Error: ${res.error}`); return; }
+            onDone();
+          }}
+        >
+          Save
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AuthorityClient() {
@@ -334,6 +491,13 @@ export default function AuthorityClient() {
   // Attach Video panel — which projection is currently open
   const [attachingProjId, setAttachingProjId] = useState<string | null>(null);
   const [attachingMasterId, setAttachingMasterId] = useState<string | null>(null);
+
+  // Presentation panel — which master is currently open
+  const [presentingMasterId, setPresentingMasterId] = useState<string | null>(null);
+
+  // Projection presentation panel
+  const [presentingProjId, setPresentingProjId] = useState<string | null>(null);
+  const [presentingProjMasterId, setPresentingProjMasterId] = useState<string | null>(null);
 
   async function load() {
     const d = await api("/api/authority");
@@ -355,9 +519,8 @@ export default function AuthorityClient() {
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
 
-  const { authority, masters, states, projections, bindings } = data;
+  const { authority, masters, states, projections, bindings, presentations, projectionPresentations } = data;
 
-  // Derive per-master relationships
   function getState(masterId: string) {
     return states.find(s => s.master_id === masterId);
   }
@@ -366,6 +529,12 @@ export default function AuthorityClient() {
   }
   function getBinding(projectionId: string) {
     return bindings.find(b => b.projection_id === projectionId);
+  }
+  function getPresentation(masterId: string) {
+    return presentations.find(p => p.master_id === masterId);
+  }
+  function getProjectionPresentation(projectionId: string) {
+    return projectionPresentations.find(p => p.projection_id === projectionId);
   }
 
   return (
@@ -427,23 +596,45 @@ export default function AuthorityClient() {
         const state = getState(master.master_id);
         const projection = getProjection(master.master_id);
         const binding = projection ? getBinding(projection.projection_id) : undefined;
+        const presentation = getPresentation(master.master_id);
+        const projectionPresentation = projection ? getProjectionPresentation(projection.projection_id) : undefined;
 
-        // If this work's projection is currently in the attach video flow, show the panel instead
+        // Projection presentation panel open for this projection
+        if (presentingProjId === projection?.projection_id) {
+          return (
+            <ProjectionPresentationPanel
+              key={master.master_id}
+              projectionId={presentingProjId}
+              masterId={presentingProjMasterId!}
+              existing={projectionPresentation}
+              onDone={async () => { setPresentingProjId(null); setPresentingProjMasterId(null); await load(); }}
+              onCancel={() => { setPresentingProjId(null); setPresentingProjMasterId(null); }}
+            />
+          );
+        }
+
+        // Presentation panel open for this master
+        if (presentingMasterId === master.master_id) {
+          return (
+            <PresentationPanel
+              key={master.master_id}
+              masterId={master.master_id}
+              existing={presentation}
+              onDone={async () => { setPresentingMasterId(null); await load(); }}
+              onCancel={() => setPresentingMasterId(null)}
+            />
+          );
+        }
+
+        // Attach video panel
         if (attachingProjId === projection?.projection_id) {
           return (
             <AttachVideoPanel
               key={master.master_id}
               projId={attachingProjId}
               masterId={attachingMasterId!}
-              onDone={async () => {
-                setAttachingProjId(null);
-                setAttachingMasterId(null);
-                await load();
-              }}
-              onCancel={() => {
-                setAttachingProjId(null);
-                setAttachingMasterId(null);
-              }}
+              onDone={async () => { setAttachingProjId(null); setAttachingMasterId(null); await load(); }}
+              onCancel={() => { setAttachingProjId(null); setAttachingMasterId(null); }}
             />
           );
         }
@@ -455,18 +646,19 @@ export default function AuthorityClient() {
             state={state}
             projection={projection}
             binding={binding}
+            presentation={presentation}
+            projectionPresentation={projectionPresentation}
             busy={busy}
             onAuthorise={masterId => act("Authorise Work", "/api/authority/states", { master_id: masterId })}
             onCreateExperience={(stateId, masterId, type) =>
               act("Create Experience", "/api/authority/projections", { canonical_state_id: stateId, master_id: masterId, projection_type: type })
             }
-            onAttachVideo={(projId, masterId) => {
-              setAttachingProjId(projId);
-              setAttachingMasterId(masterId);
-            }}
+            onAttachVideo={(projId, masterId) => { setAttachingProjId(projId); setAttachingMasterId(masterId); }}
             onDesignate={(projId, masterId) =>
               act("Designate Collectible", "/api/authority/collectibles", { projection_id: projId, master_id: masterId })
             }
+            onEditPresentation={masterId => setPresentingMasterId(masterId)}
+            onEditProjectionPresentation={(projId, masterId) => { setPresentingProjId(projId); setPresentingProjMasterId(masterId); }}
           />
         );
       })}

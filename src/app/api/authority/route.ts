@@ -51,12 +51,26 @@ export async function GET() {
 
   const projectionIds = (projections ?? []).map((p) => p.projection_id);
 
-  const { data: bindings } = projectionIds.length
-    ? await svc
-        .from("projection_media_binding")
-        .select("binding_id, projection_id, binding_type, access_level, asset_id")
-        .in("projection_id", projectionIds)
-    : { data: [] };
+  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }] = await Promise.all([
+    projectionIds.length
+      ? svc
+          .from("projection_media_binding")
+          .select("binding_id, projection_id, binding_type, access_level, asset_id")
+          .in("projection_id", projectionIds)
+      : Promise.resolve({ data: [] }),
+    masterIds.length
+      ? svc
+          .from("work_presentation")
+          .select("master_id, title, description")
+          .in("master_id", masterIds)
+      : Promise.resolve({ data: [] }),
+    projectionIds.length
+      ? svc
+          .from("projection_presentation")
+          .select("projection_id, title, description")
+          .in("projection_id", projectionIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
   return NextResponse.json({
     authority: {
@@ -69,5 +83,7 @@ export async function GET() {
     states: states ?? [],
     projections: projections ?? [],
     bindings: bindings ?? [],
+    presentations: presentations ?? [],
+    projectionPresentations: projectionPresentations ?? [],
   });
 }

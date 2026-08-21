@@ -52,6 +52,12 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     .eq("access_level", "public")
     .single();
 
+  // Fetch both presentation records in parallel — neither touches the canonical chain
+  const [{ data: projPresentation }, { data: worldPresentation }] = await Promise.all([
+    svc.from("projection_presentation").select("title, description").eq("projection_id", projectionId).maybeSingle(),
+    svc.from("work_presentation").select("title").eq("master_id", proj.master_id).maybeSingle(),
+  ]);
+
   let media: ProjectionMedia | null = null;
   if (binding) {
     const [{ data: asset }, { data: variant }] = await Promise.all([
@@ -91,6 +97,8 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     },
     attribution: { roles: (attrEntries ?? []).map((e) => ({ role_type: e.role_type })) },
     media,
+    presentation: projPresentation ?? null,
+    worldTitle: worldPresentation?.title ?? null,
   };
 }
 
@@ -103,9 +111,9 @@ export default async function MomentPage({
   const moment = await getMoment(projectionId);
   if (!moment) notFound();
 
-  const { projection, canonical_state, master, provenance, attribution, media } = moment;
+  const { projection, canonical_state, master, provenance, attribution, media, presentation, worldTitle } = moment;
 
-  const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
+  const parentLabel = worldTitle ?? (TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " "));
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
 
   return (
@@ -129,17 +137,25 @@ export default async function MomentPage({
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <span>←</span>
-          <span>Back to {parentTypeLabel}</span>
+          <span>Back to {parentLabel}</span>
         </Link>
 
         {/* Moment identity */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-foreground text-lg font-semibold">{projTypeLabel} Moment</span>
+            <span className="text-foreground text-lg font-semibold">
+              {presentation?.title ?? `${projTypeLabel} Moment`}
+            </span>
             {projection.collectible_designated && (
               <Badge variant="outline">collectible</Badge>
             )}
           </div>
+          {presentation?.title && (
+            <p className="text-muted-foreground text-xs">{projTypeLabel}</p>
+          )}
+          {presentation?.description && (
+            <p className="text-muted-foreground text-sm">{presentation.description}</p>
+          )}
           {attribution.roles.length > 0 && (
             <p className="text-muted-foreground text-sm capitalize">
               {attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")}

@@ -27,7 +27,7 @@ type MomentRow = {
   collectible_designated: boolean;
 };
 
-type WorldPageData = WorldData & { moments: MomentRow[] };
+type WorldPageData = WorldData & { moments: MomentRow[]; presentation: { title: string; description: string | null } | null };
 
 async function getWorld(masterId: string): Promise<WorldPageData | null> {
   const svc = getServiceClient();
@@ -104,6 +104,12 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
     };
   }
 
+  const { data: presentationRow } = await svc
+    .from("work_presentation")
+    .select("title, description")
+    .eq("master_id", masterId)
+    .maybeSingle();
+
   return {
     master: { master_id: master.master_id, canonical_type: master.canonical_type },
     canonical_state: {
@@ -136,6 +142,7 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
       projection_type: p.projection_type,
       collectible_designated: p.collectible_designated,
     })),
+    presentation: presentationRow ?? null,
   };
 }
 
@@ -148,7 +155,7 @@ export default async function WorldPage({
   const world = await getWorld(masterId);
   if (!world) notFound();
 
-  const { master, canonical_state, projection, provenance, attribution, media, moments } = world;
+  const { master, canonical_state, projection, provenance, attribution, media, moments, presentation } = world;
 
   const typeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
 
@@ -165,11 +172,19 @@ export default async function WorldPage({
         {/* World identity */}
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-foreground text-lg font-semibold">{typeLabel}</span>
+            <span className="text-foreground text-lg font-semibold">
+              {presentation?.title ?? typeLabel}
+            </span>
             {projection.collectible_designated && (
               <Badge variant="outline">collectible</Badge>
             )}
           </div>
+          {presentation?.title && (
+            <p className="text-muted-foreground text-xs">{typeLabel}</p>
+          )}
+          {presentation?.description && (
+            <p className="text-muted-foreground text-sm">{presentation.description}</p>
+          )}
           {attribution.roles.length > 0 && (
             <p className="text-muted-foreground text-sm capitalize">
               {attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")}

@@ -6,6 +6,7 @@ export type DiscoveryWorld = {
   canonical_state_version: number;
   authorisation_state: string;
   has_media: boolean;
+  title: string | null;
   attribution_roles: string[];
   projections: DiscoveryProjection[];
 };
@@ -15,6 +16,7 @@ export type DiscoveryProjection = {
   projection_type: string;
   collectible_designated: boolean;
   has_media: boolean;
+  title: string | null;
 };
 
 export async function getDiscovery(): Promise<DiscoveryWorld[]> {
@@ -33,7 +35,7 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
   const masterIds = masters.map((m) => m.master_id);
   const attrIds = masters.map((m) => m.attribution_ref).filter(Boolean);
 
-  const [{ data: states }, { data: projections }, { data: attrEntries }, { data: bindings }] =
+  const [{ data: states }, { data: projections }, { data: attrEntries }, { data: bindings }, { data: presentationRows }] =
     await Promise.all([
       svc
         .from("canonical_state")
@@ -56,7 +58,16 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
         .select("projection_id, access_level, asset_id")
         .in("master_id", masterIds)
         .eq("access_level", "public"),
+      svc
+        .from("work_presentation")
+        .select("master_id, title")
+        .in("master_id", masterIds),
     ]);
+
+  const projectionIds = (projections ?? []).map((p) => p.projection_id);
+  const { data: projPresentations } = projectionIds.length
+    ? await svc.from("projection_presentation").select("projection_id, title").in("projection_id", projectionIds)
+    : { data: [] };
 
   // Determine which asset_ids are placeholders
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
@@ -86,6 +97,7 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
         .map((e) => e.role_type);
 
       const masterHasMedia = mProjs.some((p) => projHasMedia.get(p.projection_id));
+      const presentation = (presentationRows ?? []).find((p) => p.master_id === m.master_id);
 
       return {
         master_id: m.master_id,
@@ -93,12 +105,14 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
         canonical_state_version: cs.version,
         authorisation_state: cs.authorisation_state,
         has_media: masterHasMedia,
+        title: presentation?.title ?? null,
         attribution_roles: roles,
         projections: mProjs.map((p) => ({
           projection_id: p.projection_id,
           projection_type: p.projection_type,
           collectible_designated: p.collectible_designated,
           has_media: projHasMedia.get(p.projection_id) ?? false,
+          title: (projPresentations ?? []).find((pp) => pp.projection_id === p.projection_id)?.title ?? null,
         })),
       };
     })
