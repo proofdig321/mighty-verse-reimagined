@@ -711,3 +711,72 @@ The canonical World, Mural, and future Scenes remain independent of any particul
 
 **Migration:** `supabase/migrations/20260821020000_media_realization.sql`  
 **Commit:** TBD (pending review)
+
+---
+
+## Build 12 — Scene Canonical Primitive (2026-08-21, CLOSED)
+
+`CANONICAL` **Scene is a first-class canonical type** (2026-08-21, founder-established)
+
+`scene` is now a valid `canonical_type`. A Scene is a bounded canonical extraction from a
+specific Mural canonical state, given independent canonical identity by an explicit act of
+the canonical authority. It is not a UI crop, not a media clip, not a Creative Moment, and
+not an Interpretation.
+
+`CANONICAL` **Scene parentage invariant** (2026-08-21, founder-established)
+
+A Scene's `parent_master_id` must reference a `mural` master. Enforced by:
+- `master_parent_type_check` CHECK constraint (permits `scene` to have a parent)
+- `enforce_mural_parent_type` trigger (validates parent is `mural`)
+- `registerMaster()` application-layer check
+
+`CANONICAL` **Canonical hierarchy** (2026-08-21, founder-established)
+
+```
+World (song-world)
+  └── Mural (mural, parent = World)
+        └── Scene (scene, parent = Mural)
+```
+
+Creative Moment remains separate:
+
+```
+World (song-world)
+  └── Creative Moment (creative-moment, parent = World)
+```
+
+`CANONICAL` **extraction is a first-class provenance relationship** (2026-08-21, founder-established)
+
+`extraction` is now a valid `provenance_relationship_type`. It represents:
+`Scene canonical state → extracted from → source Mural canonical state`.
+This is distinct from `canonical-revision` (state supersedes state) and `projection`
+(projection derives from state). The three concepts remain separate:
+- `parent_master_id` = canonical hierarchy
+- `provenance_record / extraction` = source-state lineage
+- `content_refs` = extraction details (geometry deferred)
+
+`CANONICAL` **Extraction geometry intentionally deferred** (2026-08-21, founder-established)
+
+The format of `content_refs.extraction_bounds` is not yet defined. The exact geometry or
+semantic extraction format (spatial region, visual element, character, compositional unit)
+remains deferred until the first Scene ontology audit against the actual Super Hero Ego
+Mural material.
+
+`CANONICAL` **No Scene instances created** (2026-08-21)
+
+Build 12 establishes infrastructure only. Zero Scene master records exist. Zero Scene
+canonical states, projections, media bindings, or collectibles were created.
+
+`CANONICAL` **Creative Moment remains distinct from Scene** (2026-08-21, founder-established)
+
+Proverb (`3b0de6b4`), Reason (`2745a50a`), Mothipa (`32422bb4`) remain children of the
+World. They were not moved, converted, or attached to Scenes. `mural_moment_context`
+remains deferred.
+
+`OPEN QUESTION` **First Scene ontology** — What specific bounded visual/canonical units
+should become the first Super Hero Ego Scenes? (spatial region, visual element, character,
+object, symbol, compositional unit?) This must be answered by the founder against the actual
+Mural material before any Scene record is created.
+
+**Migration:** `supabase/migrations/20260821030000_scene_canonical_type.sql`
+**Commit:** TBD (pending review)
