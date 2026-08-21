@@ -11,6 +11,7 @@ const TYPE_LABELS: Record<string, string> = {
   "song-world": "Song World",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
+  "scene": "Scene",
   "interpretation": "Interpretation",
   "other": "Work",
 };

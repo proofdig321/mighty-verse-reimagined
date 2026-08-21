@@ -12,6 +12,7 @@ const TYPE_LABELS: Record<string, string> = {
   "song-world": "Song World",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
+  "scene": "Scene",
   "interpretation": "Interpretation",
   "other": "Work",
 };
@@ -19,6 +20,7 @@ const TYPE_LABELS: Record<string, string> = {
 type MomentRow = {
   master_id: string;
   title: string | null;
+  scene_projection_id: string | null; // projection_id of the associated Scene, if any
 };
 
 type MuralRow = {
@@ -26,9 +28,24 @@ type MuralRow = {
   title: string | null;
 };
 
+type SceneRow = {
+  master_id: string;
+  title: string | null;
+  projection_id: string | null;
+};
+
+// Static Scene → Creative Moment mapping (canonical fact from Build 13).
+// Golden Shovel has no Creative Moment counterpart — intentional.
+const SCENE_TO_CM: Record<string, string> = {
+  "bebb65d2-21ed-4bc9-9fa0-a4857df30a43": "32422bb4-d03c-465d-8348-942e49ae0051", // Mothipa
+  "df15ec76-6bd8-4956-bbaa-755f72b2b8f8": "3b0de6b4-2ca0-43c0-8561-7dc1c0697435", // ProVerb
+  "65490a92-8faf-42ea-a391-0e6473360f5c": "2745a50a-5417-4613-b23b-ef4857ab112e", // Reason
+};
+
 type WorldPageData = WorldData & {
   moments: MomentRow[];
   murals: MuralRow[];
+  scenes: SceneRow[];
   presentation: { title: string; description: string | null } | null;
 };
 
@@ -134,9 +151,55 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
       const momentIds = momentMasters.map((m) => m.master_id);
       const { data: momentPresentations } = await svc
         .from("work_presentation").select("master_id, title").in("master_id", momentIds);
+
+      // Build CM → Scene projection map from static relationship
+      const cmToSceneProj: Record<string, string> = {};
+      const cmToScene = Object.fromEntries(Object.entries(SCENE_TO_CM).map(([s, c]) => [c, s]));
+      const sceneMasterIds = Object.keys(SCENE_TO_CM);
+      if (sceneMasterIds.length) {
+        const { data: sceneProjs } = await svc
+          .from("projection")
+          .select("master_id, projection_id")
+          .in("master_id", sceneMasterIds)
+          .eq("projection_type", "experiential");
+        for (const sp of sceneProjs ?? []) {
+          const cmId = SCENE_TO_CM[sp.master_id];
+          if (cmId) cmToSceneProj[cmId] = sp.projection_id;
+        }
+      }
+
       return momentMasters.map((m) => ({
         master_id: m.master_id,
         title: (momentPresentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
+        scene_projection_id: cmToSceneProj[m.master_id] ?? null,
+      }));
+    })(),
+    scenes: await (async () => {
+      const { data: sceneMasters } = await svc
+        .from("master")
+        .select("master_id")
+        .eq("parent_master_id", masterId)
+        .eq("canonical_type", "mural")
+        .not("current_state_id", "is", null);
+      // Scenes are children of the Mural, not the World — fetch via Mural children
+      const muralIds = (sceneMasters ?? []).map((m) => m.master_id);
+      if (!muralIds.length) return [];
+      const { data: sceneChildren } = await svc
+        .from("master")
+        .select("master_id")
+        .in("parent_master_id", muralIds)
+        .eq("canonical_type", "scene")
+        .not("current_state_id", "is", null);
+      if (!sceneChildren?.length) return [];
+      const sceneIds = sceneChildren.map((s) => s.master_id);
+      const [{ data: scenePres }, { data: sceneProjs }] = await Promise.all([
+        svc.from("work_presentation").select("master_id, title").in("master_id", sceneIds),
+        svc.from("projection").select("master_id, projection_id").in("master_id", sceneIds).eq("projection_type", "experiential"),
+      ]);
+      return sceneChildren.map((s) => ({
+        master_id: s.master_id,
+        title: (scenePres ?? []).find((p) => p.master_id === s.master_id)?.title ?? null,
+        projection_id: (sceneProjs ?? []).find((p) => p.master_id === s.master_id)?.projection_id ?? null,
       }));
     })(),
     murals: await (async () => {
@@ -192,7 +255,7 @@ export default async function WorldPage({
   const world = await getWorld(masterId);
   if (!world) notFound();
 
-  const { master, canonical_state, projection, provenance, attribution, media, moments, murals, presentation } = world;
+  const { master, canonical_state, projection, provenance, attribution, media, moments, murals, scenes, presentation } = world;
 
   const typeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
   const title = presentation?.title ?? typeLabel;
@@ -236,17 +299,37 @@ export default async function WorldPage({
           </section>
         )}
 
-        {/* Moments — canonical Creative Moment masters belonging to this World */}
+        {/* Moments — Creative Moment cards navigate to their associated Scene */}
         {moments.length > 0 && (
           <section className="space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Moments</h2>
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Creative Moments</h2>
             <div className="space-y-2">
               {moments.map((m) => (
                 <MomentCard
                   key={m.master_id}
+                  projectionId={m.scene_projection_id ?? undefined}
                   title={m.title}
                   typeLabel="Creative Moment"
-                  hasMedia={false}
+                  hasMedia={!!m.scene_projection_id}
+                  collectible={false}
+                />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Scenes — independently discoverable visual/spatial canonical units */}
+        {scenes.length > 0 && (
+          <section className="space-y-3">
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scenes</h2>
+            <div className="space-y-2">
+              {scenes.map((s) => (
+                <MomentCard
+                  key={s.master_id}
+                  projectionId={s.projection_id ?? undefined}
+                  title={s.title}
+                  typeLabel="Scene"
+                  hasMedia={!!s.projection_id}
                   collectible={false}
                 />
               ))}

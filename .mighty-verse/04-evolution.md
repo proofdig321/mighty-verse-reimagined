@@ -1052,3 +1052,35 @@ Scene registration is canonical identity only. No delivery infrastructure was cr
 
 **Script:** `scripts/build13-create-scenes.ts`
 **Migrations:** `20260821030000_scene_canonical_type.sql`, `20260821031000_scene_constraints.sql`
+
+---
+
+## Build 14 — Scene-First V1 Experience (2026-08-21, CLOSED)
+
+`CANONICAL` **Scene projections established** (2026-08-21, founder-established)
+
+Four experiential projections created for the Build 13 Scenes, all bound to `bda79051`
+(Mural animation, Golden Shovel-controlled). No new media asset created — reused via
+idempotency. This is a V1 bridge: Scene-specific media realizations are a future build.
+
+| Scene | projection_id |
+|---|---|
+| Golden Shovel — Powerhouse | `3039ca84` |
+| Mothipa — Dark Knight | `bb802400` |
+| ProVerb — Hand-to-Hand | `9c045ea3` |
+| Reason — Sword Master | `8100033e` |
+
+`CANONICAL` **Creative Moment → Scene navigation** (2026-08-21, founder-established)
+
+Creative Moment cards on the World page navigate to their associated Scene's projection.
+The relationship is expressed as a static application-layer map (`SCENE_TO_CM` in
+`worlds/[masterId]/page.tsx`), explicitly documented as a temporary bridge pending
+`mural_moment_context`. When that relationship is implemented, the static map is removed.
+
+Golden Shovel Scene remains independently discoverable in the Scenes section with no
+Creative Moment counterpart — preserving the Scene ≠ Creative Moment invariant in live UI.
+
+`CANONICAL` **No Creative Moment projections created** (2026-08-21, founder-established)
+
+Creative Moments remain canonical contributor-centered entities without projections.
+Navigation to the Scene experience does not require or imply a Creative Moment projection.
