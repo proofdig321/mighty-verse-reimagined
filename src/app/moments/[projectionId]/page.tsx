@@ -97,7 +97,6 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     media,
     presentation: projPresentation ?? null,
     worldTitle: worldPresentation?.title ?? null,
-    // Pass world description for credit fallback
     worldDescription: worldPresentation?.description ?? null,
   } as MomentData & { worldDescription: string | null };
 }
@@ -112,16 +111,22 @@ export async function generateMetadata({
   const { data: proj } = await svc.from("projection").select("master_id").eq("projection_id", projectionId).single();
   const [{ data: pres }, { data: worldPres }] = await Promise.all([
     svc.from("projection_presentation").select("title").eq("projection_id", projectionId).maybeSingle(),
-    proj ? svc.from("work_presentation").select("title").eq("master_id", proj.master_id).maybeSingle() : Promise.resolve({ data: null }),
+    proj ? svc.from("work_presentation").select("title, description").eq("master_id", proj.master_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const momentTitle = pres?.title ?? null;
-  const worldTitle = worldPres?.title ?? null;
+  const worldTitle = (worldPres as { title?: string; description?: string } | null)?.title ?? null;
+  const description = (worldPres as { title?: string; description?: string } | null)?.description ?? "Mighty Verse";
   const title = momentTitle
     ? `${momentTitle} — Mighty Verse`
     : worldTitle
     ? `${worldTitle} — Mighty Verse`
     : "Mighty Verse";
-  return { title };
+  return {
+    title,
+    description,
+    openGraph: { title, description },
+    twitter: { card: "summary", title, description },
+  };
 }
 
 export default async function MomentPage({
@@ -136,11 +141,11 @@ export default async function MomentPage({
   const m = moment as MomentData & { worldDescription: string | null };
   const { projection, canonical_state, master, provenance, attribution, media, presentation, worldTitle } = m;
 
-  const parentLabel = worldTitle ?? (TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " "));
+  const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
+  const parentLabel = worldTitle ?? parentTypeLabel;
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
   const title = presentation?.title ?? `${projTypeLabel} Moment`;
 
-  // Credit: prefer moment description, then world description, then role types
   const credit = presentation?.description
     ?? m.worldDescription
     ?? (attribution.roles.length > 0
@@ -150,8 +155,8 @@ export default async function MomentPage({
   return (
     <main className="min-h-screen bg-background">
 
-      {/* Back navigation — above media */}
-      <div className="mx-auto max-w-2xl px-4 pt-4 pb-2">
+      {/* World breadcrumb — above media */}
+      <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
         <Link
           href={`/worlds/${master.master_id}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -161,7 +166,7 @@ export default async function MomentPage({
         </Link>
       </div>
 
-      {/* MediaHero */}
+      {/* Media + identity */}
       <MediaHero
         media={media}
         projectionId={projection.projection_id}
@@ -173,8 +178,22 @@ export default async function MomentPage({
         collectible={projection.collectible_designated}
       />
 
-      {/* Canonical Record — secondary, collapsible */}
-      <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
+      <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+
+        {/* World relationship */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Part of</span>
+          <Link
+            href={`/worlds/${master.master_id}`}
+            className="text-foreground hover:opacity-70 transition-opacity font-medium"
+            style={{ fontFamily: "var(--font-display, inherit)" }}
+          >
+            {parentLabel}
+          </Link>
+          <span className="text-xs text-muted-foreground">· {parentTypeLabel}</span>
+        </div>
+
+        {/* Canonical Record — secondary, collapsible */}
         <Separator />
         <details>
           <summary className="text-muted-foreground text-xs font-medium uppercase tracking-widest cursor-pointer select-none hover:text-foreground transition-colors">
@@ -201,6 +220,7 @@ export default async function MomentPage({
             )}
           </div>
         </details>
+
       </div>
     </main>
   );

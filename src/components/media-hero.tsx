@@ -10,10 +10,10 @@ type Props = {
   canonicalStateId: string;
   title: string;
   typeLabel: string;
-  // Human-readable credit line — e.g. "Golden Shovel ft Proverb, Reason and Mothipa"
-  // Falls back to role-type string when absent
   credit: string | null;
   collectible: boolean;
+  // artwork slot — null until genuine artwork exists
+  artworkUrl?: string | null;
 };
 
 export default function MediaHero({
@@ -28,29 +28,31 @@ export default function MediaHero({
 }: Props) {
   return (
     <div className="w-full">
-      {/* Video — full bleed, black surround */}
+      {/* Video — full bleed, no max-width constraint */}
       <div className="w-full bg-black">
-        <ProjectionMediaPlayer
-          media={media}
-          projectionId={projectionId}
-          masterId={masterId}
-          canonicalStateId={canonicalStateId}
-        />
+        <div className="mx-auto" style={{ maxWidth: "1280px" }}>
+          <ProjectionMediaPlayer
+            media={media}
+            projectionId={projectionId}
+            masterId={masterId}
+            canonicalStateId={canonicalStateId}
+          />
+        </div>
       </div>
 
-      {/* Identity — immediately below media, no gap */}
+      {/* Identity — below media, constrained */}
       <div className="bg-background border-b border-border">
-        <div className="mx-auto max-w-2xl px-4 py-5 space-y-1">
+        <div className="mx-auto max-w-5xl px-4 py-6 space-y-2">
           <div className="flex items-start justify-between gap-4">
             <h1
-              className="text-2xl font-display font-semibold leading-tight tracking-tight text-foreground"
+              className="text-3xl md:text-4xl font-semibold leading-tight tracking-tight text-foreground"
               style={{ fontFamily: "var(--font-display, inherit)" }}
             >
               {title}
             </h1>
             {collectible && (
               <span
-                className="shrink-0 mt-1 text-xs font-medium px-2 py-0.5 rounded-full border"
+                className="shrink-0 mt-1.5 text-xs font-medium px-2.5 py-1 rounded-full border"
                 style={{ color: "var(--accent-mv)", borderColor: "var(--accent-mv)" }}
               >
                 collectible

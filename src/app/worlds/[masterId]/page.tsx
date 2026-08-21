@@ -5,6 +5,7 @@ import type { WorldData } from "@/app/api/worlds/[masterId]/route";
 import { Separator } from "@/components/ui/separator";
 import MediaHero from "@/components/media-hero";
 import MomentCard from "@/components/moment-card";
+import ExperienceToggle from "@/components/experience-toggle";
 import { getServiceClient } from "@/lib/authority/validate";
 
 const TYPE_LABELS: Record<string, string> = {
@@ -101,7 +102,6 @@ async function getWorld(masterId: string): Promise<WorldPageData | null> {
   const provCS = provRecords?.find((p) => p.subject_type === "canonical-state");
   const provProj = provRecords?.find((p) => p.subject_type === "projection");
 
-  // Determine which projections have non-placeholder media
   const boundAssetIds = (mediaBindings ?? []).map((b) => b.asset_id);
   let mediaSet = new Set<string>();
   if (boundAssetIds.length) {
@@ -179,7 +179,13 @@ export async function generateMetadata({
     .eq("master_id", masterId)
     .maybeSingle();
   const title = pres?.title ? `${pres.title} — Mighty Verse` : "Mighty Verse";
-  return { title, description: pres?.description ?? "Mighty Verse" };
+  const description = pres?.description ?? "Mighty Verse";
+  return {
+    title,
+    description,
+    openGraph: { title, description },
+    twitter: { card: "summary", title, description },
+  };
 }
 
 export default async function WorldPage({
@@ -196,7 +202,6 @@ export default async function WorldPage({
   const typeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
   const title = presentation?.title ?? typeLabel;
 
-  // Credit: prefer presentation description, fall back to role types
   const credit = presentation?.description
     ?? (attribution.roles.length > 0
       ? attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")
@@ -205,7 +210,7 @@ export default async function WorldPage({
   return (
     <main className="min-h-screen bg-background">
 
-      {/* MediaHero — media + identity as one unit */}
+      {/* Media + identity */}
       <MediaHero
         media={media}
         projectionId={projection.projection_id}
@@ -217,7 +222,10 @@ export default async function WorldPage({
         collectible={projection.collectible_designated}
       />
 
-      <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
+      <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+
+        {/* Experience toggle */}
+        <ExperienceToggle />
 
         {/* Moments */}
         {moments.length > 0 && (
@@ -246,7 +254,7 @@ export default async function WorldPage({
           </summary>
           <div className="mt-4 space-y-3 text-xs">
             <div className="flex items-start gap-3">
-              <span className="text-muted-foreground w-24 shrink-0">Work</span>
+              <span className="text-muted-foreground w-24 shrink-0">World</span>
               <span className="text-muted-foreground font-mono break-all">{master.master_id}</span>
             </div>
             <div className="flex items-start gap-3">
@@ -265,6 +273,13 @@ export default async function WorldPage({
             )}
           </div>
         </details>
+
+        {/* Back */}
+        <div className="pt-2">
+          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            ← All Worlds
+          </Link>
+        </div>
 
       </div>
     </main>
