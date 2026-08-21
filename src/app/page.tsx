@@ -102,30 +102,7 @@ export default async function HomePage() {
       {/* ── MOMENTS ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-4 py-12 space-y-16">
 
-        {featured.projections.length > 0 && (
-          <section className="space-y-4">
-            <div className="flex items-baseline justify-between gap-4">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
-                Moments — {featured.title}
-              </h2>
-              <Link href={`/worlds/${featured.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                View Universe →
-              </Link>
-            </div>
-            <div className="space-y-2">
-              {featured.projections.map((p) => (
-                <MomentCard
-                  key={p.projection_id}
-                  projectionId={p.projection_id}
-                  title={p.title}
-                  typeLabel={PROJ_LABELS[p.projection_type] ?? p.projection_type.replace(/-/g, " ")}
-                  hasMedia={p.has_media}
-                  collectible={p.collectible_designated}
-                />
-              ))}
-            </div>
-          </section>
-        )}
+        {/* Universe projections are not surfaced on Home — enter via Universe page */}
 
         {/* Additional authored universes */}
         {remaining.map((w: DiscoveryUniverse) => {

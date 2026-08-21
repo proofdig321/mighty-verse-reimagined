@@ -44,6 +44,7 @@ type SceneMomentData = MomentData & {
   muralMasterId: string | null;
   worldMasterId: string | null;
   cmTitle: string | null;
+  cmMasterId: string | null;
 };
 
 async function getMoment(projectionId: string): Promise<SceneMomentData | null> {
@@ -105,6 +106,7 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
   let muralMasterId: string | null = null;
   let worldMasterId: string | null = null;
   let cmTitle: string | null = null;
+  let cmMasterId: string | null = null;
 
   if (isScene) {
     const sourceStateId = (cs?.content_refs as { source_canonical_state_id?: string } | null)?.source_canonical_state_id ?? null;
@@ -114,13 +116,13 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
         muralMasterId = muralState.master_id;
         const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralState.master_id).maybeSingle();
         muralTitle = muralPres?.title ?? null;
-        // Universe = parent of Mural — find the universe master
+        // Universe = parent of Mural
         const { data: worldMaster } = await svc.from("master").select("master_id").eq("canonical_type", "universe").single();
         worldMasterId = worldMaster?.master_id ?? null;
       }
     }
 
-    const cmMasterId = SCENE_TO_CM[proj.master_id] ?? null;
+    cmMasterId = SCENE_TO_CM[proj.master_id] ?? null;
     if (cmMasterId) {
       const { data: cmPres } = await svc.from("work_presentation").select("title").eq("master_id", cmMasterId).maybeSingle();
       cmTitle = cmPres?.title ?? null;
@@ -158,6 +160,7 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
     muralMasterId,
     worldMasterId,
     cmTitle,
+    cmMasterId,
   };
 }
 
@@ -199,7 +202,7 @@ export default async function MomentPage({
   if (!moment) notFound();
 
   const { projection, canonical_state, master, provenance, attribution, media, presentation,
-          worldTitle, muralTitle, muralMasterId, worldMasterId, cmTitle } = moment;
+          worldTitle, muralTitle, muralMasterId, worldMasterId, cmTitle, cmMasterId } = moment;
 
   const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
@@ -286,18 +289,16 @@ export default async function MomentPage({
             {/* Creative Moment association */}
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
               <span className="text-muted-foreground text-xs uppercase tracking-widest">Creative Moment</span>
-              {cmTitle ? (
-                worldMasterId ? (
-                  <Link
-                    href={`/worlds/${worldMasterId}`}
-                    className="text-foreground hover:opacity-70 transition-opacity font-medium"
-                    style={{ fontFamily: "var(--font-display, inherit)" }}
-                  >
-                    {cmTitle}
-                  </Link>
-                ) : (
-                  <span className="text-foreground font-medium">{cmTitle}</span>
-                )
+              {cmTitle && cmMasterId ? (
+                <Link
+                  href={`/creative-moments/${cmMasterId}`}
+                  className="text-foreground hover:opacity-70 transition-opacity font-medium"
+                  style={{ fontFamily: "var(--font-display, inherit)" }}
+                >
+                  {cmTitle}
+                </Link>
+              ) : cmTitle ? (
+                <span className="text-foreground font-medium">{cmTitle}</span>
               ) : (
                 <span className="text-muted-foreground text-xs italic">None — this Scene has no Creative Moment counterpart</span>
               )}

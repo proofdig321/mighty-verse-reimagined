@@ -2,13 +2,14 @@ import Link from "next/link";
 
 type Props = {
   projectionId?: string;
+  href?: string;
   title: string | null;
   typeLabel: string;
   hasMedia: boolean;
   collectible: boolean;
 };
 
-export default function MomentCard({ projectionId, title, typeLabel, hasMedia, collectible }: Props) {
+export default function MomentCard({ projectionId, href, title, typeLabel, hasMedia, collectible }: Props) {
   const displayTitle = title ?? typeLabel;
   const hasTitle = !!title;
 
@@ -45,8 +46,10 @@ export default function MomentCard({ projectionId, title, typeLabel, hasMedia, c
 
   const className = "group flex items-center justify-between gap-4 px-5 py-4 rounded-lg border border-border bg-card hover:border-foreground/20 transition-colors";
 
-  if (projectionId) {
-    return <Link href={`/moments/${projectionId}`} className={className}>{inner}</Link>;
+  const target = href ?? (projectionId ? `/moments/${projectionId}` : null);
+
+  if (target) {
+    return <Link href={target} className={className}>{inner}</Link>;
   }
 
   return <div className={className}>{inner}</div>;
