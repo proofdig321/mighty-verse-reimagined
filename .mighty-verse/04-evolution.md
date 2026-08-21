@@ -500,7 +500,52 @@ Mural canonical state 8f7fe56d
 
 ---
 
-## Next Boundary — Creative Moment Ontology Audit
+## Build 09 — Attribution Provenance Correction (2026-08-21, CLOSED)
+
+`CANONICAL` **Registering authority ≠ creative contributor** (2026-08-21, founder-established)
+
+`created_by` on a `master` record identifies the canonical authority that registered the work.
+`attribution_entry.participant_id` identifies the creative contributor.
+These must never be confused. The registering authority is not automatically the creative contributor.
+
+`CANONICAL` **Build 09 correction** (2026-08-21)
+
+Build 07 created the correct participant records for Proverb (`ed5949f1`), Reason (`5f74b13e`), and Mothipa (`d6ffdaa9`), but passed `GOLDEN_SHOVEL` as the `participantId` argument to `addAttribution()`. This caused all three `featured-artist` attribution entries to point to Golden Shovel (`866390ff`) instead of the actual featured artists.
+
+Build 09 corrected the `participant_id` FK on the three existing `attribution_entry` rows by exact `entry_id`. No entries were created or deleted. No canonical states, projections, or media bindings were modified. Golden Shovel's World and Mural attribution entries are unchanged.
+
+| Entry | Moment | Corrected from | Corrected to |
+|---|---|---|---|
+| `ccf2eba3` | Proverb | `866390ff` (Golden Shovel) | `ed5949f1` (Proverb) |
+| `2937ae84` | Reason | `866390ff` (Golden Shovel) | `5f74b13e` (Reason) |
+| `70c19369` | Mothipa | `866390ff` (Golden Shovel) | `d6ffdaa9` (Mothipa) |
+
+This correction restores canonical provenance before any downstream Scene, collectible, or Interpretation work is built on top of these Creative Moments.
+
+`CANONICAL` **Tokenization direction** (2026-08-21, founder-established)
+
+Mighty Verse is intended to support progressively finer-grained canonical units. Future Scenes and other extractable units may be **derived/sliced directly from existing canonical works** (such as the original Mural), rather than necessarily being newly authored independent content. A Scene does not have to originate as newly authored application data — it may be a canonical extraction of an existing Master, with its provenance and source relationship preserved.
+
+This distinction matters for the full canonical hierarchy:
+
+```
+Source
+→ World / Mural / existing canonical work
+
+Extracted canonical unit
+→ Scene / visual element / character / object / Creative Moment
+
+Interpretive layer
+→ Interpretation of that unit
+
+Projection
+→ experiential representation
+
+Collectible / token layer
+→ economic / Web3 projection of the canonical unit
+```
+
+The Scene vocabulary decision (Creative Moment = canonical; Scene = contextual Mural appearance) remains in place. The tokenization direction does not change that vocabulary — it adds the principle that Scenes and other fine-grained units may be extracted from existing canonical works rather than authored from scratch. This must be considered before the `mural_moment_context` schema is designed.
 
 `CANONICAL` **Creative Moment vs Scene vocabulary** (2026-08-21, founder-established)
 
