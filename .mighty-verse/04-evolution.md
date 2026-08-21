@@ -1002,3 +1002,53 @@ canonical Scene identity. Spatial bounds require visual inspection of the Mural'
 surface, not inference from video timestamps.
 
 **Build 13 status: DISCOVERY CONTINUES. No Scene records. No implementation.**
+
+---
+
+## Build 13 — Scene Registration (2026-08-21, CLOSED)
+
+`CANONICAL` **Migration split: Build 12 enum/constraint separation** (2026-08-21)
+
+The Build 12 migration was split into two files to satisfy Postgres's requirement that
+`ALTER TYPE ... ADD VALUE` be committed before the new value is used in a constraint:
+- `20260821030000_scene_canonical_type.sql` — enum additions only
+- `20260821031000_scene_constraints.sql` — constraint and trigger extension
+
+`CANONICAL` **Four canonical Scenes registered** (2026-08-21, founder-established)
+
+The four Super Hero Ego warrior manifestations are now canonical Scene records.
+
+| Scene | master_id | canonical_state_id | Creative Moment |
+|---|---|---|---|
+| Golden Shovel — Powerhouse | `4790c7cf` | `43ad0791` | none (intentional) |
+| Mothipa — Dark Knight | `bebb65d2` | `e785f838` | `32422bb4` |
+| ProVerb — Hand-to-Hand | `df15ec76` | `3c2de179` | `3b0de6b4` |
+| Reason — Sword Master | `65490a92` | `c55a1c13` | `2745a50a` |
+
+All four:
+- `canonical_type = 'scene'`
+- `parent_master_id = a75ae8af` (Super Hero Ego Mural)
+- canonical state with `content_refs` carrying semantic-spatial extraction bounds
+- `provenance_record` with `relationship_type = 'extraction'` → source Mural state `8f7fe56d`
+- `provenance_record` with `relationship_type = 'canonical-revision'` (standard canonical chain)
+- `attribution_entry` with `role_type = 'director'` → Golden Shovel
+- `work_presentation` with title and description
+
+`CANONICAL` **Golden Shovel Scene has no Creative Moment counterpart** (2026-08-21, founder-established)
+
+The Golden Shovel warrior manifestation Scene (`4790c7cf`) has `creative_moment_id = null`.
+This is intentional and validates the Scene ≠ Creative Moment ontology: a Scene does not
+require a Creative Moment counterpart.
+
+`CANONICAL` **Extraction bounds are semantic-spatial only** (2026-08-21, founder-established)
+
+All four Scenes carry `extraction_bounds.type = 'semantic-spatial'` with semantic identity
+and spatial description. `geometry = null` — numerical coordinates are not yet established
+and were not fabricated. Timecodes from the media realization were not used as bounds.
+
+`CANONICAL` **Zero projections, media bindings, collectibles, or tokens created** (2026-08-21)
+
+Scene registration is canonical identity only. No delivery infrastructure was created.
+
+**Script:** `scripts/build13-create-scenes.ts`
+**Migrations:** `20260821030000_scene_canonical_type.sql`, `20260821031000_scene_constraints.sql`
