@@ -955,3 +955,50 @@ the founder must examine the actual Super Hero Ego animation and establish:
 (6) what should remain part of the Mural rather than becoming a Scene.
 
 **Build 13 status: DISCOVERY CONTINUES. No implementation. No Scene records.**
+
+---
+
+## Build 13 — Scene Candidate Map Correction (2026-08-21, DISCOVERY CONTINUES)
+
+`CANONICAL` **Media evidence map — corrected** (2026-08-21, founder-established)
+
+Visual audit of the Super Hero Ego animation establishes the following media-realization
+observations. These are timecode observations only — they do not define Scene boundaries.
+
+| Media interval | Visual/performer context | Canonical treatment |
+|---|---|---|
+| 00:00–00:35 | Golden Shovel / hook-led | Mural / Scene evidence — no separate Scene |
+| 00:36–01:19 | Golden Shovel warrior | Golden Shovel Scene candidate |
+| 01:20–02:04 | Mothipa warrior | Mothipa Scene candidate |
+| 02:05–02:28 | Hook / Golden Shovel-led | Mural / recurring manifestation — no separate Scene |
+| 02:29–03:12 | ProVerb warrior | ProVerb Scene candidate |
+| 03:13–04:14 | Reason warrior | Reason Scene candidate |
+| 04:02–04:14 | Final hook overlap | Media transition/overlap — not a new Scene |
+
+`CANONICAL` **Recurring appearance ≠ new Scene** (2026-08-21, founder-established)
+
+A recurring appearance in the media realization does not automatically create another
+canonical Scene. The Golden Shovel visual manifestation appears during the intro, hook,
+and his verse. Those appearances are media depictions of the same canonical Golden Shovel
+Scene — not multiple canonical entities. This is the concrete proof that Scene identity
+is canonical visual/spatial identity, not temporal occurrence.
+
+`CANONICAL` **Four authorised first Scene candidates** (2026-08-21, founder-established)
+
+| Candidate | Creative Moment link |
+|---|---|
+| Golden Shovel warrior manifestation | None currently |
+| Mothipa warrior manifestation | `32422bb4` (Mothipa) |
+| ProVerb warrior manifestation | `3b0de6b4` (ProVerb) |
+| Reason warrior manifestation | `2745a50a` (Reason) |
+
+Intro/hook material, environmental elements, antagonist elements, and media
+transitions are not authorised Scene candidates at this stage.
+
+`CANONICAL` **Spatial bounds not yet established** (2026-08-21, founder-established)
+
+Timecodes are media-realization observations. They do not constitute spatial bounds for
+canonical Scene identity. Spatial bounds require visual inspection of the Mural's canonical
+surface, not inference from video timestamps.
+
+**Build 13 status: DISCOVERY CONTINUES. No Scene records. No implementation.**
