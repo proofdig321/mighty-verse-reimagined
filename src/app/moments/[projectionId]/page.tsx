@@ -8,7 +8,7 @@ import { Separator } from "@/components/ui/separator";
 import MediaHero from "@/components/media-hero";
 
 const TYPE_LABELS: Record<string, string> = {
-  "song-world": "Song World",
+  "universe": "Universe",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
   "scene": "Scene",
@@ -114,8 +114,8 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
         muralMasterId = muralState.master_id;
         const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralState.master_id).maybeSingle();
         muralTitle = muralPres?.title ?? null;
-        // World = parent of Mural — find the song-world master
-        const { data: worldMaster } = await svc.from("master").select("master_id").eq("canonical_type", "song-world").single();
+        // Universe = parent of Mural — find the universe master
+        const { data: worldMaster } = await svc.from("master").select("master_id").eq("canonical_type", "universe").single();
         worldMasterId = worldMaster?.master_id ?? null;
       }
     }
@@ -218,7 +218,7 @@ export default async function MomentPage({
 
   // Breadcrumb: Scene → Mural (if known), else World
   const breadcrumbHref = muralMasterId ? `/worlds/${muralMasterId}` : worldMasterId ? `/worlds/${worldMasterId}` : "/";
-  const breadcrumbLabel = muralTitle ?? worldTitle ?? "World";
+  const breadcrumbLabel = muralTitle ?? worldTitle ?? "Universe";
 
   return (
     <main className="min-h-screen bg-background">

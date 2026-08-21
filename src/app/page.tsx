@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import MomentCard from "@/components/moment-card";
 import ArtworkFrame from "@/components/artwork-frame";
@@ -12,7 +13,7 @@ export const metadata: Metadata = {
 };
 
 const TYPE_LABELS: Record<string, string> = {
-  "song-world": "Song World",
+  "universe": "Universe",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
   "interpretation": "Interpretation",
@@ -27,10 +28,10 @@ const PROJ_LABELS: Record<string, string> = {
 };
 
 export default async function HomePage() {
-  const worlds = await getDiscovery();
+  const universes = await getDiscovery();
 
-  // Only surface worlds with authored presentation identity
-  const authored = worlds.filter((w) => !!w.title);
+  // Only surface universes with authored presentation identity
+  const authored = universes.filter((w: DiscoveryUniverse) => !!w.title);
   const featured = authored[0] ?? null;
   const remaining = authored.slice(1);
 
@@ -38,7 +39,7 @@ export default async function HomePage() {
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-4 pt-16">
-          <p className="text-muted-foreground text-sm">No worlds yet.</p>
+          <p className="text-muted-foreground text-sm">No universes yet.</p>
         </div>
       </main>
     );
@@ -89,7 +90,7 @@ export default async function HomePage() {
                 className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-70 transition-opacity"
                 style={{ fontFamily: "var(--font-display, inherit)" }}
               >
-                Enter World
+                Enter Universe
                 <span style={{ color: "var(--accent-mv)" }}>→</span>
               </Link>
             </div>
@@ -108,7 +109,7 @@ export default async function HomePage() {
                 Moments — {featured.title}
               </h2>
               <Link href={`/worlds/${featured.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                View World →
+                View Universe →
               </Link>
             </div>
             <div className="space-y-2">
@@ -126,8 +127,8 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* Additional authored worlds */}
-        {remaining.map((w) => {
+        {/* Additional authored universes */}
+        {remaining.map((w: DiscoveryUniverse) => {
           const typeLabel = TYPE_LABELS[w.canonical_type] ?? w.canonical_type.replace(/-/g, " ");
           return (
             <section key={w.master_id} className="space-y-4">

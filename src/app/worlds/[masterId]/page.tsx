@@ -9,7 +9,7 @@ import ExperienceToggle from "@/components/experience-toggle";
 import { getServiceClient } from "@/lib/authority/validate";
 
 const TYPE_LABELS: Record<string, string> = {
-  "song-world": "Song World",
+  "universe": "Universe",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
   "scene": "Scene",
@@ -350,7 +350,7 @@ export default async function WorldPage({
           </summary>
           <div className="mt-4 space-y-3 text-xs">
             <div className="flex items-start gap-3">
-              <span className="text-muted-foreground w-24 shrink-0">World</span>
+              <span className="text-muted-foreground w-24 shrink-0">Universe</span>
               <span className="text-muted-foreground font-mono break-all">{master.master_id}</span>
             </div>
             <div className="flex items-start gap-3">
@@ -373,7 +373,7 @@ export default async function WorldPage({
         {/* Back */}
         <div className="pt-2">
           <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            ← All Worlds
+            ← All Universes
           </Link>
         </div>
 

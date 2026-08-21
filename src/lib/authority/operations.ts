@@ -10,7 +10,7 @@ export type OperationResult<T> = { data: T } | { error: string };
 // ---------------------------------------------------------------------------
 export async function registerMaster(
   participantId: string,
-  canonicalType: "song-world" | "creative-moment" | "mural" | "scene" | "interpretation" | "other",
+  canonicalType: "universe" | "creative-moment" | "mural" | "scene" | "interpretation" | "other",
   parentMasterId?: string
 ): Promise<OperationResult<{ master_id: string; attribution_id: string }>> {
   const auth = await validateAuthority(participantId, "create-canonical-state", null);
@@ -27,8 +27,8 @@ export async function registerMaster(
         .eq("master_id", parentMasterId)
         .single();
       if (!parentMaster) return { error: `Parent master not found: ${parentMasterId}` };
-      if (parentMaster.canonical_type !== "song-world") {
-        return { error: `A Mural parent must be a song-world (got: ${parentMaster.canonical_type})` };
+      if (parentMaster.canonical_type !== "universe") {
+        return { error: `A Mural parent must be a universe (got: ${parentMaster.canonical_type})` };
       }
     }
     if (canonicalType === "scene") {

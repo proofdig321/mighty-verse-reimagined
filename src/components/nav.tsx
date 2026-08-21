@@ -13,7 +13,7 @@ export default function Nav() {
         </Link>
         <div className="flex items-center gap-6">
           <Link href="/" className="text-muted-foreground text-xs hover:text-foreground transition-colors">
-            Worlds
+            Universes
           </Link>
         </div>
       </div>

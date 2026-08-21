@@ -1084,3 +1084,53 @@ Creative Moment counterpart — preserving the Scene ≠ Creative Moment invaria
 
 Creative Moments remain canonical contributor-centered entities without projections.
 Navigation to the Scene experience does not require or imply a Creative Moment projection.
+
+---
+
+## Build 18 — Universe terminology transition (2026-08-21)
+
+`CANONICAL` **Terminology decision: Song World → Universe** (2026-08-21, founder-established)
+
+The top-level canonical container is now a **Universe**.
+
+**Mighty Verse is the multiverse/platform. Each song/work establishes a Universe.**
+
+```
+MIGHTY VERSE
+   │
+   ├── Super Hero Ego Universe  (05ccc0c6)
+   │      ├── Creative Moments
+   │      ├── Mural
+   │      └── Scenes
+   │
+   └── [future Universes]
+```
+
+Prior builds used `song-world` as the canonical type. That history is preserved in
+migration records and this evolution document. The transition is:
+
+```
+song-world  →  universe
+```
+
+**What changed:**
+
+- `canonical_type` enum value renamed: `'song-world'` → `'universe'`
+  (migration `20260821050000_universe_terminology.sql`)
+- `enforce_mural_parent_type()` trigger updated to validate `'universe'`
+- TypeScript union types, string comparisons, discovery type, authority client,
+  UI labels and nav copy updated throughout
+- Route `/worlds/[masterId]` unchanged — backwards compatibility preserved
+
+**What did not change:**
+
+- Master `05ccc0c6` — same ID, same record, only `canonical_type` value changed
+- All other master IDs, canonical states, projections, bindings, media assets
+- Historical migrations — not rewritten
+- `mural_moment_context` — not introduced
+
+**Important distinction preserved:**
+
+Universe ≠ Multiverse. `universe` is a canonical database type.
+`multiverse` is not a canonical type and must not become one.
+Mighty Verse is the platform/multiverse; it is not represented as a canonical entity.

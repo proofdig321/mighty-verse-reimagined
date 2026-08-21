@@ -1,6 +1,6 @@
 import { getServiceClient } from "@/lib/authority/validate";
 
-export type DiscoveryWorld = {
+export type DiscoveryUniverse = {
   master_id: string;
   canonical_type: string;
   canonical_state_version: number;
@@ -20,7 +20,7 @@ export type DiscoveryProjection = {
   title: string | null;
 };
 
-export async function getDiscovery(): Promise<DiscoveryWorld[]> {
+export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
   const svc = getServiceClient();
 
   const { data: masters } = await svc
@@ -125,5 +125,5 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
         })),
       };
     })
-    .filter((w): w is DiscoveryWorld => w !== null);
+    .filter((w): w is DiscoveryUniverse => w !== null);
 }

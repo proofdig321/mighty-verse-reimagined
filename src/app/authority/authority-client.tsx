@@ -17,7 +17,7 @@ type AuthorityData = {
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
-  "song-world": "Song World",
+  "universe": "Universe",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
   "interpretation": "Interpretation",
@@ -31,7 +31,7 @@ const EXPERIENCE_TYPE_LABELS: Record<string, string> = {
   "other": "Other",
 };
 
-const CANONICAL_TYPES = ["song-world", "creative-moment", "mural", "interpretation", "other"] as const;
+const CANONICAL_TYPES = ["universe", "creative-moment", "mural", "interpretation", "other"] as const;
 const PROJECTION_TYPES = ["experiential", "distributional", "archival", "other"] as const;
 
 function shortId(id: string) { return id.slice(0, 8); }
@@ -486,7 +486,7 @@ export default function AuthorityClient() {
 
   // Register New Work
   const [showRegister, setShowRegister] = useState(false);
-  const [canonicalType, setCanonicalType] = useState<string>("song-world");
+  const [canonicalType, setCanonicalType] = useState<string>("universe");
 
   // Attach Video panel — which projection is currently open
   const [attachingProjId, setAttachingProjId] = useState<string | null>(null);

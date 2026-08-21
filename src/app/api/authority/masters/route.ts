@@ -19,10 +19,10 @@ export async function POST(request: Request) {
 
   const { master_id } = result.data;
 
-  // For song-world: explicitly attribute original-artist and director (per I.1.B and I.1.C)
+  // For universe: explicitly attribute original-artist and director (per I.1.B and I.1.C)
   // For mural: no auto-attribution — Director must be added via a separate explicit call
   // For other types: no auto-attribution
-  if (canonical_type === "song-world") {
+  if (canonical_type === "universe") {
     await addAttribution(participantId, master_id, "original-artist", "Canonical creator", true);
     await addAttribution(participantId, master_id, "director", "Director", true);
   }
