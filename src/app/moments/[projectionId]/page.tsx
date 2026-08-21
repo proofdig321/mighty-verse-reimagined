@@ -1,11 +1,11 @@
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { MomentData } from "@/app/api/moments/[projectionId]/route";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
-import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import ProjectionMediaPlayer from "@/components/player/projection-media-player";
+import MediaHero from "@/components/media-hero";
 
 const TYPE_LABELS: Record<string, string> = {
   "song-world": "Song World",
@@ -32,13 +32,12 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     .single();
   if (!proj) return null;
 
-  const [{ data: cs }, { data: master }, { data: prov }, { data: masterFull }] =
-    await Promise.all([
-      svc.from("canonical_state").select("canonical_state_id, version, authorisation_state").eq("canonical_state_id", proj.canonical_state_id).single(),
-      svc.from("master").select("master_id, canonical_type").eq("master_id", proj.master_id).single(),
-      svc.from("provenance_record").select("relationship_type, integrity_hash").eq("subject_id", projectionId).eq("subject_type", "projection").eq("public", true).single(),
-      svc.from("master").select("attribution_ref").eq("master_id", proj.master_id).single(),
-    ]);
+  const [{ data: cs }, { data: master }, { data: prov }, { data: masterFull }] = await Promise.all([
+    svc.from("canonical_state").select("canonical_state_id, version, authorisation_state").eq("canonical_state_id", proj.canonical_state_id).single(),
+    svc.from("master").select("master_id, canonical_type").eq("master_id", proj.master_id).single(),
+    svc.from("provenance_record").select("relationship_type, integrity_hash").eq("subject_id", projectionId).eq("subject_type", "projection").eq("public", true).single(),
+    svc.from("master").select("attribution_ref").eq("master_id", proj.master_id).single(),
+  ]);
 
   const { data: attrEntries } = masterFull?.attribution_ref
     ? await svc.from("attribution_entry").select("role_type").eq("attribution_id", masterFull.attribution_ref).eq("public", true)
@@ -52,10 +51,9 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     .eq("access_level", "public")
     .single();
 
-  // Fetch both presentation records in parallel — neither touches the canonical chain
   const [{ data: projPresentation }, { data: worldPresentation }] = await Promise.all([
     svc.from("projection_presentation").select("title, description").eq("projection_id", projectionId).maybeSingle(),
-    svc.from("work_presentation").select("title").eq("master_id", proj.master_id).maybeSingle(),
+    svc.from("work_presentation").select("title, description").eq("master_id", proj.master_id).maybeSingle(),
   ]);
 
   let media: ProjectionMedia | null = null;
@@ -99,7 +97,31 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     media,
     presentation: projPresentation ?? null,
     worldTitle: worldPresentation?.title ?? null,
-  };
+    // Pass world description for credit fallback
+    worldDescription: worldPresentation?.description ?? null,
+  } as MomentData & { worldDescription: string | null };
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ projectionId: string }>;
+}): Promise<Metadata> {
+  const { projectionId } = await params;
+  const svc = getServiceClient();
+  const { data: proj } = await svc.from("projection").select("master_id").eq("projection_id", projectionId).single();
+  const [{ data: pres }, { data: worldPres }] = await Promise.all([
+    svc.from("projection_presentation").select("title").eq("projection_id", projectionId).maybeSingle(),
+    proj ? svc.from("work_presentation").select("title").eq("master_id", proj.master_id).maybeSingle() : Promise.resolve({ data: null }),
+  ]);
+  const momentTitle = pres?.title ?? null;
+  const worldTitle = worldPres?.title ?? null;
+  const title = momentTitle
+    ? `${momentTitle} — Mighty Verse`
+    : worldTitle
+    ? `${worldTitle} — Mighty Verse`
+    : "Mighty Verse";
+  return { title };
 }
 
 export default async function MomentPage({
@@ -111,62 +133,51 @@ export default async function MomentPage({
   const moment = await getMoment(projectionId);
   if (!moment) notFound();
 
-  const { projection, canonical_state, master, provenance, attribution, media, presentation, worldTitle } = moment;
+  const m = moment as MomentData & { worldDescription: string | null };
+  const { projection, canonical_state, master, provenance, attribution, media, presentation, worldTitle } = m;
 
   const parentLabel = worldTitle ?? (TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " "));
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
+  const title = presentation?.title ?? `${projTypeLabel} Moment`;
+
+  // Credit: prefer moment description, then world description, then role types
+  const credit = presentation?.description
+    ?? m.worldDescription
+    ?? (attribution.roles.length > 0
+      ? attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")
+      : null);
 
   return (
     <main className="min-h-screen bg-background">
 
-      {/* Media */}
-      <section className="w-full bg-black">
-        <ProjectionMediaPlayer
-          media={media}
-          projectionId={projection.projection_id}
-          masterId={master.master_id}
-          canonicalStateId={canonical_state.canonical_state_id}
-        />
-      </section>
-
-      <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
-
-        {/* Back to World */}
+      {/* Back navigation — above media */}
+      <div className="mx-auto max-w-2xl px-4 pt-4 pb-2">
         <Link
           href={`/worlds/${master.master_id}`}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <span>←</span>
-          <span>Back to {parentLabel}</span>
+          <span>{parentLabel}</span>
         </Link>
+      </div>
 
-        {/* Moment identity */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-foreground text-lg font-semibold">
-              {presentation?.title ?? `${projTypeLabel} Moment`}
-            </span>
-            {projection.collectible_designated && (
-              <Badge variant="outline">collectible</Badge>
-            )}
-          </div>
-          {presentation?.title && (
-            <p className="text-muted-foreground text-xs">{projTypeLabel}</p>
-          )}
-          {presentation?.description && (
-            <p className="text-muted-foreground text-sm">{presentation.description}</p>
-          )}
-          {attribution.roles.length > 0 && (
-            <p className="text-muted-foreground text-sm capitalize">
-              {attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")}
-            </p>
-          )}
-        </div>
+      {/* MediaHero */}
+      <MediaHero
+        media={media}
+        projectionId={projection.projection_id}
+        masterId={master.master_id}
+        canonicalStateId={canonical_state.canonical_state_id}
+        title={title}
+        typeLabel={projTypeLabel}
+        credit={credit}
+        collectible={projection.collectible_designated}
+      />
 
-        {/* Canonical Record — secondary */}
+      {/* Canonical Record — secondary, collapsible */}
+      <div className="mx-auto max-w-2xl px-4 py-8 space-y-8">
         <Separator />
-        <details className="group">
-          <summary className="text-muted-foreground text-xs font-medium uppercase tracking-wider cursor-pointer select-none hover:text-foreground transition-colors">
+        <details>
+          <summary className="text-muted-foreground text-xs font-medium uppercase tracking-widest cursor-pointer select-none hover:text-foreground transition-colors">
             Canonical Record
           </summary>
           <div className="mt-4 space-y-3 text-xs">
@@ -190,7 +201,6 @@ export default async function MomentPage({
             )}
           </div>
         </details>
-
       </div>
     </main>
   );
