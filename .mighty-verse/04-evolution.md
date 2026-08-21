@@ -448,3 +448,76 @@ The Mural is the complete visual expression of the World. The World already carr
 | Mural-Moment context | Deferred |
 | Rendition entity | No |
 | Expression vocabulary | Conceptually established; no new table yet |
+
+---
+
+## Build 06 — Super Hero Ego Mural (2026-08-21, CLOSED)
+
+`CANONICAL` **First real Mural instance** (2026-08-21, founder-established)
+
+The Super Hero Ego Mural is the first canonical instance of the two-graph ontology in production.
+
+**Canonical Identity Graph:**
+```
+Super Hero Ego World (song-world)
+master_id: 05ccc0c6-75f9-4864-b0c1-af5e36bf45cc
+│
+└── Super Hero Ego Mural (mural)
+    master_id: a75ae8af-7b48-4b67-8392-d89447bae370
+    canonical_state_id: 8f7fe56d-0269-476d-b925-4567c461ee5e
+    director: Golden Shovel (866390ff) — explicit canonical act
+    original-artist: not assigned
+```
+
+**Experiential Delivery (two separate projection contexts, one underlying asset):**
+```
+World canonical state abe7b1c0
+  └── World projection a66a93b6
+        └── media asset bda79051 (Livepeer: 5a112ddzzuvlq3a5)
+
+Mural canonical state 8f7fe56d
+  └── Mural projection 2e68a8d6
+        └── same media asset bda79051 (reused, not duplicated)
+```
+
+**Proven architectural result:** the same creative media participates in two legitimate projection contexts without collapsing the canonical identities. The World projection and Mural projection are distinct canonical records with distinct provenance, pointing to the same underlying delivery asset.
+
+**Record IDs:**
+
+| Record | ID |
+|---|---|
+| Mural master | `a75ae8af-7b48-4b67-8392-d89447bae370` |
+| Mural canonical state | `8f7fe56d-0269-476d-b925-4567c461ee5e` |
+| Mural projection | `2e68a8d6-6b15-4d16-a0d9-2ea290815f21` |
+| Mural media binding | `17294363-9ac2-44c9-bbb5-0fe358b07f86` |
+| Director attribution entry | `08455471-3108-4a61-b74e-0491314eb9c4` |
+| Work presentation | `4c45bbf4-9a55-41ae-b1ee-627397bfeb9a` |
+| Media asset reused | `bda79051-6bc9-497f-b0aa-12d95130290c` |
+
+**Commit:** `bc46f2f`
+
+**Integrity:** 15/15 checks passed. World canonical state and projection unchanged. TypeScript clean.
+
+---
+
+## Next Boundary — Creative Moment Ontology Audit
+
+`OPEN QUESTION` **What exactly is a Creative Moment, now that a real World and real Mural exist?**
+
+Build 06 is closed. The next build must NOT begin with implementation.
+
+The next step is an evidence/ontology audit of Creative Moments against the real Super Hero Ego material. The question to answer before any schema or code work:
+
+> Does the relationship `Mural → Creative Moment` require an intermediate layer, or is direct expressive placement (via `mural_moment_context`) sufficient?
+
+Specifically:
+- What is the unit of meaning that constitutes a Creative Moment in Super Hero Ego?
+- Is a Creative Moment a segment of the Mural's timeline, a visual region, a lyric unit, or something else?
+- Does the Mural → Moment relationship require a named intermediate concept (e.g. a "Scene" or "Act") between the full Mural and individual Moments?
+- What does "a Moment appearing within a Mural" actually mean against the real 4:15 video?
+
+This audit must be conducted by the founder against the actual Super Hero Ego material before any `mural_moment_context` schema or Creative Moment creation is designed.
+
+`CANONICAL` **Mural does not own any Creative Moments** (2026-08-21, founder-established)
+
+The Super Hero Ego Mural currently has no Creative Moment relationships. This is correct — not missing data. The expressive composition graph between Mural and Moments is deferred until the Creative Moment ontology audit is complete.
