@@ -2,9 +2,7 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { getDiscovery } from "@/lib/discovery";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
+import MomentCard from "@/components/moment-card";
 
 const TYPE_LABELS: Record<string, string> = {
   "song-world": "Song World",
@@ -21,90 +19,100 @@ const PROJ_LABELS: Record<string, string> = {
   "other": "Moment",
 };
 
-function typeLabel(s: string) {
-  return TYPE_LABELS[s] ?? s.replace(/-/g, " ");
-}
-
-function projLabel(s: string) {
-  return PROJ_LABELS[s] ?? s.replace(/-/g, " ");
-}
-
 export default async function HomePage() {
   const worlds = await getDiscovery();
 
+  if (worlds.length === 0) {
+    return (
+      <main className="min-h-screen bg-background">
+        <div className="mx-auto max-w-2xl px-4 pt-16">
+          <p className="text-muted-foreground text-sm">No worlds yet.</p>
+        </div>
+      </main>
+    );
+  }
+
+  const featured = worlds.filter((w) => !!w.title);
+  const secondary = worlds.filter((w) => !w.title);
+
   return (
     <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-2xl px-4 pt-8 pb-16 space-y-10">
+      <div className="mx-auto max-w-2xl px-4 pt-10 pb-16 space-y-16">
 
-        {worlds.length === 0 ? (
-          <p className="text-muted-foreground text-sm pt-8">No worlds yet.</p>
-        ) : (
-          <section className="space-y-4">
-            <div className="flex items-center gap-3">
-              <h2 className="text-foreground text-xs font-medium uppercase tracking-wider">Worlds</h2>
-              <Separator className="flex-1" />
-            </div>
+        {/* Featured works — titled, with media and credit */}
+        {featured.length > 0 && (
+          <section className="space-y-10">
+            {featured.map((w) => {
+              const typeLabel = TYPE_LABELS[w.canonical_type] ?? w.canonical_type.replace(/-/g, " ");
+              const credit = w.description ?? (
+                w.attribution_roles.length > 0
+                  ? w.attribution_roles.map(r => r.replace(/-/g, " ")).join(" · ")
+                  : null
+              );
 
-            <div className="space-y-6">
-              {worlds.map((w) => (
-                <div key={w.master_id} className="space-y-2">
-                  {/* World card */}
-                  <Link href={`/worlds/${w.master_id}`} className="block group">
-                    <Card className="transition-colors group-hover:border-foreground/20">
-                      <CardContent className="pt-4 pb-4 flex items-center justify-between gap-4">
-                        <div className="space-y-1 min-w-0">
-                          <p className="text-foreground text-sm font-medium">
-                            {w.title ?? typeLabel(w.canonical_type)}
-                          </p>
-                          {w.title && (
-                            <p className="text-muted-foreground text-xs">{typeLabel(w.canonical_type)}</p>
-                          )}
-                          {w.attribution_roles.length > 0 && (
-                            <p className="text-muted-foreground text-xs capitalize">
-                              {w.attribution_roles.map(r => r.replace(/-/g, " ")).join(" · ")}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                          {w.has_media && (
-                            <span className="text-xs text-foreground">● playable</span>
-                          )}
-                          <span className="text-muted-foreground text-xs">→</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+              return (
+                <div key={w.master_id} className="space-y-4">
+                  <Link href={`/worlds/${w.master_id}`} className="group block space-y-2">
+                    <div className="flex items-start justify-between gap-4">
+                      <h2
+                        className="text-3xl font-semibold text-foreground group-hover:opacity-80 transition-opacity leading-tight tracking-tight"
+                        style={{ fontFamily: "var(--font-display, inherit)" }}
+                      >
+                        {w.title}
+                      </h2>
+                      {w.has_media && (
+                        <span
+                          className="shrink-0 mt-2 text-sm font-medium"
+                          style={{ color: "var(--accent-mv)" }}
+                        >
+                          ▶
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground text-xs uppercase tracking-widest">{typeLabel}</p>
+                    {credit && (
+                      <p className="text-foreground/60 text-sm">{credit}</p>
+                    )}
                   </Link>
 
-                  {/* Nested Moments */}
                   {w.projections.length > 0 && (
-                    <div className="pl-4 space-y-1.5">
+                    <div className="pl-4 border-l border-border space-y-2">
                       {w.projections.map((p) => (
-                        <Link
+                        <MomentCard
                           key={p.projection_id}
-                          href={`/moments/${p.projection_id}`}
-                          className="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-border hover:border-foreground/20 hover:bg-muted/30 transition-colors group"
-                        >
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className="text-muted-foreground text-xs truncate">
-                              {p.title ?? `Moment · ${projLabel(p.projection_type)}`}
-                            </span>
-                            {p.collectible_designated && (
-                              <Badge variant="outline" className="text-xs py-0">collectible</Badge>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            {p.has_media && (
-                              <span className="text-xs text-foreground">● playable</span>
-                            )}
-                            <span className="text-muted-foreground text-xs group-hover:text-foreground transition-colors">→</span>
-                          </div>
-                        </Link>
+                          projectionId={p.projection_id}
+                          title={p.title}
+                          typeLabel={PROJ_LABELS[p.projection_type] ?? p.projection_type.replace(/-/g, " ")}
+                          hasMedia={p.has_media}
+                          collectible={p.collectible_designated}
+                        />
                       ))}
                     </div>
                   )}
                 </div>
-              ))}
-            </div>
+              );
+            })}
+          </section>
+        )}
+
+        {/* Secondary works — untitled, receded */}
+        {secondary.length > 0 && (
+          <section className="space-y-1 border-t border-border pt-8">
+            {secondary.map((w) => {
+              const typeLabel = TYPE_LABELS[w.canonical_type] ?? w.canonical_type.replace(/-/g, " ");
+              return (
+                <Link
+                  key={w.master_id}
+                  href={`/worlds/${w.master_id}`}
+                  className="group flex items-center justify-between gap-4 py-2.5 text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  <span className="text-sm">{typeLabel}</span>
+                  <span className="text-xs font-mono opacity-40 group-hover:opacity-70 transition-opacity">
+                    {w.master_id.slice(0, 8)}
+                  </span>
+                </Link>
+              );
+            })}
           </section>
         )}
 

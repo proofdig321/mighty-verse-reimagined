@@ -7,6 +7,7 @@ export type DiscoveryWorld = {
   authorisation_state: string;
   has_media: boolean;
   title: string | null;
+  description: string | null;
   attribution_roles: string[];
   projections: DiscoveryProjection[];
 };
@@ -60,7 +61,7 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
         .eq("access_level", "public"),
       svc
         .from("work_presentation")
-        .select("master_id, title")
+        .select("master_id, title, description")
         .in("master_id", masterIds),
     ]);
 
@@ -106,6 +107,7 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
         authorisation_state: cs.authorisation_state,
         has_media: masterHasMedia,
         title: presentation?.title ?? null,
+        description: presentation?.description ?? null,
         attribution_roles: roles,
         projections: mProjs.map((p) => ({
           projection_id: p.projection_id,
