@@ -224,9 +224,6 @@ export default async function WorldPage({
 
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
 
-        {/* Experience toggle */}
-        <ExperienceToggle />
-
         {/* Moments */}
         {moments.length > 0 && (
           <section className="space-y-3">
@@ -245,6 +242,9 @@ export default async function WorldPage({
             </div>
           </section>
         )}
+
+        {/* Experience toggle — below Moments, above Canonical Record */}
+        <ExperienceToggle />
 
         {/* Canonical Record — secondary, collapsible */}
         <Separator />

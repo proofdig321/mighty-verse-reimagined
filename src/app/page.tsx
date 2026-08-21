@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getDiscovery } from "@/lib/discovery";
 import MomentCard from "@/components/moment-card";
+import ArtworkFrame from "@/components/artwork-frame";
 
 export const metadata: Metadata = {
   title: "Mighty Verse",
@@ -28,7 +29,12 @@ const PROJ_LABELS: Record<string, string> = {
 export default async function HomePage() {
   const worlds = await getDiscovery();
 
-  if (worlds.length === 0) {
+  // Only surface worlds with authored presentation identity
+  const authored = worlds.filter((w) => !!w.title);
+  const featured = authored[0] ?? null;
+  const remaining = authored.slice(1);
+
+  if (!featured) {
     return (
       <main className="min-h-screen bg-background">
         <div className="mx-auto max-w-5xl px-4 pt-16">
@@ -38,85 +44,70 @@ export default async function HomePage() {
     );
   }
 
-  const featured = worlds.find((w) => !!w.title) ?? null;
-  const remaining = worlds.filter((w) => w !== featured);
-  const namedRemaining = remaining.filter((w) => !!w.title);
-  const unnamed = remaining.filter((w) => !w.title);
+  const featuredTypeLabel = TYPE_LABELS[featured.canonical_type] ?? featured.canonical_type.replace(/-/g, " ");
 
   return (
     <main className="min-h-screen bg-background">
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      {featured && (() => {
-        const typeLabel = TYPE_LABELS[featured.canonical_type] ?? featured.canonical_type.replace(/-/g, " ");
-        return (
-          <section className="border-b border-border">
-            <div className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-              <div className="max-w-2xl space-y-6">
+      <section className="border-b border-border">
+        <div className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+          <div className="flex flex-col md:flex-row md:items-start gap-10 md:gap-16">
 
-                {/* Eyebrow */}
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">{typeLabel}</p>
-
-                {/* Title */}
-                <h1
-                  className="text-5xl md:text-7xl font-semibold leading-none tracking-tight text-foreground"
-                  style={{ fontFamily: "var(--font-display, inherit)" }}
-                >
-                  {featured.title}
-                </h1>
-
-                {/* Credit */}
-                {featured.description && (
-                  <p className="text-lg text-muted-foreground">{featured.description}</p>
-                )}
-
-                {/* Signals */}
-                <div className="flex items-center gap-3 pt-2">
-                  {featured.has_media && (
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
-                      style={{ color: "var(--accent-mv)", borderColor: "var(--accent-mv)" }}>
-                      ▶ Media available
-                    </span>
-                  )}
-                  {featured.projections.some((p) => p.collectible_designated) && (
-                    <span className="text-xs font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground">
-                      Collectible
-                    </span>
-                  )}
-                </div>
-
-                {/* CTA */}
-                <div className="pt-2">
-                  <Link
-                    href={`/worlds/${featured.master_id}`}
-                    className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-70 transition-opacity"
-                    style={{ fontFamily: "var(--font-display, inherit)" }}
-                  >
-                    Enter World
-                    <span style={{ color: "var(--accent-mv)" }}>→</span>
-                  </Link>
-                </div>
-
-              </div>
+            {/* Artwork slot — empty until genuine artwork exists */}
+            <div className="w-full md:w-48 shrink-0">
+              <ArtworkFrame artworkUrl={null} alt={featured.title ?? ""} aspectRatio="1/1" />
             </div>
-          </section>
-        );
-      })()}
 
-      {/* ── WORLDS ───────────────────────────────────────────────────────── */}
+            {/* Identity */}
+            <div className="space-y-6">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">{featuredTypeLabel}</p>
+              <h1
+                className="text-5xl md:text-7xl font-semibold leading-none tracking-tight text-foreground"
+                style={{ fontFamily: "var(--font-display, inherit)" }}
+              >
+                {featured.title}
+              </h1>
+              {featured.description && (
+                <p className="text-lg text-muted-foreground">{featured.description}</p>
+              )}
+              <div className="flex items-center gap-3">
+                {featured.has_media && (
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full border"
+                    style={{ color: "var(--accent-mv)", borderColor: "var(--accent-mv)" }}>
+                    ▶ Media available
+                  </span>
+                )}
+                {featured.projections.some((p) => p.collectible_designated) && (
+                  <span className="text-xs font-medium px-2.5 py-1 rounded-full border border-border text-muted-foreground">
+                    Collectible
+                  </span>
+                )}
+              </div>
+              <Link
+                href={`/worlds/${featured.master_id}`}
+                className="inline-flex items-center gap-2 text-sm font-medium text-foreground hover:opacity-70 transition-opacity"
+                style={{ fontFamily: "var(--font-display, inherit)" }}
+              >
+                Enter World
+                <span style={{ color: "var(--accent-mv)" }}>→</span>
+              </Link>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      {/* ── MOMENTS ──────────────────────────────────────────────────────── */}
       <div className="mx-auto max-w-5xl px-4 py-12 space-y-16">
 
-        {/* Featured world moments (below hero) */}
-        {featured && featured.projections.length > 0 && (
+        {featured.projections.length > 0 && (
           <section className="space-y-4">
             <div className="flex items-baseline justify-between gap-4">
               <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
                 Moments — {featured.title}
               </h2>
-              <Link
-                href={`/worlds/${featured.master_id}`}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <Link href={`/worlds/${featured.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
                 View World →
               </Link>
             </div>
@@ -135,17 +126,14 @@ export default async function HomePage() {
           </section>
         )}
 
-        {/* Other named worlds */}
-        {namedRemaining.map((w) => {
+        {/* Additional authored worlds */}
+        {remaining.map((w) => {
           const typeLabel = TYPE_LABELS[w.canonical_type] ?? w.canonical_type.replace(/-/g, " ");
           return (
             <section key={w.master_id} className="space-y-4">
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">{typeLabel}</p>
-                <Link
-                  href={`/worlds/${w.master_id}`}
-                  className="group inline-flex items-center gap-2"
-                >
+                <Link href={`/worlds/${w.master_id}`} className="group inline-flex items-center gap-2">
                   <h2
                     className="text-2xl font-semibold text-foreground group-hover:opacity-70 transition-opacity"
                     style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -154,9 +142,7 @@ export default async function HomePage() {
                   </h2>
                   <span className="text-muted-foreground group-hover:text-foreground transition-colors text-sm">→</span>
                 </Link>
-                {w.description && (
-                  <p className="text-sm text-muted-foreground">{w.description}</p>
-                )}
+                {w.description && <p className="text-sm text-muted-foreground">{w.description}</p>}
               </div>
               {w.projections.length > 0 && (
                 <div className="space-y-2">
@@ -175,30 +161,6 @@ export default async function HomePage() {
             </section>
           );
         })}
-
-        {/* Unnamed / unresolved works — receded */}
-        {unnamed.length > 0 && (
-          <section className="border-t border-border pt-8 space-y-1">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground mb-4">
-              Works in progress
-            </p>
-            {unnamed.map((w) => {
-              const typeLabel = TYPE_LABELS[w.canonical_type] ?? w.canonical_type.replace(/-/g, " ");
-              return (
-                <Link
-                  key={w.master_id}
-                  href={`/worlds/${w.master_id}`}
-                  className="group flex items-center justify-between gap-4 py-2.5 text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  <span className="text-sm">{typeLabel}</span>
-                  <span className="text-xs font-mono opacity-40 group-hover:opacity-70 transition-opacity">
-                    {w.master_id.slice(0, 8)}
-                  </span>
-                </Link>
-              );
-            })}
-          </section>
-        )}
 
       </div>
     </main>

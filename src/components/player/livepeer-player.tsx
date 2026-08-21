@@ -23,7 +23,10 @@ export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalSt
         const hls = info?.meta?.source?.find((s: { type: string; url: string }) => s.type === "html5/application/vnd.apple.mpegurl");
         if (!hls) return;
 
-        // Native HLS (Safari) or hls.js for other browsers
+        // Derive poster from the thumbnails path alongside the HLS manifest
+        const poster = hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png");
+        if (poster && !video.poster) video.poster = poster;
+
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = hls.url;
         } else {
@@ -38,7 +41,6 @@ export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalSt
       })
       .catch(() => null);
 
-    // Consumption signal on play
     const onPlay = () => fetch("/api/signals", {
       method: "POST",
       headers: { "Content-Type": "application/json" },

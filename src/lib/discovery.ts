@@ -23,7 +23,6 @@ export type DiscoveryProjection = {
 export async function getDiscovery(): Promise<DiscoveryWorld[]> {
   const svc = getServiceClient();
 
-  // Masters with an authorised current state
   const { data: masters } = await svc
     .from("master")
     .select("master_id, canonical_type, current_state_id, attribution_ref")
@@ -36,7 +35,8 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
   const masterIds = masters.map((m) => m.master_id);
   const attrIds = masters.map((m) => m.attribution_ref).filter(Boolean);
 
-  const [{ data: states }, { data: projections }, { data: attrEntries }, { data: bindings }, { data: presentationRows }] =
+  // Fetch states, projections, attribution, and presentation in parallel
+  const [{ data: states }, { data: projections }, { data: attrEntries }, { data: presentationRows }] =
     await Promise.all([
       svc
         .from("canonical_state")
@@ -55,20 +55,26 @@ export async function getDiscovery(): Promise<DiscoveryWorld[]> {
             .eq("public", true)
         : Promise.resolve({ data: [] }),
       svc
-        .from("projection_media_binding")
-        .select("projection_id, access_level, asset_id")
-        .in("master_id", masterIds)
-        .eq("access_level", "public"),
-      svc
         .from("work_presentation")
         .select("master_id, title, description")
         .in("master_id", masterIds),
     ]);
 
+  // Now we have projection IDs — use them to query bindings correctly
   const projectionIds = (projections ?? []).map((p) => p.projection_id);
-  const { data: projPresentations } = projectionIds.length
-    ? await svc.from("projection_presentation").select("projection_id, title").in("projection_id", projectionIds)
-    : { data: [] };
+
+  const [{ data: projPresentations }, { data: bindings }] = await Promise.all([
+    projectionIds.length
+      ? svc.from("projection_presentation").select("projection_id, title").in("projection_id", projectionIds)
+      : Promise.resolve({ data: [] }),
+    projectionIds.length
+      ? svc
+          .from("projection_media_binding")
+          .select("projection_id, asset_id")
+          .in("projection_id", projectionIds)
+          .eq("access_level", "public")
+      : Promise.resolve({ data: [] }),
+  ]);
 
   // Determine which asset_ids are placeholders
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
