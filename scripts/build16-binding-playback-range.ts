@@ -34,10 +34,10 @@ async function sql(query: string) {
 
 // V1 realization ranges — media observations, not canonical Scene boundaries
 const RANGES = [
-  { projectionId: "3039ca84-0000-0000-0000-000000000000", startMs: 36000,  endMs: 79000,  label: "Golden Shovel Powerhouse" },
-  { projectionId: "bb802400-0000-0000-0000-000000000000", startMs: 80000,  endMs: 124000, label: "Mothipa Dark Knight" },
-  { projectionId: "9c045ea3-0000-0000-0000-000000000000", startMs: 149000, endMs: 192000, label: "ProVerb Hand-to-Hand" },
-  { projectionId: "8100033e-0000-0000-0000-000000000000", startMs: 193000, endMs: 254000, label: "Reason Sword Master" },
+  { projectionId: "3039ca84-7e11-4eb6-8895-d16d13a899c3", startMs: 36000,  endMs: 79000,  label: "Golden Shovel Powerhouse" },
+  { projectionId: "bb802400-b385-4025-9bb8-63df53abd9be", startMs: 80000,  endMs: 124000, label: "Mothipa Dark Knight" },
+  { projectionId: "9c045ea3-ab09-4a6f-b89c-02dce076b8da", startMs: 149000, endMs: 192000, label: "ProVerb Hand-to-Hand" },
+  { projectionId: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd", startMs: 193000, endMs: 254000, label: "Reason Sword Master" },
 ];
 
 async function main() {

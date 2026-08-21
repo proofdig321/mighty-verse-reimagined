@@ -29,7 +29,7 @@ comment on column public.projection_media_binding.end_ms is
   'Optional playback end offset in milliseconds for this projection''s use of the asset. NULL = play to end. NOT canonical Scene identity.';
 
 -- V1 Scene realization ranges
-update public.projection_media_binding set start_ms = 36000,  end_ms = 79000  where projection_id = '3039ca84-0000-0000-0000-000000000000';
-update public.projection_media_binding set start_ms = 80000,  end_ms = 124000 where projection_id = 'bb802400-0000-0000-0000-000000000000';
-update public.projection_media_binding set start_ms = 149000, end_ms = 192000 where projection_id = '9c045ea3-0000-0000-0000-000000000000';
-update public.projection_media_binding set start_ms = 193000, end_ms = 254000 where projection_id = '8100033e-0000-0000-0000-000000000000';
+update public.projection_media_binding set start_ms = 36000,  end_ms = 79000  where projection_id = '3039ca84-7e11-4eb6-8895-d16d13a899c3';
+update public.projection_media_binding set start_ms = 80000,  end_ms = 124000 where projection_id = 'bb802400-b385-4025-9bb8-63df53abd9be';
+update public.projection_media_binding set start_ms = 149000, end_ms = 192000 where projection_id = '9c045ea3-ab09-4a6f-b89c-02dce076b8da';
+update public.projection_media_binding set start_ms = 193000, end_ms = 254000 where projection_id = '8100033e-4c7e-448f-8b9c-b9ff97fdc3fd';
