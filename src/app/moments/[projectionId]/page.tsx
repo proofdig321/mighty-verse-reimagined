@@ -23,7 +23,30 @@ const PROJ_LABELS: Record<string, string> = {
   "other": "Moment",
 };
 
-async function getMoment(projectionId: string): Promise<MomentData | null> {
+// Canonical Scene → Creative Moment master mapping.
+// Golden Shovel intentionally absent — no CM counterpart.
+const SCENE_TO_CM: Record<string, string> = {
+  "bebb65d2-21ed-4bc9-9fa0-a4857df30a43": "32422bb4-d03c-465d-8348-942e49ae0051", // Mothipa
+  "df15ec76-6bd8-4956-bbaa-755f72b2b8f8": "3b0de6b4-2ca0-43c0-8561-7dc1c0697435", // ProVerb
+  "65490a92-8faf-42ea-a391-0e6473360f5c": "2745a50a-5417-4613-b23b-ef4857ab112e", // Reason
+};
+
+function formatMs(ms: number): string {
+  const totalSec = Math.floor(ms / 1000);
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${s.toString().padStart(2, "0")}`;
+}
+
+type SceneMomentData = MomentData & {
+  worldDescription: string | null;
+  muralTitle: string | null;
+  muralMasterId: string | null;
+  worldMasterId: string | null;
+  cmTitle: string | null;
+};
+
+async function getMoment(projectionId: string): Promise<SceneMomentData | null> {
   const svc = getServiceClient();
 
   const { data: proj } = await svc
@@ -39,6 +62,8 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     svc.from("provenance_record").select("relationship_type, integrity_hash").eq("subject_id", projectionId).eq("subject_type", "projection").eq("public", true).single(),
     svc.from("master").select("attribution_ref").eq("master_id", proj.master_id).single(),
   ]);
+
+  const isScene = master?.canonical_type === "scene";
 
   const { data: attrEntries } = masterFull?.attribution_ref
     ? await svc.from("attribution_entry").select("role_type").eq("attribution_id", masterFull.attribution_ref).eq("public", true)
@@ -75,6 +100,33 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     };
   }
 
+  // Scene-specific: resolve Mural and associated Creative Moment
+  let muralTitle: string | null = null;
+  let muralMasterId: string | null = null;
+  let worldMasterId: string | null = null;
+  let cmTitle: string | null = null;
+
+  if (isScene) {
+    const sourceStateId = (cs?.content_refs as { source_canonical_state_id?: string } | null)?.source_canonical_state_id ?? null;
+    if (sourceStateId) {
+      const { data: muralState } = await svc.from("canonical_state").select("canonical_state_id, master_id").eq("canonical_state_id", sourceStateId).single() as { data: { canonical_state_id: string; master_id: string } | null };
+      if (muralState) {
+        muralMasterId = muralState.master_id;
+        const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralState.master_id).maybeSingle();
+        muralTitle = muralPres?.title ?? null;
+        // World = parent of Mural — find the song-world master
+        const { data: worldMaster } = await svc.from("master").select("master_id").eq("canonical_type", "song-world").single();
+        worldMasterId = worldMaster?.master_id ?? null;
+      }
+    }
+
+    const cmMasterId = SCENE_TO_CM[proj.master_id] ?? null;
+    if (cmMasterId) {
+      const { data: cmPres } = await svc.from("work_presentation").select("title").eq("master_id", cmMasterId).maybeSingle();
+      cmTitle = cmPres?.title ?? null;
+    }
+  }
+
   return {
     projection: {
       projection_id: proj.projection_id,
@@ -102,7 +154,11 @@ async function getMoment(projectionId: string): Promise<MomentData | null> {
     presentation: projPresentation ?? null,
     worldTitle: worldPresentation?.title ?? null,
     worldDescription: worldPresentation?.description ?? null,
-  } as MomentData & { worldDescription: string | null };
+    muralTitle,
+    muralMasterId,
+    worldMasterId,
+    cmTitle,
+  };
 }
 
 export async function generateMetadata({
@@ -142,37 +198,39 @@ export default async function MomentPage({
   const moment = await getMoment(projectionId);
   if (!moment) notFound();
 
-  const m = moment as MomentData & { worldDescription: string | null };
-  const { projection, canonical_state, master, provenance, attribution, media, presentation, worldTitle } = m;
+  const { projection, canonical_state, master, provenance, attribution, media, presentation,
+          worldTitle, muralTitle, muralMasterId, worldMasterId, cmTitle } = moment;
 
   const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
-  const parentLabel = worldTitle ?? parentTypeLabel;
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
   const isScene = master.canonical_type === "scene";
   const title = presentation?.title ?? `${projTypeLabel} Moment`;
 
-  // Scene extraction metadata from content_refs
   const extractionBounds = isScene
     ? (canonical_state.content_refs as { extraction_bounds?: { semantic_identity?: string; spatial_description?: string } } | null)?.extraction_bounds ?? null
     : null;
 
   const credit = presentation?.description
-    ?? m.worldDescription
+    ?? moment.worldDescription
     ?? (attribution.roles.length > 0
       ? attribution.roles.map((r) => r.role_type.replace(/-/g, " ")).join(" · ")
       : null);
 
+  // Breadcrumb: Scene → Mural (if known), else World
+  const breadcrumbHref = muralMasterId ? `/worlds/${muralMasterId}` : worldMasterId ? `/worlds/${worldMasterId}` : "/";
+  const breadcrumbLabel = muralTitle ?? worldTitle ?? "World";
+
   return (
     <main className="min-h-screen bg-background">
 
-      {/* World breadcrumb — above media */}
+      {/* Breadcrumb */}
       <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
         <Link
-          href={`/worlds/${master.master_id}`}
+          href={breadcrumbHref}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
         >
           <span>←</span>
-          <span>{parentLabel}</span>
+          <span>{breadcrumbLabel}</span>
         </Link>
       </div>
 
@@ -188,40 +246,96 @@ export default async function MomentPage({
         collectible={projection.collectible_designated}
       />
 
-      <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
+      <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
 
-        {/* Scene extraction identity — only for scene canonical type */}
-        {isScene && extractionBounds && (
-          <section className="space-y-2">
-            {extractionBounds.semantic_identity && (
-              <p className="text-sm text-foreground font-medium"
-                style={{ fontFamily: "var(--font-display, inherit)" }}>
-                {extractionBounds.semantic_identity}
-              </p>
+        {/* Scene identity block */}
+        {isScene && (
+          <section className="space-y-5">
+
+            {/* Semantic + spatial identity */}
+            {extractionBounds && (
+              <div className="space-y-1.5">
+                {extractionBounds.semantic_identity && (
+                  <p className="text-sm text-foreground font-medium"
+                    style={{ fontFamily: "var(--font-display, inherit)" }}>
+                    {extractionBounds.semantic_identity}
+                  </p>
+                )}
+                {extractionBounds.spatial_description && (
+                  <p className="text-xs text-muted-foreground">{extractionBounds.spatial_description}</p>
+                )}
+              </div>
             )}
-            {extractionBounds.spatial_description && (
-              <p className="text-xs text-muted-foreground">{extractionBounds.spatial_description}</p>
+
+            {/* Mural relationship */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="text-muted-foreground text-xs uppercase tracking-widest">Mural</span>
+              {muralMasterId ? (
+                <Link
+                  href={`/worlds/${muralMasterId}`}
+                  className="text-foreground hover:opacity-70 transition-opacity font-medium"
+                  style={{ fontFamily: "var(--font-display, inherit)" }}
+                >
+                  {muralTitle ?? "Super Hero Ego"}
+                </Link>
+              ) : (
+                <span className="text-foreground font-medium">{muralTitle ?? "Super Hero Ego"}</span>
+              )}
+            </div>
+
+            {/* Creative Moment association */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+              <span className="text-muted-foreground text-xs uppercase tracking-widest">Creative Moment</span>
+              {cmTitle ? (
+                worldMasterId ? (
+                  <Link
+                    href={`/worlds/${worldMasterId}`}
+                    className="text-foreground hover:opacity-70 transition-opacity font-medium"
+                    style={{ fontFamily: "var(--font-display, inherit)" }}
+                  >
+                    {cmTitle}
+                  </Link>
+                ) : (
+                  <span className="text-foreground font-medium">{cmTitle}</span>
+                )
+              ) : (
+                <span className="text-muted-foreground text-xs italic">None — this Scene has no Creative Moment counterpart</span>
+              )}
+            </div>
+
+            {/* Media realization range */}
+            {media?.start_ms != null && media?.end_ms != null && (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                <span className="text-muted-foreground text-xs uppercase tracking-widest">Realization</span>
+                <span className="text-foreground font-mono text-xs">
+                  {formatMs(media.start_ms)} – {formatMs(media.end_ms)}
+                </span>
+                <span className="text-muted-foreground text-xs">temporal range within Mural animation</span>
+              </div>
             )}
+
             <p className="text-xs text-muted-foreground italic">
-              Scene extracted from the Super Hero Ego Mural · media realization plays the Scene&apos;s portion of the Mural animation
+              This is a canonical Scene — a visual/spatial unit of the Mural. The current experience is a temporal media realization, not the Scene&apos;s canonical identity.
             </p>
           </section>
         )}
 
-        {/* World relationship */}
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <span>Part of</span>
-          <Link
-            href={`/worlds/${master.master_id}`}
-            className="text-foreground hover:opacity-70 transition-opacity font-medium"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            {parentLabel}
-          </Link>
-          <span className="text-xs text-muted-foreground">· {parentTypeLabel}</span>
-        </div>
+        {/* Non-scene world relationship */}
+        {!isScene && (
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Part of</span>
+            <Link
+              href={`/worlds/${master.master_id}`}
+              className="text-foreground hover:opacity-70 transition-opacity font-medium"
+              style={{ fontFamily: "var(--font-display, inherit)" }}
+            >
+              {worldTitle ?? parentTypeLabel}
+            </Link>
+            <span className="text-xs text-muted-foreground">· {parentTypeLabel}</span>
+          </div>
+        )}
 
-        {/* Canonical Record — secondary, collapsible */}
+        {/* Canonical Record */}
         <Separator />
         <details>
           <summary className="text-muted-foreground text-xs font-medium uppercase tracking-widest cursor-pointer select-none hover:text-foreground transition-colors">
