@@ -321,3 +321,130 @@ The following questions are unresolved and must not be answered by assumption:
 | 2026-08-17 | Phase 6 — A11–A13 architectural decisions established. A11: AuthorityRecord as first-class access-control entity; seven explicit capabilities; five-step validation on every canonical operation; revocation preserves historical lineage; ownership/attribution/economic entitlement/Web3 grant zero canonical capabilities. A12: five-entity media model (MediaAsset, ProjectionMediaBinding, DeliveryVariant, Projection, ConsumptionSignal); provenance resolved through entity chain not URL; ConsumptionSignals are evidence not automatic entitlements; attribution_confidence gates economic attribution. A13: Participant as stable internal identity; IdentityLink for external/wallet references (wallet is a link, not identity); ParticipantRole explicit and never inferred; AttributionRecord versioned with snapshots; four privacy levels; participant_id immutable regardless of external identity changes. |
 | 2026-08-17 | Phase 6 — A14 Technology Selection completed. Stack: Next.js 16 + React + shadcn/ui + Tailwind (UI); Supabase/PostgreSQL (authoritative database, one project); Supabase Storage + IPFS/Pinata (media); Livepeer (video/streaming); n8n (automation); thirdweb v5.121.0 (Web3, selected after current-state investigation — materially different from V1); Base L2 (chain); ERC-721/ERC-1155 + OpenZeppelin v5 (contract standards); Supabase Auth + thirdweb in-app wallets (identity/auth); Stripe + thirdweb Pay (settlement); PostgreSQL FTS (search, initial); Vercel (deployment). shadcn/ui MCP verified: official built-in MCP server in shadcn CLI v4.18.0 via `npx shadcn mcp`, eight tools, requires components.json. Architecture contradiction check: all ten constitutional principles satisfied. 17 remaining unresolved items recorded. |
 | 2026-08-17 | A14 accepted. Operational architecture constraint recorded: Q is the primary implementation operator. Founder involvement limited to minimum external secrets and irreversible-action approvals. Supabase and deployment operational authority granted to Q within constitutional boundaries. Implementation commenced. Dependency order: Supabase schema → AuthorityRecord → Participant/Identity → Master/CanonicalState/Provenance → Projection → Waterfalls → Next.js + shadcn/ui + MCP → Auth → Media/Livepeer → Collectible → Economic engine → ConsumptionSignal → n8n → thirdweb v5 → Stripe → Vercel. |
+
+---
+
+## Canonical Identity vs Expressive Composition
+
+`CANONICAL` **Two-graph ontology** (2026-08-21, founder-established)
+
+Mighty Verse distinguishes two separate graphs that must not be collapsed:
+
+**Graph 1 — Canonical Identity**
+Establishes what a work *is* and where its canonical identity belongs.
+Governs: ownership, provenance, authority, integrity, attribution.
+
+```
+World (canonical source — the Song)
+├── Mural (canonical entity — the complete visual expression)
+└── Creative Moment (canonical entity — a meaningful unit)
+      └── Interpretation (canonical entity — a new creative response)
+```
+
+Implemented via: `master.canonical_type`, `master.parent_master_id`, `canonical_state`, `provenance_record`, `attribution_entry`.
+
+**Graph 2 — Expressive Composition**
+Establishes how canonical works express, represent, interpret, or project one another.
+Governs: creative relationships, contextual placement, expressive composition.
+
+```
+World ──[expressed-as]──► Mural
+Mural ──[expresses]──► Creative Moment (contextually, without owning it)
+Creative Moment ──[represented-as]──► Card (collectible)
+Creative Moment ──[responded-to-by]──► Interpretation (new creative act)
+Any canonical entity ──[projected-as]──► Projection (technical delivery)
+```
+
+Implemented via: `parent_master_id` (partial — canonical identity only), future `mural_moment_context` (expressive placement), `projection` (technical delivery).
+
+`CANONICAL` **Four relationship vocabulary** (2026-08-21, founder-established)
+
+Mighty Verse uses four distinct relationship types in the expressive composition graph:
+
+| Relationship | Meaning |
+|---|---|
+| **Expression** | A canonical work expressed through another creative form (World → Mural) |
+| **Representation** | A canonical work represented as a collectible/designated object (Moment → Card) |
+| **Interpretation** | A new creative work responding to another canonical work (Moment → Interpretation) |
+| **Projection** | A canonical state technically delivered or exhibited (any entity → Projection) |
+
+These four words are now architectural vocabulary. They must not be collapsed into one another.
+
+`CANONICAL` **parent_master_id is canonical identity, not expressive composition** (2026-08-21, founder-established)
+
+`master.parent_master_id` answers: "What canonical World does this entity belong to?"
+
+It does NOT answer: "How does this work appear within another creative expression?"
+
+The eventual `mural_moment_context` relationship is the first concrete implementation of the expressive composition graph. It is not merely a join table — it carries the semantic meaning of the `expresses` relationship type.
+
+`CANONICAL` **Registration and attribution are separate ontological acts** (2026-08-21, founder-established)
+
+Registering a canonical entity (creating a `master` record) establishes canonical identity.
+Attributing creative contribution is a separate, explicit act.
+Granting operational authority is a further separate, explicit act.
+
+These must not be collapsed. `registerMaster()` should establish canonical identity only.
+Creative roles (Director, original-artist, collaborator) must be explicitly attributed, not defaulted.
+
+This principle applies especially to Mural creation:
+- A Mural's Director must be explicitly designated — not defaulted to the creating participant.
+- A Mural does not have an `original-artist` in the same sense as a World — the Mural is an expression of the World, not an independent original work. Whether a Mural carries `original-artist` attribution requires an explicit product decision.
+
+`OPEN QUESTION` **Mural attribution model** — Whether a Mural carries `original-artist` attribution (and if so, whose) is UNKNOWN / TO BE ESTABLISHED. The Mural is an expression of the World, not an independent original work. The Director is the creative authority over the Mural. Whether these are the same person, and whether `original-artist` is the right role type for the Mural, requires a founder decision before the first Mural is created.
+
+`OPEN QUESTION` **Super Hero Ego Mural Director** — Whether Golden Shovel is the Director of the Super Hero Ego Mural is UNKNOWN / TO BE ESTABLISHED. Golden Shovel is the most plausible Director, but this must be explicitly confirmed by the founder before the Mural is created. The Director designation is a deliberate canonical act, not a default.
+
+`OPEN QUESTION` **World projection vs Mural projection** — Once the Super Hero Ego Mural exists and has its own projection, the product must decide whether the World's experiential projection remains the primary public experience, or whether the Mural's projection becomes the primary experience. Both can coexist architecturally. This is a product navigation decision, not a schema decision.
+
+`ARCHITECTURAL DECISION` **Mural title shares World title** (2026-08-21, founder-established)
+
+The Mural's canonical title is the same as the World's title. "Super Hero Ego" is the name of the Song/World. The Mural, as the complete visual expression of that World, shares that name. The word "Mural" is the `canonical_type` designation, not part of the title. This follows directly from the V1 compound "Song / Mural" — the Song and its complete visual expression share the name of the creative work.
+
+`ARCHITECTURAL DECISION` **Existing video is legitimately the Mural's media** (2026-08-21, founder-established)
+
+The existing ~4:15 Livepeer video (`5a112ddzzuvlq3a5`, "Golden Shovel ft Proverb, Reason and Mothipa - Super Hero Ego") is the complete visual expression of Super Hero Ego. It is legitimately the Mural's media. The same asset can be bound to both the World's experiential projection and the Mural's experiential projection without either claim being false — they operate at different layers (canonical identity vs technical delivery). The World projection is not wrong; the Mural projection is an additional canonical record, not a replacement.
+
+`ARCHITECTURAL DECISION` **Build 04 canonical Mural foundation is closed** (2026-08-21)
+
+`master.parent_master_id` (nullable FK, song-world cannot have parent), `master_parent_type_check` CHECK constraint, and `enforce_mural_parent_type` trigger are in place. No Mural record has been created. The architecture is ready. Creation of the first Mural record is deferred until the attribution model is resolved and explicit product confirmation is received.
+
+`CANONICAL` **Registration and attribution are separate canonical acts** (2026-08-21, founder-established)
+
+`registerMaster()` establishes canonical identity only:
+- `master` record
+- `attribution_record` container (empty — no entries)
+- `canonical_operation_log` entry
+
+Creative roles are established by a separate explicit `addAttribution()` operation.
+The system must never infer a creative role from the person who registered a canonical work.
+Every attribution entry is an explicit canonical fact, not a default.
+
+This applies retroactively as a principle. Existing World attribution entries were created correctly (Golden Shovel is the original-artist and director of the Super Hero Ego World). But the mechanism that created them automatically is now considered incorrect architecture and must be replaced.
+
+`CANONICAL` **Super Hero Ego Mural — Director** (2026-08-21, founder-established)
+
+Golden Shovel is the Director of the Super Hero Ego Mural.
+This is an explicit product decision, not a deduction from the registration act.
+`attribution_entry.role_type = 'director'` pointing to Golden Shovel's participant record.
+
+`CANONICAL` **Super Hero Ego Mural — original-artist** (2026-08-21, founder-established)
+
+No `original-artist` attribution is assigned to the Super Hero Ego Mural at this stage.
+The Mural is the complete visual expression of the World. The World already carries the `original-artist` attribution for Golden Shovel. Whether the Mural carries a separate `original-artist` attribution — and if so, whose — is UNKNOWN / TO BE ESTABLISHED. This is correctly unresolved data, not missing data.
+
+`CANONICAL` **Build 05 attribution decisions** (2026-08-21, founder-established)
+
+| Item | Decision |
+|---|---|
+| Attribution architecture | Separate `addAttribution()` operation |
+| Super Hero Ego Mural Director | Golden Shovel — explicitly designated |
+| Mural `original-artist` | Not assigned — correctly unresolved |
+| Mural title | "Super Hero Ego" |
+| Mural media | Existing ~4:15 Livepeer video (`5a112ddzzuvlq3a5`) |
+| World projection | Remains untouched and primary |
+| Mural projection | Additional projection of the Mural canonical state |
+| Creative Moments | Deferred |
+| Mural-Moment context | Deferred |
+| Rendition entity | No |
+| Expression vocabulary | Conceptually established; no new table yet |

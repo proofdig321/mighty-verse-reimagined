@@ -3,7 +3,10 @@ import { validateAuthority, logOperation, computeHash, getServiceClient } from "
 export type OperationResult<T> = { data: T } | { error: string };
 
 // ---------------------------------------------------------------------------
-// 1. Register a Master
+// 1. Register a Master — canonical identity only, no attribution entries
+//
+// Attribution is a separate explicit act (addAttribution below).
+// The system must never infer a creative role from the registering participant.
 // ---------------------------------------------------------------------------
 export async function registerMaster(
   participantId: string,
@@ -45,24 +48,6 @@ export async function registerMaster(
     .single();
   if (aErr || !attr) return { error: `Failed to create attribution_record: ${aErr?.message}` };
 
-  // canonical-creator entry (public per I.1.B)
-  await supabase.from("attribution_entry").insert({
-    attribution_id: attr.attribution_id,
-    participant_id: participantId,
-    role_type: "original-artist",
-    public: true,
-    privacy_level: "public-attribution",
-  });
-
-  // director entry (public per I.1.C)
-  await supabase.from("attribution_entry").insert({
-    attribution_id: attr.attribution_id,
-    participant_id: participantId,
-    role_type: "director",
-    public: true,
-    privacy_level: "public-attribution",
-  });
-
   await supabase
     .from("master")
     .update({ attribution_ref: attr.attribution_id })
@@ -71,6 +56,49 @@ export async function registerMaster(
   await logOperation(auth.authority_id, "register-master", master.master_id, "master", "accepted");
 
   return { data: { master_id: master.master_id, attribution_id: attr.attribution_id } };
+}
+
+// ---------------------------------------------------------------------------
+// 2. Add Attribution — explicit creative role on an existing master
+//
+// Every attribution entry is an explicit canonical fact, not a default.
+// ---------------------------------------------------------------------------
+export async function addAttribution(
+  participantId: string,
+  masterId: string,
+  roleType: "original-artist" | "director" | "collaborator" | "featured-artist" | "interpretation-creator" | "other",
+  contributionDescription: string,
+  isPublic = true
+): Promise<OperationResult<{ entry_id: string }>> {
+  const auth = await validateAuthority(participantId, "create-canonical-state", masterId);
+  if ("error" in auth) return { error: auth.error };
+
+  const supabase = getServiceClient();
+
+  const { data: master } = await supabase
+    .from("master")
+    .select("attribution_ref")
+    .eq("master_id", masterId)
+    .single();
+  if (!master?.attribution_ref) return { error: `No attribution record found for master: ${masterId}` };
+
+  const { data: entry, error: eErr } = await supabase
+    .from("attribution_entry")
+    .insert({
+      attribution_id: master.attribution_ref,
+      participant_id: participantId,
+      role_type: roleType,
+      contribution_description: contributionDescription,
+      public: isPublic,
+      privacy_level: "public-attribution",
+    })
+    .select("entry_id")
+    .single();
+  if (eErr || !entry) return { error: `Failed to create attribution_entry: ${eErr?.message}` };
+
+  await logOperation(auth.authority_id, "add-attribution", masterId, "master", "accepted");
+
+  return { data: { entry_id: entry.entry_id } };
 }
 
 // ---------------------------------------------------------------------------
