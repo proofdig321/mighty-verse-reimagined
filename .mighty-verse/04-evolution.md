@@ -502,6 +502,15 @@ Mural canonical state 8f7fe56d
 
 ## Next Boundary — Creative Moment Ontology Audit
 
+`CANONICAL` **Creative Moment vs Scene vocabulary** (2026-08-21, founder-established)
+
+- **Creative Moment** = canonical creative unit within the World. Entity type: `creative-moment`.
+- **Scene** = contextual visual appearance of a Creative Moment within a particular Mural.
+- These must not be collapsed. A Creative Moment does not become a Scene by appearing in a Mural.
+- "Verse" is not a canonical entity type.
+- The future `mural_moment_context` relationship represents the Scene/appearance relationship.
+- `start_ms` / `end_ms` belong to `mural_moment_context` (Scene), not to the Creative Moment.
+
 `OPEN QUESTION` **What exactly is a Creative Moment, now that a real World and real Mural exist?**
 
 Build 06 is closed. The next build must NOT begin with implementation.
