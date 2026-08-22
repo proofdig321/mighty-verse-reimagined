@@ -11,9 +11,9 @@ type AuthorityData = {
   masters: { master_id: string; canonical_type: string; current_state_id: string | null; created_at: string }[];
   states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
   projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
-  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string }[];
-  presentations: { master_id: string; title: string; description: string | null }[];
-  projectionPresentations: { projection_id: string; title: string; description: string | null }[];
+  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; media_asset: { storage_ref: string } | null }[];
+  presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null }[];
+  projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null }[];
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -76,6 +76,8 @@ type WorkCardProps = {
   onDesignate: (projId: string, masterId: string) => Promise<void>;
   onEditPresentation: (masterId: string) => void;
   onEditProjectionPresentation: (projId: string, masterId: string) => void;
+  onEditTimeline: (bindingId: string, masterId: string) => void;
+  onEditRealization: (bindingId: string, masterId: string) => void;
   busy: boolean;
 };
 
@@ -83,6 +85,8 @@ function WorkCard({
   master, state, projection, binding, presentation, projectionPresentation,
   onAuthorise, onCreateExperience, onAttachVideo, onDesignate,
   onEditPresentation, onEditProjectionPresentation,
+  onEditTimeline,
+  onEditRealization,
   busy,
 }: WorkCardProps) {
   const [expType, setExpType] = useState("experiential");
@@ -193,9 +197,184 @@ function WorkCard({
           </Button>
         )}
 
+        {hasProjection && hasMedia && (
+          <button
+            type="button"
+            onClick={() => onEditTimeline(binding!.binding_id, master.master_id)}
+            className="text-muted-foreground text-xs hover:text-foreground transition-colors"
+          >
+            {binding!.start_ms != null && binding!.end_ms != null ? "Adjust timeline" : "Set timeline"}
+          </button>
+        )}
+
+        {hasProjection && hasMedia && (
+          <button type="button" onClick={() => onEditRealization(binding!.binding_id, master.master_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
+            Record realization
+          </button>
+        )}
+
         {hasProjection && hasMedia && isCollectible && (
           <p className="text-muted-foreground text-xs">Complete</p>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+type TimelineEditorProps = {
+  binding: AuthorityData["bindings"][number];
+  masterId: string;
+  onDone: () => void;
+  onCancel: () => void;
+};
+
+function formatTimelineMs(value: number | null) {
+  if (value == null) return "--:--.---";
+  const totalSeconds = Math.floor(value / 1000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
+}
+
+function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
+  const [currentMs, setCurrentMs] = useState(0);
+  const [durationMs, setDurationMs] = useState(0);
+  const [startMs, setStartMs] = useState(binding.start_ms ?? 0);
+  const [endMs, setEndMs] = useState(binding.end_ms ?? 0);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const startRef = useRef(startMs);
+  const endRef = useRef(endMs);
+  const previewingRef = useRef(previewing);
+  startRef.current = startMs;
+  endRef.current = endMs;
+  previewingRef.current = previewing;
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const playbackId = binding.media_asset?.storage_ref;
+    if (!video || !playbackId) return;
+
+    const onTimeUpdate = () => {
+      const value = Math.round(video.currentTime * 1000);
+      setCurrentMs(value);
+      if (previewingRef.current && endRef.current > startRef.current && value >= endRef.current) {
+        video.pause();
+        video.currentTime = startRef.current / 1000;
+        setPreviewing(false);
+      }
+    };
+    const onLoadedMetadata = () => setDurationMs(Math.round(video.duration * 1000));
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+
+    fetch(`/api/livepeer/playback/${playbackId}`)
+      .then(response => response.ok ? response.json() : null)
+      .then(info => {
+        const hls = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl");
+        if (!hls) throw new Error("No playable HLS source returned.");
+        setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+        if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = hls.url;
+        } else {
+          import("hls.js").then(({ default: Hls }) => {
+            if (!Hls.isSupported()) throw new Error("This browser cannot play the media stream.");
+            const hlsPlayer = new Hls();
+            hlsRef.current = hlsPlayer;
+            hlsPlayer.loadSource(hls.url);
+            hlsPlayer.attachMedia(video);
+          });
+        }
+      })
+      .catch(error => setMessage(`Error: ${error instanceof Error ? error.message : "Unable to load preview"}`));
+
+    return () => {
+      video.pause();
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+    };
+  }, [binding.media_asset?.storage_ref]);
+
+  async function saveRange() {
+    if (!Number.isInteger(startMs) || !Number.isInteger(endMs) || endMs <= startMs) {
+      setMessage("Error: End must be greater than start.");
+      return;
+    }
+    setBusy(true); setMessage(null);
+    const response = await fetch("/api/authority/media/timeline", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, start_ms: startMs, end_ms: endMs }),
+    });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to save timeline"}`); return; }
+    setMessage("Timeline saved.");
+    onDone();
+  }
+
+  function previewRange() {
+    const video = videoRef.current;
+    if (!video || endMs <= startMs) return;
+    video.currentTime = startMs / 1000;
+    setPreviewing(true);
+    void video.play();
+  }
+
+  async function selectThumbnail() {
+    if (!thumbnailUrl) return;
+    setBusy(true); setMessage(null);
+    const response = await fetch("/api/authority/media/artwork", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ master_id: masterId, projection_id: binding.projection_id, thumbnail_url: thumbnailUrl }),
+    });
+    const result = await response.json();
+    setBusy(false);
+    if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to select thumbnail"}`); return; }
+    setMessage("Livepeer thumbnail selected as representative artwork.");
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-foreground text-sm font-medium block">Timeline realization</span>
+            <span className="text-muted-foreground text-xs">Capture boundaries from the actual video player.</span>
+          </div>
+          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
+        </div>
+        <video ref={videoRef} controls className="w-full aspect-video bg-black" />
+        {thumbnailUrl && (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">Representative artwork preview</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumbnailUrl} alt="Generated video thumbnail" className="w-32 aspect-video object-cover border border-border" />
+            <Button size="sm" variant="outline" onClick={selectThumbnail} disabled={busy}>Use Livepeer thumbnail as artwork</Button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge variant="outline">Current {formatTimelineMs(currentMs)}</Badge>
+          <Badge variant="outline">Duration {formatTimelineMs(durationMs)}</Badge>
+          <Badge variant="secondary">{formatTimelineMs(startMs)} → {formatTimelineMs(endMs)}</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="sm" variant="outline" onClick={() => setStartMs(currentMs)}>Set Start</Button>
+          <Button size="sm" variant="outline" onClick={() => setEndMs(currentMs)}>Set End</Button>
+          <label className="text-muted-foreground text-xs">Start (ms)<input type="number" min="0" value={startMs} onChange={event => setStartMs(Number(event.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5" /></label>
+          <label className="text-muted-foreground text-xs">End (ms)<input type="number" min="1" value={endMs} onChange={event => setEndMs(Number(event.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5" /></label>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={previewRange} disabled={endMs <= startMs}>Preview range</Button>
+          <Button size="sm" variant="outline" onClick={() => { setStartMs(0); setEndMs(durationMs); setPreviewing(false); }}>Reset range</Button>
+          <Button size="sm" onClick={saveRange} disabled={busy || endMs <= startMs}>Save exact range</Button>
+        </div>
+        {message && <p className={`text-sm ${message.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{message}</p>}
       </CardContent>
     </Card>
   );
@@ -212,11 +391,27 @@ type AttachVideoPanelProps = {
 
 function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPanelProps) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [rightsHolderRef, setRightsHolderRef] = useState("");
+  const [rightsBasis, setRightsBasis] = useState("");
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [uploadPhase, setUploadPhase] = useState<string | null>(null);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [uploadMsg, setUploadMsg] = useState<string | null>(null);
+  const [uploadStage, setUploadStage] = useState<"selecting" | "validating" | "uploading" | "processing" | "ready" | "failed">("selecting");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const statusMessage =
+    uploadStage === "selecting"
+      ? "Select a video file to begin the Livepeer upload flow."
+      : uploadStage === "validating"
+      ? "Checking the selected file and intake metadata."
+      : uploadStage === "uploading"
+      ? "Uploading to Livepeer…"
+      : uploadStage === "processing"
+      ? "Livepeer is preparing your video for playback."
+      : uploadStage === "ready"
+      ? "Video is ready to attach."
+      : "Upload status unknown.";
 
   return (
     <Card>
@@ -226,6 +421,25 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
           {!uploadBusy && (
             <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
           )}
+        </div>
+
+        <div className="space-y-2">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Rights</p>
+          <input
+            value={rightsHolderRef}
+            onChange={e => setRightsHolderRef(e.target.value)}
+            placeholder="Rights holder participant ID (required for new assets)"
+            disabled={uploadBusy}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+          />
+          <input
+            value={rightsBasis}
+            onChange={e => setRightsBasis(e.target.value)}
+            placeholder="Rights basis (for example: owned, licensed)"
+            disabled={uploadBusy}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+          />
+          <p className="text-muted-foreground text-xs">Both fields are required before a new file can enter the media pipeline.</p>
         </div>
 
         {/* File picker */}
@@ -266,7 +480,7 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
           <div className="space-y-2">
             {uploadProgress !== null && uploadProgress < 100 ? (
               <>
-                <p className="text-foreground text-sm">Uploading video…</p>
+                <p className="text-foreground text-sm">{statusMessage}</p>
                 <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
                   <div className="h-full rounded-full bg-foreground transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
                 </div>
@@ -274,8 +488,10 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
               </>
             ) : (
               <>
-                <p className="text-foreground text-sm">Processing video…</p>
-                <p className="text-muted-foreground text-xs">Livepeer is preparing your video for playback.</p>
+                <p className="text-foreground text-sm">
+                  {uploadStage === "ready" ? "Video ready" : uploadStage === "failed" ? "Upload failed" : "Processing video…"}
+                </p>
+                <p className="text-muted-foreground text-xs">{statusMessage}</p>
               </>
             )}
           </div>
@@ -289,18 +505,23 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
 
         <Button
           size="sm"
-          disabled={uploadBusy || !uploadFile}
+          disabled={uploadBusy || !uploadFile || (!!rightsHolderRef !== !!rightsBasis)}
           onClick={async () => {
             if (!uploadFile) return;
-            setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null);
+            setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null); setUploadStage("validating");
             try {
+              if (!uploadFile.type.startsWith("video/")) throw new Error("Select a video file.");
+              if (!rightsHolderRef || !rightsBasis) throw new Error("Rights holder and rights basis are required for a new upload.");
+              setUploadStage("uploading");
               const session = await fetch("/api/authority/media/upload-session", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: uploadFile.name, projection_id: projId, master_id: masterId }),
               }).then(r => r.json());
 
-              if (session.error) { setUploadMsg(`Error: ${session.error}`); return; }
+              if (session.error || !session.upload_url || !session.asset_id) {
+                throw new Error(session.error ?? "Upload session is incomplete.");
+              }
 
               const { upload_url, asset_id } = session;
 
@@ -317,29 +538,42 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
               });
 
               setUploadProgress(100);
+              setUploadStage("processing");
 
               let phase = "uploading";
-              while (phase !== "ready") {
+              for (let attempt = 0; phase !== "ready" && attempt < 120; attempt += 1) {
                 await new Promise(r => setTimeout(r, 3000));
-                const status = await fetch(`/api/authority/media/upload-session/${asset_id}`).then(r => r.json());
+                const statusResponse = await fetch(`/api/authority/media/upload-session/${asset_id}`);
+                const status = await statusResponse.json();
+                if (!statusResponse.ok || status.error) throw new Error(status.error ?? "Unable to verify Livepeer processing status.");
                 phase = status.phase ?? "unknown";
                 setUploadPhase(phase);
-                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); return; }
+                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); setUploadStage("failed"); return; }
               }
+              if (phase !== "ready") throw new Error("Livepeer processing did not become ready in time.");
+
+              setUploadStage("ready");
 
               const attach = await fetch("/api/authority/media", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ projection_id: projId, master_id: masterId, livepeer_asset_id: asset_id }),
+                body: JSON.stringify({
+                  projection_id: projId,
+                  master_id: masterId,
+                  livepeer_asset_id: asset_id,
+                  rights_holder_ref: rightsHolderRef || null,
+                  rights_basis: rightsBasis || null,
+                }),
               }).then(r => r.json());
 
               if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
               setUploadMsg("Video attached. World and Moment are now playable.");
-              setUploadFile(null); setUploadProgress(null); setUploadPhase(null);
+              setUploadFile(null); setRightsHolderRef(""); setRightsBasis(""); setUploadProgress(null); setUploadPhase(null); setUploadStage("ready");
               if (fileInputRef.current) fileInputRef.current.value = "";
               onDone();
             } catch (err) {
               setUploadMsg(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+              setUploadStage("failed");
             } finally {
               setUploadBusy(false);
             }
@@ -364,6 +598,7 @@ type PresentationPanelProps = {
 function PresentationPanel({ masterId, existing, onDone, onCancel }: PresentationPanelProps) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
+  const [artworkAssetId, setArtworkAssetId] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -391,6 +626,7 @@ function PresentationPanel({ masterId, existing, onDone, onCancel }: Presentatio
             rows={3}
             className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none"
           />
+          <input type="text" placeholder="Representative artwork asset ID (optional)" value={artworkAssetId} onChange={e => setArtworkAssetId(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         </div>
         {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
         <Button
@@ -398,7 +634,7 @@ function PresentationPanel({ masterId, existing, onDone, onCancel }: Presentatio
           disabled={busy || !title.trim()}
           onClick={async () => {
             setBusy(true); setMsg(null);
-            const res = await api("/api/authority/presentation", { master_id: masterId, title, description: description || null });
+            const res = await api("/api/authority/presentation", { master_id: masterId, title, description: description || null, artwork_asset_id: artworkAssetId || null });
             setBusy(false);
             if (res.error) { setMsg(`Error: ${res.error}`); return; }
             onDone();
@@ -424,6 +660,7 @@ type ProjectionPresentationPanelProps = {
 function ProjectionPresentationPanel({ projectionId, masterId, existing, onDone, onCancel }: ProjectionPresentationPanelProps) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
+  const [artworkAssetId, setArtworkAssetId] = useState("");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
@@ -451,6 +688,7 @@ function ProjectionPresentationPanel({ projectionId, masterId, existing, onDone,
             rows={3}
             className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none"
           />
+          <input type="text" placeholder="Representative artwork asset ID (optional)" value={artworkAssetId} onChange={e => setArtworkAssetId(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         </div>
         {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
         <Button
@@ -463,6 +701,7 @@ function ProjectionPresentationPanel({ projectionId, masterId, existing, onDone,
               master_id: masterId,
               title,
               description: description || null,
+              artwork_asset_id: artworkAssetId || null,
             });
             setBusy(false);
             if (res.error) { setMsg(`Error: ${res.error}`); return; }
@@ -471,6 +710,133 @@ function ProjectionPresentationPanel({ projectionId, masterId, existing, onDone,
         >
           Save
         </Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
+  const [title, setTitle] = useState("");
+  const [creatorName, setCreatorName] = useState("");
+  const [workType, setWorkType] = useState("animation");
+  const [sourceType, setSourceType] = useState("upload");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [isrc, setIsrc] = useState("");
+  const [isrcStatus, setIsrcStatus] = useState("not-applicable");
+  const [versionLabel, setVersionLabel] = useState("");
+  const [provenanceNotes, setProvenanceNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true); setMessage(null);
+    const result = await api("/api/authority/media-intake", {
+      title,
+      creator_name: creatorName || null,
+      work_type: workType,
+      source_type: sourceType,
+      source_url: sourceType === "external-url" ? sourceUrl : null,
+      isrc: isrc || null,
+      isrc_status: workType === "song" || workType === "audio" ? isrcStatus : "not-applicable",
+      version_label: versionLabel || null,
+      provenance_notes: provenanceNotes || null,
+    });
+    setBusy(false);
+    if (result.error) { setMessage(`Error: ${result.error}`); return; }
+    onDone();
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-foreground text-sm font-medium block">New media intake</span>
+            <span className="text-muted-foreground text-xs">Identity, source, ISRC state, and provenance.</span>
+          </div>
+          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
+        </div>
+        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <input value={creatorName} onChange={e => setCreatorName(e.target.value)} placeholder="Artist / creator" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <div className="grid grid-cols-2 gap-2">
+          <select value={workType} onChange={e => setWorkType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
+            <option value="animation">Animation</option><option value="video">Video</option><option value="song">Song</option><option value="audio">Audio</option><option value="other">Other</option>
+          </select>
+          <input value={versionLabel} onChange={e => setVersionLabel(e.target.value)} placeholder="Version / release" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+        </div>
+        <select value={sourceType} onChange={e => setSourceType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+          <option value="upload">Local upload</option><option value="external-url">Authorised external URL</option><option value="livepeer-asset">Existing Livepeer asset</option>
+        </select>
+        {sourceType === "external-url" && <input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://… (YouTube references are preserved, never downloaded)" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />}
+        {(workType === "song" || workType === "audio") && (
+          <div className="grid grid-cols-2 gap-2">
+            <select value={isrcStatus} onChange={e => setIsrcStatus(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
+              <option value="verified">ISRC verified</option><option value="not-provided">Released but ISRC not provided</option><option value="not-applicable">Unreleased / no ISRC</option>
+            </select>
+            <input value={isrc} onChange={e => setIsrc(e.target.value.toUpperCase())} placeholder="ISRC" disabled={busy || isrcStatus !== "verified"} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          </div>
+        )}
+        <textarea value={provenanceNotes} onChange={e => setProvenanceNotes(e.target.value)} placeholder="Provenance / production notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
+        {message && <p className="text-destructive text-sm">{message}</p>}
+        <Button size="sm" disabled={busy || !title.trim() || (sourceType === "external-url" && !sourceUrl.trim())} onClick={submit}>Create intake record</Button>
+      </CardContent>
+    </Card>
+  );
+}
+
+function RealizationPanel({
+  binding,
+  masterId,
+  onDone,
+  onCancel,
+}: {
+  binding: AuthorityData["bindings"][number];
+  masterId: string;
+  onDone: () => void;
+  onCancel: () => void;
+}) {
+  const [type, setType] = useState("animated-video");
+  const [rightsHolderRef, setRightsHolderRef] = useState("");
+  const [rightsBasis, setRightsBasis] = useState("");
+  const [notes, setNotes] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  async function submit() {
+    setBusy(true); setMessage(null);
+    const created = await api("/api/authority/media-realization", {
+      master_id: masterId,
+      realization_type: type,
+      rights_holder_ref: rightsHolderRef || null,
+      rights_basis: rightsBasis || null,
+      production_notes: notes || null,
+    });
+    if (created.error) { setBusy(false); setMessage(`Error: ${created.error}`); return; }
+    const bound = await fetch("/api/authority/media-realization/bind", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, realization_id: created.realization_id }),
+    }).then(response => response.json());
+    setBusy(false);
+    if (bound.error) { setMessage(`Error: ${bound.error}`); return; }
+    onDone();
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <div><span className="text-foreground text-sm font-medium block">Record realization</span><span className="text-muted-foreground text-xs">Production context attached to this media binding.</span></div>
+          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
+        </div>
+        <select value={type} onChange={e => setType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+          <option value="animated-video">Animated video</option><option value="music-video">Music video</option><option value="original-recording">Original recording</option><option value="visualisation">Visualisation</option><option value="other">Other</option>
+        </select>
+        <input value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} placeholder="Realization rights holder participant ID" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <input value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} placeholder="Realization rights basis" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Production context / provenance notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
+        {message && <p className="text-destructive text-sm">{message}</p>}
+        <Button size="sm" disabled={busy || !rightsHolderRef || !rightsBasis} onClick={submit}>Record and associate realization</Button>
       </CardContent>
     </Card>
   );
@@ -486,6 +852,7 @@ export default function AuthorityClient() {
 
   // Register New Work
   const [showRegister, setShowRegister] = useState(false);
+  const [showIntake, setShowIntake] = useState(false);
   const [canonicalType, setCanonicalType] = useState<string>("universe");
 
   // Attach Video panel — which projection is currently open
@@ -498,6 +865,10 @@ export default function AuthorityClient() {
   // Projection presentation panel
   const [presentingProjId, setPresentingProjId] = useState<string | null>(null);
   const [presentingProjMasterId, setPresentingProjMasterId] = useState<string | null>(null);
+  const [editingTimelineBindingId, setEditingTimelineBindingId] = useState<string | null>(null);
+  const [editingTimelineMasterId, setEditingTimelineMasterId] = useState<string | null>(null);
+  const [editingRealizationBindingId, setEditingRealizationBindingId] = useState<string | null>(null);
+  const [editingRealizationMasterId, setEditingRealizationMasterId] = useState<string | null>(null);
 
   async function load() {
     const d = await api("/api/authority");
@@ -551,6 +922,16 @@ export default function AuthorityClient() {
       )}
 
       {/* Register New Work */}
+      <div>
+        {!showIntake ? (
+          <Button size="sm" variant="outline" onClick={() => setShowIntake(true)}>
+            + New Media Intake
+          </Button>
+        ) : (
+          <MediaIntakePanel onDone={async () => { setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />
+        )}
+      </div>
+
       <div>
         {!showRegister ? (
           <Button size="sm" variant="outline" onClick={() => setShowRegister(true)}>
@@ -639,6 +1020,30 @@ export default function AuthorityClient() {
           );
         }
 
+        if (editingTimelineBindingId === binding?.binding_id) {
+          return (
+            <TimelineEditor
+              key={master.master_id}
+              binding={binding}
+              masterId={editingTimelineMasterId!}
+              onDone={async () => { setEditingTimelineBindingId(null); setEditingTimelineMasterId(null); await load(); }}
+              onCancel={() => { setEditingTimelineBindingId(null); setEditingTimelineMasterId(null); }}
+            />
+          );
+        }
+
+        if (editingRealizationBindingId === binding?.binding_id) {
+          return (
+            <RealizationPanel
+              key={master.master_id}
+              binding={binding}
+              masterId={editingRealizationMasterId!}
+              onDone={async () => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); await load(); }}
+              onCancel={() => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); }}
+            />
+          );
+        }
+
         return (
           <WorkCard
             key={master.master_id}
@@ -659,6 +1064,8 @@ export default function AuthorityClient() {
             }
             onEditPresentation={masterId => setPresentingMasterId(masterId)}
             onEditProjectionPresentation={(projId, masterId) => { setPresentingProjId(projId); setPresentingProjMasterId(masterId); }}
+            onEditTimeline={(bindingId, masterId) => { setEditingTimelineBindingId(bindingId); setEditingTimelineMasterId(masterId); }}
+            onEditRealization={(bindingId, masterId) => { setEditingRealizationBindingId(bindingId); setEditingRealizationMasterId(masterId); }}
           />
         );
       })}

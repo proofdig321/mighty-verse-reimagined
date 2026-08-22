@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
-import { attachMediaBinding } from "@/lib/authority/operations";
+import { grantAuthority } from "@/lib/authority/operations";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -11,20 +11,21 @@ export async function POST(request: Request) {
   const participantId = await getParticipantId(supabase);
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
-  const { projection_id, master_id, livepeer_asset_id, rights_holder_ref, rights_basis, realization_id } = await request.json();
-  if (!projection_id || !master_id || !livepeer_asset_id) {
-    return NextResponse.json({ error: "projection_id, master_id, livepeer_asset_id required" }, { status: 400 });
+  const { target_participant_id, scope_type, scope_subject_id, capabilities, authorisation_evidence } = await request.json();
+  if (!target_participant_id || !scope_type || !capabilities || !Array.isArray(capabilities)) {
+    return NextResponse.json({ error: "target_participant_id, scope_type, and capabilities required" }, { status: 400 });
   }
 
-  const result = await attachMediaBinding(
+  const result = await grantAuthority(
     participantId,
-    projection_id,
-    master_id,
-    livepeer_asset_id,
-    rights_holder_ref ?? null,
-    rights_basis ?? null,
-    realization_id ?? null
+    target_participant_id,
+    scope_type,
+    scope_subject_id ?? null,
+    capabilities,
+    "delegated",
+    authorisation_evidence ?? null
   );
+
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 403 });
   return NextResponse.json(result.data, { status: 201 });
 }

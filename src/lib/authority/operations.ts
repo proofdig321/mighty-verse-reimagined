@@ -11,7 +11,9 @@ export type OperationResult<T> = { data: T } | { error: string };
 export async function registerMaster(
   participantId: string,
   canonicalType: "universe" | "creative-moment" | "mural" | "scene" | "interpretation" | "other",
-  parentMasterId?: string
+  parentMasterId?: string,
+  title?: string,
+  description?: string
 ): Promise<OperationResult<{ master_id: string; attribution_id: string }>> {
   const auth = await validateAuthority(participantId, "create-canonical-state", null);
   if ("error" in auth) return { error: auth.error };
@@ -63,6 +65,21 @@ export async function registerMaster(
     .from("master")
     .update({ attribution_ref: attr.attribution_id })
     .eq("master_id", master.master_id);
+
+  const trimmedTitle = title?.trim();
+  if (trimmedTitle) {
+    await supabase
+      .from("work_presentation")
+      .upsert(
+        {
+          master_id: master.master_id,
+          title: trimmedTitle,
+          description: description?.trim() || null,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "master_id" }
+      );
+  }
 
   await logOperation(auth.authority_id, "register-master", master.master_id, "master", "accepted");
 
@@ -292,18 +309,158 @@ export async function attachMediaBinding(
   participantId: string,
   projectionId: string,
   masterId: string,
-  livepeerAssetId: string
+  livepeerAssetId: string,
+  rightsHolderRef?: string | null,
+  rightsBasis?: string | null,
+  realizationId?: string | null
 ): Promise<OperationResult<{ binding_id: string; asset_id: string; variant_id: string }>> {
   const auth = await validateAuthority(participantId, "authorise-projection", masterId);
   if ("error" in auth) return { error: auth.error };
 
   // Delegate to existing ingestLivepeerAsset — it handles media_asset + delivery_variant + binding
   const { ingestLivepeerAsset } = await import("@/lib/media/ingest");
-  const result = await ingestLivepeerAsset(livepeerAssetId, projectionId, participantId, "primary", "public");
+  const result = await ingestLivepeerAsset(
+    livepeerAssetId,
+    projectionId,
+    participantId,
+    "primary",
+    "public",
+    rightsHolderRef,
+    rightsBasis ?? "rights recorded during ingest",
+    realizationId ?? null
+  );
 
   await logOperation(auth.authority_id, "attach-media-binding", result.binding_id, "media-binding", "accepted");
 
   return { data: result };
+}
+
+export async function createMediaRealization(
+  participantId: string,
+  masterId: string,
+  realizationType: "original-recording" | "animated-video" | "live-performance" | "broadcast-recording" | "music-video" | "visualisation" | "other",
+  rightsHolderRef: string | null,
+  rightsBasis: string | null,
+  productionNotes?: string | null
+): Promise<OperationResult<{ realization_id: string }>> {
+  const auth = await validateAuthority(participantId, "create-canonical-state", masterId);
+  if ("error" in auth) return { error: auth.error };
+
+  const supabase = getServiceClient();
+  const { data, error } = await supabase
+    .from("media_realization")
+    .insert({
+      master_id: masterId,
+      realization_type: realizationType,
+      rights_holder_ref: rightsHolderRef,
+      rights_basis: rightsBasis,
+      production_notes: productionNotes ?? null,
+      created_by: participantId,
+    })
+    .select("realization_id")
+    .single();
+
+  if (error || !data) {
+    return { error: `Failed to create media_realization: ${error?.message ?? "unknown error"}` };
+  }
+
+  await logOperation(auth.authority_id, "create-media-realization", data.realization_id, "media-realization", "accepted");
+
+  return { data: { realization_id: data.realization_id } };
+}
+
+export async function grantAuthority(
+  participantId: string,
+  targetParticipantId: string,
+  scopeType: "platform" | "master",
+  scopeSubjectId: string | null,
+  capabilities: AuthorityCapability[],
+  authorityType: "delegated" = "delegated",
+  authorisationEvidence?: string
+): Promise<OperationResult<{ authority_id: string }>> {
+  if (scopeType === "platform" && scopeSubjectId) {
+    return { error: "Platform-scoped authority cannot also set a scope subject." };
+  }
+  if (scopeType === "master" && !scopeSubjectId) {
+    return { error: "Master-scoped authority requires a scope_subject_id." };
+  }
+  if (capabilities.length === 0) {
+    return { error: "At least one capability is required." };
+  }
+
+  const validCapabilities: AuthorityCapability[] = [
+    "create-canonical-state",
+    "advance-master-state",
+    "authorise-projection",
+    "designate-collectible",
+    "authorise-interpretation",
+    "delegate-authority",
+    "revoke-delegation",
+  ];
+  const unsupportedCapability = capabilities.find((cap) => !validCapabilities.includes(cap));
+  if (unsupportedCapability) return { error: `Unsupported authority capability: ${unsupportedCapability}` };
+
+  const supabase = getServiceClient();
+  const { data: targetParticipant } = await supabase
+    .from("participant")
+    .select("participant_id")
+    .eq("participant_id", targetParticipantId)
+    .eq("status", "active")
+    .maybeSingle();
+  if (!targetParticipant) return { error: "Target participant is not active or does not exist." };
+
+  if (scopeType === "master") {
+    const { data: targetMaster } = await supabase
+      .from("master")
+      .select("master_id")
+      .eq("master_id", scopeSubjectId)
+      .maybeSingle();
+    if (!targetMaster) return { error: "Scope master does not exist." };
+  }
+
+  const grantAuth = await validateAuthority(participantId, "delegate-authority", scopeType === "master" ? scopeSubjectId : null);
+  if ("error" in grantAuth) return { error: grantAuth.error };
+
+  const { data: grantorRecord, error: grantorError } = await supabase
+    .from("authority_record")
+    .select("authority_id, capabilities")
+    .eq("authority_id", grantAuth.authority_id)
+    .single();
+
+  if (grantorError || !grantorRecord) {
+    return { error: "Unable to resolve granting authority record." };
+  }
+
+  const grantorCapabilities = (grantorRecord.capabilities ?? []) as AuthorityCapability[];
+  const invalidCapability = capabilities.find((cap) => !grantorCapabilities.includes(cap));
+  if (invalidCapability) {
+    return { error: `Cannot grant capability ${invalidCapability} without holding it yourself.` };
+  }
+
+  const { data: authority, error: authorityError } = await supabase
+    .from("authority_record")
+    .insert({
+      holder_ref: targetParticipantId,
+      authority_type: authorityType,
+      scope_type: scopeType,
+      scope_subject_id: scopeType === "master" ? scopeSubjectId : null,
+      capabilities,
+      delegated_from: grantAuth.authority_id,
+      effective_from: new Date().toISOString(),
+      revoked: false,
+      authorisation_evidence: authorisationEvidence ?? null,
+      created_by: participantId,
+    })
+    .select("authority_id")
+    .single();
+
+  if (authorityError || !authority) {
+    return { error: `Failed to grant authority: ${authorityError?.message ?? "unknown error"}` };
+  }
+
+  await logOperation(grantAuth.authority_id, "grant-authority", authority.authority_id, "authority-record", "accepted");
+
+  return { data: { authority_id: authority.authority_id } };
 }
 
 // ---------------------------------------------------------------------------

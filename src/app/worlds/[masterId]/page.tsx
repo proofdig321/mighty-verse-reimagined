@@ -35,14 +35,6 @@ type SceneRow = {
   projection_id: string | null;
 };
 
-// Canonical Scene → Creative Moment master mapping (Build 13 fact).
-// Golden Shovel intentionally absent.
-const SCENE_TO_CM: Record<string, string> = {
-  "bebb65d2-21ed-4bc9-9fa0-a4857df30a43": "32422bb4-d03c-465d-8348-942e49ae0051",
-  "df15ec76-6bd8-4956-bbaa-755f72b2b8f8": "3b0de6b4-2ca0-43c0-8561-7dc1c0697435",
-  "65490a92-8faf-42ea-a391-0e6473360f5c": "2745a50a-5417-4613-b23b-ef4857ab112e",
-};
-
 type PageData = {
   canonical_type: string;
   master_id: string;
@@ -154,25 +146,10 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       ? await svc.from("work_presentation").select("master_id, title").in("master_id", cmIds)
       : { data: [] };
 
-    // CM → Scene projection map
-    const cmToSceneProj: Record<string, string> = {};
-    const sceneMasterIds = Object.keys(SCENE_TO_CM);
-    if (sceneMasterIds.length) {
-      const { data: sceneProjs } = await svc
-        .from("projection")
-        .select("master_id, projection_id")
-        .in("master_id", sceneMasterIds)
-        .eq("projection_type", "experiential");
-      for (const sp of sceneProjs ?? []) {
-        const cmId = SCENE_TO_CM[sp.master_id];
-        if (cmId) cmToSceneProj[cmId] = sp.projection_id;
-      }
-    }
-
     const moments: MomentRow[] = (cmMasters ?? []).map((m) => ({
       master_id: m.master_id,
       title: (cmPres ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
-      scene_projection_id: cmToSceneProj[m.master_id] ?? null,
+      scene_projection_id: null,
     }));
 
     return {

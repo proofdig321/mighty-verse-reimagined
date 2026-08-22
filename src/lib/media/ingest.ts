@@ -24,7 +24,10 @@ export async function ingestLivepeerAsset(
   projectionId: string,
   participantId: string,
   bindingType: BindingType = "primary",
-  accessLevel: AccessLevel = "public"
+  accessLevel: AccessLevel = "public",
+  rightsHolderRef?: string | null,
+  rightsBasis?: string | null,
+  realizationId?: string | null
 ): Promise<IngestResult> {
   const supabase = getServiceClient();
 
@@ -45,7 +48,7 @@ export async function ingestLivepeerAsset(
   // 3. Idempotency check: find any media_asset already stored for this playbackId
   const { data: existingAssets } = await supabase
     .from("media_asset")
-    .select("asset_id")
+    .select("asset_id, rights_holder_ref, rights_basis")
     .eq("storage_ref", playbackId);
 
   if (existingAssets && existingAssets.length > 0) {
@@ -60,7 +63,26 @@ export async function ingestLivepeerAsset(
       .maybeSingle();
 
     if (existingBinding) {
-      // Same asset already bound to this projection — return existing, no inserts
+      if (realizationId) {
+        const { error: realizationError } = await supabase
+          .from("projection_media_binding")
+          .update({ realization_id: realizationId })
+          .eq("binding_id", existingBinding.binding_id);
+        if (realizationError) throw new Error(`Failed to associate media realization: ${realizationError.message}`);
+      }
+      const { data: existingAsset } = await supabase
+        .from("media_asset")
+        .select("rights_holder_ref, rights_basis")
+        .eq("asset_id", existingBinding.asset_id)
+        .single();
+
+      if (!existingAsset?.rights_holder_ref && rightsHolderRef) {
+        await supabase
+          .from("media_asset")
+          .update({ rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis ?? "rights recorded during ingest" })
+          .eq("asset_id", existingBinding.asset_id);
+      }
+
       const { data: existingVariant } = await supabase
         .from("delivery_variant")
         .select("variant_id")
@@ -90,6 +112,7 @@ export async function ingestLivepeerAsset(
         binding_type: bindingType,
         access_level: accessLevel,
         created_by: participantId,
+        realization_id: realizationId,
       })
       .select("binding_id")
       .single();
@@ -106,6 +129,10 @@ export async function ingestLivepeerAsset(
   }
 
   // 4. No existing media_asset for this playbackId — full creation sequence
+  if (!rightsHolderRef) {
+    throw new Error("rightsHolderRef is required for new media assets; rights must be recorded at ingest time.");
+  }
+
   const { data: asset, error: assetError } = await supabase
     .from("media_asset")
     .insert({
@@ -115,6 +142,8 @@ export async function ingestLivepeerAsset(
       format: mapped.format,
       resolution: mapped.resolution,
       duration_ms: mapped.durationMs,
+      rights_holder_ref: rightsHolderRef,
+      rights_basis: rightsBasis ?? "rights recorded during ingest",
     })
     .select("asset_id")
     .single();
@@ -145,6 +174,7 @@ export async function ingestLivepeerAsset(
       binding_type: bindingType,
       access_level: accessLevel,
       created_by: participantId,
+      realization_id: realizationId,
     })
     .select("binding_id")
     .single();

@@ -11,10 +11,10 @@ export async function POST(request: Request) {
   const participantId = await getParticipantId(supabase);
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
-  const { canonical_type, parent_master_id } = await request.json();
+  const { canonical_type, parent_master_id, title, description } = await request.json();
   if (!canonical_type) return NextResponse.json({ error: "canonical_type required" }, { status: 400 });
 
-  const result = await registerMaster(participantId, canonical_type, parent_master_id);
+  const result = await registerMaster(participantId, canonical_type, parent_master_id, title, description);
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 403 });
 
   const { master_id } = result.data;

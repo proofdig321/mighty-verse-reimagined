@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
-import { attachMediaBinding } from "@/lib/authority/operations";
+import { createMediaRealization } from "@/lib/authority/operations";
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -11,20 +11,20 @@ export async function POST(request: Request) {
   const participantId = await getParticipantId(supabase);
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
-  const { projection_id, master_id, livepeer_asset_id, rights_holder_ref, rights_basis, realization_id } = await request.json();
-  if (!projection_id || !master_id || !livepeer_asset_id) {
-    return NextResponse.json({ error: "projection_id, master_id, livepeer_asset_id required" }, { status: 400 });
+  const { master_id, realization_type, rights_holder_ref, rights_basis, production_notes } = await request.json();
+  if (!master_id || !realization_type) {
+    return NextResponse.json({ error: "master_id and realization_type required" }, { status: 400 });
   }
 
-  const result = await attachMediaBinding(
+  const result = await createMediaRealization(
     participantId,
-    projection_id,
     master_id,
-    livepeer_asset_id,
+    realization_type,
     rights_holder_ref ?? null,
     rights_basis ?? null,
-    realization_id ?? null
+    production_notes ?? null
   );
+
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 403 });
   return NextResponse.json(result.data, { status: 201 });
 }

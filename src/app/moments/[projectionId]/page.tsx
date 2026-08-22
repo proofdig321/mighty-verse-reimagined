@@ -23,14 +23,6 @@ const PROJ_LABELS: Record<string, string> = {
   "other": "Moment",
 };
 
-// Canonical Scene → Creative Moment master mapping.
-// Golden Shovel intentionally absent — no CM counterpart.
-const SCENE_TO_CM: Record<string, string> = {
-  "bebb65d2-21ed-4bc9-9fa0-a4857df30a43": "32422bb4-d03c-465d-8348-942e49ae0051", // Mothipa
-  "df15ec76-6bd8-4956-bbaa-755f72b2b8f8": "3b0de6b4-2ca0-43c0-8561-7dc1c0697435", // ProVerb
-  "65490a92-8faf-42ea-a391-0e6473360f5c": "2745a50a-5417-4613-b23b-ef4857ab112e", // Reason
-};
-
 function formatMs(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
   const m = Math.floor(totalSec / 60);
@@ -122,11 +114,8 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
       }
     }
 
-    cmMasterId = SCENE_TO_CM[proj.master_id] ?? null;
-    if (cmMasterId) {
-      const { data: cmPres } = await svc.from("work_presentation").select("title").eq("master_id", cmMasterId).maybeSingle();
-      cmTitle = cmPres?.title ?? null;
-    }
+    cmMasterId = null;
+    cmTitle = null;
   }
 
   return {
@@ -279,10 +268,10 @@ export default async function MomentPage({
                   className="text-foreground hover:opacity-70 transition-opacity font-medium"
                   style={{ fontFamily: "var(--font-display, inherit)" }}
                 >
-                  {muralTitle ?? "Super Hero Ego"}
+                  {muralTitle ?? "Mural"}
                 </Link>
               ) : (
-                <span className="text-foreground font-medium">{muralTitle ?? "Super Hero Ego"}</span>
+                <span className="text-foreground font-medium">{muralTitle ?? "Mural"}</span>
               )}
             </div>
 
