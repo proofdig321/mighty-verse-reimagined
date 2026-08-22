@@ -94,10 +94,6 @@ function getWorkStatus(
   return { ready: needs === "Ready", needs, hasState, hasExperience, hasMedia, playable, hasArtwork, needsTimeline: !hasTimeline, hasRealization, rightsVerified };
 }
 
-function isOfficialAnimation(master: AuthorityData["masters"][number], presentation: AuthorityData["presentations"][number] | undefined) {
-  return (master.canonical_type === "universe" || master.canonical_type === "mural") && presentation?.title === "Super Hero Ego";
-}
-
 function StatusBadge({ label, good = false }: { label: string; good?: boolean }) {
   return <Badge variant={good ? "secondary" : "outline"}>{label}</Badge>;
 }
@@ -147,7 +143,6 @@ function WorkCard({
   const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
   const status = getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations);
   const isCollectible = projection?.collectible_designated ?? false;
-  const official = isOfficialAnimation(master, presentation);
   const artworkUrl = presentation?.artwork_asset?.storage_ref ?? projectionPresentation?.artwork_asset?.storage_ref ?? null;
 
   return (
@@ -158,7 +153,7 @@ function WorkCard({
             <span className="text-foreground text-sm font-medium block truncate">
               {presentation?.title ?? typeLabel}
             </span>
-            <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} />{official && <Badge>Official animation</Badge>}<StatusBadge label={status.needs} good={status.ready} /></div>
+            <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} /><StatusBadge label={status.needs} good={status.ready} /></div>
           </div>
           {artworkUrl && <img src={artworkUrl} alt="" className="h-12 w-20 shrink-0 rounded object-cover" />}
         </div>
@@ -952,7 +947,6 @@ export default function AuthorityClient() {
     records: workRecords.filter(record => record.master.canonical_type === type),
   }));
   const orderedRecords = groupedRecords.flatMap(group => group.records);
-  const officialRecord = workRecords.find(record => isOfficialAnimation(record.master, record.presentation));
   const overviewCounts = [
     ["Universes", workRecords.filter(record => record.master.canonical_type === "universe").length],
     ["Murals", workRecords.filter(record => record.master.canonical_type === "mural").length],
@@ -997,13 +991,6 @@ export default function AuthorityClient() {
           {overviewCounts.map(([label, count]) => <Card key={label} size="sm"><CardContent className="space-y-1 pt-3"><p className="text-muted-foreground text-xs uppercase tracking-wide">{label}</p><p className="text-foreground text-2xl font-semibold">{count}</p></CardContent></Card>)}
         </div>
       </div>
-
-      {officialRecord && (
-        <section className="space-y-3">
-          <div><h2 className="text-foreground text-sm font-medium">Official animation</h2><p className="text-muted-foreground text-xs">The current official animated expression in the catalogue.</p></div>
-          <Card className="border-foreground/20"><CardContent className="flex flex-wrap items-center justify-between gap-4 pt-4"><div><p className="text-foreground text-lg font-medium">{officialRecord.presentation?.title}</p><div className="mt-1 flex flex-wrap gap-1.5"><Badge>Official animation</Badge><StatusBadge label="Mural / Universe experience" /></div></div><div className="flex flex-wrap gap-2"><StatusBadge label={officialRecord.status.playable ? "Playable" : officialRecord.status.needs} good={officialRecord.status.playable} /><a href="#murals" className="text-sm text-foreground underline-offset-4 hover:underline">Open catalogue</a></div></CardContent></Card>
-        </section>
-      )}
 
       <div id="ingestion">
         <h2 className="text-foreground text-sm font-medium">Ingestion</h2>
