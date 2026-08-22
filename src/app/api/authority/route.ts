@@ -27,9 +27,9 @@ export async function GET() {
 
   const platformAuthority = authorities.find((record) => record.scope_type === "platform") ?? null;
   const masterAuthorities = authorities.filter((record) => record.scope_type === "master");
-  const visibleMasterIds = platformAuthority
-    ? null
-    : (masterAuthorities.map((record) => record.scope_subject_id).filter(Boolean) as string[]);
+  const visibleMasterIds = masterAuthorities
+    .map((record) => record.scope_subject_id)
+    .filter(Boolean) as string[];
 
   let masterQuery = svc.from("master").select("master_id, canonical_type, current_state_id, created_at");
   if (!platformAuthority) {

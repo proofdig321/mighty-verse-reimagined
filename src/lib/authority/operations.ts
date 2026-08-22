@@ -1,4 +1,5 @@
 import { validateAuthority, logOperation, computeHash, getServiceClient } from "./validate";
+import type { AuthorityCapability } from "./validate";
 
 export type OperationResult<T> = { data: T } | { error: string };
 
