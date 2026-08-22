@@ -11,9 +11,10 @@ type AuthorityData = {
   masters: { master_id: string; canonical_type: string; current_state_id: string | null; created_at: string }[];
   states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
   projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
-  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; media_asset: { storage_ref: string } | null }[];
-  presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null }[];
-  projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null }[];
+  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; realization_id: string | null; media_asset: { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null } | null }[];
+  presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
+  projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
+  realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -36,6 +37,64 @@ const PROJECTION_TYPES = ["experiential", "distributional", "archival", "other"]
 
 function shortId(id: string) { return id.slice(0, 8); }
 
+type WorkStatus = {
+  ready: boolean;
+  needs: string;
+  hasState: boolean;
+  hasExperience: boolean;
+  hasMedia: boolean;
+  playable: boolean;
+  hasArtwork: boolean;
+  needsTimeline: boolean;
+  hasRealization: boolean;
+  rightsVerified: boolean;
+};
+
+function getWorkStatus(
+  master: AuthorityData["masters"][number],
+  state: AuthorityData["states"][number] | undefined,
+  projection: AuthorityData["projections"][number] | undefined,
+  binding: AuthorityData["bindings"][number] | undefined,
+  presentation: AuthorityData["presentations"][number] | undefined,
+  projectionPresentation: AuthorityData["projectionPresentations"][number] | undefined,
+  realizations: AuthorityData["realizations"]
+): WorkStatus {
+  const hasState = !!state;
+  const hasExperience = !!projection;
+  const hasMedia = !!binding;
+  const playable = !!binding?.media_asset?.storage_ref && !binding.media_asset.storage_ref.startsWith("seed:placeholder:");
+  const hasArtwork = !!(presentation?.artwork_asset_id || projectionPresentation?.artwork_asset_id);
+  const needsTimeline = master.canonical_type === "scene";
+  const hasTimeline = !needsTimeline || (binding?.start_ms != null && binding?.end_ms != null);
+  const realization = realizations.find(item => item.realization_id === binding?.realization_id || item.master_id === master.master_id);
+  const hasRealization = !!realization;
+  const rightsVerified = !!binding?.media_asset?.rights_holder_ref && !!binding.media_asset.rights_basis;
+  const needs = !hasState
+    ? "Needs authorisation"
+    : !hasExperience
+    ? "Needs experience"
+    : !hasMedia || !playable
+    ? "Needs media"
+    : !hasArtwork && (master.canonical_type === "scene" || master.canonical_type === "mural" || master.canonical_type === "universe")
+    ? "Needs artwork"
+    : !hasTimeline
+    ? "Needs timeline"
+    : !hasRealization
+    ? "Needs realization"
+    : !rightsVerified
+    ? "Needs rights"
+    : "Ready";
+  return { ready: needs === "Ready", needs, hasState, hasExperience, hasMedia, playable, hasArtwork, needsTimeline: !hasTimeline, hasRealization, rightsVerified };
+}
+
+function isOfficialAnimation(master: AuthorityData["masters"][number], presentation: AuthorityData["presentations"][number] | undefined) {
+  return (master.canonical_type === "universe" || master.canonical_type === "mural") && presentation?.title === "Super Hero Ego";
+}
+
+function StatusBadge({ label, good = false }: { label: string; good?: boolean }) {
+  return <Badge variant={good ? "secondary" : "outline"}>{label}</Badge>;
+}
+
 async function api(path: string, body?: unknown) {
   const res = await fetch(path, {
     method: body ? "POST" : "GET",
@@ -47,20 +106,6 @@ async function api(path: string, body?: unknown) {
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
 
-function Step({ done, label, detail }: { done: boolean; label: string; detail?: string }) {
-  return (
-    <div className="flex items-start gap-2">
-      <span className={`mt-0.5 text-xs font-medium w-4 shrink-0 ${done ? "text-foreground" : "text-muted-foreground"}`}>
-        {done ? "✓" : "○"}
-      </span>
-      <div>
-        <span className={`text-sm ${done ? "text-foreground" : "text-muted-foreground"}`}>{label}</span>
-        {detail && <span className="text-muted-foreground text-xs ml-2">{detail}</span>}
-      </div>
-    </div>
-  );
-}
-
 // ─── Work card ───────────────────────────────────────────────────────────────
 
 type WorkCardProps = {
@@ -70,6 +115,7 @@ type WorkCardProps = {
   binding: AuthorityData["bindings"][number] | undefined;
   presentation: AuthorityData["presentations"][number] | undefined;
   projectionPresentation: AuthorityData["projectionPresentations"][number] | undefined;
+  realizations: AuthorityData["realizations"];
   onAuthorise: (masterId: string) => Promise<void>;
   onCreateExperience: (stateId: string, masterId: string, type: string) => Promise<void>;
   onAttachVideo: (projId: string, masterId: string) => void;
@@ -83,6 +129,7 @@ type WorkCardProps = {
 
 function WorkCard({
   master, state, projection, binding, presentation, projectionPresentation,
+  realizations,
   onAuthorise, onCreateExperience, onAttachVideo, onDesignate,
   onEditPresentation, onEditProjectionPresentation,
   onEditTimeline,
@@ -91,74 +138,41 @@ function WorkCard({
 }: WorkCardProps) {
   const [expType, setExpType] = useState("experiential");
   const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
-
-  const hasState = !!state;
-  const hasProjection = !!projection;
-  const hasMedia = !!binding;
+  const status = getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations);
   const isCollectible = projection?.collectible_designated ?? false;
+  const official = isOfficialAnimation(master, presentation);
+  const artworkUrl = presentation?.artwork_asset?.storage_ref ?? projectionPresentation?.artwork_asset?.storage_ref ?? null;
 
   return (
-    <Card>
+    <Card size="sm">
       <CardContent className="pt-4 space-y-3">
-        {/* Header */}
         <div className="flex items-center justify-between">
           <div className="space-y-0.5 min-w-0">
             <span className="text-foreground text-sm font-medium block truncate">
               {presentation?.title ?? typeLabel}
             </span>
-            {presentation?.title && (
-              <span className="text-muted-foreground text-xs">{typeLabel}</span>
-            )}
+            <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} />{official && <Badge>Official animation</Badge>}<StatusBadge label={status.needs} good={status.ready} /></div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={() => onEditPresentation(master.master_id)}
-              className="text-muted-foreground text-xs hover:text-foreground transition-colors"
-            >
-              {presentation ? "Edit title" : "Set title"}
-            </button>
-            <span className="text-muted-foreground font-mono text-xs cursor-default" title={master.master_id}>{shortId(master.master_id)}…</span>
-          </div>
+          {artworkUrl && <img src={artworkUrl} alt="" className="h-12 w-20 shrink-0 rounded object-cover" />}
         </div>
 
-        {/* Journey steps */}
-        <div className="space-y-1.5">
-          <Step done label="Registered" />
-          <Step
-            done={hasState}
-            label={hasState ? "Authorised" : "Needs authorisation"}
-            detail={hasState ? `v${state!.version} · ${shortId(state!.canonical_state_id)}…` : undefined}
-          />
-          {hasState && (
-            <Step
-              done={hasProjection}
-              label={hasProjection ? "Experience created" : "Needs experience"}
-              detail={hasProjection ? EXPERIENCE_TYPE_LABELS[projection!.projection_type] ?? projection!.projection_type : undefined}
-            />
-          )}
-          {hasProjection && (
-            <Step
-              done={hasMedia}
-              label={hasMedia ? "Video attached · playable" : "Needs video"}
-            />
-          )}
-          {hasProjection && (
-            <Step
-              done={isCollectible}
-              label={isCollectible ? "Collectible" : "Not yet collectible"}
-            />
-          )}
+        <div className="flex flex-wrap gap-1.5">
+          <StatusBadge label={status.hasState ? "Authorised" : "Needs authorisation"} good={status.hasState} />
+          <StatusBadge label={status.hasExperience ? "Experience" : "Needs experience"} good={status.hasExperience} />
+          <StatusBadge label={status.playable ? "Playable" : status.hasMedia ? "Media attached" : "Needs media"} good={status.playable} />
+          {(master.canonical_type === "scene" || master.canonical_type === "mural" || master.canonical_type === "universe") && <StatusBadge label={status.hasArtwork ? "Artwork" : "Needs artwork"} good={status.hasArtwork} />}
+          {status.needsTimeline && <StatusBadge label="Needs timeline" />}
+          <StatusBadge label={status.hasRealization ? "Realization" : "Needs realization"} good={status.hasRealization} />
+          {isCollectible && <Badge>Collectible</Badge>}
         </div>
 
-        {/* Single next action */}
-        {!hasState && (
+        {!status.hasState && (
           <Button size="sm" disabled={busy} onClick={() => onAuthorise(master.master_id)}>
-            Authorise Work
+            Authorise work
           </Button>
         )}
 
-        {hasState && !hasProjection && (
+        {status.hasState && !status.hasExperience && (
           <div className="space-y-2">
             <select
               value={expType}
@@ -175,7 +189,7 @@ function WorkCard({
           </div>
         )}
 
-        {hasProjection && (
+        {status.hasExperience && (
           <button
             type="button"
             onClick={() => onEditProjectionPresentation(projection!.projection_id, master.master_id)}
@@ -185,19 +199,19 @@ function WorkCard({
           </button>
         )}
 
-        {hasProjection && !hasMedia && (
+        {status.hasExperience && !status.hasMedia && (
           <Button size="sm" disabled={busy} onClick={() => onAttachVideo(projection!.projection_id, master.master_id)}>
-            Attach Video
+            Attach media
           </Button>
         )}
 
-        {hasProjection && hasMedia && !isCollectible && (
+        {status.hasExperience && status.hasMedia && !isCollectible && (
           <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id)}>
             Designate as Collectible
           </Button>
         )}
 
-        {hasProjection && hasMedia && (
+        {status.hasExperience && status.hasMedia && (
           <button
             type="button"
             onClick={() => onEditTimeline(binding!.binding_id, master.master_id)}
@@ -207,15 +221,13 @@ function WorkCard({
           </button>
         )}
 
-        {hasProjection && hasMedia && (
+        {status.hasExperience && status.hasMedia && !status.hasRealization && (
           <button type="button" onClick={() => onEditRealization(binding!.binding_id, master.master_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
             Record realization
           </button>
         )}
 
-        {hasProjection && hasMedia && isCollectible && (
-          <p className="text-muted-foreground text-xs">Complete</p>
-        )}
+        {status.ready && <p className="text-muted-foreground text-xs">Ready</p>}
       </CardContent>
     </Card>
   );
@@ -890,7 +902,7 @@ export default function AuthorityClient() {
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
 
-  const { authority, masters, states, projections, bindings, presentations, projectionPresentations } = data;
+  const { authority, masters, states, projections, bindings, presentations, projectionPresentations, realizations } = data;
 
   function getState(masterId: string) {
     return states.find(s => s.master_id === masterId);
@@ -912,9 +924,32 @@ export default function AuthorityClient() {
     <div className="mx-auto max-w-3xl space-y-6 p-6">
 
       {/* Header */}
+      <div className="border-b border-border pb-5">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-foreground text-2xl font-semibold">Mighty Verse Authority</h1>
+            <p className="text-muted-foreground text-sm">Full authority over this catalogue.</p>
+          </div>
+          <Badge variant="outline">{authority.scope_type} scope · {authority.capabilities.length} capabilities</Badge>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        {[
+          ["Works", masters.length],
+          ["Ready", masters.filter(master => getWorkStatus(master, getState(master.master_id), getProjection(master.master_id), getProjection(master.master_id) ? getBinding(getProjection(master.master_id)!.projection_id) : undefined, getPresentation(master.master_id), getProjection(master.master_id) ? getProjectionPresentation(getProjection(master.master_id)!.projection_id) : undefined, realizations).ready).length],
+          ["Needs media", masters.filter(master => { const projection = getProjection(master.master_id); return !getWorkStatus(master, getState(master.master_id), projection, projection ? getBinding(projection.projection_id) : undefined, getPresentation(master.master_id), projection ? getProjectionPresentation(projection.projection_id) : undefined, realizations).hasMedia; }).length],
+          ["Needs experience", masters.filter(master => !getProjection(master.master_id)).length],
+          ["Needs artwork", masters.filter(master => { const projection = getProjection(master.master_id); const status = getWorkStatus(master, getState(master.master_id), projection, projection ? getBinding(projection.projection_id) : undefined, getPresentation(master.master_id), projection ? getProjectionPresentation(projection.projection_id) : undefined, realizations); return !status.hasArtwork && ["universe", "mural", "scene"].includes(master.canonical_type); }).length],
+          ["Needs timeline", masters.filter(master => { const projection = getProjection(master.master_id); const status = getWorkStatus(master, getState(master.master_id), projection, projection ? getBinding(projection.projection_id) : undefined, getPresentation(master.master_id), projection ? getProjectionPresentation(projection.projection_id) : undefined, realizations); return status.needsTimeline; }).length],
+          ["Needs realization", masters.filter(master => { const projection = getProjection(master.master_id); const status = getWorkStatus(master, getState(master.master_id), projection, projection ? getBinding(projection.projection_id) : undefined, getPresentation(master.master_id), projection ? getProjectionPresentation(projection.projection_id) : undefined, realizations); return projection != null && !status.hasRealization; }).length],
+          ["Collectible", projections.filter(projection => projection.collectible_designated).length],
+        ].map(([label, count]) => <Card key={label} size="sm"><CardContent className="space-y-1 pt-3"><p className="text-muted-foreground text-xs uppercase tracking-wide">{label}</p><p className="text-foreground text-2xl font-semibold">{count}</p></CardContent></Card>)}
+      </div>
+
       <div>
-        <h1 className="text-foreground text-lg font-semibold">Authority</h1>
-        <p className="text-muted-foreground text-xs">You have full authority over this catalogue.</p>
+        <h2 className="text-foreground text-sm font-medium">Ingestion</h2>
+        <p className="text-muted-foreground text-xs">Register and prepare media before canonical publication.</p>
       </div>
 
       {msg && (
@@ -967,6 +1002,8 @@ export default function AuthorityClient() {
           </Card>
         )}
       </div>
+
+      <div className="flex items-center justify-between"><h2 className="text-foreground text-sm font-medium">Catalogue</h2><span className="text-muted-foreground text-xs">{masters.length} works</span></div>
 
       {/* Work cards */}
       {masters.length === 0 && (
@@ -1053,6 +1090,7 @@ export default function AuthorityClient() {
             binding={binding}
             presentation={presentation}
             projectionPresentation={projectionPresentation}
+            realizations={realizations}
             busy={busy}
             onAuthorise={masterId => act("Authorise Work", "/api/authority/states", { master_id: masterId })}
             onCreateExperience={(stateId, masterId, type) =>
@@ -1073,11 +1111,13 @@ export default function AuthorityClient() {
       <Separator />
 
       {/* Canonical Record — secondary technical view */}
-      <div className="space-y-4">
-        <div>
-          <h2 className="text-foreground text-sm font-medium">Canonical Record</h2>
-          <p className="text-muted-foreground text-xs">Technical verification of the canonical chain.</p>
-        </div>
+      <details className="group space-y-4">
+        <summary className="cursor-pointer list-none text-foreground text-sm font-medium">
+          <span className="mr-2 text-muted-foreground group-open:hidden">+</span>
+          <span className="mr-2 text-muted-foreground hidden group-open:inline">−</span>
+          View canonical record
+          <span className="block pl-5 text-muted-foreground text-xs font-normal">Technical verification of the canonical chain.</span>
+        </summary>
 
         {masters.length === 0 && <p className="text-muted-foreground text-xs">No records yet.</p>}
 
@@ -1130,7 +1170,7 @@ export default function AuthorityClient() {
             </Card>
           );
         })}
-      </div>
+      </details>
     </div>
   );
 }

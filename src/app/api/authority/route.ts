@@ -47,6 +47,7 @@ export async function GET() {
         bindings: [],
         presentations: [],
         projectionPresentations: [],
+        realizations: [],
       });
     }
     masterQuery = masterQuery.in("master_id", visibleMasterIds);
@@ -74,24 +75,30 @@ export async function GET() {
 
   const projectionIds = (projections ?? []).map((p) => p.projection_id);
 
-  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }] = await Promise.all([
+  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }] = await Promise.all([
     projectionIds.length
       ? svc
           .from("projection_media_binding")
-          .select("binding_id, projection_id, binding_type, access_level, asset_id, start_ms, end_ms, media_asset(storage_ref)")
+          .select("binding_id, projection_id, binding_type, access_level, asset_id, start_ms, end_ms, realization_id, media_asset(storage_ref, asset_type, rights_holder_ref, rights_basis)")
           .in("projection_id", projectionIds)
       : Promise.resolve({ data: [] }),
     masterIds.length
       ? svc
           .from("work_presentation")
-          .select("master_id, title, description, artwork_asset_id")
+          .select("master_id, title, description, artwork_asset_id, artwork_asset(storage_ref)")
           .in("master_id", masterIds)
       : Promise.resolve({ data: [] }),
     projectionIds.length
       ? svc
           .from("projection_presentation")
-          .select("projection_id, title, description, artwork_asset_id")
+          .select("projection_id, title, description, artwork_asset_id, artwork_asset(storage_ref)")
           .in("projection_id", projectionIds)
+      : Promise.resolve({ data: [] }),
+    masterIds.length
+      ? svc
+          .from("media_realization")
+          .select("realization_id, master_id, realization_type, rights_holder_ref, rights_basis, production_notes")
+          .in("master_id", masterIds)
       : Promise.resolve({ data: [] }),
   ]);
 
@@ -110,5 +117,6 @@ export async function GET() {
     bindings: bindings ?? [],
     presentations: presentations ?? [],
     projectionPresentations: projectionPresentations ?? [],
+    realizations: realizations ?? [],
   });
 }
