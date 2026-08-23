@@ -49,6 +49,7 @@ export async function GET() {
         projectionPresentations: [],
         realizations: [],
         participants: [],
+        mediaAssets: [],
       });
     }
     masterQuery = masterQuery.in("master_id", visibleMasterIds);
@@ -76,7 +77,7 @@ export async function GET() {
 
   const projectionIds = (projections ?? []).map((p) => p.projection_id);
 
-  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }, { data: participants }] = await Promise.all([
+  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }, { data: participants }, { data: mediaAssets }, { data: mediaIntake }] = await Promise.all([
     projectionIds.length
       ? svc
           .from("projection_media_binding")
@@ -102,6 +103,8 @@ export async function GET() {
           .in("master_id", masterIds)
       : Promise.resolve({ data: [] }),
     svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("status", "active"),
+    svc.from("media_asset").select("asset_id, asset_type, storage_ref, format, duration_ms, created_at"),
+    svc.from("media_intake").select("asset_id, master_id, title").not("asset_id", "is", null),
   ]);
 
   const primaryAuthority = authorities[0];
@@ -126,5 +129,9 @@ export async function GET() {
         ? participant.identity_link.find((link: { active: boolean; identity_ref: string }) => link.active)?.identity_ref ?? participant.participant_id.slice(0, 8)
         : participant.participant_id.slice(0, 8),
     })),
+    mediaAssets: (mediaAssets ?? []).map((asset) => {
+      const intake = (mediaIntake ?? []).find((item) => item.asset_id === asset.asset_id);
+      return { ...asset, title: intake?.title ?? null, master_id: intake?.master_id ?? null };
+    }),
   });
 }

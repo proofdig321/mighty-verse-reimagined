@@ -6,6 +6,7 @@ import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import MomentCard from "@/components/moment-card";
 import ArtworkFrame from "@/components/artwork-frame";
+import MediaVisual from "@/components/media-visual";
 
 export const metadata: Metadata = {
   title: "Mighty Verse",
@@ -56,8 +57,12 @@ export default async function HomePage() {
           <div className="depth-panel flex flex-col md:flex-row md:items-start gap-10 md:gap-16">
 
             {/* Artwork slot — empty until genuine artwork exists */}
-            <div className="w-full md:w-48 shrink-0">
-              <ArtworkFrame artworkUrl={null} alt={featured.title ?? ""} aspectRatio="1/1" />
+            <div className="w-full md:w-80 shrink-0">
+              {featured.visual_playback_id ? (
+                <MediaVisual playbackId={featured.visual_playback_id} title={featured.title ?? "Mighty Verse"} aspectRatio="16/9" />
+              ) : (
+                <ArtworkFrame artworkUrl={null} alt={featured.title ?? ""} aspectRatio="1/1" />
+              )}
             </div>
 
             {/* Identity */}

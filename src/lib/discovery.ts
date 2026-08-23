@@ -10,6 +10,7 @@ export type DiscoveryUniverse = {
   description: string | null;
   attribution_roles: string[];
   projections: DiscoveryProjection[];
+  visual_playback_id: string | null;
 };
 
 export type DiscoveryProjection = {
@@ -18,7 +19,13 @@ export type DiscoveryProjection = {
   collectible_designated: boolean;
   has_media: boolean;
   title: string | null;
+  visual_playback_id: string | null;
 };
+
+function mediaStorageRef(binding: { media_asset?: { storage_ref: string | null }[] | { storage_ref: string | null } | null }) {
+  const asset = Array.isArray(binding.media_asset) ? binding.media_asset[0] : binding.media_asset;
+  return asset?.storage_ref ?? null;
+}
 
 export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
   const svc = getServiceClient();
@@ -69,9 +76,9 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
       ? svc.from("projection_presentation").select("projection_id, title").in("projection_id", projectionIds)
       : Promise.resolve({ data: [] }),
     projectionIds.length
-      ? svc
+        ? svc
           .from("projection_media_binding")
-          .select("projection_id, asset_id")
+          .select("projection_id, asset_id, media_asset(storage_ref)")
           .in("projection_id", projectionIds)
           .eq("access_level", "public")
       : Promise.resolve({ data: [] }),
@@ -105,6 +112,7 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
         .map((e) => e.role_type);
 
       const masterHasMedia = mProjs.some((p) => projHasMedia.get(p.projection_id));
+      const visualPlaybackId = (bindings ?? []).map(binding => ({ binding, storageRef: mediaStorageRef(binding) })).find(({ binding, storageRef }) => binding.projection_id === mProjs[0]?.projection_id && !!storageRef && !storageRef.startsWith("seed:placeholder:"))?.storageRef ?? null;
       const presentation = (presentationRows ?? []).find((p) => p.master_id === m.master_id);
 
       return {
@@ -122,7 +130,9 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
           collectible_designated: p.collectible_designated,
           has_media: projHasMedia.get(p.projection_id) ?? false,
           title: (projPresentations ?? []).find((pp) => pp.projection_id === p.projection_id)?.title ?? null,
+          visual_playback_id: (bindings ?? []).map(binding => ({ binding, storageRef: mediaStorageRef(binding) })).find(({ binding, storageRef }) => binding.projection_id === p.projection_id && !!storageRef && !storageRef.startsWith("seed:placeholder:"))?.storageRef ?? null,
         })),
+        visual_playback_id: visualPlaybackId,
       };
     })
     .filter((w): w is DiscoveryUniverse => w !== null);
