@@ -48,12 +48,12 @@ export default async function HomePage() {
   const featuredTypeLabel = TYPE_LABELS[featured.canonical_type] ?? featured.canonical_type.replace(/-/g, " ");
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background multiverse-page">
 
       {/* ── HERO ─────────────────────────────────────────────────────────── */}
-      <section className="border-b border-border">
+      <section className="multiverse-stage border-b border-border">
         <div className="mx-auto max-w-5xl px-4 py-16 md:py-24">
-          <div className="flex flex-col md:flex-row md:items-start gap-10 md:gap-16">
+          <div className="depth-panel flex flex-col md:flex-row md:items-start gap-10 md:gap-16">
 
             {/* Artwork slot — empty until genuine artwork exists */}
             <div className="w-full md:w-48 shrink-0">
@@ -105,10 +105,10 @@ export default async function HomePage() {
         {/* Universe projections are not surfaced on Home — enter via Universe page */}
 
         {/* Additional authored universes */}
-        {remaining.map((w: DiscoveryUniverse) => {
+        {remaining.map((w: DiscoveryUniverse, index) => {
           const typeLabel = TYPE_LABELS[w.canonical_type] ?? w.canonical_type.replace(/-/g, " ");
           return (
-            <section key={w.master_id} className="space-y-4">
+            <section key={w.master_id} className={`spatial-world space-y-4 ${index % 2 ? "spatial-world-offset" : ""}`}>
               <div className="space-y-1">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">{typeLabel}</p>
                 <Link href={`/worlds/${w.master_id}`} className="group inline-flex items-center gap-2">
