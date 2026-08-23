@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Activity, Archive, BarChart3, ChevronRight, Database, FileText, Image, LayoutDashboard, Menu, MoreHorizontal, PlaySquare, Plus, Search, Settings, ShieldCheck, Upload, Users, Video, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,7 @@ const WORK_TYPE_LABELS: Record<string, string> = {
   "universe": "Universe",
   "creative-moment": "Creative Moment",
   "mural": "Mural",
+  "scene": "Scene",
   "interpretation": "Interpretation",
   "other": "Other",
 };
@@ -32,7 +34,7 @@ const EXPERIENCE_TYPE_LABELS: Record<string, string> = {
   "other": "Other",
 };
 
-const CANONICAL_TYPES = ["universe", "creative-moment", "mural", "interpretation", "other"] as const;
+const CANONICAL_TYPES = ["universe", "creative-moment", "mural", "scene", "interpretation", "other"] as const;
 const PROJECTION_TYPES = ["experiential", "distributional", "archival", "other"] as const;
 
 function shortId(id: string) { return id.slice(0, 8); }
@@ -60,6 +62,35 @@ type WorkRecord = {
   status: WorkStatus;
 };
 
+type JourneyStep = { label: string; state: "complete" | "current" | "blocked" | "optional" | "not-applicable" };
+
+function getJourneySteps(master: AuthorityData["masters"][number], status: WorkStatus): JourneyStep[] {
+  const realizationRequired = master.canonical_type === "scene";
+  const mediaRequired = master.canonical_type !== "creative-moment";
+  const rightsState = !status.playable ? "not-applicable" : status.rightsVerified ? "complete" : "blocked";
+  return [
+    { label: "Registered", state: "complete" },
+    { label: "Authorised", state: status.hasState ? "complete" : "current" },
+    { label: "Experience", state: status.hasExperience ? "complete" : status.hasState ? "current" : "not-applicable" },
+    { label: "Media", state: !mediaRequired ? "not-applicable" : status.playable ? "complete" : status.hasExperience ? "current" : "not-applicable" },
+    { label: "Rights", state: rightsState },
+    { label: "Artwork", state: status.hasArtwork ? "complete" : "optional" },
+    { label: "Timeline", state: master.canonical_type !== "scene" ? "not-applicable" : status.needsTimeline ? status.hasMedia ? "current" : "not-applicable" : "complete" },
+    { label: "Realization", state: !realizationRequired ? "not-applicable" : status.hasRealization ? "complete" : status.playable ? "current" : "not-applicable" },
+    { label: "Ready", state: status.ready ? "complete" : "current" },
+  ];
+}
+
+function getNextAction(master: AuthorityData["masters"][number], status: WorkStatus) {
+  if (!status.hasState) return "Authorise work";
+  if (!status.hasExperience) return "Create experience";
+  if (master.canonical_type !== "creative-moment" && !status.playable) return "Attach media";
+  if (status.needsTimeline) return "Set timeline";
+  if (master.canonical_type === "scene" && !status.hasRealization) return "Record production version";
+  if (status.playable && !status.rightsVerified) return "Review rights";
+  return status.ready ? "Review publication" : "Verify readiness";
+}
+
 function getWorkStatus(
   master: AuthorityData["masters"][number],
   state: AuthorityData["states"][number] | undefined,
@@ -79,6 +110,8 @@ function getWorkStatus(
   const realization = realizations.find(item => item.realization_id === binding?.realization_id || item.master_id === master.master_id);
   const hasRealization = !!realization;
   const rightsVerified = !!binding?.media_asset?.rights_holder_ref && !!binding.media_asset.rights_basis;
+  const realizationRequired = master.canonical_type === "scene";
+  const mediaRequired = master.canonical_type !== "creative-moment";
   // Artwork, realization, and rights are surfaced as operational context. They
   // are not universal blockers: the operating requirement is determined by the
   // kind of work and the experience it is meant to deliver.
@@ -86,16 +119,33 @@ function getWorkStatus(
     ? "Needs authorisation"
     : !hasExperience
     ? "Needs experience"
-    : !hasMedia || !playable
+    : mediaRequired && (!hasMedia || !playable)
     ? "Needs media"
     : !hasTimeline
     ? "Needs timeline"
     : "Ready";
-  return { ready: needs === "Ready", needs, hasState, hasExperience, hasMedia, playable, hasArtwork, needsTimeline: !hasTimeline, hasRealization, rightsVerified };
+  const operationalNeeds = needs !== "Ready"
+    ? needs
+    : playable && !rightsVerified
+    ? "Needs rights review"
+    : !hasTimeline
+    ? "Needs timeline"
+    : realizationRequired && !hasRealization
+    ? "Needs production version"
+    : "Ready";
+  return { ready: operationalNeeds === "Ready", needs: operationalNeeds, hasState, hasExperience, hasMedia, playable, hasArtwork, needsTimeline: !hasTimeline, hasRealization, rightsVerified };
 }
 
 function StatusBadge({ label, good = false }: { label: string; good?: boolean }) {
   return <Badge variant={good ? "secondary" : "outline"}>{label}</Badge>;
+}
+
+function operatorError(value: unknown) {
+  const message = String(value ?? "");
+  if (/uuid|participant/i.test(message)) return "The selected participant could not be identified as a registered Mighty Verse participant. Select a registered participant and try again.";
+  if (/rights holder|rights basis|unknown rights/i.test(message)) return "This work's media does not yet have a confirmed rights holder. Complete the rights information before continuing.";
+  if (/json|unexpected end|incomplete response/i.test(message)) return "We couldn't complete this operation because the service returned an incomplete response. Try again.";
+  return message || "We couldn't complete this operation. Try again.";
 }
 
 async function api(path: string, body?: unknown) {
@@ -104,7 +154,12 @@ async function api(path: string, body?: unknown) {
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });
-  return res.json();
+  const responseText = await res.text();
+  try {
+    return JSON.parse(responseText);
+  } catch {
+    return { error: "The service returned an incomplete response." };
+  }
 }
 
 // ─── Step indicator ──────────────────────────────────────────────────────────
@@ -144,6 +199,8 @@ function WorkCard({
   const status = getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations);
   const isCollectible = projection?.collectible_designated ?? false;
   const artworkUrl = presentation?.artwork_asset?.storage_ref ?? projectionPresentation?.artwork_asset?.storage_ref ?? null;
+  const journey = getJourneySteps(master, status);
+  const nextStep = getNextAction(master, status);
 
   return (
     <Card size="sm">
@@ -158,15 +215,19 @@ function WorkCard({
           {artworkUrl && <img src={artworkUrl} alt="" className="h-12 w-20 shrink-0 rounded object-cover" />}
         </div>
 
-        <div className="flex flex-wrap gap-1.5">
-          <StatusBadge label="Registered" good />
-          <StatusBadge label={status.hasState ? "Authorised" : "Needs authorisation"} good={status.hasState} />
-          <StatusBadge label={status.hasExperience ? "Experience" : "Needs experience"} good={status.hasExperience} />
-          <StatusBadge label={status.playable ? "Playable" : status.hasMedia ? "Media attached" : "Needs media"} good={status.playable} />
-          {(master.canonical_type === "scene" || master.canonical_type === "mural") && <StatusBadge label={status.hasArtwork ? "Artwork" : "Artwork recommended"} good={status.hasArtwork} />}
-          {master.canonical_type === "scene" && <StatusBadge label={status.needsTimeline ? "Needs timeline" : "Timeline set"} good={!status.needsTimeline} />}
-          <StatusBadge label={status.hasRealization ? "Realization recorded" : "Realization not recorded"} good={status.hasRealization} />
-          <StatusBadge label={status.rightsVerified ? "Rights recorded" : "Rights review"} good={status.rightsVerified} />
+        <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Production journey</p>
+          <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
+            {journey.map((step, index) => (
+              <div key={step.label} className="flex items-center gap-1">
+                {index > 0 && <span className="px-0.5 text-muted-foreground/50">→</span>}
+                <span className={`text-xs ${step.state === "complete" ? "text-foreground" : step.state === "blocked" ? "font-medium text-destructive" : step.state === "current" ? "font-medium text-foreground" : "text-muted-foreground/60"}`}>
+                  {step.state === "complete" ? "✓ " : step.state === "blocked" ? "! " : step.state === "not-applicable" ? "— " : step.state === "optional" ? "· " : "○ "}{step.label}{step.state === "optional" ? " (optional)" : ""}
+                </span>
+              </div>
+            ))}
+          </div>
+          {!status.ready && <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Next step:</span> {nextStep}</p>}
           {isCollectible && <Badge>Collectible</Badge>}
         </div>
 
@@ -203,7 +264,7 @@ function WorkCard({
           </button>
         )}
 
-        {status.hasExperience && !status.hasMedia && (
+        {status.hasExperience && master.canonical_type !== "creative-moment" && !status.hasMedia && (
           <Button size="sm" disabled={busy} onClick={() => onAttachVideo(projection!.projection_id, master.master_id)}>
             Attach media
           </Button>
@@ -215,7 +276,7 @@ function WorkCard({
           </Button>
         )}
 
-        {status.hasExperience && status.hasMedia && (
+        {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && (
           <button
             type="button"
             onClick={() => onEditTimeline(binding!.binding_id, master.master_id)}
@@ -225,7 +286,7 @@ function WorkCard({
           </button>
         )}
 
-        {status.hasExperience && status.hasMedia && !status.hasRealization && (
+        {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && !status.hasRealization && (
           <button type="button" onClick={() => onEditRealization(binding!.binding_id, master.master_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
             Record realization
           </button>
@@ -264,9 +325,12 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
   const startRef = useRef(startMs);
   const endRef = useRef(endMs);
   const previewingRef = useRef(previewing);
-  startRef.current = startMs;
-  endRef.current = endMs;
-  previewingRef.current = previewing;
+
+  useEffect(() => {
+    startRef.current = startMs;
+    endRef.current = endMs;
+    previewingRef.current = previewing;
+  }, [endMs, previewing, startMs]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -885,6 +949,10 @@ export default function AuthorityClient() {
   const [editingTimelineMasterId, setEditingTimelineMasterId] = useState<string | null>(null);
   const [editingRealizationBindingId, setEditingRealizationBindingId] = useState<string | null>(null);
   const [editingRealizationMasterId, setEditingRealizationMasterId] = useState<string | null>(null);
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [mobileNav, setMobileNav] = useState(false);
 
   async function load() {
     const d = await api("/api/authority");
@@ -892,13 +960,15 @@ export default function AuthorityClient() {
     setData(d);
   }
 
-  useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // The fetch resolves outside React; its completion updates the read model.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load(); }, []);
 
   async function act(label: string, path: string, body: unknown) {
     setBusy(true); setMsg(null);
     const d = await api(path, body);
     setBusy(false);
-    if (d.error) { setMsg(`Error: ${d.error}`); return; }
+    if (d.error) { setMsg(operatorError(d.error)); return; }
     setMsg(`${label} succeeded.`);
     await load();
   }
@@ -941,56 +1011,56 @@ export default function AuthorityClient() {
     };
   });
 
-  const groupedRecords = ["universe", "mural", "creative-moment", "scene"].map(type => ({
-    type,
-    label: WORK_TYPE_LABELS[type],
-    records: workRecords.filter(record => record.master.canonical_type === type),
-  }));
-  const orderedRecords = groupedRecords.flatMap(group => group.records);
-  const overviewCounts = [
-    ["Universes", workRecords.filter(record => record.master.canonical_type === "universe").length],
-    ["Murals", workRecords.filter(record => record.master.canonical_type === "mural").length],
-    ["Creative Moments", workRecords.filter(record => record.master.canonical_type === "creative-moment").length],
-    ["Scenes", workRecords.filter(record => record.master.canonical_type === "scene").length],
-    ["Registered", workRecords.length],
-    ["Authorised", workRecords.filter(record => record.status.hasState).length],
-    ["Experiential", workRecords.filter(record => record.status.hasExperience).length],
-    ["Playable", workRecords.filter(record => record.status.playable).length],
-    ["Collectible", projections.filter(projection => projection.collectible_designated).length],
-    ["Needs attention", workRecords.filter(record => !record.status.ready).length],
-  ];
+  const titleFor = (record: WorkRecord) => record.presentation?.title ?? record.projectionPresentation?.title ?? WORK_TYPE_LABELS[record.master.canonical_type] ?? "Untitled work";
+  const visibleRecords = workRecords.filter(record => titleFor(record).toLowerCase().includes(query.toLowerCase()) && (typeFilter === "all" || record.master.canonical_type === typeFilter));
+  const orderedRecords = visibleRecords;
+  const selected = workRecords.find(record => record.master.master_id === selectedId) ?? null;
+  const attention = workRecords.flatMap(record => {
+    const issues: { record: WorkRecord; label: string; detail: string; action: string }[] = [];
+    const name = titleFor(record);
+    if (!record.status.hasState) issues.push({ record, label: "Needs authorisation", detail: `${name} is registered but has not been authorised for publishing.`, action: "Authorise work" });
+    else if (!record.status.hasExperience) issues.push({ record, label: "Needs experience", detail: `${name} has an authorised identity but no publishing experience.`, action: "Create experience" });
+    else if (!record.status.playable) issues.push({ record, label: "Needs media", detail: `${name} has an experience waiting for playable media.`, action: "Attach media" });
+    if (record.status.needsTimeline) issues.push({ record, label: "Needs timeline", detail: `${name} needs a playback range before it can be reviewed.`, action: "Set timeline" });
+    if (record.master.canonical_type === "scene" && record.status.playable && !record.status.hasRealization) issues.push({ record, label: "Production version not recorded", detail: `${name} has playable media, but its production version has not been recorded.`, action: "Record production version" });
+    if (record.status.playable && !record.status.rightsVerified) issues.push({ record, label: "Rights review", detail: `${name} cannot be designated collectible until its media rights are verified.`, action: "Review rights" });
+    return issues;
+  });
+  const statusLabel = (record: WorkRecord) => record.status.ready ? "Ready to publish" : record.status.needs;
+  const nextAction = (record: WorkRecord) => getNextAction(record.master, record.status);
+  const runNextAction = (record: WorkRecord) => {
+    if (!record.status.hasState) return act("Authorise Work", "/api/authority/states", { master_id: record.master.master_id });
+    if (!record.status.hasExperience) return act("Create Experience", "/api/authority/projections", { canonical_state_id: record.state!.canonical_state_id, master_id: record.master.master_id, projection_type: "experiential" });
+    if (!record.status.playable && record.projection) { setAttachingProjId(record.projection.projection_id); setAttachingMasterId(record.master.master_id); return Promise.resolve(); }
+    if (record.status.needsTimeline && record.binding) { setEditingTimelineBindingId(record.binding.binding_id); setEditingTimelineMasterId(record.master.master_id); return Promise.resolve(); }
+    if (record.master.canonical_type === "scene" && !record.status.hasRealization && record.binding) { setEditingRealizationBindingId(record.binding.binding_id); setEditingRealizationMasterId(record.master.master_id); return Promise.resolve(); }
+    return Promise.resolve();
+  };
 
+  const overviewMetrics: Array<[string, string, typeof Archive]> = [["Universes", "universe", Archive], ["Murals", "mural", Image], ["Creative Moments", "creative-moment", FileText], ["Scenes", "scene", PlaySquare], ["Registered", "all", Database], ["Authorised", "state", ShieldCheck], ["With Experience", "experience", PlaySquare], ["Playable", "playable", Video], ["Collectible", "collectible", BarChart3], ["Needs attention", "attention", Activity]];
+  const navGroups = [{ label: "Overview", links: [["Dashboard", "overview", LayoutDashboard]] }, { label: "Catalogue", links: [["Universes", "catalogue", Archive], ["Murals", "catalogue", Image], ["Creative Moments", "catalogue", FileText], ["Scenes", "catalogue", PlaySquare]] }, { label: "Media", links: [["Media Library", "catalogue", Video], ["Media Intake", "ingestion", Upload], ["Artwork", "catalogue", Image], ["Realizations", "catalogue", Activity]] }, { label: "Publishing", links: [["Experiences", "catalogue", PlaySquare], ["Publishing Queue", "attention", BarChart3]] }, { label: "Governance", links: [["Rights & Authority", "attention", ShieldCheck], ["Canonical Records", "canonical", Database]] }, { label: "System", links: [["Activity / Audit", "canonical", Activity], ["Settings", "overview", Settings]] }] as const;
   return (
-    <div className="min-h-screen bg-background lg:flex">
-      <aside className="border-b border-border bg-card px-4 py-4 lg:min-h-screen lg:w-60 lg:shrink-0 lg:border-b-0 lg:border-r lg:px-5">
-        <div className="mb-5"><p className="text-foreground text-sm font-semibold">Mighty Verse</p><p className="text-muted-foreground text-xs">Authority console</p></div>
-        <nav className="grid grid-cols-2 gap-1 text-xs lg:block lg:space-y-4">
-          <div><p className="mb-1 px-2 text-muted-foreground uppercase tracking-widest">Authority</p><a href="#overview" className="block rounded-md bg-muted px-2 py-1.5 text-foreground">Overview</a></div>
-          <div><p className="mb-1 px-2 text-muted-foreground uppercase tracking-widest">Catalogue</p><div className="space-y-0.5 lg:space-y-1"><a href="#universes" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Universes</a><a href="#murals" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Murals</a><a href="#creative-moments" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Creative Moments</a><a href="#scenes" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Scenes</a></div></div>
-          <div><p className="mb-1 px-2 text-muted-foreground uppercase tracking-widest">Media</p><div className="space-y-0.5 lg:space-y-1"><a href="#ingestion" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Media intake</a><a href="#realizations" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Realizations</a><a href="#artwork" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Artwork</a></div></div>
-          <div><p className="mb-1 px-2 text-muted-foreground uppercase tracking-widest">Publishing</p><a href="#catalogue" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Experiences</a></div>
-          <div><p className="mb-1 px-2 text-muted-foreground uppercase tracking-widest">Governance</p><div className="space-y-0.5 lg:space-y-1"><a href="#canonical" className="block px-2 py-1 text-muted-foreground hover:text-foreground">Canonical records</a><span className="block px-2 py-1 text-muted-foreground/60">Rights &amp; authority</span></div></div>
-        </nav>
+    <div className="min-h-screen bg-muted/30 lg:flex">
+      <aside className={`${mobileNav ? "block" : "hidden"} fixed inset-y-0 left-0 z-20 w-64 border-r border-border bg-card p-5 lg:static lg:block lg:min-h-screen`}>
+        <div className="mb-8 flex items-start justify-between"><div><p className="text-sm font-semibold tracking-tight">Mighty Verse</p><p className="mt-1 text-xs text-muted-foreground">Authority Console</p></div><button className="lg:hidden" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={16} /></button></div>
+        <nav className="space-y-6">{navGroups.map(group => <div key={group.label}><p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</p><div className="space-y-0.5">{group.links.map(([label, target, Icon]) => <a key={label} href={`#${target}`} onClick={() => setMobileNav(false)} className={`flex items-center gap-2 rounded-md px-2 py-2 text-xs ${label === "Dashboard" ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}><Icon size={14} />{label}</a>)}</div></div>)}</nav>
+        <div className="mt-10 border-t border-border pt-4"><div className="flex items-center gap-2 px-2 text-xs text-muted-foreground"><Users size={14} />{authority.scope_type} scope</div></div>
       </aside>
-      <main className="mx-auto w-full max-w-6xl space-y-6 p-4 sm:p-6 lg:px-8">
+      <main className="mx-auto w-full max-w-[1500px] flex-1 space-y-8 p-4 sm:p-6 lg:px-10">
+        <header className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><button className="lg:hidden" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button><div><div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mighty Verse</span><ChevronRight size={13} /><span>Authority</span></div><h1 className="mt-2 text-2xl font-semibold tracking-tight">Dashboard</h1></div></div><div className="flex items-center gap-2"><div className="hidden items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground md:flex"><Search size={14} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search catalogue..." className="w-40 bg-transparent outline-none placeholder:text-muted-foreground" /></div><Button size="sm" onClick={() => setShowRegister(true)}><Plus size={14} /> New work</Button><button className="rounded-md border border-border bg-card p-2 text-muted-foreground" aria-label="More actions"><MoreHorizontal size={16} /></button></div></header>
 
+      <section id="attention" className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+        <Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5"><div className="flex items-start justify-between"><div><h2 className="text-base font-semibold">Needs attention</h2><p className="mt-1 text-sm text-muted-foreground">The next useful action for incomplete work.</p></div><Badge variant="outline">{attention.length} items</Badge></div>{attention.length === 0 ? <p className="border-t border-border pt-4 text-sm text-muted-foreground">Everything in the catalogue is ready for review.</p> : <div className="divide-y divide-border">{attention.slice(0, 6).map((item, index) => <div key={`${item.record.master.master_id}-${item.label}-${index}`} className="flex items-center justify-between gap-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{titleFor(item.record)}</p><div className="mt-1 flex flex-wrap items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[item.record.master.canonical_type]}</Badge><span className="text-xs text-muted-foreground">{item.label}</span></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div><Button size="sm" variant="outline" onClick={() => { setSelectedId(item.record.master.master_id); void runNextAction(item.record); }}>{item.action}</Button></div>)}</div>}</CardContent></Card>
+        <Card className="border-0 bg-primary text-primary-foreground shadow-sm"><CardContent className="space-y-5 pt-5"><div><p className="text-xs uppercase tracking-widest text-primary-foreground/60">Publishing readiness</p><p className="mt-2 text-4xl font-semibold">{workRecords.length ? Math.round(workRecords.filter(r => r.status.ready).length / workRecords.length * 100) : 0}%</p><p className="mt-1 text-sm text-primary-foreground/70">{workRecords.filter(r => r.status.ready).length} of {workRecords.length} works ready to publish</p></div><div className="h-2 overflow-hidden rounded-full bg-primary-foreground/20"><div className="h-full bg-accent-mv transition-all" style={{ width: `${workRecords.length ? workRecords.filter(r => r.status.ready).length / workRecords.length * 100 : 0}%` }} /></div><p className="text-xs text-primary-foreground/60">Readiness is calculated from the live catalogue.</p></CardContent></Card>
+      </section>
+
+      <section id="catalogue" className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-semibold">Catalogue</h2><p className="mt-1 text-sm text-muted-foreground">Search and manage every registered work.</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:hidden"><Search size={14} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search..." className="w-28 bg-transparent outline-none" /></div><select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="h-8 rounded-md border border-border bg-card px-2 text-xs"><option value="all">All types</option>{Object.entries(WORK_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button size="sm" variant="outline" onClick={() => setShowIntake(true)}><Upload size={14} /> Media intake</Button></div></div><div className="overflow-x-auto rounded-lg border border-border bg-card"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Work</th><th className="px-4 py-3 font-medium">Type</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Media</th><th className="px-4 py-3 font-medium">Experience</th><th className="px-4 py-3 font-medium">Rights</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-border">{visibleRecords.map(record => <tr key={record.master.master_id} className="cursor-pointer hover:bg-muted/30" onClick={() => setSelectedId(record.master.master_id)}><td className="px-4 py-3 font-medium">{titleFor(record)}</td><td className="px-4 py-3 text-muted-foreground">{WORK_TYPE_LABELS[record.master.canonical_type]}</td><td className="px-4 py-3"><Badge variant={record.status.ready ? "secondary" : "outline"}>{statusLabel(record)}</Badge></td><td className="px-4 py-3 text-muted-foreground">{record.status.playable ? "Playable" : record.status.hasMedia ? "Processing" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.hasExperience ? "Created" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.rightsVerified ? "Verified" : "Review"}</td><td className="px-4 py-3 text-right"><ChevronRight size={16} className="inline text-muted-foreground" /></td></tr>)}</tbody></table>{visibleRecords.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No works match this search.</p>}</div></section>
+
+      {selected && <section className="grid gap-5 xl:grid-cols-[1fr_320px]"><Card className="border-0 shadow-sm"><CardContent className="space-y-6 pt-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[selected.master.canonical_type]}</Badge><Badge variant={selected.status.ready ? "secondary" : "outline"}>{statusLabel(selected)}</Badge></div><h2 className="mt-3 text-2xl font-semibold">{titleFor(selected)}</h2><p className="mt-1 text-sm text-muted-foreground">Work management and publishing journey</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void runNextAction(selected)} disabled={busy}>{nextAction(selected)}</Button><button className="rounded-md border border-border p-2 text-muted-foreground" aria-label="Close work detail" onClick={() => setSelectedId(null)}><X size={16} /></button></div></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{[["Identity", selected.status.hasState], ["Rights", selected.status.rightsVerified], ["Experience", selected.status.hasExperience], ["Media", selected.status.playable], ["Artwork", selected.status.hasArtwork], ["Timeline", !selected.status.needsTimeline]].map(([label, complete]) => <div key={label as string} className={`rounded-md border p-3 ${complete ? "border-accent-mv/50 bg-accent-mv/10" : "border-border"}`}><div className={`mb-2 h-1.5 rounded-full ${complete ? "bg-accent-mv" : "bg-muted"}`} /><p className="text-xs font-medium">{label}</p><p className="mt-1 text-[10px] text-muted-foreground">{complete ? "Complete" : "Next"}</p></div>)}</div><div className="grid gap-3 sm:grid-cols-3"><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overview</p><p className="text-sm">{selected.presentation?.description ?? "No description has been added yet."}</p></CardContent></Card><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Media</p><p className="text-sm">{selected.status.playable ? "Playable media attached" : "No playable media attached"}</p><Button size="sm" variant="outline" disabled={!selected.projection} onClick={() => { if (selected.projection) { setAttachingProjId(selected.projection.projection_id); setAttachingMasterId(selected.master.master_id); } }}>{selected.status.playable ? "Replace media" : "Attach media"}</Button></CardContent></Card><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Presentation</p><p className="text-sm">{selected.status.hasArtwork ? "Artwork ready" : "Artwork not available"}</p><Button size="sm" variant="outline" onClick={() => setPresentingMasterId(selected.master.master_id)}>Edit artwork &amp; title</Button></CardContent></Card></div>{selected.master.canonical_type === "scene" && selected.binding && <Button size="sm" variant="outline" onClick={() => { setEditingTimelineBindingId(selected.binding!.binding_id); setEditingTimelineMasterId(selected.master.master_id); }}>Set timeline</Button>}</CardContent></Card><Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5"><div><h3 className="text-sm font-semibold">Technical details</h3><p className="mt-1 text-xs text-muted-foreground">Canonical and verification records for authorised operators.</p></div><details className="text-xs"><summary className="cursor-pointer font-medium">View canonical record</summary><div className="mt-3 space-y-2 font-mono text-muted-foreground"><p>Master: {shortId(selected.master.master_id)}…</p><p>State: {selected.state ? `${shortId(selected.state.canonical_state_id)}… · v${selected.state.version}` : "None"}</p><p>Experience: {selected.projection ? `${shortId(selected.projection.projection_id)}…` : "None"}</p><p>Media: {selected.binding ? `${shortId(selected.binding.asset_id)}…` : "None"}</p><p>Realization: {selected.binding?.realization_id ? `${shortId(selected.binding.realization_id)}…` : "None"}</p></div></details></CardContent></Card></section>}
+
+      <div className="hidden">
       {/* Header */}
-      <div id="overview" className="border-b border-border pb-5">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <h1 className="text-foreground text-2xl font-semibold">Mighty Verse Authority</h1>
-            <p className="text-muted-foreground text-sm">Full authority over this catalogue.</p>
-          </div>
-          <Badge variant="outline">{authority.scope_type} scope · {authority.capabilities.length} capabilities</Badge>
-        </div>
-      </div>
-
-      <div className="space-y-3">
-        <div><h2 className="text-foreground text-sm font-medium">Overview</h2><p className="text-muted-foreground text-xs">Catalogue shape and operational readiness.</p></div>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-          {overviewCounts.map(([label, count]) => <Card key={label} size="sm"><CardContent className="space-y-1 pt-3"><p className="text-muted-foreground text-xs uppercase tracking-wide">{label}</p><p className="text-foreground text-2xl font-semibold">{count}</p></CardContent></Card>)}
-        </div>
-      </div>
+      <section id="overview" className="space-y-5"><div><p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Catalogue pulse</p><p className="mt-1 text-sm text-muted-foreground">A live view of what exists and what is ready for publishing.</p></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">{overviewMetrics.map(([label, key, Icon]) => { const count = key === "all" ? workRecords.length : key === "state" ? workRecords.filter(r => r.status.hasState).length : key === "experience" ? workRecords.filter(r => r.status.hasExperience).length : key === "playable" ? workRecords.filter(r => r.status.playable).length : key === "collectible" ? projections.filter(p => p.collectible_designated).length : key === "attention" ? attention.length : workRecords.filter(r => r.master.canonical_type === key).length; return <Card key={label} size="sm"><CardContent className="flex items-center justify-between pt-4"><div><p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{count}</p></div><Icon size={18} className="text-muted-foreground" /></CardContent></Card>; })}</div></section>
 
       <div id="ingestion">
         <h2 className="text-foreground text-sm font-medium">Ingestion</h2>
@@ -1065,7 +1135,7 @@ export default function AuthorityClient() {
           return (
             <div key={master.master_id} className="space-y-2">
               {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <ProjectionPresentationPanel projectionId={presentingProjId} masterId={presentingProjMasterId!} existing={projectionPresentation} onDone={async () => { setPresentingProjId(null); setPresentingProjMasterId(null); await load(); }} onCancel={() => { setPresentingProjId(null); setPresentingProjMasterId(null); }} />
+              <ProjectionPresentationPanel projectionId={presentingProjId!} masterId={presentingProjMasterId!} existing={projectionPresentation} onDone={async () => { setPresentingProjId(null); setPresentingProjMasterId(null); await load(); }} onCancel={() => { setPresentingProjId(null); setPresentingProjMasterId(null); }} />
             </div>
           );
         }
@@ -1085,7 +1155,7 @@ export default function AuthorityClient() {
           return (
             <div key={master.master_id} className="space-y-2">
               {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <AttachVideoPanel projId={attachingProjId} masterId={attachingMasterId!} onDone={async () => { setAttachingProjId(null); setAttachingMasterId(null); await load(); }} onCancel={() => { setAttachingProjId(null); setAttachingMasterId(null); }} />
+              <AttachVideoPanel projId={attachingProjId!} masterId={attachingMasterId!} onDone={async () => { setAttachingProjId(null); setAttachingMasterId(null); await load(); }} onCancel={() => { setAttachingProjId(null); setAttachingMasterId(null); }} />
             </div>
           );
         }
@@ -1200,6 +1270,7 @@ export default function AuthorityClient() {
           );
         })}
       </details>
+      </div>
       </main>
     </div>
   );

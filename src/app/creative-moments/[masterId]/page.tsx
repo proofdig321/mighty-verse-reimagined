@@ -99,7 +99,6 @@ export default async function CreativeMomentPage({
       {/* Identity */}
       <div className="border-b border-border">
         <div className="mx-auto max-w-5xl px-4 py-12 space-y-3">
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">Creative Moment</p>
           <h1
             className="text-5xl md:text-6xl font-semibold leading-none tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -118,10 +117,6 @@ export default async function CreativeMomentPage({
         {data.scene_master_id ? (
           <section className="space-y-3">
             <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scene</h2>
-            <p className="text-sm text-muted-foreground">
-              This Creative Moment is expressed through the following canonical Scene within the{" "}
-              {data.universe_title ?? "Universe"} Mural.
-            </p>
             <MomentCard
               projectionId={data.scene_projection_id ?? undefined}
               title={data.scene_title}
@@ -134,15 +129,10 @@ export default async function CreativeMomentPage({
             )}
           </section>
         ) : (
-          <p className="text-sm text-muted-foreground italic">
-            This Creative Moment has no associated Scene.
-          </p>
+          <p className="text-sm text-muted-foreground">Scene not available</p>
         )}
 
         <Separator />
-        <p className="text-xs text-muted-foreground">
-          A Creative Moment is a canonical creative identity within the Universe. It is not a Scene, a projection, or a media asset.
-        </p>
 
       </div>
     </main>
