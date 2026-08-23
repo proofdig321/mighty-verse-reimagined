@@ -5,6 +5,13 @@ import { getServiceClient } from "@/lib/authority/validate";
 import MomentCard from "@/components/moment-card";
 import { Separator } from "@/components/ui/separator";
 
+const SCENE_TO_CM: Record<string, string> = {
+  "bebb65d2-21ed-4bc9-9fa0-a4857df30a43": "32422bb4-d03c-465d-8348-942e49ae0051",
+  "df15ec76-6bd8-4956-bbaa-755f72b2b8f8": "3b0de6b4-2ca0-43c0-8561-7dc1c0697435",
+  "65490a92-8faf-42ea-a391-0e6473360f5c": "2745a50a-5417-4613-b23b-ef4857ab112e",
+};
+const CM_TO_SCENE = Object.fromEntries(Object.entries(SCENE_TO_CM).map(([sceneId, momentId]) => [momentId, sceneId]));
+
 type CMPageData = {
   master_id: string;
   title: string | null;
@@ -42,11 +49,21 @@ async function getCMData(masterId: string): Promise<CMPageData | null> {
     universe_title = uPres?.title ?? null;
   }
 
-  // The relationship is database-driven; absent relationship data renders no Scene.
-  const scene_master_id = null;
+  // Temporary application-layer bridge documented in Build 14 until mural_moment_context exists.
+  const scene_master_id = CM_TO_SCENE[masterId] ?? null;
   let scene_title: string | null = null;
   let scene_projection_id: string | null = null;
   let scene_description: string | null = null;
+
+  if (scene_master_id) {
+    const [{ data: scenePres }, { data: sceneProj }] = await Promise.all([
+      svc.from("work_presentation").select("title, description").eq("master_id", scene_master_id).maybeSingle(),
+      svc.from("projection").select("projection_id").eq("master_id", scene_master_id).eq("projection_type", "experiential").maybeSingle(),
+    ]);
+    scene_title = scenePres?.title ?? null;
+    scene_description = scenePres?.description ?? null;
+    scene_projection_id = sceneProj?.projection_id ?? null;
+  }
 
   return {
     master_id: masterId,

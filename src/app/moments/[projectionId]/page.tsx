@@ -109,8 +109,8 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
         const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralState.master_id).maybeSingle();
         muralTitle = muralPres?.title ?? null;
         // Universe = parent of Mural
-        const { data: worldMaster } = await svc.from("master").select("master_id").eq("canonical_type", "universe").single();
-        worldMasterId = worldMaster?.master_id ?? null;
+        const { data: muralMaster } = await svc.from("master").select("parent_master_id").eq("master_id", muralState.master_id).maybeSingle();
+        worldMasterId = muralMaster?.parent_master_id ?? null;
       }
     }
 
@@ -196,7 +196,7 @@ export default async function MomentPage({
   const parentTypeLabel = TYPE_LABELS[master.canonical_type] ?? master.canonical_type.replace(/-/g, " ");
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
   const isScene = master.canonical_type === "scene";
-  const title = presentation?.title ?? `${projTypeLabel} Moment`;
+  const title = presentation?.title ?? worldTitle ?? `${projTypeLabel} Moment`;
 
   const extractionBounds = isScene
     ? (canonical_state.content_refs as { extraction_bounds?: { semantic_identity?: string; spatial_description?: string } } | null)?.extraction_bounds ?? null
