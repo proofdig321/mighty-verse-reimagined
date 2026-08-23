@@ -9,13 +9,14 @@ import { Separator } from "@/components/ui/separator";
 
 type AuthorityData = {
   authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
-  masters: { master_id: string; canonical_type: string; current_state_id: string | null; created_at: string }[];
+  masters: { master_id: string; canonical_type: string; parent_master_id: string | null; current_state_id: string | null; created_at: string }[];
   states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
   projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
   bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; realization_id: string | null; media_asset: { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null } | null }[];
   presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
   projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
   realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
+  participants: { participant_id: string; label: string }[];
 };
 
 const WORK_TYPE_LABELS: Record<string, string> = {
@@ -69,14 +70,14 @@ function getJourneySteps(master: AuthorityData["masters"][number], status: WorkS
   const mediaRequired = master.canonical_type !== "creative-moment";
   const rightsState = !status.playable ? "not-applicable" : status.rightsVerified ? "complete" : "blocked";
   return [
-    { label: "Registered", state: "complete" },
+    { label: "Work", state: "complete" },
     { label: "Authorised", state: status.hasState ? "complete" : "current" },
     { label: "Experience", state: status.hasExperience ? "complete" : status.hasState ? "current" : "not-applicable" },
     { label: "Media", state: !mediaRequired ? "not-applicable" : status.playable ? "complete" : status.hasExperience ? "current" : "not-applicable" },
     { label: "Rights", state: rightsState },
     { label: "Artwork", state: status.hasArtwork ? "complete" : "optional" },
     { label: "Timeline", state: master.canonical_type !== "scene" ? "not-applicable" : status.needsTimeline ? status.hasMedia ? "current" : "not-applicable" : "complete" },
-    { label: "Realization", state: !realizationRequired ? "not-applicable" : status.hasRealization ? "complete" : status.playable ? "current" : "not-applicable" },
+    { label: "Production version", state: !realizationRequired ? "not-applicable" : status.hasRealization ? "complete" : status.playable ? "current" : "not-applicable" },
     { label: "Ready", state: status.ready ? "complete" : "current" },
   ];
 }
@@ -86,8 +87,8 @@ function getNextAction(master: AuthorityData["masters"][number], status: WorkSta
   if (!status.hasExperience) return "Create experience";
   if (master.canonical_type !== "creative-moment" && !status.playable) return "Attach media";
   if (status.needsTimeline) return "Set timeline";
-  if (master.canonical_type === "scene" && !status.hasRealization) return "Record production version";
   if (status.playable && !status.rightsVerified) return "Review rights";
+  if (master.canonical_type === "scene" && !status.hasRealization) return "Record production version";
   return status.ready ? "Review publication" : "Verify readiness";
 }
 
@@ -156,9 +157,18 @@ async function api(path: string, body?: unknown) {
   });
   const responseText = await res.text();
   try {
-    return JSON.parse(responseText);
+    return { ...JSON.parse(responseText), status: res.status };
   } catch {
-    return { error: "The service returned an incomplete response." };
+    return { error: `The service returned no readable response (HTTP ${res.status}).`, status: res.status };
+  }
+}
+
+async function responseData(response: Response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch {
+    return { error: `The service returned no readable response (HTTP ${response.status}).` };
   }
 }
 
@@ -177,7 +187,7 @@ type WorkCardProps = {
   onAuthorise: (masterId: string) => Promise<void>;
   onCreateExperience: (stateId: string, masterId: string, type: string) => Promise<void>;
   onAttachVideo: (projId: string, masterId: string) => void;
-  onDesignate: (projId: string, masterId: string) => Promise<void>;
+  onDesignate: (projId: string, masterId: string, workTitle: string) => Promise<void>;
   onEditPresentation: (masterId: string) => void;
   onEditProjectionPresentation: (projId: string, masterId: string) => void;
   onEditTimeline: (bindingId: string, masterId: string) => void;
@@ -271,7 +281,7 @@ function WorkCard({
         )}
 
         {status.hasExperience && status.hasMedia && !isCollectible && (
-          <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id)}>
+          <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id, presentation?.title ?? projectionPresentation?.title ?? typeLabel)}>
             Designate as Collectible
           </Button>
         )}
@@ -390,7 +400,7 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, start_ms: startMs, end_ms: endMs }),
     });
-    const result = await response.json();
+    const result = await responseData(response);
     setBusy(false);
     if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to save timeline"}`); return; }
     setMessage("Timeline saved.");
@@ -413,7 +423,7 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ master_id: masterId, projection_id: binding.projection_id, thumbnail_url: thumbnailUrl }),
     });
-    const result = await response.json();
+    const result = await responseData(response);
     setBusy(false);
     if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to select thumbnail"}`); return; }
     setMessage("Livepeer thumbnail selected as representative artwork.");
@@ -465,11 +475,12 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
 type AttachVideoPanelProps = {
   projId: string;
   masterId: string;
+  workTitle: string;
   onDone: () => void;
   onCancel: () => void;
 };
 
-function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPanelProps) {
+function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: AttachVideoPanelProps) {
   const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [rightsHolderRef, setRightsHolderRef] = useState("");
   const [rightsBasis, setRightsBasis] = useState("");
@@ -578,8 +589,8 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
         )}
 
         {uploadMsg && (
-          <p className={`text-sm ${uploadMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>
-            {uploadMsg.startsWith("Error") ? uploadMsg : "✓ " + uploadMsg}
+          <p className={`text-sm ${/failed|could not|connection failed/i.test(uploadMsg) ? "text-destructive" : "text-foreground"}`}>
+            {/failed|could not|connection failed/i.test(uploadMsg) ? uploadMsg : "✓ " + uploadMsg}
           </p>
         )}
 
@@ -597,10 +608,10 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ name: uploadFile.name, projection_id: projId, master_id: masterId }),
-              }).then(r => r.json());
+              }).then(responseData);
 
               if (session.error || !session.upload_url || !session.asset_id) {
-                throw new Error(session.error ?? "Upload session is incomplete.");
+                throw new Error(`${workTitle} — Video upload could not be started. ${session.error ?? "The upload session was incomplete."} Next: try the upload again.`);
               }
 
               const { upload_url, asset_id } = session;
@@ -624,8 +635,8 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
               for (let attempt = 0; phase !== "ready" && attempt < 120; attempt += 1) {
                 await new Promise(r => setTimeout(r, 3000));
                 const statusResponse = await fetch(`/api/authority/media/upload-session/${asset_id}`);
-                const status = await statusResponse.json();
-                if (!statusResponse.ok || status.error) throw new Error(status.error ?? "Unable to verify Livepeer processing status.");
+                const status = await responseData(statusResponse);
+                if (!statusResponse.ok || status.error) throw new Error(`${workTitle} — Video processing could not be verified. ${status.error ?? "The service returned an invalid processing status."} Next: retry processing or check the media service.`);
                 phase = status.phase ?? "unknown";
                 setUploadPhase(phase);
                 if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); setUploadStage("failed"); return; }
@@ -644,15 +655,15 @@ function AttachVideoPanel({ projId, masterId, onDone, onCancel }: AttachVideoPan
                   rights_holder_ref: rightsHolderRef || null,
                   rights_basis: rightsBasis || null,
                 }),
-              }).then(r => r.json());
+              }).then(responseData);
 
-              if (attach.error) { setUploadMsg(`Error: ${attach.error}`); return; }
+              if (attach.error) { setUploadMsg(`${workTitle} — Video connection failed. ${attach.error} Next: confirm the video and rights details, then retry.`); return; }
               setUploadMsg("Video attached. World and Moment are now playable.");
               setUploadFile(null); setRightsHolderRef(""); setRightsBasis(""); setUploadProgress(null); setUploadPhase(null); setUploadStage("ready");
               if (fileInputRef.current) fileInputRef.current.value = "";
               onDone();
             } catch (err) {
-              setUploadMsg(`Error: ${err instanceof Error ? err.message : "Unknown error"}`);
+              setUploadMsg(`${workTitle} — Video upload failed. ${err instanceof Error ? err.message : "The upload could not be completed."}`);
               setUploadStage("failed");
             } finally {
               setUploadBusy(false);
@@ -867,11 +878,15 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
 function RealizationPanel({
   binding,
   masterId,
+  workTitle,
+  participants,
   onDone,
   onCancel,
 }: {
   binding: AuthorityData["bindings"][number];
   masterId: string;
+  workTitle: string;
+  participants: AuthorityData["participants"];
   onDone: () => void;
   onCancel: () => void;
 }) {
@@ -891,14 +906,14 @@ function RealizationPanel({
       rights_basis: rightsBasis || null,
       production_notes: notes || null,
     });
-    if (created.error) { setBusy(false); setMessage(`Error: ${created.error}`); return; }
+    if (created.error) { setBusy(false); setMessage(`${workTitle} — Production version: ${created.error} Next: select a registered participant.`); return; }
     const bound = await fetch("/api/authority/media-realization/bind", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, realization_id: created.realization_id }),
-    }).then(response => response.json());
+    }).then(responseData);
     setBusy(false);
-    if (bound.error) { setMessage(`Error: ${bound.error}`); return; }
+    if (bound.error) { setMessage(`${workTitle} — Production version: ${bound.error} Next: verify the selected production details.`); return; }
     onDone();
   }
 
@@ -912,7 +927,10 @@ function RealizationPanel({
         <select value={type} onChange={e => setType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
           <option value="animated-video">Animated video</option><option value="music-video">Music video</option><option value="original-recording">Original recording</option><option value="visualisation">Visualisation</option><option value="other">Other</option>
         </select>
-        <input value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} placeholder="Realization rights holder participant ID" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <select value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+          <option value="">Select rights owner</option>
+          {participants.map(participant => <option key={participant.participant_id} value={participant.participant_id}>{participant.label}</option>)}
+        </select>
         <input value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} placeholder="Realization rights basis" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Production context / provenance notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
         {message && <p className="text-destructive text-sm">{message}</p>}
@@ -976,7 +994,7 @@ export default function AuthorityClient() {
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
 
-  const { authority, masters, states, projections, bindings, presentations, projectionPresentations, realizations } = data;
+  const { authority, masters, states, projections, bindings, presentations, projectionPresentations, realizations, participants } = data;
 
   function getState(masterId: string) {
     return states.find(s => s.master_id === masterId);
@@ -1012,23 +1030,44 @@ export default function AuthorityClient() {
   });
 
   const titleFor = (record: WorkRecord) => record.presentation?.title ?? record.projectionPresentation?.title ?? WORK_TYPE_LABELS[record.master.canonical_type] ?? "Untitled work";
-  const visibleRecords = workRecords.filter(record => titleFor(record).toLowerCase().includes(query.toLowerCase()) && (typeFilter === "all" || record.master.canonical_type === typeFilter));
+  const homeRoot = workRecords.find(record => record.master.parent_master_id === null && record.master.canonical_type === "universe" && !!record.presentation?.title);
+  const homeIds = new Set<string>(homeRoot ? [homeRoot.master.master_id] : workRecords.map(record => record.master.master_id));
+  if (homeRoot) {
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const record of workRecords) {
+        if (record.master.parent_master_id && homeIds.has(record.master.parent_master_id) && !homeIds.has(record.master.master_id)) {
+          homeIds.add(record.master.master_id);
+          changed = true;
+        }
+      }
+    }
+  }
+  const operationalRecords = workRecords.filter(record => homeIds.has(record.master.master_id));
+  const visibleRecords = operationalRecords.filter(record => titleFor(record).toLowerCase().includes(query.toLowerCase()) && (typeFilter === "all" || record.master.canonical_type === typeFilter));
   const orderedRecords = visibleRecords;
-  const selected = workRecords.find(record => record.master.master_id === selectedId) ?? null;
-  const attention = workRecords.flatMap(record => {
+  const selected = operationalRecords.find(record => record.master.master_id === selectedId) ?? null;
+  const attention = operationalRecords.flatMap(record => {
     const issues: { record: WorkRecord; label: string; detail: string; action: string }[] = [];
     const name = titleFor(record);
     if (!record.status.hasState) issues.push({ record, label: "Needs authorisation", detail: `${name} is registered but has not been authorised for publishing.`, action: "Authorise work" });
     else if (!record.status.hasExperience) issues.push({ record, label: "Needs experience", detail: `${name} has an authorised identity but no publishing experience.`, action: "Create experience" });
-    else if (!record.status.playable) issues.push({ record, label: "Needs media", detail: `${name} has an experience waiting for playable media.`, action: "Attach media" });
+    else if (record.master.canonical_type !== "creative-moment" && !record.status.playable) issues.push({ record, label: "Video", detail: `${name} needs a playable video to continue publishing.`, action: "Add video" });
     if (record.status.needsTimeline) issues.push({ record, label: "Needs timeline", detail: `${name} needs a playback range before it can be reviewed.`, action: "Set timeline" });
     if (record.master.canonical_type === "scene" && record.status.playable && !record.status.hasRealization) issues.push({ record, label: "Production version not recorded", detail: `${name} has playable media, but its production version has not been recorded.`, action: "Record production version" });
-    if (record.status.playable && !record.status.rightsVerified) issues.push({ record, label: "Rights review", detail: `${name} cannot be designated collectible until its media rights are verified.`, action: "Review rights" });
     return issues;
   });
   const statusLabel = (record: WorkRecord) => record.status.ready ? "Ready to publish" : record.status.needs;
-  const nextAction = (record: WorkRecord) => getNextAction(record.master, record.status);
+  const hasSupportedNextAction = (record: WorkRecord) =>
+    !record.status.hasState ||
+    !record.status.hasExperience ||
+    (!record.status.playable && record.projection != null) ||
+    (record.status.needsTimeline && record.binding != null) ||
+    (record.master.canonical_type === "scene" && !record.status.hasRealization && record.binding != null);
+  const nextAction = (record: WorkRecord) => hasSupportedNextAction(record) ? getNextAction(record.master, record.status) : "No action available";
   const runNextAction = (record: WorkRecord) => {
+    if (!hasSupportedNextAction(record)) return Promise.resolve();
     if (!record.status.hasState) return act("Authorise Work", "/api/authority/states", { master_id: record.master.master_id });
     if (!record.status.hasExperience) return act("Create Experience", "/api/authority/projections", { canonical_state_id: record.state!.canonical_state_id, master_id: record.master.master_id, projection_type: "experiential" });
     if (!record.status.playable && record.projection) { setAttachingProjId(record.projection.projection_id); setAttachingMasterId(record.master.master_id); return Promise.resolve(); }
@@ -1056,7 +1095,7 @@ export default function AuthorityClient() {
 
       <section id="catalogue" className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-semibold">Catalogue</h2><p className="mt-1 text-sm text-muted-foreground">Search and manage every registered work.</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:hidden"><Search size={14} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search..." className="w-28 bg-transparent outline-none" /></div><select value={typeFilter} onChange={e => setTypeFilter(e.target.value)} className="h-8 rounded-md border border-border bg-card px-2 text-xs"><option value="all">All types</option>{Object.entries(WORK_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button size="sm" variant="outline" onClick={() => setShowIntake(true)}><Upload size={14} /> Media intake</Button></div></div><div className="overflow-x-auto rounded-lg border border-border bg-card"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Work</th><th className="px-4 py-3 font-medium">Type</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Media</th><th className="px-4 py-3 font-medium">Experience</th><th className="px-4 py-3 font-medium">Rights</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-border">{visibleRecords.map(record => <tr key={record.master.master_id} className="cursor-pointer hover:bg-muted/30" onClick={() => setSelectedId(record.master.master_id)}><td className="px-4 py-3 font-medium">{titleFor(record)}</td><td className="px-4 py-3 text-muted-foreground">{WORK_TYPE_LABELS[record.master.canonical_type]}</td><td className="px-4 py-3"><Badge variant={record.status.ready ? "secondary" : "outline"}>{statusLabel(record)}</Badge></td><td className="px-4 py-3 text-muted-foreground">{record.status.playable ? "Playable" : record.status.hasMedia ? "Processing" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.hasExperience ? "Created" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.rightsVerified ? "Verified" : "Review"}</td><td className="px-4 py-3 text-right"><ChevronRight size={16} className="inline text-muted-foreground" /></td></tr>)}</tbody></table>{visibleRecords.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No works match this search.</p>}</div></section>
 
-      {selected && <section className="grid gap-5 xl:grid-cols-[1fr_320px]"><Card className="border-0 shadow-sm"><CardContent className="space-y-6 pt-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[selected.master.canonical_type]}</Badge><Badge variant={selected.status.ready ? "secondary" : "outline"}>{statusLabel(selected)}</Badge></div><h2 className="mt-3 text-2xl font-semibold">{titleFor(selected)}</h2><p className="mt-1 text-sm text-muted-foreground">Work management and publishing journey</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void runNextAction(selected)} disabled={busy}>{nextAction(selected)}</Button><button className="rounded-md border border-border p-2 text-muted-foreground" aria-label="Close work detail" onClick={() => setSelectedId(null)}><X size={16} /></button></div></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{[["Identity", selected.status.hasState], ["Rights", selected.status.rightsVerified], ["Experience", selected.status.hasExperience], ["Media", selected.status.playable], ["Artwork", selected.status.hasArtwork], ["Timeline", !selected.status.needsTimeline]].map(([label, complete]) => <div key={label as string} className={`rounded-md border p-3 ${complete ? "border-accent-mv/50 bg-accent-mv/10" : "border-border"}`}><div className={`mb-2 h-1.5 rounded-full ${complete ? "bg-accent-mv" : "bg-muted"}`} /><p className="text-xs font-medium">{label}</p><p className="mt-1 text-[10px] text-muted-foreground">{complete ? "Complete" : "Next"}</p></div>)}</div><div className="grid gap-3 sm:grid-cols-3"><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overview</p><p className="text-sm">{selected.presentation?.description ?? "No description has been added yet."}</p></CardContent></Card><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Media</p><p className="text-sm">{selected.status.playable ? "Playable media attached" : "No playable media attached"}</p><Button size="sm" variant="outline" disabled={!selected.projection} onClick={() => { if (selected.projection) { setAttachingProjId(selected.projection.projection_id); setAttachingMasterId(selected.master.master_id); } }}>{selected.status.playable ? "Replace media" : "Attach media"}</Button></CardContent></Card><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Presentation</p><p className="text-sm">{selected.status.hasArtwork ? "Artwork ready" : "Artwork not available"}</p><Button size="sm" variant="outline" onClick={() => setPresentingMasterId(selected.master.master_id)}>Edit artwork &amp; title</Button></CardContent></Card></div>{selected.master.canonical_type === "scene" && selected.binding && <Button size="sm" variant="outline" onClick={() => { setEditingTimelineBindingId(selected.binding!.binding_id); setEditingTimelineMasterId(selected.master.master_id); }}>Set timeline</Button>}</CardContent></Card><Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5"><div><h3 className="text-sm font-semibold">Technical details</h3><p className="mt-1 text-xs text-muted-foreground">Canonical and verification records for authorised operators.</p></div><details className="text-xs"><summary className="cursor-pointer font-medium">View canonical record</summary><div className="mt-3 space-y-2 font-mono text-muted-foreground"><p>Master: {shortId(selected.master.master_id)}…</p><p>State: {selected.state ? `${shortId(selected.state.canonical_state_id)}… · v${selected.state.version}` : "None"}</p><p>Experience: {selected.projection ? `${shortId(selected.projection.projection_id)}…` : "None"}</p><p>Media: {selected.binding ? `${shortId(selected.binding.asset_id)}…` : "None"}</p><p>Realization: {selected.binding?.realization_id ? `${shortId(selected.binding.realization_id)}…` : "None"}</p></div></details></CardContent></Card></section>}
+      {selected && <section className="grid gap-5 xl:grid-cols-[1fr_320px]"><Card className="border-0 shadow-sm"><CardContent className="space-y-6 pt-5"><div className="flex flex-wrap items-start justify-between gap-4"><div><div className="flex items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[selected.master.canonical_type]}</Badge><Badge variant={selected.status.ready ? "secondary" : "outline"}>{statusLabel(selected)}</Badge></div><h2 className="mt-3 text-2xl font-semibold">{titleFor(selected)}</h2><p className="mt-1 text-sm text-muted-foreground">Work management and publishing journey</p></div><div className="flex gap-2"><Button size="sm" onClick={() => void runNextAction(selected)} disabled={busy || !hasSupportedNextAction(selected)} title={!hasSupportedNextAction(selected) ? "No supported operation is available for this step" : undefined}>{nextAction(selected)}</Button><button className="rounded-md border border-border p-2 text-muted-foreground" aria-label="Close work detail" onClick={() => setSelectedId(null)}><X size={16} /></button></div></div><div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{[["Identity", selected.status.hasState], ["Rights", selected.status.rightsVerified], ["Experience", selected.status.hasExperience], ["Media", selected.status.playable], ["Artwork", selected.status.hasArtwork], ["Timeline", !selected.status.needsTimeline]].map(([label, complete]) => <div key={label as string} className={`rounded-md border p-3 ${complete ? "border-accent-mv/50 bg-accent-mv/10" : "border-border"}`}><div className={`mb-2 h-1.5 rounded-full ${complete ? "bg-accent-mv" : "bg-muted"}`} /><p className="text-xs font-medium">{label}</p><p className="mt-1 text-[10px] text-muted-foreground">{complete ? "Complete" : "Next"}</p></div>)}</div><div className="grid gap-3 sm:grid-cols-3"><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overview</p><p className="text-sm">{selected.presentation?.description ?? "No description has been added yet."}</p></CardContent></Card><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Media</p><p className="text-sm">{selected.status.playable ? "Playable media attached" : "No playable media attached"}</p><Button size="sm" variant="outline" disabled={!selected.projection} onClick={() => { if (selected.projection) { setAttachingProjId(selected.projection.projection_id); setAttachingMasterId(selected.master.master_id); } }}>{selected.status.playable ? "Replace media" : "Attach media"}</Button></CardContent></Card><Card size="sm"><CardContent className="space-y-2 pt-4"><p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Presentation</p><p className="text-sm">{selected.status.hasArtwork ? "Artwork ready" : "Artwork not available"}</p><Button size="sm" variant="outline" onClick={() => setPresentingMasterId(selected.master.master_id)}>Edit artwork &amp; title</Button></CardContent></Card></div>{selected.master.canonical_type === "scene" && selected.binding && <Button size="sm" variant="outline" onClick={() => { setEditingTimelineBindingId(selected.binding!.binding_id); setEditingTimelineMasterId(selected.master.master_id); }}>Set timeline</Button>}</CardContent></Card><Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5"><div><h3 className="text-sm font-semibold">Technical details</h3><p className="mt-1 text-xs text-muted-foreground">Canonical and verification records for authorised operators.</p></div><details className="text-xs"><summary className="cursor-pointer font-medium">View canonical record</summary><div className="mt-3 space-y-2 font-mono text-muted-foreground"><p>Master: {shortId(selected.master.master_id)}…</p><p>State: {selected.state ? `${shortId(selected.state.canonical_state_id)}… · v${selected.state.version}` : "None"}</p><p>Experience: {selected.projection ? `${shortId(selected.projection.projection_id)}…` : "None"}</p><p>Media: {selected.binding ? `${shortId(selected.binding.asset_id)}…` : "None"}</p><p>Realization: {selected.binding?.realization_id ? `${shortId(selected.binding.realization_id)}…` : "None"}</p></div></details></CardContent></Card></section>}
 
       <div className="hidden">
       {/* Header */}
@@ -1125,7 +1164,7 @@ export default function AuthorityClient() {
         <p className="text-muted-foreground text-sm">No works registered yet. Register your first work above.</p>
       )}
 
-      {orderedRecords.map((record, index) => {
+      {(selected ? [] : orderedRecords).map((record, index) => {
         const { master, state, projection, binding, presentation, projectionPresentation } = record;
         const previousType = orderedRecords[index - 1]?.master.canonical_type;
         const isGroupStart = previousType !== master.canonical_type;
@@ -1155,7 +1194,7 @@ export default function AuthorityClient() {
           return (
             <div key={master.master_id} className="space-y-2">
               {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <AttachVideoPanel projId={attachingProjId!} masterId={attachingMasterId!} onDone={async () => { setAttachingProjId(null); setAttachingMasterId(null); await load(); }} onCancel={() => { setAttachingProjId(null); setAttachingMasterId(null); }} />
+              <AttachVideoPanel projId={attachingProjId!} masterId={attachingMasterId!} workTitle={titleFor(record)} onDone={async () => { setAttachingProjId(null); setAttachingMasterId(null); await load(); }} onCancel={() => { setAttachingProjId(null); setAttachingMasterId(null); }} />
             </div>
           );
         }
@@ -1173,7 +1212,7 @@ export default function AuthorityClient() {
           return (
             <div key={master.master_id} className="space-y-2">
               {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <RealizationPanel binding={binding} masterId={editingRealizationMasterId!} onDone={async () => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); await load(); }} onCancel={() => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); }} />
+              <RealizationPanel binding={binding} masterId={editingRealizationMasterId!} workTitle={titleFor(record)} participants={participants} onDone={async () => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); await load(); }} onCancel={() => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); }} />
             </div>
           );
         }
@@ -1195,8 +1234,8 @@ export default function AuthorityClient() {
               act("Create Experience", "/api/authority/projections", { canonical_state_id: stateId, master_id: masterId, projection_type: type })
             }
             onAttachVideo={(projId, masterId) => { setAttachingProjId(projId); setAttachingMasterId(masterId); }}
-            onDesignate={(projId, masterId) =>
-              act("Designate Collectible", "/api/authority/collectibles", { projection_id: projId, master_id: masterId })
+            onDesignate={(projId, masterId, workTitle) =>
+              act(`${workTitle} — Collectible setup`, "/api/authority/collectibles", { projection_id: projId, master_id: masterId })
             }
             onEditPresentation={masterId => setPresentingMasterId(masterId)}
             onEditProjectionPresentation={(projId, masterId) => { setPresentingProjId(projId); setPresentingProjMasterId(masterId); }}

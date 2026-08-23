@@ -31,7 +31,7 @@ export async function GET() {
     .map((record) => record.scope_subject_id)
     .filter(Boolean) as string[];
 
-  let masterQuery = svc.from("master").select("master_id, canonical_type, current_state_id, created_at");
+  let masterQuery = svc.from("master").select("master_id, canonical_type, parent_master_id, current_state_id, created_at");
   if (!platformAuthority) {
     if (visibleMasterIds.length === 0) {
       return NextResponse.json({
@@ -48,6 +48,7 @@ export async function GET() {
         presentations: [],
         projectionPresentations: [],
         realizations: [],
+        participants: [],
       });
     }
     masterQuery = masterQuery.in("master_id", visibleMasterIds);
@@ -75,7 +76,7 @@ export async function GET() {
 
   const projectionIds = (projections ?? []).map((p) => p.projection_id);
 
-  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }] = await Promise.all([
+  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }, { data: participants }] = await Promise.all([
     projectionIds.length
       ? svc
           .from("projection_media_binding")
@@ -100,6 +101,7 @@ export async function GET() {
           .select("realization_id, master_id, realization_type, rights_holder_ref, rights_basis, production_notes")
           .in("master_id", masterIds)
       : Promise.resolve({ data: [] }),
+    svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("status", "active"),
   ]);
 
   const primaryAuthority = authorities[0];
@@ -118,5 +120,11 @@ export async function GET() {
     presentations: presentations ?? [],
     projectionPresentations: projectionPresentations ?? [],
     realizations: realizations ?? [],
+    participants: (participants ?? []).map((participant) => ({
+      participant_id: participant.participant_id,
+      label: Array.isArray(participant.identity_link)
+        ? participant.identity_link.find((link: { active: boolean; identity_ref: string }) => link.active)?.identity_ref ?? participant.participant_id.slice(0, 8)
+        : participant.participant_id.slice(0, 8),
+    })),
   });
 }
