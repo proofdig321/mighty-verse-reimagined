@@ -42,11 +42,28 @@ type SceneMomentData = MomentData & {
 async function getMoment(projectionId: string): Promise<SceneMomentData | null> {
   const svc = getServiceClient();
 
-  const { data: proj } = await svc
+  let { data: proj } = await svc
     .from("projection")
     .select("projection_id, projection_type, collectible_designated, integrity_hash, created_at, canonical_state_id, master_id")
     .eq("projection_id", projectionId)
     .single();
+  if (!proj) {
+    const { data: scene } = await svc
+      .from("master")
+      .select("master_id, current_state_id")
+      .eq("master_id", projectionId)
+      .eq("canonical_type", "scene")
+      .single();
+    if (scene?.current_state_id) {
+      const { data: fallbackProjection } = await svc
+        .from("projection")
+        .select("projection_id, projection_type, collectible_designated, integrity_hash, created_at, canonical_state_id, master_id")
+        .eq("master_id", scene.master_id)
+        .eq("projection_type", "experiential")
+        .single();
+      proj = fallbackProjection;
+    }
+  }
   if (!proj) return null;
 
   const [{ data: cs }, { data: master }, { data: prov }, { data: masterFull }] = await Promise.all([

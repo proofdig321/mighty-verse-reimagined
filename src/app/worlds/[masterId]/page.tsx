@@ -8,6 +8,7 @@ import MomentCard from "@/components/moment-card";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
 import MediaVisual from "@/components/media-visual";
+import SceneDeck from "@/components/scene-deck";
 
 const TYPE_LABELS: Record<string, string> = {
   "universe": "Universe",
@@ -277,18 +278,7 @@ export default async function WorldPage({
           {data.scenes.length > 0 && (
             <section className="space-y-3">
               <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scenes</h2>
-              <div className="space-y-2">
-                {data.scenes.map((s) => (
-                  <MomentCard
-                    key={s.master_id}
-                    projectionId={s.projection_id ?? undefined}
-                    title={s.title}
-                    typeLabel="Scene"
-                    hasMedia={!!s.projection_id}
-                    collectible={false}
-                  />
-                ))}
-              </div>
+              <SceneDeck scenes={data.scenes.map((s) => ({ id: s.master_id, title: s.title, href: `/moments/${s.projection_id ?? s.master_id}` }))} />
             </section>
           )}
 
