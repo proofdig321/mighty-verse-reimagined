@@ -148,10 +148,10 @@ function operatorError(value: unknown, context?: { workTitle?: string; operation
     const media = context?.mediaTitle ? ` Video: ${context.mediaTitle}.` : "";
     return `${prefix}Collectible designation is blocked because the attached video does not have a confirmed rights holder.${media} Next: establish the video's rights before designating it as collectible.`;
   }
-  if (/uuid|participant/i.test(message)) return "The selected participant could not be identified as a registered Mighty Verse participant. Select a registered participant and try again.";
-  if (/rights holder|rights basis|unknown rights/i.test(message)) return "This work's media does not yet have a confirmed rights holder. Complete the rights information before continuing.";
-  if (/json|unexpected end|incomplete response/i.test(message)) return "We couldn't complete this operation because the service returned an incomplete response. Try again.";
-  return message || "We couldn't complete this operation. Try again.";
+  if (/uuid|participant/i.test(message)) return `${prefix}The selected participant could not be identified as a registered Mighty Verse participant. Next: select a registered participant and try again.`;
+  if (/rights holder|rights basis|unknown rights/i.test(message)) return `${prefix}The attached video does not yet have a confirmed rights holder. Next: establish the video's rights before continuing.`;
+  if (/json|unexpected end|incomplete response/i.test(message)) return `${prefix}The service returned an incomplete response. Next: retry the operation.`;
+  return `${prefix}${message || "The operation could not be completed."} Next: review the work details and try again.`;
 }
 
 async function api(path: string, body?: unknown) {
@@ -1072,8 +1072,8 @@ export default function AuthorityClient() {
     if (!record.status.hasState) issues.push({ record, label: "Needs authorisation", detail: `${name} is registered but has not been authorised for publishing.`, action: "Authorise work" });
     else if (!record.status.hasExperience) issues.push({ record, label: "Needs experience", detail: `${name} has an authorised identity but no publishing experience.`, action: "Create experience" });
     else if (record.master.canonical_type !== "creative-moment" && !record.status.playable) issues.push({ record, label: "Video", detail: `${name} needs a playable video to continue publishing.`, action: "Add video" });
-    if (record.status.needsTimeline) issues.push({ record, label: "Needs timeline", detail: `${name} needs a playback range before it can be reviewed.`, action: "Set timeline" });
-    if (record.master.canonical_type === "scene" && record.status.playable && !record.status.hasRealization) issues.push({ record, label: "Production version not recorded", detail: `${name} has playable media, but its production version has not been recorded.`, action: "Record production version" });
+    if (record.status.needsTimeline && record.status.hasMedia) issues.push({ record, label: "Timeline", detail: `${name} needs a playback range before it can be reviewed.`, action: "Set timeline" });
+    if (record.master.canonical_type === "scene" && record.status.playable && !record.status.needsTimeline && !record.status.hasRealization) issues.push({ record, label: "Production version", detail: `${name} has playable media and a complete timeline, but its production version has not been recorded.`, action: "Record production version" });
     return issues;
   });
   const statusLabel = (record: WorkRecord) => record.status.ready ? "Ready to publish" : record.status.needs;
