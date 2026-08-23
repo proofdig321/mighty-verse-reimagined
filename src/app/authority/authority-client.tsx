@@ -1099,7 +1099,14 @@ export default function AuthorityClient() {
   const overviewMetrics: Array<[string, string, typeof Archive]> = [["Universes", "universe", Archive], ["Murals", "mural", Image], ["Creative Moments", "creative-moment", FileText], ["Scenes", "scene", PlaySquare], ["Registered", "all", Database], ["Authorised", "state", ShieldCheck], ["With Experience", "experience", PlaySquare], ["Playable", "playable", Video], ["Collectible", "collectible", BarChart3], ["Needs attention", "attention", Activity]];
   const navGroups = [{ label: "Workspace", links: [["Dashboard", "dashboard", LayoutDashboard], ["Content", "content", Archive], ["Production", "production", Activity], ["Publishing", "publishing", BarChart3], ["Rights", "rights", ShieldCheck]] }, { label: "Tools", links: [["Media intake", "media", Upload], ["Technical details", "technical", Database]] }] as const;
   return (
-    <div className="min-h-screen bg-muted/30 lg:flex">
+    <div className="min-h-screen bg-muted/30 pt-12 lg:flex lg:pt-0">
+      <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-2 text-foreground shadow-sm lg:pl-72">
+        <div className="mx-auto flex max-w-[1500px] items-baseline gap-3 text-sm">
+          <span className="font-semibold">{selected ? titleFor(selected) : "Mighty Verse"}</span>
+          <span className="text-muted-foreground">{selected ? WORK_TYPE_LABELS[selected.master.canonical_type] : "Authority"}</span>
+          <span className="text-muted-foreground">{activeModule === "dashboard" ? "Dashboard" : activeModule === "media" ? "Media Library" : activeModule[0].toUpperCase() + activeModule.slice(1)}</span>
+        </div>
+      </div>
       <aside className={`${mobileNav ? "block" : "hidden"} fixed inset-y-0 left-0 z-20 w-64 border-r border-border bg-card p-5 lg:static lg:block lg:min-h-screen`}>
         <div className="mb-8 flex items-start justify-between"><div><p className="text-sm font-semibold tracking-tight">Mighty Verse</p><p className="mt-1 text-xs text-muted-foreground">Authority Console</p></div><button className="lg:hidden" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={16} /></button></div>
         <nav className="space-y-6">{navGroups.map(group => <div key={group.label}><p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</p><div className="space-y-0.5">{group.links.map(([label, target, Icon]) => <button key={label} type="button" onClick={() => { if (target === "media") { setActiveModule("media"); setShowIntake(false); } else if (target === "technical") document.getElementById("canonical")?.scrollIntoView({ behavior: "smooth" }); else setActiveModule(target as typeof activeModule); setSelectedId(null); setMobileNav(false); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs ${activeModule === target ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}><Icon size={14} />{label}</button>)}</div></div>)}</nav>
