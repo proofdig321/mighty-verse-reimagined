@@ -141,8 +141,13 @@ function StatusBadge({ label, good = false }: { label: string; good?: boolean })
   return <Badge variant={good ? "secondary" : "outline"}>{label}</Badge>;
 }
 
-function operatorError(value: unknown) {
+function operatorError(value: unknown, context?: { workTitle?: string; operation?: string; mediaTitle?: string }) {
   const message = String(value ?? "");
+  const prefix = context?.workTitle && context.operation ? `${context.workTitle} — ${context.operation}: ` : "";
+  if (/collectible designation blocked/i.test(message)) {
+    const media = context?.mediaTitle ? ` Video: ${context.mediaTitle}.` : "";
+    return `${prefix}Collectible designation is blocked because the attached video does not have a confirmed rights holder.${media} Next: establish the video's rights before designating it as collectible.`;
+  }
   if (/uuid|participant/i.test(message)) return "The selected participant could not be identified as a registered Mighty Verse participant. Select a registered participant and try again.";
   if (/rights holder|rights basis|unknown rights/i.test(message)) return "This work's media does not yet have a confirmed rights holder. Complete the rights information before continuing.";
   if (/json|unexpected end|incomplete response/i.test(message)) return "We couldn't complete this operation because the service returned an incomplete response. Try again.";
@@ -982,11 +987,11 @@ export default function AuthorityClient() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void load(); }, []);
 
-  async function act(label: string, path: string, body: unknown) {
+  async function act(label: string, path: string, body: unknown, context?: { workTitle?: string; mediaTitle?: string }) {
     setBusy(true); setMsg(null);
     const d = await api(path, body);
     setBusy(false);
-    if (d.error) { setMsg(operatorError(d.error)); return; }
+    if (d.error) { setMsg(operatorError(d.error, { ...context, operation: label })); return; }
     setMsg(`${label} succeeded.`);
     await load();
   }
@@ -1235,7 +1240,7 @@ export default function AuthorityClient() {
             }
             onAttachVideo={(projId, masterId) => { setAttachingProjId(projId); setAttachingMasterId(masterId); }}
             onDesignate={(projId, masterId, workTitle) =>
-              act(`${workTitle} — Collectible setup`, "/api/authority/collectibles", { projection_id: projId, master_id: masterId })
+              act("Collectible setup", "/api/authority/collectibles", { projection_id: projId, master_id: masterId }, { workTitle, mediaTitle: "Attached video" })
             }
             onEditPresentation={masterId => setPresentingMasterId(masterId)}
             onEditProjectionPresentation={(projId, masterId) => { setPresentingProjId(projId); setPresentingProjMasterId(masterId); }}
