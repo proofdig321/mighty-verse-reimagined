@@ -7,6 +7,7 @@ import MediaHero from "@/components/media-hero";
 import MomentCard from "@/components/moment-card";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
+import MediaVisual from "@/components/media-visual";
 
 const TYPE_LABELS: Record<string, string> = {
   "universe": "Universe",
@@ -157,7 +158,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       master_id: masterId,
       title: pres?.title ?? null,
       description: pres?.description ?? null,
-      media: null, // Universe is container — no media hero
+      media,
       projection_id: proj?.projection_id ?? null,
       canonical_state_id: cs.canonical_state_id,
       murals,
@@ -243,7 +244,7 @@ export default async function WorldPage({
   // ── MURAL LAYOUT ──────────────────────────────────────────────────────────
   if (data.canonical_type === "mural") {
     return (
-      <main className="min-h-screen bg-background">
+      <main className="min-h-screen bg-background multiverse-page">
 
         {/* Breadcrumb → Universe */}
         <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
@@ -257,7 +258,8 @@ export default async function WorldPage({
         </div>
 
         {/* Full Mural animation */}
-        <MediaHero
+          <div className="multiverse-stage">
+          <MediaHero
           media={data.media}
           projectionId={data.projection_id ?? ""}
           masterId={data.master_id}
@@ -266,7 +268,8 @@ export default async function WorldPage({
           typeLabel="Mural"
           credit={data.description}
           collectible={false}
-        />
+          />
+          </div>
 
         <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
 
@@ -291,7 +294,6 @@ export default async function WorldPage({
 
           <Separator />
           <div className="text-xs text-muted-foreground space-y-1">
-            <p>Mural · {data.master_id}</p>
             <p>The complete visual expression of the {data.universe_title ?? "Universe"}.</p>
           </div>
 
@@ -302,11 +304,12 @@ export default async function WorldPage({
 
   // ── UNIVERSE LAYOUT ───────────────────────────────────────────────────────
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background multiverse-page">
 
       {/* Universe identity — no media hero, Universe is the container */}
-      <div className="border-b border-border">
+      <div className="multiverse-stage border-b border-border">
         <div className="mx-auto max-w-5xl px-4 py-16 space-y-4">
+          {data.media?.playback_id && <MediaVisual playbackId={data.media.playback_id} title={title} className="mb-8" />}
           <p className="text-xs uppercase tracking-widest text-muted-foreground">{typeLabel}</p>
           <h1
             className="text-5xl md:text-7xl font-semibold leading-none tracking-tight text-foreground"

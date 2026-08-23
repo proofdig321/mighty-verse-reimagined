@@ -100,7 +100,7 @@ export default async function CreativeMomentPage({
   if (!data) notFound();
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background multiverse-page">
 
       {/* Breadcrumb → Universe */}
       <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
@@ -114,7 +114,7 @@ export default async function CreativeMomentPage({
       </div>
 
       {/* Identity */}
-      <div className="border-b border-border">
+      <div className="multiverse-stage border-b border-border">
         <div className="mx-auto max-w-5xl px-4 py-12 space-y-3">
           <h1
             className="text-5xl md:text-6xl font-semibold leading-none tracking-tight text-foreground"

@@ -213,7 +213,7 @@ export default async function MomentPage({
   const breadcrumbLabel = muralTitle ?? worldTitle ?? "Universe";
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="min-h-screen bg-background multiverse-page">
 
       {/* Breadcrumb */}
       <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
@@ -227,6 +227,7 @@ export default async function MomentPage({
       </div>
 
       {/* Media + identity */}
+      <div className="multiverse-stage">
       <MediaHero
         media={media}
         projectionId={projection.projection_id}
@@ -237,6 +238,7 @@ export default async function MomentPage({
         credit={credit}
         collectible={projection.collectible_designated}
       />
+      </div>
 
       <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
 
@@ -293,10 +295,10 @@ export default async function MomentPage({
               )}
             </div>
 
-            {/* Media realization range */}
+            {/* Scene playback range */}
             {media?.start_ms != null && media?.end_ms != null && (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-                <span className="text-muted-foreground text-xs uppercase tracking-widest">Realization</span>
+                <span className="text-muted-foreground text-xs uppercase tracking-widest">Scene timing</span>
                 <span className="text-foreground font-mono text-xs">
                   {formatMs(media.start_ms)} – {formatMs(media.end_ms)}
                 </span>
@@ -304,9 +306,6 @@ export default async function MomentPage({
               </div>
             )}
 
-            <p className="text-xs text-muted-foreground italic">
-              This is a canonical Scene — a visual/spatial unit of the Mural. The current experience is a temporal media realization, not the Scene&apos;s canonical identity.
-            </p>
           </section>
         )}
 
