@@ -94,8 +94,8 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
         muralMasterId = muralState.master_id;
         const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralState.master_id).maybeSingle();
         muralTitle = muralPres?.title ?? null;
-        const { data: worldMaster } = await svc.from("master").select("master_id").eq("canonical_type", "universe").single();
-        worldMasterId = worldMaster?.master_id ?? null;
+        const { data: muralMaster } = await svc.from("master").select("parent_master_id").eq("master_id", muralState.master_id).single();
+        worldMasterId = muralMaster?.parent_master_id ?? null;
       }
     }
     cmMasterId = null;

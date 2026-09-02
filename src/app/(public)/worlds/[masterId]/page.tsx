@@ -274,7 +274,7 @@ export default async function WorldPage({
               )}
             </div>
             <div className="px-4 py-4 border-t border-border">
-              <Link href={`/worlds/${masterId}/scenes`}>
+              <Link href={`/worlds/${data.universe_master_id}/scenes`}>
                 <Button variant="outline" className="w-full text-xs">View Scene Deck</Button>
               </Link>
             </div>
