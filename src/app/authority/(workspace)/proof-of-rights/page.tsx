@@ -34,9 +34,12 @@ async function getData(): Promise<RightsRow[]> {
     .in("projection_id", projIds);
 
   return bindings
-    .filter((b) => b.media_asset && !(b.media_asset as { storage_ref: string }).storage_ref?.startsWith("seed:placeholder:"))
+    .filter((b) => {
+      const asset = b.media_asset as unknown as { storage_ref: string } | null;
+      return asset && !asset.storage_ref?.startsWith("seed:placeholder:");
+    })
     .map((b) => {
-      const asset = b.media_asset as { asset_id: string; asset_type: string | null; storage_ref: string; rights_holder_ref: string | null; rights_basis: string | null };
+      const asset = b.media_asset as unknown as { asset_id: string; asset_type: string | null; storage_ref: string; rights_holder_ref: string | null; rights_basis: string | null };
       const pres = (presentations ?? []).find((p) => p.projection_id === b.projection_id);
       return {
         asset_id: asset.asset_id,

@@ -9,6 +9,10 @@ type MediaItem = {
   asset_id: string;
   asset_type: string | null;
   title: string | null;
+  storage_ref: string | null;
+  rights_holder_ref: string | null;
+  rights_basis: string | null;
+  work_title: string | null;
 };
 
 async function getData(): Promise<MediaItem[]> {
@@ -33,6 +37,10 @@ async function getData(): Promise<MediaItem[]> {
     asset_id: a.asset_id,
     asset_type: a.asset_type ?? null,
     title: null,
+    storage_ref: a.storage_ref ?? null,
+    rights_holder_ref: null,
+    rights_basis: null,
+    work_title: null,
   }));
 }
 
