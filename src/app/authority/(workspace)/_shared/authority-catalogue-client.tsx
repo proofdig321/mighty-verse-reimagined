@@ -13,11 +13,11 @@ import {
   WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS, PROJECTION_TYPES,
   getWorkStatus, getJourneySteps, getNextAction,
   type WorkStatus, type JourneyStep,
-} from "./_shared/authority-utils";
+} from "./authority-utils";
 import {
   StatusBadge, WorkJourney, PresentationPanel, ProjectionPresentationPanel,
   RealizationPanel, CreateExperiencePanel,
-} from "./_shared/authority-panels";
+} from "./authority-panels";
 
 type AuthorityData = {
   authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
