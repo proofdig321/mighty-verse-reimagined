@@ -2,14 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight } from "lucide-react";
+import { ArrowRight, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
-  api, shortId, operatorError,
-  WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS,
-  getWorkStatus, type WorkStatus,
+  api, shortId, WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS,
+  getWorkStatus, getJourneySteps, type WorkStatus, type JourneyStep,
 } from "./_shared/authority-utils";
 
 type AuthorityData = {
@@ -35,6 +34,42 @@ type WorkRecord = {
   status: WorkStatus;
 };
 
+// ─── Aggregate journey legend ─────────────────────────────────────────────────
+
+function AggregateJourney({ records }: { records: WorkRecord[] }) {
+  // For each journey step, count how many operational records have it complete
+  const steps = ["Authorised", "Experience", "Media", "Rights", "Artwork", "Timeline", "Production version", "Ready"];
+  const counts = steps.map(label => {
+    const n = records.filter(r => {
+      const j = getJourneySteps(r.master, r.status);
+      const step = j.find(s => s.label === label);
+      return step?.state === "complete";
+    }).length;
+    return { label, n, total: records.length };
+  });
+
+  return (
+    <div className="space-y-2">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publishing Journey</p>
+      <div className="flex flex-wrap items-center gap-x-0 gap-y-2">
+        {counts.map((s, i) => {
+          const allDone = s.n === s.total && s.total > 0;
+          const noneDone = s.n === 0;
+          return (
+            <div key={s.label} className="flex items-center">
+              {i > 0 && <span className="px-1 text-muted-foreground/30 text-xs">→</span>}
+              <span className={`text-xs ${allDone ? "text-green-400" : noneDone ? "text-muted-foreground/40" : "text-amber-400"}`}>
+                {allDone ? "✓" : noneDone ? "○" : "◑"} {s.label}
+                {!allDone && s.total > 0 && <span className="ml-0.5 text-[10px] opacity-60">{s.n}/{s.total}</span>}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function AuthorityClient() {
   const [data, setData] = useState<AuthorityData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +83,7 @@ export default function AuthorityClient() {
   }, []);
 
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>;
-  if (!data) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
+  if (!data) return <p className="text-muted-foreground p-6 text-sm animate-pulse">Loading…</p>;
 
   const { authority, masters, states, projections, bindings, presentations, projectionPresentations, realizations } = data;
 
@@ -77,93 +112,148 @@ export default function AuthorityClient() {
     }
   }
   const operationalRecords = workRecords.filter(r => homeIds.has(r.master.master_id));
+  const readyCount = operationalRecords.filter(r => r.status.ready).length;
+  const readinessPct = operationalRecords.length ? Math.round(readyCount / operationalRecords.length * 100) : 0;
 
   const attention = operationalRecords.flatMap(record => {
-    const issues: { record: WorkRecord; label: string; detail: string; action: string }[] = [];
+    const issues: { record: WorkRecord; label: string; action: string }[] = [];
     const name = titleFor(record);
-    if (!record.status.hasState) issues.push({ record, label: "Needs authorisation", detail: `${name} is registered but has not been authorised for publishing.`, action: "Authorise work" });
-    else if (!record.status.hasExperience) issues.push({ record, label: "Needs experience", detail: `${name} has an authorised identity but no publishing experience.`, action: "Create experience" });
-    else if (record.master.canonical_type !== "creative-moment" && !record.status.playable) issues.push({ record, label: "Video", detail: `${name} needs a playable video to continue publishing.`, action: "Add video" });
-    if (record.status.needsTimeline && record.status.hasMedia) issues.push({ record, label: "Timeline", detail: `${name} needs a playback range before it can be reviewed.`, action: "Set timeline" });
-    if (record.master.canonical_type === "scene" && record.status.playable && !record.status.needsTimeline && !record.status.hasRealization) issues.push({ record, label: "Production version", detail: `${name} has playable media and a complete timeline, but its production version has not been recorded.`, action: "Record production version" });
+    if (!record.status.hasState) issues.push({ record, label: "Needs authorisation", action: "Authorise work" });
+    else if (!record.status.hasExperience) issues.push({ record, label: "Needs experience", action: "Create experience" });
+    else if (record.master.canonical_type !== "creative-moment" && !record.status.playable) issues.push({ record, label: "Needs media", action: "Add video" });
+    if (record.status.needsTimeline && record.status.hasMedia) issues.push({ record, label: "Needs timeline", action: "Set timeline" });
+    if (record.master.canonical_type === "scene" && record.status.playable && !record.status.needsTimeline && !record.status.hasRealization) issues.push({ record, label: "Needs production version", action: "Record production version" });
     return issues;
   });
 
   return (
-    <div className="space-y-8">
-      <header>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mighty Verse</span><ChevronRight size={13} /><span>Authority</span></div>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Dashboard</h1>
-        <p className="mt-0.5 text-xs text-muted-foreground">{authority.scope_type} scope</p>
-      </header>
+    <div className="space-y-12">
 
-      <section className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-        <Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5">
-          <div className="flex items-start justify-between">
-            <div><h2 className="text-base font-semibold">Needs attention</h2><p className="mt-1 text-sm text-muted-foreground">The next useful action for incomplete work.</p></div>
-            <Badge variant="outline">{attention.length} items</Badge>
+      {/* ── Page header ─────────────────────────────────────────────────────── */}
+      <div className="space-y-1">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          {authority.scope_type} scope
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight text-foreground">Authority Console</h1>
+        <p className="text-sm text-muted-foreground">
+          Operational overview of the Mighty Verse production and publishing state.
+        </p>
+      </div>
+
+      {/* ── State summary ────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-px sm:grid-cols-4 rounded-lg overflow-hidden border border-border bg-border">
+        {[
+          { label: "Needs Attention", value: attention.length, sub: "works require action" },
+          { label: "Readiness", value: `${readinessPct}%`, sub: `${readyCount} / ${operationalRecords.length} ready` },
+          { label: "Ready", value: readyCount, sub: "works ready to publish" },
+          { label: "Operational", value: operationalRecords.length, sub: "works in scope" },
+        ].map(({ label, value, sub }) => (
+          <div key={label} className="bg-card px-5 py-5">
+            <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+            <p className="mt-2 text-3xl font-semibold tracking-tight text-foreground">{value}</p>
+            <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
           </div>
-          {attention.length === 0
-            ? <p className="border-t border-border pt-4 text-sm text-muted-foreground">Everything in the catalogue is ready for review.</p>
-            : <div className="divide-y divide-border">{attention.slice(0, 6).map((item, index) => (
-                <div key={`${item.record.master.master_id}-${item.label}-${index}`} className="flex items-center justify-between gap-4 py-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{titleFor(item.record)}</p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[item.record.master.canonical_type]}</Badge><span className="text-xs text-muted-foreground">{item.label}</span></div>
-                    <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => router.push(`/authority/${item.record.master.master_id}`)}>{item.action}</Button>
-                </div>
-              ))}</div>
-          }
-        </CardContent></Card>
+        ))}
+      </div>
 
-        <Card className="border-0 bg-primary text-primary-foreground shadow-sm"><CardContent className="space-y-5 pt-5">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-primary-foreground/60">Publishing readiness</p>
-            <p className="mt-2 text-4xl font-semibold">{operationalRecords.length ? Math.round(operationalRecords.filter(r => r.status.ready).length / operationalRecords.length * 100) : 0}%</p>
-            <p className="mt-1 text-sm text-primary-foreground/70">{operationalRecords.filter(r => r.status.ready).length} of {operationalRecords.length} works ready to publish</p>
+      {/* ── Publishing journey ───────────────────────────────────────────────── */}
+      <AggregateJourney records={operationalRecords} />
+
+      <Separator className="opacity-30" />
+
+      {/* ── Needs attention ─────────────────────────────────────────────────── */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Needs Attention</p>
+          <span className="text-xs text-muted-foreground">{attention.length} item{attention.length !== 1 ? "s" : ""}</span>
+        </div>
+
+        {attention.length === 0 ? (
+          <p className="text-sm text-muted-foreground">All operational works are ready for review.</p>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-muted/20">
+                <tr>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Work</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Type</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Block</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {attention.map((item, i) => (
+                  <tr
+                    key={`${item.record.master.master_id}-${i}`}
+                    className="cursor-pointer hover:bg-muted/20 transition-colors"
+                    onClick={() => router.push(`/authority/${item.record.master.master_id}`)}
+                  >
+                    <td className="px-4 py-3 font-medium text-foreground">{titleFor(item.record)}</td>
+                    <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">{WORK_TYPE_LABELS[item.record.master.canonical_type]}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-400/80">{item.label}</span>
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+                        {item.action} <ChevronRight size={12} />
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-primary-foreground/20"><div className="h-full bg-accent-mv transition-all" style={{ width: `${operationalRecords.length ? operationalRecords.filter(r => r.status.ready).length / operationalRecords.length * 100 : 0}%` }} /></div>
-          <p className="text-xs text-primary-foreground/60">Readiness is calculated from the live catalogue.</p>
-        </CardContent></Card>
-      </section>
+        )}
+      </div>
 
-      <details id="canonical" className="group space-y-4">
-        <summary className="cursor-pointer list-none text-foreground text-sm font-medium">
-          <span className="mr-2 text-muted-foreground group-open:hidden">+</span>
-          <span className="mr-2 text-muted-foreground hidden group-open:inline">−</span>
-          View canonical record
-          <span className="block pl-5 text-muted-foreground text-xs font-normal">Technical verification of the canonical chain.</span>
+      <Separator className="opacity-30" />
+
+      {/* ── Content link ─────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Content</p>
+          <p className="mt-1 text-sm text-muted-foreground">{operationalRecords.length} works in the operational catalogue.</p>
+        </div>
+        <a href="/authority/content" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
+          View catalogue <ArrowRight size={13} />
+        </a>
+      </div>
+
+      {/* ── Canonical record ─────────────────────────────────────────────────── */}
+      <details id="canonical" className="group">
+        <summary className="cursor-pointer list-none flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground transition-colors select-none">
+          <span className="group-open:hidden">+</span>
+          <span className="hidden group-open:inline">−</span>
+          Technical details — Canonical record
         </summary>
-        {masters.length === 0 && <p className="text-muted-foreground text-xs">No records yet.</p>}
-        {masters.map(m => {
-          const mStates = states.filter(s => s.master_id === m.master_id);
-          const mProjs = projections.filter(p => p.master_id === m.master_id);
-          const typeLabel = WORK_TYPE_LABELS[m.canonical_type] ?? m.canonical_type;
-          return (
-            <Card key={m.master_id}><CardContent className="pt-4 space-y-2">
-              <div className="flex items-center gap-2"><Badge variant="outline">{typeLabel}</Badge><span className="text-muted-foreground font-mono text-xs" title={m.master_id}>{shortId(m.master_id)}…</span></div>
-              {mStates.length === 0 && <p className="text-muted-foreground text-xs pl-4">No authorised state.</p>}
-              {mStates.map(s => (
-                <div key={s.canonical_state_id} className="pl-4 border-l border-border space-y-1">
-                  <div className="flex items-center gap-2"><Badge variant="secondary">v{s.version}</Badge><Badge variant="outline">{s.authorisation_state}</Badge><span className="text-muted-foreground font-mono text-xs" title={s.canonical_state_id}>{shortId(s.canonical_state_id)}…</span></div>
-                  {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).map(p => {
-                    const pBindings = bindings.filter(b => b.projection_id === p.projection_id);
-                    return (
-                      <div key={p.projection_id} className="pl-4 border-l border-border space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap"><Badge>{EXPERIENCE_TYPE_LABELS[p.projection_type] ?? p.projection_type}</Badge>{p.collectible_designated && <Badge variant="secondary">collectible</Badge>}<span className="text-muted-foreground font-mono text-xs" title={p.projection_id}>{shortId(p.projection_id)}…</span></div>
-                        {pBindings.length === 0 && <p className="text-muted-foreground text-xs pl-4">No media.</p>}
-                        {pBindings.map(b => <div key={b.binding_id} className="pl-4 flex items-center gap-2"><Badge variant="outline">{b.binding_type}</Badge><Badge variant="outline">{b.access_level}</Badge><span className="text-muted-foreground font-mono text-xs" title={b.asset_id}>{shortId(b.asset_id)}…</span></div>)}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </CardContent></Card>
-          );
-        })}
+        <div className="mt-4 space-y-2 rounded-lg border border-border bg-card/50 p-4">
+          {masters.length === 0 && <p className="text-muted-foreground text-xs">No records yet.</p>}
+          {masters.map(m => {
+            const mStates = states.filter(s => s.master_id === m.master_id);
+            const mProjs = projections.filter(p => p.master_id === m.master_id);
+            return (
+              <div key={m.master_id} className="space-y-1 font-mono text-xs text-muted-foreground">
+                <p><span className="text-foreground/60">{WORK_TYPE_LABELS[m.canonical_type] ?? m.canonical_type}</span> {shortId(m.master_id)}…</p>
+                {mStates.map(s => (
+                  <div key={s.canonical_state_id} className="pl-4 border-l border-border/50">
+                    <p>state {shortId(s.canonical_state_id)}… v{s.version} {s.authorisation_state}</p>
+                    {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).map(p => {
+                      const pBindings = bindings.filter(b => b.projection_id === p.projection_id);
+                      return (
+                        <div key={p.projection_id} className="pl-4 border-l border-border/50">
+                          <p>proj {shortId(p.projection_id)}… {p.projection_type}{p.collectible_designated ? " collectible" : ""}</p>
+                          {pBindings.map(b => <p key={b.binding_id} className="pl-4">binding {shortId(b.asset_id)}… {b.binding_type} {b.access_level}</p>)}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+            );
+          })}
+        </div>
       </details>
+
     </div>
   );
 }

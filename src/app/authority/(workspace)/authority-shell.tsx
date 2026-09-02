@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Activity, Archive, BarChart3, Database, LayoutDashboard, Menu, ShieldCheck, Upload, Users, X } from "lucide-react";
+import { Activity, Archive, BarChart3, Database, LayoutDashboard, Menu, ShieldCheck, Upload, X } from "lucide-react";
 
 const NAV_GROUPS = [
   {
@@ -18,19 +18,13 @@ const NAV_GROUPS = [
   {
     label: "Tools",
     links: [
-      { label: "Media intake",      href: "/authority/media",      icon: Upload },
-      { label: "Technical details", href: "/authority#canonical",  icon: Database },
+      { label: "Media intake",      href: "/authority/media",     icon: Upload },
+      { label: "Technical details", href: "/authority#canonical", icon: Database },
     ],
   },
 ] as const;
 
-type Props = {
-  children: React.ReactNode;
-  scopeType?: string;
-  pageLabel?: string;
-};
-
-export default function AuthorityShell({ children, scopeType, pageLabel }: Props) {
+export default function AuthorityShell({ children }: { children: React.ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false);
   const pathname = usePathname();
 
@@ -41,34 +35,34 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 pt-14 lg:flex lg:pt-0">
+    <div className="min-h-screen bg-background pt-14 lg:flex lg:pt-0">
       {/* Top bar */}
-      <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-3 text-foreground shadow-sm lg:pl-72">
-        <div className="mx-auto flex max-w-[1500px] items-baseline gap-3 text-sm">
-          <span className="font-semibold">Mighty Verse</span>
-          <span className="text-muted-foreground">Authority</span>
-          {pageLabel && <span className="text-muted-foreground">{pageLabel}</span>}
+      <div className="fixed inset-x-0 top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:pl-64">
+        <div className="mx-auto flex max-w-[1400px] items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-semibold text-foreground">Mighty Verse</span>
+          <span className="opacity-30">/</span>
+          <span>Authority</span>
         </div>
       </div>
 
       {/* Sidebar */}
-      <aside
-        className={`${mobileNav ? "block" : "hidden"} fixed inset-y-0 left-0 z-20 w-64 border-r border-border bg-card p-5 lg:static lg:block lg:min-h-screen`}
-      >
-        <div className="mb-8 flex items-start justify-between">
+      <aside className={`${mobileNav ? "flex" : "hidden"} fixed inset-y-0 left-0 z-20 w-64 flex-col border-r border-border bg-card lg:static lg:flex lg:min-h-screen`}>
+        {/* Sidebar header */}
+        <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-border">
           <div>
-            <p className="text-sm font-semibold tracking-tight">Mighty Verse</p>
-            <p className="mt-1 text-xs text-muted-foreground">Authority Console</p>
+            <p className="text-xs font-semibold tracking-widest uppercase text-foreground">Mighty Verse</p>
+            <p className="mt-0.5 text-[10px] tracking-widest uppercase text-muted-foreground">Authority Console</p>
           </div>
-          <button className="lg:hidden" onClick={() => setMobileNav(false)} aria-label="Close navigation">
-            <X size={16} />
+          <button className="lg:hidden text-muted-foreground hover:text-foreground" onClick={() => setMobileNav(false)} aria-label="Close navigation">
+            <X size={15} />
           </button>
         </div>
 
-        <nav className="space-y-6">
-          {NAV_GROUPS.map((group, groupIndex) => (
-            <div key={group.label} className={groupIndex > 0 ? "border-t border-border pt-4" : ""}>
-              <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+        {/* Nav */}
+        <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto">
+          {NAV_GROUPS.map((group, gi) => (
+            <div key={group.label}>
+              <p className="mb-1.5 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60">
                 {group.label}
               </p>
               <div className="space-y-0.5">
@@ -79,38 +73,35 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
                       key={label}
                       href={href}
                       onClick={() => setMobileNav(false)}
-                      className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs ${
-                        active ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className={`group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+                        active
+                          ? "bg-accent text-foreground font-medium"
+                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       }`}
                     >
-                      <Icon size={14} />
+                      {active && (
+                        <span className="absolute left-3 h-4 w-0.5 rounded-full bg-accent-mv" style={{ marginLeft: "-0.75rem" }} />
+                      )}
+                      <Icon size={15} strokeWidth={1.5} className={active ? "text-accent-mv" : "text-muted-foreground/60 group-hover:text-muted-foreground"} />
                       {label}
                     </a>
                   );
                 })}
               </div>
+              {gi === 0 && <div className="mt-5 border-t border-border" />}
             </div>
           ))}
         </nav>
-
-        {scopeType && (
-          <div className="mt-10 border-t border-border pt-4">
-            <div className="flex items-center gap-2 px-2 text-xs text-muted-foreground">
-              <Users size={14} />
-              {scopeType} scope
-            </div>
-          </div>
-        )}
       </aside>
 
-      {/* Main content */}
+      {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-center gap-3 px-4 pt-4 lg:hidden">
-          <button onClick={() => setMobileNav(true)} aria-label="Open navigation">
-            <Menu size={20} />
+          <button onClick={() => setMobileNav(true)} aria-label="Open navigation" className="text-muted-foreground hover:text-foreground">
+            <Menu size={18} />
           </button>
         </div>
-        <main className="mx-auto w-full max-w-[1500px] flex-1 space-y-8 p-4 sm:p-6 lg:px-10 lg:pt-8">
+        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-8 pb-16 sm:px-6 lg:px-10">
           {children}
         </main>
       </div>
