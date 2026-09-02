@@ -9,9 +9,9 @@ const NAV_LINKS = [
   { href: "/authority/public", label: "Authority" },
 ];
 
-type Props = { activePath: string };
+type Props = { activePath?: string };
 
-export default function PageTopNav({ activePath }: Props) {
+export default function PageTopNav({ activePath = "" }: Props) {
   return (
     <div className="sticky top-0 z-10 border-b border-border backdrop-blur-sm bg-background/80">
       <div className="mx-auto max-w-5xl px-6 h-12 flex items-center justify-between gap-4">
