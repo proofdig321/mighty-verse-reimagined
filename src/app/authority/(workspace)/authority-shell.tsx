@@ -8,18 +8,18 @@ const NAV_GROUPS = [
   {
     label: "Workspace",
     links: [
-      { label: "Dashboard", href: "/authority", icon: LayoutDashboard },
-      { label: "Content", href: "/authority", icon: Archive },
-      { label: "Production", href: "/authority", icon: Activity },
-      { label: "Publishing", href: "/authority", icon: BarChart3 },
-      { label: "Rights", href: "/authority", icon: ShieldCheck },
+      { label: "Dashboard",  href: "/authority",            icon: LayoutDashboard },
+      { label: "Content",    href: "/authority/content",    icon: Archive },
+      { label: "Production", href: "/authority/production", icon: Activity },
+      { label: "Publishing", href: "/authority/publishing", icon: BarChart3 },
+      { label: "Rights",     href: "/authority/rights",     icon: ShieldCheck },
     ],
   },
   {
     label: "Tools",
     links: [
-      { label: "Media intake", href: "/authority/media", icon: Upload },
-      { label: "Technical details", href: "/authority", icon: Database },
+      { label: "Media intake",      href: "/authority/media",      icon: Upload },
+      { label: "Technical details", href: "/authority#canonical",  icon: Database },
     ],
   },
 ] as const;
@@ -34,16 +34,10 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
   const [mobileNav, setMobileNav] = useState(false);
   const pathname = usePathname();
 
-  // Determine which top-level route is active for sidebar highlighting
-  const isMedia = pathname === "/authority/media";
-  const isParticipants = pathname === "/authority/participants";
-  const isWorkDetail = !isMedia && !isParticipants && pathname !== "/authority" && pathname.startsWith("/authority/");
-
-  function linkActive(href: string, label: string) {
-    if (href === "/authority/media") return isMedia;
-    if (href === "/authority/participants") return isParticipants;
-    // Dashboard-level links: active when on /authority or a work detail
-    return !isMedia && !isParticipants;
+  function isActive(href: string) {
+    if (href.includes("#")) return pathname === "/authority";
+    if (href === "/authority") return pathname === "/authority";
+    return pathname === href || pathname.startsWith(href + "/");
   }
 
   return (
@@ -79,7 +73,7 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
               </p>
               <div className="space-y-0.5">
                 {group.links.map(({ label, href, icon: Icon }) => {
-                  const active = linkActive(href, label);
+                  const active = isActive(href);
                   return (
                     <a
                       key={label}
@@ -109,9 +103,8 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
         )}
       </aside>
 
-      {/* Main content — hamburger + children */}
+      {/* Main content */}
       <div className="flex min-w-0 flex-1 flex-col">
-        {/* Mobile hamburger row */}
         <div className="flex items-center gap-3 px-4 pt-4 lg:hidden">
           <button onClick={() => setMobileNav(true)} aria-label="Open navigation">
             <Menu size={20} />

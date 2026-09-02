@@ -1,24 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Archive, BarChart3, ChevronRight, Database, FileText, Image, MoreHorizontal, PlaySquare, Plus, Search, ShieldCheck, Upload, Video } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import MediaVisual from "@/components/media-visual";
 import {
-  api, responseData, shortId, operatorError,
-  WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS, PROJECTION_TYPES,
-  getWorkStatus, getJourneySteps, getNextAction,
-  type WorkStatus, type JourneyStep,
+  api, shortId, operatorError,
+  WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS,
+  getWorkStatus, type WorkStatus,
 } from "./_shared/authority-utils";
-import {
-  StatusBadge, WorkJourney, PresentationPanel, ProjectionPresentationPanel,
-  RealizationPanel, CreateExperiencePanel,
-} from "./_shared/authority-panels";
 
 type AuthorityData = {
   authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
@@ -33,8 +25,6 @@ type AuthorityData = {
   mediaAssets: { asset_id: string; asset_type: string; storage_ref: string; format: string | null; duration_ms: number | null; created_at: string; title: string | null; master_id: string | null }[];
 };
 
-const CANONICAL_TYPES = ["universe", "creative-moment", "mural", "scene", "interpretation", "other"] as const;
-
 type WorkRecord = {
   master: AuthorityData["masters"][number];
   state: AuthorityData["states"][number] | undefined;
@@ -45,609 +35,22 @@ type WorkRecord = {
   status: WorkStatus;
 };
 
-// ─── Work card ───────────────────────────────────────────────────────────────
-
-type WorkCardProps = {
-  master: AuthorityData["masters"][number];
-  state: AuthorityData["states"][number] | undefined;
-  projection: AuthorityData["projections"][number] | undefined;
-  binding: AuthorityData["bindings"][number] | undefined;
-  presentation: AuthorityData["presentations"][number] | undefined;
-  projectionPresentation: AuthorityData["projectionPresentations"][number] | undefined;
-  realizations: AuthorityData["realizations"];
-  onAuthorise: (masterId: string) => Promise<void>;
-  onCreateExperience: (stateId: string, masterId: string, type: string) => Promise<void>;
-  onAttachVideo: (projId: string, masterId: string) => void;
-  onDesignate: (projId: string, masterId: string, workTitle: string) => Promise<void>;
-  onEditPresentation: (masterId: string) => void;
-  onEditProjectionPresentation: (projId: string, masterId: string) => void;
-  onEditTimeline: (bindingId: string, masterId: string) => void;
-  onEditRealization: (bindingId: string, masterId: string) => void;
-  busy: boolean;
-};
-
-function WorkCard({
-  master, state, projection, binding, presentation, projectionPresentation,
-  realizations,
-  onAuthorise, onCreateExperience, onAttachVideo, onDesignate,
-  onEditPresentation, onEditProjectionPresentation,
-  onEditTimeline,
-  onEditRealization,
-  busy,
-}: WorkCardProps) {
-  const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
-  const status = getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations, master.master_id);
-  const isCollectible = projection?.collectible_designated ?? false;
-  const artworkUrl = presentation?.artwork_asset?.storage_ref ?? projectionPresentation?.artwork_asset?.storage_ref ?? null;
-  const journey = getJourneySteps(master, status);
-  const nextStep = getNextAction(master, status);
-
-  return (
-    <Card size="sm">
-      <CardContent className="pt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5 min-w-0">
-            <span className="text-foreground text-sm font-medium block truncate">
-              {presentation?.title ?? typeLabel}
-            </span>
-            <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} /><StatusBadge label={status.needs} good={status.ready} /></div>
-          </div>
-          {artworkUrl && <img src={artworkUrl} alt="" className="h-12 w-20 shrink-0 rounded object-cover" />}
-        </div>
-
-        <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
-          <WorkJourney steps={journey} />
-          {!status.ready && <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Next step:</span> {nextStep}</p>}
-          {isCollectible && <Badge>Collectible</Badge>}
-        </div>
-
-        {!status.hasState && (
-          <Button size="sm" disabled={busy} onClick={() => onAuthorise(master.master_id)}>
-            Authorise work
-          </Button>
-        )}
-
-        {status.hasState && !status.hasExperience && (
-          <CreateExperiencePanel stateId={state!.canonical_state_id} masterId={master.master_id} busy={busy} onCreate={onCreateExperience} />
-        )}
-
-        {status.hasExperience && (
-          <button
-            type="button"
-            onClick={() => onEditProjectionPresentation(projection!.projection_id, master.master_id)}
-            className="text-muted-foreground text-xs hover:text-foreground transition-colors"
-          >
-            {projectionPresentation ? "Edit moment title" : "Set moment title"}
-          </button>
-        )}
-
-        {status.hasExperience && master.canonical_type !== "creative-moment" && !status.hasMedia && (
-          <Button size="sm" disabled={busy} onClick={() => onAttachVideo(projection!.projection_id, master.master_id)}>
-            Attach media
-          </Button>
-        )}
-
-        {status.hasExperience && status.hasMedia && !isCollectible && (
-          <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id, presentation?.title ?? projectionPresentation?.title ?? typeLabel)}>
-            Designate as Collectible
-          </Button>
-        )}
-
-        {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && (
-          <button
-            type="button"
-            onClick={() => onEditTimeline(binding!.binding_id, master.master_id)}
-            className="text-muted-foreground text-xs hover:text-foreground transition-colors"
-          >
-            {binding!.start_ms != null && binding!.end_ms != null ? "Adjust timeline" : "Set timeline"}
-          </button>
-        )}
-
-        {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && !status.hasRealization && (
-          <button type="button" onClick={() => onEditRealization(binding!.binding_id, master.master_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
-            Record realization
-          </button>
-        )}
-
-        {status.ready && <p className="text-muted-foreground text-xs">Ready</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
-type TimelineEditorProps = {
-  binding: AuthorityData["bindings"][number];
-  masterId: string;
-  onDone: () => void;
-  onCancel: () => void;
-};
-
-function formatTimelineMs(value: number | null) {
-  if (value == null) return "--:--.---";
-  const totalSeconds = Math.floor(value / 1000);
-  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
-}
-
-function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const hlsRef = useRef<{ destroy: () => void } | null>(null);
-  const [currentMs, setCurrentMs] = useState(0);
-  const [durationMs, setDurationMs] = useState(0);
-  const [startMs, setStartMs] = useState(binding.start_ms ?? 0);
-  const [endMs, setEndMs] = useState(binding.end_ms ?? 0);
-  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
-  const [previewing, setPreviewing] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-  const startRef = useRef(startMs);
-  const endRef = useRef(endMs);
-  const previewingRef = useRef(previewing);
-
-  useEffect(() => {
-    startRef.current = startMs;
-    endRef.current = endMs;
-    previewingRef.current = previewing;
-  }, [endMs, previewing, startMs]);
-
-  useEffect(() => {
-    const video = videoRef.current;
-    const playbackId = binding.media_asset?.storage_ref;
-    if (!video || !playbackId) return;
-
-    const onTimeUpdate = () => {
-      const value = Math.round(video.currentTime * 1000);
-      setCurrentMs(value);
-      if (previewingRef.current && endRef.current > startRef.current && value >= endRef.current) {
-        video.pause();
-        video.currentTime = startRef.current / 1000;
-        setPreviewing(false);
-      }
-    };
-    const onLoadedMetadata = () => setDurationMs(Math.round(video.duration * 1000));
-    video.addEventListener("timeupdate", onTimeUpdate);
-    video.addEventListener("loadedmetadata", onLoadedMetadata);
-
-    fetch(`/api/livepeer/playback/${playbackId}`)
-      .then(response => response.ok ? response.json() : null)
-      .then(info => {
-        const hls = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl");
-        if (!hls) throw new Error("No playable HLS source returned.");
-        setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-        if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = hls.url;
-        } else {
-          import("hls.js").then(({ default: Hls }) => {
-            if (!Hls.isSupported()) throw new Error("This browser cannot play the media stream.");
-            const hlsPlayer = new Hls();
-            hlsRef.current = hlsPlayer;
-            hlsPlayer.loadSource(hls.url);
-            hlsPlayer.attachMedia(video);
-          });
-        }
-      })
-      .catch(error => setMessage(`Error: ${error instanceof Error ? error.message : "Unable to load preview"}`));
-
-    return () => {
-      video.pause();
-      video.removeEventListener("timeupdate", onTimeUpdate);
-      video.removeEventListener("loadedmetadata", onLoadedMetadata);
-      hlsRef.current?.destroy();
-      hlsRef.current = null;
-    };
-  }, [binding.media_asset?.storage_ref]);
-
-  async function saveRange() {
-    if (!Number.isInteger(startMs) || !Number.isInteger(endMs) || endMs <= startMs) {
-      setMessage("Error: End must be greater than start.");
-      return;
-    }
-    setBusy(true); setMessage(null);
-    const response = await fetch("/api/authority/media/timeline", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, start_ms: startMs, end_ms: endMs }),
-    });
-    const result = await responseData(response);
-    setBusy(false);
-    if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to save timeline"}`); return; }
-    setMessage("Timeline saved.");
-    onDone();
-  }
-
-  function previewRange() {
-    const video = videoRef.current;
-    if (!video || endMs <= startMs) return;
-    video.currentTime = startMs / 1000;
-    setPreviewing(true);
-    void video.play();
-  }
-
-  async function selectThumbnail() {
-    if (!thumbnailUrl) return;
-    setBusy(true); setMessage(null);
-    const response = await fetch("/api/authority/media/artwork", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ master_id: masterId, projection_id: binding.projection_id, thumbnail_url: thumbnailUrl }),
-    });
-    const result = await responseData(response);
-    setBusy(false);
-    if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to select thumbnail"}`); return; }
-    setMessage("Livepeer thumbnail selected as representative artwork.");
-  }
-
-  return (
-    <Card>
-      <CardContent className="pt-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-foreground text-sm font-medium block">Timeline realization</span>
-            <span className="text-muted-foreground text-xs">Capture boundaries from the actual video player.</span>
-          </div>
-          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
-        </div>
-        <video ref={videoRef} controls className="w-full aspect-video bg-black" />
-        {thumbnailUrl && (
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">Representative artwork preview</p>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumbnailUrl} alt="Generated video thumbnail" className="w-32 aspect-video object-cover border border-border" />
-            <Button size="sm" variant="outline" onClick={selectThumbnail} disabled={busy}>Use Livepeer thumbnail as artwork</Button>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant="outline">Current {formatTimelineMs(currentMs)}</Badge>
-          <Badge variant="outline">Duration {formatTimelineMs(durationMs)}</Badge>
-          <Badge variant="secondary">{formatTimelineMs(startMs)} → {formatTimelineMs(endMs)}</Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          <Button size="sm" variant="outline" onClick={() => setStartMs(currentMs)}>Set Start</Button>
-          <Button size="sm" variant="outline" onClick={() => setEndMs(currentMs)}>Set End</Button>
-          <label className="text-muted-foreground text-xs">Start (ms)<input type="number" min="0" value={startMs} onChange={event => setStartMs(Number(event.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5" /></label>
-          <label className="text-muted-foreground text-xs">End (ms)<input type="number" min="1" value={endMs} onChange={event => setEndMs(Number(event.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5" /></label>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={previewRange} disabled={endMs <= startMs}>Preview range</Button>
-          <Button size="sm" variant="outline" onClick={() => { setStartMs(0); setEndMs(durationMs); setPreviewing(false); }}>Reset range</Button>
-          <Button size="sm" onClick={saveRange} disabled={busy || endMs <= startMs}>Save exact range</Button>
-        </div>
-        {message && <p className={`text-sm ${message.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{message}</p>}
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Attach Video panel ───────────────────────────────────────────────────────
-
-type AttachVideoPanelProps = {
-  projId: string;
-  masterId: string;
-  workTitle: string;
-  onDone: () => void;
-  onCancel: () => void;
-};
-
-function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: AttachVideoPanelProps) {
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
-  const [rightsHolderRef, setRightsHolderRef] = useState("");
-  const [rightsBasis, setRightsBasis] = useState("");
-  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
-  const [uploadPhase, setUploadPhase] = useState<string | null>(null);
-  const [uploadBusy, setUploadBusy] = useState(false);
-  const [uploadMsg, setUploadMsg] = useState<string | null>(null);
-  const [uploadStage, setUploadStage] = useState<"selecting" | "validating" | "uploading" | "processing" | "ready" | "failed">("selecting");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const statusMessage =
-    uploadStage === "selecting"
-      ? "Select a video file to begin the Livepeer upload flow."
-      : uploadStage === "validating"
-      ? "Checking the selected file and intake metadata."
-      : uploadStage === "uploading"
-      ? "Uploading to Livepeer…"
-      : uploadStage === "processing"
-      ? "Livepeer is preparing your video for playback."
-      : uploadStage === "ready"
-      ? "Video is ready to attach."
-      : "Upload status unknown.";
-
-  return (
-    <Card>
-      <CardContent className="pt-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-foreground text-sm font-medium">Attach Video</span>
-          {!uploadBusy && (
-            <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Rights</p>
-          <input
-            value={rightsHolderRef}
-            onChange={e => setRightsHolderRef(e.target.value)}
-            placeholder="Rights holder participant ID (required for new assets)"
-            disabled={uploadBusy}
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
-          />
-          <input
-            value={rightsBasis}
-            onChange={e => setRightsBasis(e.target.value)}
-            placeholder="Rights basis (for example: owned, licensed)"
-            disabled={uploadBusy}
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
-          />
-          <p className="text-muted-foreground text-xs">Both fields are required before a new file can enter the media pipeline.</p>
-        </div>
-
-        {/* File picker */}
-        <div className="space-y-1">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Choose video</p>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/mp4,video/*"
-            disabled={uploadBusy}
-            onChange={e => { setUploadFile(e.target.files?.[0] ?? null); setUploadMsg(null); }}
-            className="sr-only"
-          />
-          <button
-            type="button"
-            disabled={uploadBusy}
-            onClick={() => fileInputRef.current?.click()}
-            className={`w-full rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors
-              ${uploadFile ? "border-border bg-muted/30" : "border-border hover:border-foreground/30 hover:bg-muted/20 cursor-pointer"}
-              disabled:pointer-events-none disabled:opacity-50`}
-          >
-            {uploadFile ? (
-              <div className="space-y-0.5">
-                <p className="text-foreground text-sm font-medium">{uploadFile.name}</p>
-                <p className="text-muted-foreground text-xs">{(uploadFile.size / 1024 / 1024).toFixed(1)} MB</p>
-              </div>
-            ) : (
-              <div className="space-y-1">
-                <p className="text-foreground text-sm">＋ Choose MP4 video</p>
-                <p className="text-muted-foreground text-xs">MP4 · Full video · Uploads directly to Mighty Verse</p>
-              </div>
-            )}
-          </button>
-        </div>
-
-        {/* Progress */}
-        {uploadBusy && (
-          <div className="space-y-2">
-            {uploadProgress !== null && uploadProgress < 100 ? (
-              <>
-                <p className="text-foreground text-sm">{statusMessage}</p>
-                <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                  <div className="h-full rounded-full bg-foreground transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
-                </div>
-                <p className="text-muted-foreground text-xs">{uploadProgress}%</p>
-              </>
-            ) : (
-              <>
-                <p className="text-foreground text-sm">
-                  {uploadStage === "ready" ? "Video ready" : uploadStage === "failed" ? "Upload failed" : "Processing video…"}
-                </p>
-                <p className="text-muted-foreground text-xs">{statusMessage}</p>
-              </>
-            )}
-          </div>
-        )}
-
-        {uploadMsg && (
-          <p className={`text-sm ${/failed|could not|connection failed/i.test(uploadMsg) ? "text-destructive" : "text-foreground"}`}>
-            {/failed|could not|connection failed/i.test(uploadMsg) ? uploadMsg : "✓ " + uploadMsg}
-          </p>
-        )}
-
-        <Button
-          size="sm"
-          disabled={uploadBusy || !uploadFile || (!!rightsHolderRef !== !!rightsBasis)}
-          onClick={async () => {
-            if (!uploadFile) return;
-            setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null); setUploadStage("validating");
-            try {
-              if (!uploadFile.type.startsWith("video/")) throw new Error("Select a video file.");
-              if (!rightsHolderRef || !rightsBasis) throw new Error("Rights holder and rights basis are required for a new upload.");
-              setUploadStage("uploading");
-              const session = await fetch("/api/authority/media/upload-session", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name: uploadFile.name, projection_id: projId, master_id: masterId }),
-              }).then(responseData);
-
-              if (session.error || !session.upload_url || !session.asset_id) {
-                throw new Error(`${workTitle} — Video upload could not be started. ${session.error ?? "The upload session was incomplete."} Next: try the upload again.`);
-              }
-
-              const { upload_url, asset_id } = session;
-
-              await new Promise<void>((resolve, reject) => {
-                const xhr = new XMLHttpRequest();
-                xhr.upload.onprogress = e => {
-                  if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
-                };
-                xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
-                xhr.onerror = () => reject(new Error("Upload network error"));
-                xhr.open("PUT", upload_url);
-                // Do NOT set Content-Type — Livepeer's pre-signed URL handles it
-                xhr.send(uploadFile);
-              });
-
-              setUploadProgress(100);
-              setUploadStage("processing");
-
-              let phase = "uploading";
-              for (let attempt = 0; phase !== "ready" && attempt < 120; attempt += 1) {
-                await new Promise(r => setTimeout(r, 3000));
-                const statusResponse = await fetch(`/api/authority/media/upload-session/${asset_id}`);
-                const status = await responseData(statusResponse);
-                if (!statusResponse.ok || status.error) throw new Error(`${workTitle} — Video processing could not be verified. ${status.error ?? "The service returned an invalid processing status."} Next: retry processing or check the media service.`);
-                phase = status.phase ?? "unknown";
-                setUploadPhase(phase);
-                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); setUploadStage("failed"); return; }
-              }
-              if (phase !== "ready") throw new Error("Livepeer processing did not become ready in time.");
-
-              setUploadStage("ready");
-
-              const attach = await fetch("/api/authority/media", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  projection_id: projId,
-                  master_id: masterId,
-                  livepeer_asset_id: asset_id,
-                  rights_holder_ref: rightsHolderRef || null,
-                  rights_basis: rightsBasis || null,
-                }),
-              }).then(responseData);
-
-              if (attach.error) { setUploadMsg(`${workTitle} — Video connection failed. ${attach.error} Next: confirm the video and rights details, then retry.`); return; }
-              setUploadMsg("Video attached. World and Moment are now playable.");
-              setUploadFile(null); setRightsHolderRef(""); setRightsBasis(""); setUploadProgress(null); setUploadPhase(null); setUploadStage("ready");
-              if (fileInputRef.current) fileInputRef.current.value = "";
-              onDone();
-            } catch (err) {
-              setUploadMsg(`${workTitle} — Video upload failed. ${err instanceof Error ? err.message : "The upload could not be completed."}`);
-              setUploadStage("failed");
-            } finally {
-              setUploadBusy(false);
-            }
-          }}
-        >
-          Upload & Attach Video
-        </Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
-  const [title, setTitle] = useState("");
-  const [creatorName, setCreatorName] = useState("");
-  const [workType, setWorkType] = useState("animation");
-  const [sourceType, setSourceType] = useState("upload");
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [isrc, setIsrc] = useState("");
-  const [isrcStatus, setIsrcStatus] = useState("not-applicable");
-  const [versionLabel, setVersionLabel] = useState("");
-  const [provenanceNotes, setProvenanceNotes] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
-
-  async function submit() {
-    setBusy(true); setMessage(null);
-    const result = await api("/api/authority/media-intake", {
-      title,
-      creator_name: creatorName || null,
-      work_type: workType,
-      source_type: sourceType,
-      source_url: sourceType === "external-url" ? sourceUrl : null,
-      isrc: isrc || null,
-      isrc_status: workType === "song" || workType === "audio" ? isrcStatus : "not-applicable",
-      version_label: versionLabel || null,
-      provenance_notes: provenanceNotes || null,
-    });
-    setBusy(false);
-    if (result.error) { setMessage(`Error: ${result.error}`); return; }
-    onDone();
-  }
-
-  return (
-    <Card>
-      <CardContent className="pt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-foreground text-sm font-medium block">New media intake</span>
-            <span className="text-muted-foreground text-xs">Identity, source, ISRC state, and provenance.</span>
-          </div>
-          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
-        </div>
-        <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
-        <input value={creatorName} onChange={e => setCreatorName(e.target.value)} placeholder="Artist / creator" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
-        <div className="grid grid-cols-2 gap-2">
-          <select value={workType} onChange={e => setWorkType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
-            <option value="animation">Animation</option><option value="video">Video</option><option value="song">Song</option><option value="audio">Audio</option><option value="other">Other</option>
-          </select>
-          <input value={versionLabel} onChange={e => setVersionLabel(e.target.value)} placeholder="Version / release" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
-        </div>
-        <select value={sourceType} onChange={e => setSourceType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
-          <option value="upload">Local upload</option><option value="external-url">Authorised external URL</option><option value="livepeer-asset">Existing Livepeer asset</option>
-        </select>
-        {sourceType === "external-url" && <input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://… (YouTube references are preserved, never downloaded)" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />}
-        {(workType === "song" || workType === "audio") && (
-          <div className="grid grid-cols-2 gap-2">
-            <select value={isrcStatus} onChange={e => setIsrcStatus(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
-              <option value="verified">ISRC verified</option><option value="not-provided">Released but ISRC not provided</option><option value="not-applicable">Unreleased / no ISRC</option>
-            </select>
-            <input value={isrc} onChange={e => setIsrc(e.target.value.toUpperCase())} placeholder="ISRC" disabled={busy || isrcStatus !== "verified"} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
-          </div>
-        )}
-        <textarea value={provenanceNotes} onChange={e => setProvenanceNotes(e.target.value)} placeholder="Provenance / production notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
-        {message && <p className="text-destructive text-sm">{message}</p>}
-        <Button size="sm" disabled={busy || !title.trim() || (sourceType === "external-url" && !sourceUrl.trim())} onClick={submit}>Create intake record</Button>
-      </CardContent>
-    </Card>
-  );
-}
-
-// ─── Main component ───────────────────────────────────────────────────────────
-
 export default function AuthorityClient() {
   const [data, setData] = useState<AuthorityData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-
-  // Register New Work
-  const [showRegister, setShowRegister] = useState(false);
-  const [showIntake, setShowIntake] = useState(false);
-  const [canonicalType, setCanonicalType] = useState<string>("universe");
-
-  // Attach Video panel — which projection is currently open
-  const [attachingProjId, setAttachingProjId] = useState<string | null>(null);
-  const [attachingMasterId, setAttachingMasterId] = useState<string | null>(null);
-
-  // Presentation panel — which master is currently open
-  const [presentingMasterId, setPresentingMasterId] = useState<string | null>(null);
-
-  // Projection presentation panel
-  const [presentingProjId, setPresentingProjId] = useState<string | null>(null);
-  const [presentingProjMasterId, setPresentingProjMasterId] = useState<string | null>(null);
-  const [editingTimelineBindingId, setEditingTimelineBindingId] = useState<string | null>(null);
-  const [editingTimelineMasterId, setEditingTimelineMasterId] = useState<string | null>(null);
-  const [editingRealizationBindingId, setEditingRealizationBindingId] = useState<string | null>(null);
-  const [editingRealizationMasterId, setEditingRealizationMasterId] = useState<string | null>(null);
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [cataloguePage, setCataloguePage] = useState(1);
-  const [activeModule, setActiveModule] = useState<"dashboard" | "content" | "production" | "publishing" | "rights" | "media">("dashboard");
   const router = useRouter();
-  async function load() {
-    const d = await api("/api/authority");
-    if (d.error) { setError(d.error); return; }
-    setData(d);
-  }
 
-  // The fetch resolves outside React; its completion updates the read model.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { void load(); }, []);
-
-  async function act(label: string, path: string, body: unknown, context?: { workTitle?: string; mediaTitle?: string }) {
-    setBusy(true); setMsg(null);
-    const d = await api(path, body);
-    setBusy(false);
-    if (d.error) { setMsg(operatorError(d.error, { ...context, operation: label })); return; }
-    setMsg(`${label} succeeded.`);
-    await load();
-  }
+  useEffect(() => {
+    api("/api/authority").then(d => {
+      if (d.error) setError(d.error);
+      else setData(d);
+    });
+  }, []);
 
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground p-6 text-sm">Loading…</p>;
 
-  const { authority, masters, states, projections, bindings, presentations, projectionPresentations, realizations, participants, mediaAssets } = data;
+  const { authority, masters, states, projections, bindings, presentations, projectionPresentations, realizations } = data;
 
   const workRecords: WorkRecord[] = masters.map(master => {
     const state = states.find(s => s.master_id === master.master_id);
@@ -655,46 +58,26 @@ export default function AuthorityClient() {
     const binding = projection ? bindings.find(b => b.projection_id === projection.projection_id) : undefined;
     const presentation = presentations.find(p => p.master_id === master.master_id);
     const projectionPresentation = projection ? projectionPresentations.find(p => p.projection_id === projection.projection_id) : undefined;
-    return {
-      master,
-      state,
-      projection,
-      binding,
-      presentation,
-      projectionPresentation,
-      status: getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations),
-    };
+    return { master, state, projection, binding, presentation, projectionPresentation, status: getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations) };
   });
 
-  const titleFor = (record: WorkRecord) => record.presentation?.title ?? record.projectionPresentation?.title ?? "Untitled work";
-  const homeRoot = workRecords.find(record => record.master.parent_master_id === null && record.master.canonical_type === "universe" && !!record.presentation?.title);
-  const homeIds = new Set<string>(homeRoot ? [homeRoot.master.master_id] : workRecords.map(record => record.master.master_id));
+  const titleFor = (r: WorkRecord) => r.presentation?.title ?? r.projectionPresentation?.title ?? "Untitled work";
+  const homeRoot = workRecords.find(r => r.master.parent_master_id === null && r.master.canonical_type === "universe" && !!r.presentation?.title);
+  const homeIds = new Set<string>(homeRoot ? [homeRoot.master.master_id] : workRecords.map(r => r.master.master_id));
   if (homeRoot) {
     let changed = true;
     while (changed) {
       changed = false;
-      for (const record of workRecords) {
-        if (record.master.parent_master_id && homeIds.has(record.master.parent_master_id) && !homeIds.has(record.master.master_id)) {
-          homeIds.add(record.master.master_id);
+      for (const r of workRecords) {
+        if (r.master.parent_master_id && homeIds.has(r.master.parent_master_id) && !homeIds.has(r.master.master_id)) {
+          homeIds.add(r.master.master_id);
           changed = true;
         }
       }
     }
   }
-  const operationalRecords = workRecords.filter(record => homeIds.has(record.master.master_id));
-  const matchingRecords = operationalRecords.filter(record => titleFor(record).toLowerCase().includes(query.toLowerCase()) && (typeFilter === "all" || record.master.canonical_type === typeFilter));
-  const moduleRecords = activeModule === "production"
-    ? matchingRecords.filter(record => record.master.canonical_type === "scene" || record.master.canonical_type === "mural")
-    : activeModule === "publishing"
-    ? matchingRecords.filter(record => record.status.ready || record.status.hasExperience)
-    : activeModule === "rights"
-    ? matchingRecords.filter(record => record.status.playable)
-    : matchingRecords;
-  const cataloguePageSize = 8;
-  const cataloguePageCount = Math.max(1, Math.ceil(moduleRecords.length / cataloguePageSize));
-  const currentCataloguePage = Math.min(cataloguePage, cataloguePageCount);
-  const visibleRecords = moduleRecords.slice((currentCataloguePage - 1) * cataloguePageSize, currentCataloguePage * cataloguePageSize);
-  const orderedRecords = visibleRecords;
+  const operationalRecords = workRecords.filter(r => homeIds.has(r.master.master_id));
+
   const attention = operationalRecords.flatMap(record => {
     const issues: { record: WorkRecord; label: string; detail: string; action: string }[] = [];
     const name = titleFor(record);
@@ -705,81 +88,51 @@ export default function AuthorityClient() {
     if (record.master.canonical_type === "scene" && record.status.playable && !record.status.needsTimeline && !record.status.hasRealization) issues.push({ record, label: "Production version", detail: `${name} has playable media and a complete timeline, but its production version has not been recorded.`, action: "Record production version" });
     return issues;
   });
-  const statusLabel = (record: WorkRecord) => record.status.ready ? "Ready to publish" : record.status.needs;
-
-  const overviewMetrics: Array<[string, string, typeof Archive]> = [["Universes", "universe", Archive], ["Murals", "mural", Image], ["Creative Moments", "creative-moment", FileText], ["Scenes", "scene", PlaySquare], ["Registered", "all", Database], ["Authorised", "state", ShieldCheck], ["With Experience", "experience", PlaySquare], ["Playable", "playable", Video], ["Collectible", "collectible", BarChart3], ["Needs attention", "attention", Activity]];
-  const MODULE_TABS = [
-    { label: "Dashboard", value: "dashboard" },
-    { label: "Content", value: "content" },
-    { label: "Production", value: "production" },
-    { label: "Publishing", value: "publishing" },
-    { label: "Rights", value: "rights" },
-    { label: "Media", value: "media" },
-  ] as const;
 
   return (
     <div className="space-y-8">
-      <header className="flex items-center justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mighty Verse</span><ChevronRight size={13} /><span>Authority</span></div>
-          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-0.5 text-xs text-muted-foreground">{authority.scope_type} scope</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground md:flex"><Search size={14} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search catalogue..." className="w-40 bg-transparent outline-none placeholder:text-muted-foreground" /></div>
-          <Button size="sm" onClick={() => setShowRegister(true)}><Plus size={14} /> New work</Button>
-          <button className="rounded-md border border-border bg-card p-2 text-muted-foreground" aria-label="More actions"><MoreHorizontal size={16} /></button>
-        </div>
+      <header>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mighty Verse</span><ChevronRight size={13} /><span>Authority</span></div>
+        <h1 className="mt-2 text-2xl font-semibold tracking-tight">Dashboard</h1>
+        <p className="mt-0.5 text-xs text-muted-foreground">{authority.scope_type} scope</p>
       </header>
 
-      {/* Module tabs */}
-      <Tabs value={activeModule} onValueChange={(v) => { if (v === "media") { setActiveModule("media"); setShowIntake(false); } else setActiveModule(v as typeof activeModule); }}>
-        <TabsList variant="line" className="w-full justify-start rounded-none border-b border-border bg-transparent h-auto pb-0">
-          {MODULE_TABS.map(({ label, value }) => (
-            <TabsTrigger key={value} value={value} className="px-3 py-2 text-xs rounded-none">
-              {label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <section className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
+        <Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5">
+          <div className="flex items-start justify-between">
+            <div><h2 className="text-base font-semibold">Needs attention</h2><p className="mt-1 text-sm text-muted-foreground">The next useful action for incomplete work.</p></div>
+            <Badge variant="outline">{attention.length} items</Badge>
+          </div>
+          {attention.length === 0
+            ? <p className="border-t border-border pt-4 text-sm text-muted-foreground">Everything in the catalogue is ready for review.</p>
+            : <div className="divide-y divide-border">{attention.slice(0, 6).map((item, index) => (
+                <div key={`${item.record.master.master_id}-${item.label}-${index}`} className="flex items-center justify-between gap-4 py-3">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{titleFor(item.record)}</p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[item.record.master.canonical_type]}</Badge><span className="text-xs text-muted-foreground">{item.label}</span></div>
+                    <p className="mt-1 text-xs text-muted-foreground">{item.detail}</p>
+                  </div>
+                  <Button size="sm" variant="outline" onClick={() => router.push(`/authority/${item.record.master.master_id}`)}>{item.action}</Button>
+                </div>
+              ))}</div>
+          }
+        </CardContent></Card>
 
-      {activeModule === "dashboard" && <section id="attention" className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
-        <Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5"><div className="flex items-start justify-between"><div><h2 className="text-base font-semibold">Needs attention</h2><p className="mt-1 text-sm text-muted-foreground">The next useful action for incomplete work.</p></div><Badge variant="outline">{attention.length} items</Badge></div>{attention.length === 0 ? <p className="border-t border-border pt-4 text-sm text-muted-foreground">Everything in the catalogue is ready for review.</p> : <div className="divide-y divide-border">{attention.slice(0, 6).map((item, index) => <div key={`${item.record.master.master_id}-${item.label}-${index}`} className="flex items-center justify-between gap-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{titleFor(item.record)}</p><div className="mt-1 flex flex-wrap items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[item.record.master.canonical_type]}</Badge><span className="text-xs text-muted-foreground">{item.label}</span></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div><Button size="sm" variant="outline" onClick={() => router.push(`/authority/${item.record.master.master_id}`)}>{item.action}</Button></div>)}</div>}</CardContent></Card>
-        <Card className="border-0 bg-primary text-primary-foreground shadow-sm"><CardContent className="space-y-5 pt-5"><div><p className="text-xs uppercase tracking-widest text-primary-foreground/60">Publishing readiness</p><p className="mt-2 text-4xl font-semibold">{operationalRecords.length ? Math.round(operationalRecords.filter(r => r.status.ready).length / operationalRecords.length * 100) : 0}%</p><p className="mt-1 text-sm text-primary-foreground/70">{operationalRecords.filter(r => r.status.ready).length} of {operationalRecords.length} works ready to publish</p></div><div className="h-2 overflow-hidden rounded-full bg-primary-foreground/20"><div className="h-full bg-accent-mv transition-all" style={{ width: `${operationalRecords.length ? operationalRecords.filter(r => r.status.ready).length / operationalRecords.length * 100 : 0}%` }} /></div><p className="text-xs text-primary-foreground/60">Readiness is calculated from the live catalogue.</p></CardContent></Card>
-      </section>}
+        <Card className="border-0 bg-primary text-primary-foreground shadow-sm"><CardContent className="space-y-5 pt-5">
+          <div>
+            <p className="text-xs uppercase tracking-widest text-primary-foreground/60">Publishing readiness</p>
+            <p className="mt-2 text-4xl font-semibold">{operationalRecords.length ? Math.round(operationalRecords.filter(r => r.status.ready).length / operationalRecords.length * 100) : 0}%</p>
+            <p className="mt-1 text-sm text-primary-foreground/70">{operationalRecords.filter(r => r.status.ready).length} of {operationalRecords.length} works ready to publish</p>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-primary-foreground/20"><div className="h-full bg-accent-mv transition-all" style={{ width: `${operationalRecords.length ? operationalRecords.filter(r => r.status.ready).length / operationalRecords.length * 100 : 0}%` }} /></div>
+          <p className="text-xs text-primary-foreground/60">Readiness is calculated from the live catalogue.</p>
+        </CardContent></Card>
+      </section>
 
-      {activeModule === "media" && <section className="space-y-4">
-        <div className="flex items-end justify-between gap-4"><div><h2 className="text-lg font-semibold">Media Library</h2><p className="mt-1 text-sm text-muted-foreground">Existing media known to Mighty Verse, ready to inspect or connect.</p></div><Button size="sm" variant="outline" onClick={() => setShowIntake(true)}><Upload size={14} /> Add media</Button></div>
-        {mediaAssets.length === 0 ? <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No media assets are available.</p> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{mediaAssets.map(asset => { const linkedWork = operationalRecords.find(record => record.master.master_id === asset.master_id); const mediaTitle = asset.title ?? linkedWork ? titleFor(linkedWork!) : "Existing media"; const playable = !asset.storage_ref.startsWith("seed:placeholder:"); return <Card key={asset.asset_id} size="sm"><CardContent className="space-y-3 pt-4">{playable ? <MediaVisual playbackId={asset.storage_ref} title={mediaTitle} /> : <MediaVisual title={mediaTitle} />}</CardContent><CardContent className="space-y-1 pb-4"><p className="font-medium">{mediaTitle}</p><p className="text-xs text-muted-foreground">{asset.asset_type}{asset.duration_ms ? ` · ${Math.round(asset.duration_ms / 1000)}s` : ""}</p><p className="text-xs text-muted-foreground">{playable ? "Playable" : "Processing"}{linkedWork ? ` · ${titleFor(linkedWork)}` : " · Not connected to a work"}</p></CardContent></Card>; })}</div>}
-      </section>}
-
-      <section id="catalogue" className="space-y-4 pt-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-semibold">Catalogue</h2><p className="mt-1 text-sm text-muted-foreground">{matchingRecords.length ? `Showing ${(currentCataloguePage - 1) * cataloguePageSize + 1}\u2013${Math.min(currentCataloguePage * cataloguePageSize, matchingRecords.length)} of ${matchingRecords.length} works` : "No works match this search."}</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:hidden"><Search size={14} /><input value={query} onChange={e => { setQuery(e.target.value); setCataloguePage(1); }} placeholder="Search..." className="w-28 bg-transparent outline-none" /></div><select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCataloguePage(1); }} className="h-8 rounded-md border border-border bg-card px-2 text-xs"><option value="all">All types</option>{Object.entries(WORK_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button size="sm" variant="outline" onClick={() => setShowIntake(true)}><Upload size={14} /> Media intake</Button></div></div><div className="overflow-x-auto rounded-lg border border-border bg-card"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Work</th><th className="px-4 py-3 font-medium">Type</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Media</th><th className="px-4 py-3 font-medium">Experience</th><th className="px-4 py-3 font-medium">Rights</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-border">{visibleRecords.map(record => <tr key={record.master.master_id} className="cursor-pointer hover:bg-muted/30" onClick={() => router.push(`/authority/${record.master.master_id}`)}><td className="px-4 py-3 font-medium">{titleFor(record)}</td><td className="px-4 py-3 text-muted-foreground">{WORK_TYPE_LABELS[record.master.canonical_type]}</td><td className="px-4 py-3"><Badge variant={record.status.ready ? "secondary" : "outline"}>{statusLabel(record)}</Badge></td><td className="px-4 py-3 text-muted-foreground">{record.status.playable ? "Playable" : record.status.hasMedia ? "Processing" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.hasExperience ? "Created" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.rightsVerified ? "Verified" : "Review"}</td><td className="px-4 py-3 text-right"><ChevronRight size={16} className="inline text-muted-foreground" /></td></tr>)}</tbody></table>{visibleRecords.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No works match this search.</p>}</div>{cataloguePageCount > 1 && <div className="flex items-center justify-between"><Button size="sm" variant="outline" disabled={currentCataloguePage === 1} onClick={() => setCataloguePage(page => Math.max(1, page - 1))}>Previous</Button><span className="text-xs text-muted-foreground">Page {currentCataloguePage} of {cataloguePageCount}</span><Button size="sm" variant="outline" disabled={currentCataloguePage === cataloguePageCount} onClick={() => setCataloguePage(page => Math.min(cataloguePageCount, page + 1))}>Next</Button></div>}</section>
-
-      {/* Register New Work */}
-      {showRegister && (
-        <Card>
-          <CardContent className="pt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-foreground text-sm font-medium">Register New Work</span>
-              <button type="button" onClick={() => setShowRegister(false)} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
-            </div>
-            <select value={canonicalType} onChange={e => setCanonicalType(e.target.value)} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
-              {CANONICAL_TYPES.map(t => <option key={t} value={t}>{WORK_TYPE_LABELS[t]}</option>)}
-            </select>
-            <Button size="sm" disabled={busy} onClick={async () => { await act("Register Work", "/api/authority/masters", { canonical_type: canonicalType }); setShowRegister(false); }}>Register Work</Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {showIntake && <MediaIntakePanel onDone={async () => { setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />}
-
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
-
-      {/* Canonical Record */}
       <details id="canonical" className="group space-y-4">
         <summary className="cursor-pointer list-none text-foreground text-sm font-medium">
           <span className="mr-2 text-muted-foreground group-open:hidden">+</span>
-          <span className="mr-2 text-muted-foreground hidden group-open:inline">\u2212</span>
+          <span className="mr-2 text-muted-foreground hidden group-open:inline">−</span>
           View canonical record
           <span className="block pl-5 text-muted-foreground text-xs font-normal">Technical verification of the canonical chain.</span>
         </summary>
@@ -790,18 +143,18 @@ export default function AuthorityClient() {
           const typeLabel = WORK_TYPE_LABELS[m.canonical_type] ?? m.canonical_type;
           return (
             <Card key={m.master_id}><CardContent className="pt-4 space-y-2">
-              <div className="flex items-center gap-2"><Badge variant="outline">{typeLabel}</Badge><span className="text-muted-foreground font-mono text-xs" title={m.master_id}>{shortId(m.master_id)}\u2026</span></div>
+              <div className="flex items-center gap-2"><Badge variant="outline">{typeLabel}</Badge><span className="text-muted-foreground font-mono text-xs" title={m.master_id}>{shortId(m.master_id)}…</span></div>
               {mStates.length === 0 && <p className="text-muted-foreground text-xs pl-4">No authorised state.</p>}
               {mStates.map(s => (
                 <div key={s.canonical_state_id} className="pl-4 border-l border-border space-y-1">
-                  <div className="flex items-center gap-2"><Badge variant="secondary">v{s.version}</Badge><Badge variant="outline">{s.authorisation_state}</Badge><span className="text-muted-foreground font-mono text-xs" title={s.canonical_state_id}>{shortId(s.canonical_state_id)}\u2026</span></div>
+                  <div className="flex items-center gap-2"><Badge variant="secondary">v{s.version}</Badge><Badge variant="outline">{s.authorisation_state}</Badge><span className="text-muted-foreground font-mono text-xs" title={s.canonical_state_id}>{shortId(s.canonical_state_id)}…</span></div>
                   {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).map(p => {
                     const pBindings = bindings.filter(b => b.projection_id === p.projection_id);
                     return (
                       <div key={p.projection_id} className="pl-4 border-l border-border space-y-1">
-                        <div className="flex items-center gap-2 flex-wrap"><Badge>{EXPERIENCE_TYPE_LABELS[p.projection_type] ?? p.projection_type}</Badge>{p.collectible_designated && <Badge variant="secondary">collectible</Badge>}<span className="text-muted-foreground font-mono text-xs" title={p.projection_id}>{shortId(p.projection_id)}\u2026</span></div>
+                        <div className="flex items-center gap-2 flex-wrap"><Badge>{EXPERIENCE_TYPE_LABELS[p.projection_type] ?? p.projection_type}</Badge>{p.collectible_designated && <Badge variant="secondary">collectible</Badge>}<span className="text-muted-foreground font-mono text-xs" title={p.projection_id}>{shortId(p.projection_id)}…</span></div>
                         {pBindings.length === 0 && <p className="text-muted-foreground text-xs pl-4">No media.</p>}
-                        {pBindings.map(b => <div key={b.binding_id} className="pl-4 flex items-center gap-2"><Badge variant="outline">{b.binding_type}</Badge><Badge variant="outline">{b.access_level}</Badge><span className="text-muted-foreground font-mono text-xs" title={b.asset_id}>{shortId(b.asset_id)}\u2026</span></div>)}
+                        {pBindings.map(b => <div key={b.binding_id} className="pl-4 flex items-center gap-2"><Badge variant="outline">{b.binding_type}</Badge><Badge variant="outline">{b.access_level}</Badge><span className="text-muted-foreground font-mono text-xs" title={b.asset_id}>{shortId(b.asset_id)}…</span></div>)}
                       </div>
                     );
                   })}
