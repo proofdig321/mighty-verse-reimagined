@@ -17,14 +17,14 @@ async function getData(): Promise<ParticipantItem[]> {
   const { data: participants } = await svc
     .from("participant")
     .select("participant_id")
-    .eq("active", true);
+    .eq("status", "active");
 
   if (!participants?.length) return [];
 
   const ids = participants.map((p) => p.participant_id);
 
   const [{ data: roles }, { data: attrEntries }] = await Promise.all([
-    svc.from("participant_role").select("participant_id, role_type").in("participant_id", ids).eq("active", true),
+    svc.from("participant_role").select("participant_id, role_type").in("participant_id", ids),
     svc.from("attribution_entry").select("participant_id, contribution_description").in("participant_id", ids).eq("public", true),
   ]);
 
