@@ -6,6 +6,15 @@ import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  api, responseData, shortId, operatorError,
+  WORK_TYPE_LABELS, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS,
+  getWorkStatus, getJourneySteps, getNextAction,
+} from "../_shared/authority-utils";
+import {
+  WorkJourney, PresentationPanel, ProjectionPresentationPanel,
+  RealizationPanel, CreateExperiencePanel,
+} from "../_shared/authority-panels";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -31,90 +40,7 @@ type Props = {
   participants: Participant[];
 };
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const WORK_TYPE_LABELS: Record<string, string> = {
-  "universe": "Universe", "creative-moment": "Creative Moment", "mural": "Mural",
-  "scene": "Scene", "interpretation": "Interpretation", "other": "Other",
-};
-const EXPERIENCE_TYPE_LABELS: Record<string, string> = {
-  "experiential": "Experiential", "distributional": "Distributional",
-  "archival": "Archival", "other": "Other",
-};
-const PROJECTION_TYPES = ["experiential", "distributional", "archival", "other"] as const;
-
-function shortId(id: string) { return id.slice(0, 8); }
-
-// ─── Status ───────────────────────────────────────────────────────────────────
-
-function getStatus(master: Master, state: State | undefined, projection: Projection | undefined, binding: Binding | undefined, presentation: Presentation, projPres: ProjPresentation | undefined, realizations: Realization[]) {
-  const hasState = !!state;
-  const hasExperience = !!projection;
-  const hasMedia = !!binding;
-  const playable = !!binding?.media_asset?.storage_ref && !binding.media_asset.storage_ref.startsWith("seed:placeholder:");
-  const hasArtwork = !!(presentation?.artwork_asset_id || projPres?.artwork_asset_id);
-  const needsTimelineCheck = master.canonical_type === "scene";
-  const hasTimeline = !needsTimelineCheck || (binding?.start_ms != null && binding?.end_ms != null);
-  const realization = realizations.find(r => r.realization_id === binding?.realization_id || r.master_id === master.master_id);
-  const hasRealization = !!realization;
-  const rightsVerified = !!binding?.media_asset?.rights_holder_ref && !!binding.media_asset.rights_basis;
-  const mediaRequired = master.canonical_type !== "creative-moment";
-  const needs = !hasState ? "Needs authorisation" : !hasExperience ? "Needs experience" : mediaRequired && (!hasMedia || !playable) ? "Needs media" : !hasTimeline ? "Needs timeline" : "Ready";
-  const opNeeds = needs !== "Ready" ? needs : playable && !rightsVerified ? "Needs rights review" : !hasTimeline ? "Needs timeline" : needsTimelineCheck && !hasRealization ? "Needs production version" : "Ready";
-  return { ready: opNeeds === "Ready", needs: opNeeds, hasState, hasExperience, hasMedia, playable, hasArtwork, needsTimeline: !hasTimeline, hasRealization, rightsVerified };
-}
-
-// ─── API helpers ──────────────────────────────────────────────────────────────
-
-async function api(path: string, body?: unknown) {
-  const res = await fetch(path, {
-    method: body ? "POST" : "GET",
-    headers: body ? { "Content-Type": "application/json" } : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const text = await res.text();
-  try { return { ...JSON.parse(text), status: res.status }; }
-  catch { return { error: `HTTP ${res.status}`, status: res.status }; }
-}
-
-async function responseData(res: Response) {
-  const text = await res.text();
-  try { return JSON.parse(text); } catch { return { error: `HTTP ${res.status}` }; }
-}
-
-// ─── Panels (inline action surfaces) ─────────────────────────────────────────
-
-function PresentationPanel({ masterId, existing, onDone, onCancel }: { masterId: string; existing: Presentation; onDone: () => void; onCancel: () => void }) {
-  const [title, setTitle] = useState(existing?.title ?? "");
-  const [description, setDescription] = useState(existing?.description ?? "");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  return (
-    <Card><CardContent className="pt-4 space-y-3">
-      <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Presentation</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
-      <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
-      <textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none" />
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
-      <Button size="sm" disabled={busy || !title.trim()} onClick={async () => { setBusy(true); setMsg(null); const r = await api("/api/authority/presentation", { master_id: masterId, title, description: description || null }); setBusy(false); if (r.error) { setMsg(`Error: ${r.error}`); return; } onDone(); }}>Save</Button>
-    </CardContent></Card>
-  );
-}
-
-function ProjectionPresentationPanel({ projectionId, masterId, existing, onDone, onCancel }: { projectionId: string; masterId: string; existing: ProjPresentation | undefined; onDone: () => void; onCancel: () => void }) {
-  const [title, setTitle] = useState(existing?.title ?? "");
-  const [description, setDescription] = useState(existing?.description ?? "");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  return (
-    <Card><CardContent className="pt-4 space-y-3">
-      <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Moment Presentation</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
-      <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
-      <textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none" />
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
-      <Button size="sm" disabled={busy || !title.trim()} onClick={async () => { setBusy(true); setMsg(null); const r = await api("/api/authority/projection-presentation", { projection_id: projectionId, master_id: masterId, title, description: description || null }); setBusy(false); if (r.error) { setMsg(`Error: ${r.error}`); return; } onDone(); }}>Save</Button>
-    </CardContent></Card>
-  );
-}
+// ─── AttachVideoPanel (contextual — dashboard version has full staged UX) ─────
 
 function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { projId: string; masterId: string; workTitle: string; onDone: () => void; onCancel: () => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -159,12 +85,14 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { p
           setMsg("Video attached.");
           onDone();
         } catch (err) {
-          setMsg(`Error: ${err instanceof Error ? err.message : "Upload failed"}`);
+          setMsg(operatorError(err instanceof Error ? err.message : err, { workTitle, operation: "Attach video" }));
         } finally { setBusy(false); }
       }}>Upload &amp; Attach</Button>
     </CardContent></Card>
   );
 }
+
+// ─── TimelineEditor (contextual — dashboard version has full video player) ────
 
 function TimelineEditor({ binding, masterId, onDone, onCancel }: { binding: Binding; masterId: string; onDone: () => void; onCancel: () => void }) {
   const [startMs, setStartMs] = useState(binding.start_ms ?? 0);
@@ -191,38 +119,6 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: { binding: Bind
   );
 }
 
-function RealizationPanel({ binding, masterId, participants, onDone, onCancel }: { binding: Binding; masterId: string; participants: Participant[]; onDone: () => void; onCancel: () => void }) {
-  const [type, setType] = useState("animated-video");
-  const [rightsHolderRef, setRightsHolderRef] = useState("");
-  const [rightsBasis, setRightsBasis] = useState("");
-  const [notes, setNotes] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  return (
-    <Card><CardContent className="pt-4 space-y-3">
-      <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Record realization</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
-      <select value={type} onChange={e => setType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
-        <option value="animated-video">Animated video</option><option value="music-video">Music video</option><option value="original-recording">Original recording</option><option value="visualisation">Visualisation</option><option value="other">Other</option>
-      </select>
-      <select value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
-        <option value="">Select rights owner</option>{participants.map(p => <option key={p.participant_id} value={p.participant_id}>{p.label}</option>)}
-      </select>
-      <input value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} placeholder="Rights basis" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
-      <textarea value={notes} onChange={e => setNotes(e.target.value)} placeholder="Production notes" disabled={busy} rows={2} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
-      {msg && <p className="text-destructive text-sm">{msg}</p>}
-      <Button size="sm" disabled={busy || !rightsHolderRef || !rightsBasis} onClick={async () => {
-        setBusy(true); setMsg(null);
-        const created = await api("/api/authority/media-realization", { master_id: masterId, realization_type: type, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis, production_notes: notes || null });
-        if (created.error) { setBusy(false); setMsg(`Error: ${created.error}`); return; }
-        const bound = await fetch("/api/authority/media-realization/bind", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, realization_id: created.realization_id }) }).then(responseData);
-        setBusy(false);
-        if (bound.error) { setMsg(`Error: ${bound.error}`); return; }
-        onDone();
-      }}>Record and associate</Button>
-    </CardContent></Card>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AuthorityWorkClient({
@@ -231,7 +127,6 @@ export default function AuthorityWorkClient({
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
-  const [expType, setExpType] = useState("experiential");
 
   // Panel state
   const [attachingProjId, setAttachingProjId] = useState<string | null>(null);
@@ -248,35 +143,21 @@ export default function AuthorityWorkClient({
   const projection = projections[0];
   const binding = projection ? bindings.find(b => b.projection_id === projection.projection_id) : undefined;
   const projPres = projection ? projectionPresentations.find(p => p.projection_id === projection.projection_id) : undefined;
-  const status = getStatus(master, state, projection, binding, presentation, projPres, realizations);
+  const status = getWorkStatus(master, state, projection, binding, presentation, projPres, realizations, master.master_id);
 
   const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
   const title = presentation?.title ?? projPres?.title ?? typeLabel;
   const statusLabel = status.ready ? "Ready to publish" : status.needs;
+  const journey = getJourneySteps(master, status);
+  const nextStep = getNextAction(master, status);
 
   async function act(label: string, path: string, body: unknown) {
     setBusy(true); setMsg(null);
     const d = await api(path, body);
     setBusy(false);
-    if (d.error) { setMsg(`Error: ${d.error}`); return; }
+    if (d.error) { setMsg(operatorError(d.error, { workTitle: title, operation: label })); return; }
     setMsg(`${label} succeeded. Refresh to see updated state.`);
   }
-
-  // Journey steps
-  const realizationRequired = master.canonical_type === "scene";
-  const mediaRequired = master.canonical_type !== "creative-moment";
-  const rightsState = !status.playable ? "not-applicable" : status.rightsVerified ? "complete" : "blocked";
-  const journey: { label: string; state: "complete" | "current" | "blocked" | "optional" | "not-applicable" }[] = [
-    { label: "Work", state: "complete" },
-    { label: "Authorised", state: status.hasState ? "complete" : "current" },
-    { label: "Experience", state: status.hasExperience ? "complete" : status.hasState ? "current" : "not-applicable" },
-    { label: "Media", state: !mediaRequired ? "not-applicable" : status.playable ? "complete" : status.hasExperience ? "current" : "not-applicable" },
-    { label: "Rights", state: rightsState },
-    { label: "Artwork", state: status.hasArtwork ? "complete" : "optional" },
-    { label: "Timeline", state: master.canonical_type !== "scene" ? "not-applicable" : status.needsTimeline ? status.hasMedia ? "current" : "not-applicable" : "complete" },
-    { label: "Production version", state: !realizationRequired ? "not-applicable" : status.hasRealization ? "complete" : status.playable ? "current" : "not-applicable" },
-    { label: "Ready", state: status.ready ? "complete" : "current" },
-  ];
 
   // Active panel — only one open at a time
   if (presentingMaster) {
@@ -310,7 +191,7 @@ export default function AuthorityWorkClient({
   if (editingRealizationBindingId && binding) {
     return (
       <WorkDetailShell title={title} typeLabel={typeLabel}>
-        <RealizationPanel binding={binding} masterId={master.master_id} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} />
+        <RealizationPanel bindingId={binding.binding_id} masterId={master.master_id} workTitle={title} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} />
       </WorkDetailShell>
     );
   }
@@ -348,19 +229,8 @@ export default function AuthorityWorkClient({
         </div>
 
         {/* Publishing journey */}
-        <Card className="border-0 shadow-sm"><CardContent className="space-y-2 pt-4">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Publishing journey</p>
-          <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
-            {journey.map((step, i) => (
-              <div key={step.label} className="flex items-center gap-1">
-                {i > 0 && <span className="px-0.5 text-muted-foreground/50">→</span>}
-                <span className={`text-xs ${step.state === "complete" ? "text-foreground" : step.state === "blocked" ? "font-medium text-destructive" : step.state === "current" ? "font-medium text-foreground" : "text-muted-foreground/60"}`}>
-                  {step.state === "complete" ? "✓ " : step.state === "blocked" ? "! " : step.state === "not-applicable" ? "— " : step.state === "optional" ? "· " : "○ "}{step.label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </CardContent></Card>
+        <WorkJourney steps={journey} />
+        {!status.ready && <p className="text-xs text-muted-foreground -mt-4"><span className="font-medium text-foreground">Next step:</span> {nextStep}</p>}
 
         {/* Overview / Media / Presentation cards */}
         <div className="grid gap-3 sm:grid-cols-3">
@@ -383,17 +253,11 @@ export default function AuthorityWorkClient({
         </div>
 
         {/* Contextual actions */}
+        {status.hasState && !status.hasExperience && state && (
+          <CreateExperiencePanel stateId={state.canonical_state_id} masterId={master.master_id} busy={busy} onCreate={(stateId, masterId, type) => act("Create Experience", "/api/authority/projections", { canonical_state_id: stateId, master_id: masterId, projection_type: type })} />
+        )}
+
         <div className="flex flex-wrap gap-2">
-          {status.hasState && !status.hasExperience && (
-            <div className="flex items-center gap-2">
-              <select value={expType} onChange={e => setExpType(e.target.value)} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
-                {PROJECTION_TYPES.map(t => <option key={t} value={t}>{EXPERIENCE_TYPE_LABELS[t]}</option>)}
-              </select>
-              <Button size="sm" disabled={busy} onClick={() => act("Create Experience", "/api/authority/projections", { canonical_state_id: state!.canonical_state_id, master_id: master.master_id, projection_type: expType })}>
-                Create Experience
-              </Button>
-            </div>
-          )}
           {status.hasExperience && (
             <button type="button" onClick={() => setPresentingProjId(projection!.projection_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
               {projPres ? "Edit moment title" : "Set moment title"}
@@ -430,7 +294,7 @@ export default function AuthorityWorkClient({
                 setBusy(true); setMsg(null);
                 const d = await api("/api/authority/media/rights", { binding_id: binding.binding_id, master_id: master.master_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis });
                 setBusy(false);
-                if (d.error) { setMsg(`Error: ${d.error}`); return; }
+                if (d.error) { setMsg(operatorError(d.error, { workTitle: title, operation: "Rights update" })); return; }
                 setEditingRights(false);
                 setMsg("Rights updated. Refresh to see updated state.");
               }}>Save rights</Button>
@@ -469,7 +333,6 @@ export default function AuthorityWorkClient({
 function WorkDetailShell({ title, typeLabel, children }: { title: string; typeLabel: string; children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-muted/30">
-      {/* Top bar */}
       <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-2 text-foreground shadow-sm">
         <div className="mx-auto flex max-w-[1500px] items-baseline gap-3 text-sm">
           <span className="font-semibold">{title}</span>
@@ -478,11 +341,7 @@ function WorkDetailShell({ title, typeLabel, children }: { title: string; typeLa
         </div>
       </div>
       <div className="mx-auto w-full max-w-[1500px] px-4 pt-16 pb-12 sm:px-6 lg:px-10">
-        {/* Back navigation */}
-        <Link
-          href="/authority"
-          className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8"
-        >
+        <Link href="/authority" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
           <ChevronRight size={14} className="rotate-180" />
           <span>Catalogue</span>
         </Link>
