@@ -5,7 +5,7 @@ import Link from "next/link";
 import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import ArtworkFrame from "@/components/artwork-frame";
-import Nav from "@/components/nav";
+import PageTopNav from "@/components/page-top-nav";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -18,9 +18,9 @@ export default async function HomePage() {
   const authored = universes.filter((w: DiscoveryUniverse) => !!w.title);
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <Nav />
-      <main className="flex-1 overflow-y-auto">
+    <div className="flex flex-col min-h-screen bg-background">
+      <PageTopNav />
+      <main className="flex-1">
 
       {/* Hero */}
       <section className="border-b border-border">
