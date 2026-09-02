@@ -2,24 +2,16 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Activity, Archive, BarChart3, Database, LayoutDashboard, Menu, ShieldCheck, Upload, X } from "lucide-react";
+import { Film, LayoutDashboard, Menu, ShieldCheck, Users, X } from "lucide-react";
 
 const NAV_GROUPS = [
   {
     label: "Workspace",
     links: [
-      { label: "Dashboard",  href: "/authority",            icon: LayoutDashboard },
-      { label: "Content",    href: "/authority/content",    icon: Archive },
-      { label: "Production", href: "/authority/production", icon: Activity },
-      { label: "Publishing", href: "/authority/publishing", icon: BarChart3 },
-      { label: "Rights",     href: "/authority/rights",     icon: ShieldCheck },
-    ],
-  },
-  {
-    label: "Tools",
-    links: [
-      { label: "Media intake",      href: "/authority/media",     icon: Upload },
-      { label: "Technical details", href: "/authority#canonical", icon: Database },
+      { label: "Dashboard",       href: "/authority",                icon: LayoutDashboard },
+      { label: "Media Gallery",   href: "/authority/media",          icon: Film },
+      { label: "Participants",    href: "/authority/participants",    icon: Users },
+      { label: "Proof of Rights", href: "/authority/proof-of-rights", icon: ShieldCheck },
     ],
   },
 ] as const;
@@ -29,7 +21,6 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   const pathname = usePathname();
 
   function isActive(href: string) {
-    if (href.includes("#")) return pathname === "/authority";
     if (href === "/authority") return pathname === "/authority";
     return pathname === href || pathname.startsWith(href + "/");
   }
@@ -59,8 +50,8 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-5 space-y-6 overflow-y-auto">
-          {NAV_GROUPS.map((group, gi) => (
+        <nav className="flex-1 px-3 py-5 overflow-y-auto">
+          {NAV_GROUPS.map((group) => (
             <div key={group.label}>
               <p className="mb-1.5 px-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-muted-foreground/60">
                 {group.label}
@@ -73,14 +64,14 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
                       key={label}
                       href={href}
                       onClick={() => setMobileNav(false)}
-                      className={`group flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+                      className={`group relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
                         active
                           ? "bg-accent text-foreground font-medium"
                           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                       }`}
                     >
                       {active && (
-                        <span className="absolute left-3 h-4 w-0.5 rounded-full bg-accent-mv" style={{ marginLeft: "-0.75rem" }} />
+                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-mv" />
                       )}
                       <Icon size={15} strokeWidth={1.5} className={active ? "text-accent-mv" : "text-muted-foreground/60 group-hover:text-muted-foreground"} />
                       {label}
@@ -88,7 +79,6 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
                   );
                 })}
               </div>
-              {gi === 0 && <div className="mt-5 border-t border-border" />}
             </div>
           ))}
         </nav>

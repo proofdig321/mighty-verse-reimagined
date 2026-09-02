@@ -208,15 +208,21 @@ export default function AuthorityClient() {
 
       <Separator className="opacity-30" />
 
-      {/* ── Content link ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Content</p>
-          <p className="mt-1 text-sm text-muted-foreground">{operationalRecords.length} works in the operational catalogue.</p>
-        </div>
-        <a href="/authority/content" className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors">
-          View catalogue <ArrowRight size={13} />
-        </a>
+      {/* ── Module handoffs ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-px sm:grid-cols-3 rounded-lg overflow-hidden border border-border bg-border">
+        {[
+          { label: "Media Gallery", sub: "Audio and video assets", href: "/authority/media" },
+          { label: "Participants", sub: "People and roles", href: "/authority/participants" },
+          { label: "Proof of Rights", sub: "Rights and provenance", href: "/authority/proof-of-rights" },
+        ].map(({ label, sub, href }) => (
+          <a key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground/60">{sub}</p>
+            </div>
+            <ArrowRight size={13} className="text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
+          </a>
+        ))}
       </div>
 
       {/* ── Canonical record ─────────────────────────────────────────────────── */}
