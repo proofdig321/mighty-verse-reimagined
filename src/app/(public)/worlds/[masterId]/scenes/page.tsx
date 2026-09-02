@@ -78,7 +78,7 @@ export default async function UniverseScenesPage({
     <main className="min-h-screen bg-background">
       <PageTopNav activePath="/scenes" />
       <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div className="space-y-1">
+        <div className="space-y-3">
           <Link
             href={`/worlds/${masterId}`}
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"

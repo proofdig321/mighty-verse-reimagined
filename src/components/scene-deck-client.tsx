@@ -50,15 +50,27 @@ export default function SceneDeckClient({ scenes }: Props) {
       </div>
 
       {gridView ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-          {order.map((s) => (
-            <SceneCard key={s.master_id} scene={s} selected={selected === s.master_id} onSelect={setSelected} />
+        <div className="scene-deck">
+          {order.map((s, i) => (
+            <SceneCard
+              key={s.master_id}
+              scene={s}
+              index={i}
+              selected={selected === s.master_id}
+              onSelect={setSelected}
+            />
           ))}
         </div>
       ) : (
-        <div className="flex gap-3 overflow-x-auto pb-4 -mx-1 px-1">
-          {order.map((s) => (
-            <SceneCard key={s.master_id} scene={s} selected={selected === s.master_id} onSelect={setSelected} />
+        <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
+          {order.map((s, i) => (
+            <SceneCard
+              key={s.master_id}
+              scene={s}
+              index={i}
+              selected={selected === s.master_id}
+              onSelect={setSelected}
+            />
           ))}
         </div>
       )}
@@ -82,33 +94,27 @@ export default function SceneDeckClient({ scenes }: Props) {
 
 function SceneCard({
   scene,
+  index,
   selected,
   onSelect,
 }: {
   scene: SceneItem;
+  index: number;
   selected: boolean;
   onSelect: (id: string) => void;
 }) {
+  const cardClass = `scene-deck-card scene-deck-card-${index % 5}`;
+
   const inner = (
     <div
       onClick={() => onSelect(scene.master_id)}
-      className="shrink-0 w-32 cursor-pointer"
+      className={`${cardClass} cursor-pointer`}
+      style={selected ? { borderColor: "var(--accent-mv-gold)", boxShadow: `0 0 16px var(--accent-mv-gold)` } : undefined}
     >
-      <div
-        className="w-32 h-48 rounded-xl border-2 flex flex-col items-center justify-center p-3 transition-all"
-        style={{
-          background: "var(--card)",
-          borderColor: selected ? "var(--accent-mv-gold)" : "var(--border)",
-          boxShadow: selected ? `0 0 12px var(--accent-mv-gold)` : undefined,
-        }}
-      >
-        <div
-          className="w-10 h-10 rounded-full flex items-center justify-center mb-3"
-          style={{ background: "var(--accent-mv)" }}
-        >
-          <span className="text-white text-sm">◈</span>
-        </div>
-        <p className="text-xs font-medium text-foreground text-center leading-tight line-clamp-3">
+      <div className="scene-deck-lines" />
+      <div className="scene-deck-mark">◈</div>
+      <div className="absolute bottom-0 inset-x-0 p-4">
+        <p className="text-xs font-medium text-foreground text-center leading-tight line-clamp-3 relative z-10">
           {scene.title ?? "Scene"}
         </p>
       </div>
@@ -117,10 +123,10 @@ function SceneCard({
 
   if (scene.projection_id) {
     return (
-      <Link href={`/moments/${scene.projection_id}`} className="shrink-0">
+      <Link href={`/moments/${scene.projection_id}`} className="shrink-0 block">
         {inner}
       </Link>
     );
   }
-  return inner;
+  return <div className="shrink-0">{inner}</div>;
 }

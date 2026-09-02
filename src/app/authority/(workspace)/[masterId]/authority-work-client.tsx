@@ -198,7 +198,7 @@ export default function AuthorityWorkClient({
 
   return (
     <div className="space-y-6">
-      <Link href="/authority" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+      <Link href="/authority" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
         <ChevronRight size={14} className="rotate-180" />
         <span>Catalogue</span>
       </Link>
@@ -222,9 +222,9 @@ export default function AuthorityWorkClient({
         </div>
 
         {/* Status tiles */}
-        <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {([["Identity", status.hasState], ["Rights", status.rightsVerified], ["Experience", status.hasExperience], ["Media", status.playable], ["Artwork", status.hasArtwork], ["Timeline", !status.needsTimeline]] as [string, boolean][]).map(([label, complete]) => (
-            <div key={label} className={`rounded-md border p-3 ${complete ? "border-accent-mv/50 bg-accent-mv/10" : "border-border"}`}>
+            <div key={label} className={`rounded-md border p-4 ${complete ? "border-accent-mv/50 bg-accent-mv/10" : "border-border"}`}>
               <div className={`mb-2 h-1.5 rounded-full ${complete ? "bg-accent-mv" : "bg-muted"}`} />
               <p className="text-xs font-medium">{label}</p>
               <p className="mt-1 text-[10px] text-muted-foreground">{complete ? "Complete" : "Next"}</p>
@@ -238,18 +238,18 @@ export default function AuthorityWorkClient({
 
         {/* Overview / Media / Presentation cards */}
         <div className="grid gap-3 sm:grid-cols-3">
-          <Card className="border-0 shadow-sm"><CardContent className="space-y-2 pt-4">
+          <Card className="border-0 shadow-sm"><CardContent className="space-y-3 pt-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Overview</p>
             <p className="text-sm">{presentation?.description ?? "No description has been added yet."}</p>
           </CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="space-y-2 pt-4">
+          <Card className="border-0 shadow-sm"><CardContent className="space-y-3 pt-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Media</p>
             <p className="text-sm">{status.playable ? "Playable media attached" : "No playable media attached"}</p>
             <Button size="sm" variant="outline" disabled={!projection} onClick={() => { if (projection) setAttachingProjId(projection.projection_id); }}>
               {status.playable ? "Replace media" : "Attach media"}
             </Button>
           </CardContent></Card>
-          <Card className="border-0 shadow-sm"><CardContent className="space-y-2 pt-4">
+          <Card className="border-0 shadow-sm"><CardContent className="space-y-3 pt-5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Presentation</p>
             <p className="text-sm">{status.hasArtwork ? "Artwork ready" : "Artwork not available"}</p>
             <Button size="sm" variant="outline" onClick={() => setPresentingMaster(true)}>Edit artwork &amp; title</Button>

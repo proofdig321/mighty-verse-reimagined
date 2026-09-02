@@ -282,8 +282,8 @@ export default async function MomentPage({
                 { label: "Owner", value: "—" },
                 { label: "Token ID", value: "—" },
               ].map(({ label, value }) => (
-                <div key={label} className="bg-card border border-border rounded-lg px-3 py-2.5">
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-0.5">{label}</p>
+                <div key={label} className="bg-card border border-border rounded-lg px-4 py-3">
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">{label}</p>
                   <p className="text-sm font-medium text-foreground font-mono">{value}</p>
                 </div>
               ))}

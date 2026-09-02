@@ -47,9 +47,9 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
   }
 
   return (
-    <div className="min-h-screen bg-muted/30 pt-12 lg:flex lg:pt-0">
+    <div className="min-h-screen bg-muted/30 pt-14 lg:flex lg:pt-0">
       {/* Top bar */}
-      <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-2 text-foreground shadow-sm lg:pl-72">
+      <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-3 text-foreground shadow-sm lg:pl-72">
         <div className="mx-auto flex max-w-[1500px] items-baseline gap-3 text-sm">
           <span className="font-semibold">Mighty Verse</span>
           <span className="text-muted-foreground">Authority</span>
@@ -72,8 +72,8 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
         </div>
 
         <nav className="space-y-6">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
+          {NAV_GROUPS.map((group, groupIndex) => (
+            <div key={group.label} className={groupIndex > 0 ? "border-t border-border pt-4" : ""}>
               <p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
                 {group.label}
               </p>
@@ -117,7 +117,7 @@ export default function AuthorityShell({ children, scopeType, pageLabel }: Props
             <Menu size={20} />
           </button>
         </div>
-        <main className="mx-auto w-full max-w-[1500px] flex-1 space-y-8 p-4 sm:p-6 lg:px-10">
+        <main className="mx-auto w-full max-w-[1500px] flex-1 space-y-8 p-4 sm:p-6 lg:px-10 lg:pt-8">
           {children}
         </main>
       </div>
