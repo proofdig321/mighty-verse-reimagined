@@ -30,7 +30,7 @@ async function getData(): Promise<MediaItem[]> {
 
   const { data: assets } = await svc
     .from("media_asset")
-    .select("asset_id, asset_type, storage_ref, title, rights_holder_ref, rights_basis")
+    .select("asset_id, asset_type, storage_ref, rights_holder_ref, rights_basis")
     .in("asset_id", assetIds)
     .not("storage_ref", "like", "seed:placeholder:%");
 
@@ -52,7 +52,7 @@ async function getData(): Promise<MediaItem[]> {
   return assets.map((a) => ({
     asset_id: a.asset_id,
     asset_type: a.asset_type ?? null,
-    title: a.title ?? null,
+    title: null,
     storage_ref: a.storage_ref ?? null,
     rights_holder_ref: a.rights_holder_ref ?? null,
     rights_basis: a.rights_basis ?? null,
