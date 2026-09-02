@@ -84,7 +84,7 @@ export default async function AuthorityWorkPage({
       states={states ?? []}
       projections={projections ?? []}
       bindings={(bindings ?? []) as never}
-      presentation={presentations ?? null}
+      presentation={(presentations ?? null) as never}
       projectionPresentations={(projectionPresentations ?? []) as never}
       realizations={realizations ?? []}
       participants={participantList}
