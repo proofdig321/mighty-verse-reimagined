@@ -10,6 +10,11 @@ type MediaItem = {
   asset_id: string;
   asset_type: string | null;
   title: string | null;
+  // storage_ref = Livepeer asset ID — used as playbackId for poster/playback
+  storage_ref: string | null;
+  rights_holder_ref: string | null;
+  rights_basis: string | null;
+  work_title: string | null;
 };
 
 async function getData(): Promise<MediaItem[]> {
@@ -17,7 +22,7 @@ async function getData(): Promise<MediaItem[]> {
 
   const { data: bindings } = await svc
     .from("projection_media_binding")
-    .select("asset_id");
+    .select("asset_id, projection_id");
 
   if (!bindings?.length) return [];
 
@@ -25,14 +30,33 @@ async function getData(): Promise<MediaItem[]> {
 
   const { data: assets } = await svc
     .from("media_asset")
-    .select("asset_id, asset_type, storage_ref, title")
+    .select("asset_id, asset_type, storage_ref, title, rights_holder_ref, rights_basis")
     .in("asset_id", assetIds)
     .not("storage_ref", "like", "seed:placeholder:%");
 
-  return (assets ?? []).map((a) => ({
+  if (!assets?.length) return [];
+
+  // Fetch work titles via projection_presentation
+  const projIds = [...new Set(bindings.map((b) => b.projection_id).filter(Boolean))];
+  const { data: presentations } = projIds.length
+    ? await svc.from("projection_presentation").select("projection_id, title").in("projection_id", projIds)
+    : { data: [] };
+
+  // Build asset_id → work_title map via bindings
+  const assetToWorkTitle = new Map<string, string>();
+  for (const b of bindings) {
+    const pres = (presentations ?? []).find((p) => p.projection_id === b.projection_id);
+    if (pres?.title) assetToWorkTitle.set(b.asset_id, pres.title);
+  }
+
+  return assets.map((a) => ({
     asset_id: a.asset_id,
     asset_type: a.asset_type ?? null,
     title: a.title ?? null,
+    storage_ref: a.storage_ref ?? null,
+    rights_holder_ref: a.rights_holder_ref ?? null,
+    rights_basis: a.rights_basis ?? null,
+    work_title: assetToWorkTitle.get(a.asset_id) ?? null,
   }));
 }
 
