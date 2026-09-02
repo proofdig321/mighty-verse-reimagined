@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Activity, Archive, BarChart3, ChevronRight, Database, FileText, Image, LayoutDashboard, Menu, MoreHorizontal, PlaySquare, Plus, Search, ShieldCheck, Upload, Users, Video, X } from "lucide-react";
+import { Activity, Archive, BarChart3, ChevronRight, Database, FileText, Image, MoreHorizontal, PlaySquare, Plus, Search, ShieldCheck, Upload, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -621,7 +621,6 @@ export default function AuthorityClient() {
   const [editingRealizationMasterId, setEditingRealizationMasterId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const [mobileNav, setMobileNav] = useState(false);
   const [cataloguePage, setCataloguePage] = useState(1);
   const [activeModule, setActiveModule] = useState<"dashboard" | "content" | "production" | "publishing" | "rights" | "media">("dashboard");
   const router = useRouter();
@@ -708,23 +707,43 @@ export default function AuthorityClient() {
   const statusLabel = (record: WorkRecord) => record.status.ready ? "Ready to publish" : record.status.needs;
 
   const overviewMetrics: Array<[string, string, typeof Archive]> = [["Universes", "universe", Archive], ["Murals", "mural", Image], ["Creative Moments", "creative-moment", FileText], ["Scenes", "scene", PlaySquare], ["Registered", "all", Database], ["Authorised", "state", ShieldCheck], ["With Experience", "experience", PlaySquare], ["Playable", "playable", Video], ["Collectible", "collectible", BarChart3], ["Needs attention", "attention", Activity]];
-  const navGroups = [{ label: "Workspace", links: [["Dashboard", "dashboard", LayoutDashboard], ["Content", "content", Archive], ["Production", "production", Activity], ["Publishing", "publishing", BarChart3], ["Rights", "rights", ShieldCheck]] }, { label: "Tools", links: [["Media intake", "media", Upload], ["Technical details", "technical", Database]] }] as const;
+  const MODULE_TABS = [
+    { label: "Dashboard", value: "dashboard" },
+    { label: "Content", value: "content" },
+    { label: "Production", value: "production" },
+    { label: "Publishing", value: "publishing" },
+    { label: "Rights", value: "rights" },
+    { label: "Media", value: "media" },
+  ] as const;
+
   return (
-    <div className="min-h-screen bg-muted/30 pt-12 lg:flex lg:pt-0">
-      <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-2 text-foreground shadow-sm lg:pl-72">
-        <div className="mx-auto flex max-w-[1500px] items-baseline gap-3 text-sm">
-          <span className="font-semibold">Mighty Verse</span>
-          <span className="text-muted-foreground">Authority</span>
-          <span className="text-muted-foreground">{activeModule === "dashboard" ? "Dashboard" : activeModule === "media" ? "Media Library" : activeModule[0].toUpperCase() + activeModule.slice(1)}</span>
+    <div className="space-y-8">
+      <header className="flex items-center justify-between gap-4">
+        <div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mighty Verse</span><ChevronRight size={13} /><span>Authority</span></div>
+          <h1 className="mt-2 text-2xl font-semibold tracking-tight">Dashboard</h1>
+          <p className="mt-0.5 text-xs text-muted-foreground">{authority.scope_type} scope</p>
         </div>
+        <div className="flex items-center gap-2">
+          <div className="hidden items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground md:flex"><Search size={14} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search catalogue..." className="w-40 bg-transparent outline-none placeholder:text-muted-foreground" /></div>
+          <Button size="sm" onClick={() => setShowRegister(true)}><Plus size={14} /> New work</Button>
+          <button className="rounded-md border border-border bg-card p-2 text-muted-foreground" aria-label="More actions"><MoreHorizontal size={16} /></button>
+        </div>
+      </header>
+
+      {/* Module tabs */}
+      <div className="flex flex-wrap gap-1 border-b border-border pb-0">
+        {MODULE_TABS.map(({ label, value }) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => { if (value === "media") { setActiveModule("media"); setShowIntake(false); } else setActiveModule(value as typeof activeModule); }}
+            className={`px-3 py-2 text-xs border-b-2 -mb-px transition-colors ${activeModule === value ? "border-foreground font-medium text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+          >
+            {label}
+          </button>
+        ))}
       </div>
-      <aside className={`${mobileNav ? "block" : "hidden"} fixed inset-y-0 left-0 z-20 w-64 border-r border-border bg-card p-5 lg:static lg:block lg:min-h-screen`}>
-        <div className="mb-8 flex items-start justify-between"><div><p className="text-sm font-semibold tracking-tight">Mighty Verse</p><p className="mt-1 text-xs text-muted-foreground">Authority Console</p></div><button className="lg:hidden" onClick={() => setMobileNav(false)} aria-label="Close navigation"><X size={16} /></button></div>
-        <nav className="space-y-6">{navGroups.map(group => <div key={group.label}><p className="mb-2 px-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</p><div className="space-y-0.5">{group.links.map(([label, target, Icon]) => <button key={label} type="button" onClick={() => { if (target === "media") { setActiveModule("media"); setShowIntake(false); } else if (target === "technical") document.getElementById("canonical")?.scrollIntoView({ behavior: "smooth" }); else setActiveModule(target as typeof activeModule); setMobileNav(false); }} className={`flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-xs ${activeModule === target ? "bg-muted font-medium text-foreground" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}><Icon size={14} />{label}</button>)}</div></div>)}</nav>
-        <div className="mt-10 border-t border-border pt-4"><div className="flex items-center gap-2 px-2 text-xs text-muted-foreground"><Users size={14} />{authority.scope_type} scope</div></div>
-      </aside>
-      <main className="mx-auto w-full max-w-[1500px] flex-1 space-y-8 p-4 sm:p-6 lg:px-10">
-        <header className="flex items-center justify-between gap-4"><div className="flex items-center gap-3"><button className="lg:hidden" onClick={() => setMobileNav(true)} aria-label="Open navigation"><Menu size={20} /></button><div><div className="flex items-center gap-2 text-xs text-muted-foreground"><span>Mighty Verse</span><ChevronRight size={13} /><span>Authority</span></div><h1 className="mt-2 text-2xl font-semibold tracking-tight">Dashboard</h1></div></div><div className="flex items-center gap-2"><div className="hidden items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs text-muted-foreground md:flex"><Search size={14} /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search catalogue..." className="w-40 bg-transparent outline-none placeholder:text-muted-foreground" /></div><Button size="sm" onClick={() => setShowRegister(true)}><Plus size={14} /> New work</Button><button className="rounded-md border border-border bg-card p-2 text-muted-foreground" aria-label="More actions"><MoreHorizontal size={16} /></button></div></header>
 
       {activeModule === "dashboard" && <section id="attention" className="grid gap-5 xl:grid-cols-[1.45fr_1fr]">
         <Card className="border-0 shadow-sm"><CardContent className="space-y-4 pt-5"><div className="flex items-start justify-between"><div><h2 className="text-base font-semibold">Needs attention</h2><p className="mt-1 text-sm text-muted-foreground">The next useful action for incomplete work.</p></div><Badge variant="outline">{attention.length} items</Badge></div>{attention.length === 0 ? <p className="border-t border-border pt-4 text-sm text-muted-foreground">Everything in the catalogue is ready for review.</p> : <div className="divide-y divide-border">{attention.slice(0, 6).map((item, index) => <div key={`${item.record.master.master_id}-${item.label}-${index}`} className="flex items-center justify-between gap-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{titleFor(item.record)}</p><div className="mt-1 flex flex-wrap items-center gap-2"><Badge variant="outline">{WORK_TYPE_LABELS[item.record.master.canonical_type]}</Badge><span className="text-xs text-muted-foreground">{item.label}</span></div><p className="mt-1 text-xs text-muted-foreground">{item.detail}</p></div><Button size="sm" variant="outline" onClick={() => router.push(`/authority/${item.record.master.master_id}`)}>{item.action}</Button></div>)}</div>}</CardContent></Card>
@@ -736,221 +755,64 @@ export default function AuthorityClient() {
         {mediaAssets.length === 0 ? <p className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">No media assets are available.</p> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{mediaAssets.map(asset => { const linkedWork = operationalRecords.find(record => record.master.master_id === asset.master_id); const mediaTitle = asset.title ?? linkedWork ? titleFor(linkedWork!) : "Existing media"; const playable = !asset.storage_ref.startsWith("seed:placeholder:"); return <Card key={asset.asset_id} size="sm"><CardContent className="space-y-3 pt-4">{playable ? <MediaVisual playbackId={asset.storage_ref} title={mediaTitle} /> : <MediaVisual title={mediaTitle} />}</CardContent><CardContent className="space-y-1 pb-4"><p className="font-medium">{mediaTitle}</p><p className="text-xs text-muted-foreground">{asset.asset_type}{asset.duration_ms ? ` · ${Math.round(asset.duration_ms / 1000)}s` : ""}</p><p className="text-xs text-muted-foreground">{playable ? "Playable" : "Processing"}{linkedWork ? ` · ${titleFor(linkedWork)}` : " · Not connected to a work"}</p></CardContent></Card>; })}</div>}
       </section>}
 
-      <section id="catalogue" className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-semibold">Catalogue</h2><p className="mt-1 text-sm text-muted-foreground">{matchingRecords.length ? `Showing ${(currentCataloguePage - 1) * cataloguePageSize + 1}–${Math.min(currentCataloguePage * cataloguePageSize, matchingRecords.length)} of ${matchingRecords.length} works` : "No works match this search."}</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:hidden"><Search size={14} /><input value={query} onChange={e => { setQuery(e.target.value); setCataloguePage(1); }} placeholder="Search..." className="w-28 bg-transparent outline-none" /></div><select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCataloguePage(1); }} className="h-8 rounded-md border border-border bg-card px-2 text-xs"><option value="all">All types</option>{Object.entries(WORK_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button size="sm" variant="outline" onClick={() => setShowIntake(true)}><Upload size={14} /> Media intake</Button></div></div><div className="overflow-x-auto rounded-lg border border-border bg-card"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Work</th><th className="px-4 py-3 font-medium">Type</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Media</th><th className="px-4 py-3 font-medium">Experience</th><th className="px-4 py-3 font-medium">Rights</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-border">{visibleRecords.map(record => <tr key={record.master.master_id} className="cursor-pointer hover:bg-muted/30" onClick={() => router.push(`/authority/${record.master.master_id}`)}><td className="px-4 py-3 font-medium">{titleFor(record)}</td><td className="px-4 py-3 text-muted-foreground">{WORK_TYPE_LABELS[record.master.canonical_type]}</td><td className="px-4 py-3"><Badge variant={record.status.ready ? "secondary" : "outline"}>{statusLabel(record)}</Badge></td><td className="px-4 py-3 text-muted-foreground">{record.status.playable ? "Playable" : record.status.hasMedia ? "Processing" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.hasExperience ? "Created" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.rightsVerified ? "Verified" : "Review"}</td><td className="px-4 py-3 text-right"><ChevronRight size={16} className="inline text-muted-foreground" /></td></tr>)}</tbody></table>{visibleRecords.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No works match this search.</p>}</div>{cataloguePageCount > 1 && <div className="flex items-center justify-between"><Button size="sm" variant="outline" disabled={currentCataloguePage === 1} onClick={() => setCataloguePage(page => Math.max(1, page - 1))}>Previous</Button><span className="text-xs text-muted-foreground">Page {currentCataloguePage} of {cataloguePageCount}</span><Button size="sm" variant="outline" disabled={currentCataloguePage === cataloguePageCount} onClick={() => setCataloguePage(page => Math.min(cataloguePageCount, page + 1))}>Next</Button></div>}</section>
-      <div className="hidden">
-      {/* Header */}
-      <section id="overview" className="space-y-5"><div><p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Catalogue pulse</p><p className="mt-1 text-sm text-muted-foreground">A live view of what exists and what is ready for publishing.</p></div><div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-5">{overviewMetrics.map(([label, key, Icon]) => { const count = key === "all" ? workRecords.length : key === "state" ? workRecords.filter(r => r.status.hasState).length : key === "experience" ? workRecords.filter(r => r.status.hasExperience).length : key === "playable" ? workRecords.filter(r => r.status.playable).length : key === "collectible" ? projections.filter(p => p.collectible_designated).length : key === "attention" ? attention.length : workRecords.filter(r => r.master.canonical_type === key).length; return <Card key={label} size="sm"><CardContent className="flex items-center justify-between pt-4"><div><p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">{label}</p><p className="mt-1 text-2xl font-semibold">{count}</p></div><Icon size={18} className="text-muted-foreground" /></CardContent></Card>; })}</div></section>
-
-      <div id="ingestion">
-        <h2 className="text-foreground text-sm font-medium">Ingestion</h2>
-        <p className="text-muted-foreground text-xs">Register and prepare media before canonical publication.</p>
-      </div>
-
-      {msg && (
-        <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>
-      )}
+      <section id="catalogue" className="space-y-4"><div className="flex flex-wrap items-end justify-between gap-3"><div><h2 className="text-lg font-semibold">Catalogue</h2><p className="mt-1 text-sm text-muted-foreground">{matchingRecords.length ? `Showing ${(currentCataloguePage - 1) * cataloguePageSize + 1}\u2013${Math.min(currentCataloguePage * cataloguePageSize, matchingRecords.length)} of ${matchingRecords.length} works` : "No works match this search."}</p></div><div className="flex items-center gap-2"><div className="flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-xs md:hidden"><Search size={14} /><input value={query} onChange={e => { setQuery(e.target.value); setCataloguePage(1); }} placeholder="Search..." className="w-28 bg-transparent outline-none" /></div><select value={typeFilter} onChange={e => { setTypeFilter(e.target.value); setCataloguePage(1); }} className="h-8 rounded-md border border-border bg-card px-2 text-xs"><option value="all">All types</option>{Object.entries(WORK_TYPE_LABELS).map(([value, label]) => <option key={value} value={value}>{label}</option>)}</select><Button size="sm" variant="outline" onClick={() => setShowIntake(true)}><Upload size={14} /> Media intake</Button></div></div><div className="overflow-x-auto rounded-lg border border-border bg-card"><table className="w-full min-w-[760px] text-left text-sm"><thead className="border-b border-border bg-muted/40 text-xs text-muted-foreground"><tr><th className="px-4 py-3 font-medium">Work</th><th className="px-4 py-3 font-medium">Type</th><th className="px-4 py-3 font-medium">Status</th><th className="px-4 py-3 font-medium">Media</th><th className="px-4 py-3 font-medium">Experience</th><th className="px-4 py-3 font-medium">Rights</th><th className="px-4 py-3" /></tr></thead><tbody className="divide-y divide-border">{visibleRecords.map(record => <tr key={record.master.master_id} className="cursor-pointer hover:bg-muted/30" onClick={() => router.push(`/authority/${record.master.master_id}`)}><td className="px-4 py-3 font-medium">{titleFor(record)}</td><td className="px-4 py-3 text-muted-foreground">{WORK_TYPE_LABELS[record.master.canonical_type]}</td><td className="px-4 py-3"><Badge variant={record.status.ready ? "secondary" : "outline"}>{statusLabel(record)}</Badge></td><td className="px-4 py-3 text-muted-foreground">{record.status.playable ? "Playable" : record.status.hasMedia ? "Processing" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.hasExperience ? "Created" : "Missing"}</td><td className="px-4 py-3 text-muted-foreground">{record.status.rightsVerified ? "Verified" : "Review"}</td><td className="px-4 py-3 text-right"><ChevronRight size={16} className="inline text-muted-foreground" /></td></tr>)}</tbody></table>{visibleRecords.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No works match this search.</p>}</div>{cataloguePageCount > 1 && <div className="flex items-center justify-between"><Button size="sm" variant="outline" disabled={currentCataloguePage === 1} onClick={() => setCataloguePage(page => Math.max(1, page - 1))}>Previous</Button><span className="text-xs text-muted-foreground">Page {currentCataloguePage} of {cataloguePageCount}</span><Button size="sm" variant="outline" disabled={currentCataloguePage === cataloguePageCount} onClick={() => setCataloguePage(page => Math.min(cataloguePageCount, page + 1))}>Next</Button></div>}</section>
 
       {/* Register New Work */}
-      <div>
-        {!showIntake ? (
-          <Button size="sm" variant="outline" onClick={() => setShowIntake(true)}>
-            + New Media Intake
-          </Button>
-        ) : (
-          <MediaIntakePanel onDone={async () => { setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />
-        )}
-      </div>
-
-      <div>
-        {!showRegister ? (
-          <Button size="sm" variant="outline" onClick={() => setShowRegister(true)}>
-            + Register New Work
-          </Button>
-        ) : (
-          <Card>
-            <CardContent className="pt-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-foreground text-sm font-medium">Register New Work</span>
-                <button type="button" onClick={() => setShowRegister(false)} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
-              </div>
-              <select
-                value={canonicalType}
-                onChange={e => setCanonicalType(e.target.value)}
-                className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
-              >
-                {CANONICAL_TYPES.map(t => (
-                  <option key={t} value={t}>{WORK_TYPE_LABELS[t]}</option>
-                ))}
-              </select>
-              <Button
-                size="sm"
-                disabled={busy}
-                onClick={async () => {
-                  await act("Register Work", "/api/authority/masters", { canonical_type: canonicalType });
-                  setShowRegister(false);
-                }}
-              >
-                Register Work
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-      </div>
-
-      <div id="catalogue" className="flex items-center justify-between"><h2 className="text-foreground text-sm font-medium">Catalogue</h2><span className="text-muted-foreground text-xs">{masters.length} works</span></div>
-
-      {/* Work cards */}
-      {masters.length === 0 && (
-        <p className="text-muted-foreground text-sm">No works registered yet. Register your first work above.</p>
+      {showRegister && (
+        <Card>
+          <CardContent className="pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-foreground text-sm font-medium">Register New Work</span>
+              <button type="button" onClick={() => setShowRegister(false)} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
+            </div>
+            <select value={canonicalType} onChange={e => setCanonicalType(e.target.value)} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+              {CANONICAL_TYPES.map(t => <option key={t} value={t}>{WORK_TYPE_LABELS[t]}</option>)}
+            </select>
+            <Button size="sm" disabled={busy} onClick={async () => { await act("Register Work", "/api/authority/masters", { canonical_type: canonicalType }); setShowRegister(false); }}>Register Work</Button>
+          </CardContent>
+        </Card>
       )}
 
-      {orderedRecords.map((record, index) => {
-        const { master, state, projection, binding, presentation, projectionPresentation } = record;
-        const previousType = orderedRecords[index - 1]?.master.canonical_type;
-        const isGroupStart = previousType !== master.canonical_type;
+      {showIntake && <MediaIntakePanel onDone={async () => { setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />}
 
-        // Projection presentation panel open for this projection
-        if (presentingProjId === projection?.projection_id) {
-          return (
-            <div key={master.master_id} className="space-y-2">
-              {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <ProjectionPresentationPanel projectionId={presentingProjId!} masterId={presentingProjMasterId!} existing={projectionPresentation} onDone={async () => { setPresentingProjId(null); setPresentingProjMasterId(null); await load(); }} onCancel={() => { setPresentingProjId(null); setPresentingProjMasterId(null); }} />
-            </div>
-          );
-        }
+      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
 
-        // Presentation panel open for this master
-        if (presentingMasterId === master.master_id) {
-          return (
-            <div key={master.master_id} className="space-y-2">
-              {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <PresentationPanel masterId={master.master_id} existing={presentation} onDone={async () => { setPresentingMasterId(null); await load(); }} onCancel={() => setPresentingMasterId(null)} />
-            </div>
-          );
-        }
-
-        // Attach video panel
-        if (attachingProjId === projection?.projection_id) {
-          return (
-            <div key={master.master_id} className="space-y-2">
-              {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <AttachVideoPanel projId={attachingProjId!} masterId={attachingMasterId!} workTitle={titleFor(record)} onDone={async () => { setAttachingProjId(null); setAttachingMasterId(null); await load(); }} onCancel={() => { setAttachingProjId(null); setAttachingMasterId(null); }} />
-            </div>
-          );
-        }
-
-        if (editingTimelineBindingId === binding?.binding_id) {
-          return (
-            <div key={master.master_id} className="space-y-2">
-              {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <TimelineEditor binding={binding} masterId={editingTimelineMasterId!} onDone={async () => { setEditingTimelineBindingId(null); setEditingTimelineMasterId(null); await load(); }} onCancel={() => { setEditingTimelineBindingId(null); setEditingTimelineMasterId(null); }} />
-            </div>
-          );
-        }
-
-        if (editingRealizationBindingId === binding?.binding_id) {
-          return (
-            <div key={master.master_id} className="space-y-2">
-              {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-              <RealizationPanel bindingId={binding.binding_id} masterId={editingRealizationMasterId!} workTitle={titleFor(record)} participants={participants} onDone={async () => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); await load(); }} onCancel={() => { setEditingRealizationBindingId(null); setEditingRealizationMasterId(null); }} />
-            </div>
-          );
-        }
-
-        return (
-          <div key={master.master_id} className="space-y-2">
-            {isGroupStart && <h3 id={`${master.canonical_type}s`} className="pt-4 text-muted-foreground text-xs font-medium uppercase tracking-widest">{WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type}s</h3>}
-            <WorkCard
-            master={master}
-            state={state}
-            projection={projection}
-            binding={binding}
-            presentation={presentation}
-            projectionPresentation={projectionPresentation}
-            realizations={realizations}
-            busy={busy}
-            onAuthorise={masterId => act("Authorise Work", "/api/authority/states", { master_id: masterId })}
-            onCreateExperience={(stateId, masterId, type) =>
-              act("Create Experience", "/api/authority/projections", { canonical_state_id: stateId, master_id: masterId, projection_type: type })
-            }
-            onAttachVideo={(projId, masterId) => { setAttachingProjId(projId); setAttachingMasterId(masterId); }}
-            onDesignate={(projId, masterId, workTitle) =>
-              act("Collectible setup", "/api/authority/collectibles", { projection_id: projId, master_id: masterId }, { workTitle, mediaTitle: "Attached video" })
-            }
-            onEditPresentation={masterId => setPresentingMasterId(masterId)}
-            onEditProjectionPresentation={(projId, masterId) => { setPresentingProjId(projId); setPresentingProjMasterId(masterId); }}
-            onEditTimeline={(bindingId, masterId) => { setEditingTimelineBindingId(bindingId); setEditingTimelineMasterId(masterId); }}
-            onEditRealization={(bindingId, masterId) => { setEditingRealizationBindingId(bindingId); setEditingRealizationMasterId(masterId); }}
-            />
-          </div>
-        );
-      })}
-
-      <Separator />
-
-      {/* Canonical Record — secondary technical view */}
+      {/* Canonical Record */}
       <details id="canonical" className="group space-y-4">
         <summary className="cursor-pointer list-none text-foreground text-sm font-medium">
           <span className="mr-2 text-muted-foreground group-open:hidden">+</span>
-          <span className="mr-2 text-muted-foreground hidden group-open:inline">−</span>
+          <span className="mr-2 text-muted-foreground hidden group-open:inline">\u2212</span>
           View canonical record
           <span className="block pl-5 text-muted-foreground text-xs font-normal">Technical verification of the canonical chain.</span>
         </summary>
-
         {masters.length === 0 && <p className="text-muted-foreground text-xs">No records yet.</p>}
-
         {masters.map(m => {
           const mStates = states.filter(s => s.master_id === m.master_id);
           const mProjs = projections.filter(p => p.master_id === m.master_id);
           const typeLabel = WORK_TYPE_LABELS[m.canonical_type] ?? m.canonical_type;
           return (
-            <Card key={m.master_id}>
-              <CardContent className="pt-4 space-y-2">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{typeLabel}</Badge>
-                  <span className="text-muted-foreground font-mono text-xs cursor-default" title={m.master_id}>{shortId(m.master_id)}…</span>
+            <Card key={m.master_id}><CardContent className="pt-4 space-y-2">
+              <div className="flex items-center gap-2"><Badge variant="outline">{typeLabel}</Badge><span className="text-muted-foreground font-mono text-xs" title={m.master_id}>{shortId(m.master_id)}\u2026</span></div>
+              {mStates.length === 0 && <p className="text-muted-foreground text-xs pl-4">No authorised state.</p>}
+              {mStates.map(s => (
+                <div key={s.canonical_state_id} className="pl-4 border-l border-border space-y-1">
+                  <div className="flex items-center gap-2"><Badge variant="secondary">v{s.version}</Badge><Badge variant="outline">{s.authorisation_state}</Badge><span className="text-muted-foreground font-mono text-xs" title={s.canonical_state_id}>{shortId(s.canonical_state_id)}\u2026</span></div>
+                  {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).map(p => {
+                    const pBindings = bindings.filter(b => b.projection_id === p.projection_id);
+                    return (
+                      <div key={p.projection_id} className="pl-4 border-l border-border space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap"><Badge>{EXPERIENCE_TYPE_LABELS[p.projection_type] ?? p.projection_type}</Badge>{p.collectible_designated && <Badge variant="secondary">collectible</Badge>}<span className="text-muted-foreground font-mono text-xs" title={p.projection_id}>{shortId(p.projection_id)}\u2026</span></div>
+                        {pBindings.length === 0 && <p className="text-muted-foreground text-xs pl-4">No media.</p>}
+                        {pBindings.map(b => <div key={b.binding_id} className="pl-4 flex items-center gap-2"><Badge variant="outline">{b.binding_type}</Badge><Badge variant="outline">{b.access_level}</Badge><span className="text-muted-foreground font-mono text-xs" title={b.asset_id}>{shortId(b.asset_id)}\u2026</span></div>)}
+                      </div>
+                    );
+                  })}
                 </div>
-                {mStates.length === 0 && <p className="text-muted-foreground text-xs pl-4">No authorised state.</p>}
-                {mStates.map(s => (
-                  <div key={s.canonical_state_id} className="pl-4 border-l border-border space-y-1">
-                    <div className="flex items-center gap-2">
-                      <Badge variant="secondary">v{s.version}</Badge>
-                      <Badge variant="outline">{s.authorisation_state}</Badge>
-                      <span className="text-muted-foreground font-mono text-xs cursor-default" title={s.canonical_state_id}>{shortId(s.canonical_state_id)}…</span>
-                    </div>
-                    {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).map(p => {
-                      const pBindings = bindings.filter(b => b.projection_id === p.projection_id);
-                      const projLabel = EXPERIENCE_TYPE_LABELS[p.projection_type] ?? p.projection_type;
-                      return (
-                        <div key={p.projection_id} className="pl-4 border-l border-border space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge>{projLabel}</Badge>
-                            {p.collectible_designated && <Badge variant="secondary">collectible</Badge>}
-                            <span className="text-muted-foreground font-mono text-xs cursor-default" title={p.projection_id}>{shortId(p.projection_id)}…</span>
-                          </div>
-                          {pBindings.length === 0 && <p className="text-muted-foreground text-xs pl-4">No media.</p>}
-                          {pBindings.map(b => (
-                            <div key={b.binding_id} className="pl-4 flex items-center gap-2">
-                              <Badge variant="outline">{b.binding_type}</Badge>
-                              <Badge variant="outline">{b.access_level}</Badge>
-                              <span className="text-muted-foreground font-mono text-xs cursor-default" title={b.asset_id}>{shortId(b.asset_id)}…</span>
-                            </div>
-                          ))}
-                        </div>
-                      );
-                    })}
-                    {mProjs.filter(p => p.canonical_state_id === s.canonical_state_id).length === 0 && (
-                      <p className="text-muted-foreground text-xs pl-4">No experience.</p>
-                    )}
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+              ))}
+            </CardContent></Card>
           );
         })}
       </details>
-      </div>
-      </main>
     </div>
   );
 }

@@ -48,24 +48,22 @@ export default async function MediaPage() {
   const items = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div>
-          <h1
-            className="text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            Media Gallery
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Images, videos, audio and documents from across the universes.
-          </p>
-        </div>
-        <GalleryFilterClient items={items} />
-        <div className="pt-2">
-          <Button variant="outline">View Full Gallery</Button>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1
+          className="text-3xl font-semibold text-foreground"
+          style={{ fontFamily: "var(--font-display, inherit)" }}
+        >
+          Media Gallery
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">
+          Images, videos, audio and documents from across the universes.
+        </p>
       </div>
-    </main>
+      <GalleryFilterClient items={items} />
+      <div className="pt-2">
+        <Button variant="outline">View Full Gallery</Button>
+      </div>
+    </div>
   );
 }

@@ -48,22 +48,20 @@ export default async function ParticipantsPage() {
   const participants = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
-        <div>
-          <h1
-            className="text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            Creators & Participants
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">The people building the universes.</p>
-        </div>
-        <ParticipantsFilterClient participants={participants} />
-        <div className="pt-2">
-          <Button variant="outline">View All Participants</Button>
-        </div>
+    <div className="space-y-6">
+      <div>
+        <h1
+          className="text-3xl font-semibold text-foreground"
+          style={{ fontFamily: "var(--font-display, inherit)" }}
+        >
+          Creators &amp; Participants
+        </h1>
+        <p className="text-sm text-muted-foreground mt-1">The people building the universes.</p>
       </div>
-    </main>
+      <ParticipantsFilterClient participants={participants} />
+      <div className="pt-2">
+        <Button variant="outline">View All Participants</Button>
+      </div>
+    </div>
   );
 }

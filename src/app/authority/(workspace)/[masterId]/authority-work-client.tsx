@@ -162,42 +162,46 @@ export default function AuthorityWorkClient({
   // Active panel — only one open at a time
   if (presentingMaster) {
     return (
-      <WorkDetailShell title={title} typeLabel={typeLabel}>
+      <div className="space-y-6">
         <PresentationPanel masterId={master.master_id} existing={presentation} onDone={() => { setPresentingMaster(false); window.location.reload(); }} onCancel={() => setPresentingMaster(false)} />
-      </WorkDetailShell>
+      </div>
     );
   }
   if (presentingProjId && projection) {
     return (
-      <WorkDetailShell title={title} typeLabel={typeLabel}>
+      <div className="space-y-6">
         <ProjectionPresentationPanel projectionId={presentingProjId} masterId={master.master_id} existing={projPres} onDone={() => { setPresentingProjId(null); window.location.reload(); }} onCancel={() => setPresentingProjId(null)} />
-      </WorkDetailShell>
+      </div>
     );
   }
   if (attachingProjId && projection) {
     return (
-      <WorkDetailShell title={title} typeLabel={typeLabel}>
+      <div className="space-y-6">
         <AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} />
-      </WorkDetailShell>
+      </div>
     );
   }
   if (editingTimelineBindingId && binding) {
     return (
-      <WorkDetailShell title={title} typeLabel={typeLabel}>
+      <div className="space-y-6">
         <TimelineEditor binding={binding} masterId={master.master_id} onDone={() => { setEditingTimelineBindingId(null); window.location.reload(); }} onCancel={() => setEditingTimelineBindingId(null)} />
-      </WorkDetailShell>
+      </div>
     );
   }
   if (editingRealizationBindingId && binding) {
     return (
-      <WorkDetailShell title={title} typeLabel={typeLabel}>
+      <div className="space-y-6">
         <RealizationPanel bindingId={binding.binding_id} masterId={master.master_id} workTitle={title} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} />
-      </WorkDetailShell>
+      </div>
     );
   }
 
   return (
-    <WorkDetailShell title={title} typeLabel={typeLabel}>
+    <div className="space-y-6">
+      <Link href="/authority" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        <ChevronRight size={14} className="rotate-180" />
+        <span>Catalogue</span>
+      </Link>
       <div className="space-y-6">
 
         {/* Header */}
@@ -323,29 +327,6 @@ export default function AuthorityWorkClient({
           </details>
         </CardContent></Card>
 
-      </div>
-    </WorkDetailShell>
-  );
-}
-
-// ─── Shell ────────────────────────────────────────────────────────────────────
-
-function WorkDetailShell({ title, typeLabel, children }: { title: string; typeLabel: string; children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen bg-muted/30">
-      <div className="fixed inset-x-0 top-0 z-10 border-b border-foreground/10 bg-background px-4 py-2 text-foreground shadow-sm">
-        <div className="mx-auto flex max-w-[1500px] items-baseline gap-3 text-sm">
-          <span className="font-semibold">{title}</span>
-          <span className="text-muted-foreground">{typeLabel}</span>
-          <span className="text-muted-foreground">Authority</span>
-        </div>
-      </div>
-      <div className="mx-auto w-full max-w-[1500px] px-4 pt-16 pb-12 sm:px-6 lg:px-10">
-        <Link href="/authority" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-8">
-          <ChevronRight size={14} className="rotate-180" />
-          <span>Catalogue</span>
-        </Link>
-        {children}
       </div>
     </div>
   );
