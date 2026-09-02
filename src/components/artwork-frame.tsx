@@ -21,7 +21,7 @@ export default function ArtworkFrame({ artworkUrl, alt = "", aspectRatio = "1/1"
         // Deliberate empty state — artwork slot is present but not yet filled
         <div
           className="absolute inset-0 flex items-end p-4"
-          style={{ background: "linear-gradient(135deg, oklch(0.14 0 0) 0%, oklch(0.10 0 0) 100%)" }}
+          style={{ background: "linear-gradient(135deg, oklch(0.16 0.04 280) 0%, oklch(0.09 0.025 280) 100%)" }}
         >
           <span className="text-xs uppercase tracking-widest text-muted-foreground/40 select-none">
             Artwork
