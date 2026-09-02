@@ -20,7 +20,7 @@ export default async function HomePage() {
   return (
     <div className="flex min-h-screen bg-background">
       <Nav />
-      <main className="ml-56 flex-1">
+      <main className="flex-1 overflow-y-auto">
 
       {/* Hero */}
       <section className="border-b border-border">
