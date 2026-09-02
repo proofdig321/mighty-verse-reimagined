@@ -6,6 +6,7 @@ const NAV_LINKS = [
   { href: "/moments", label: "Moments" },
   { href: "/murals", label: "Murals" },
   { href: "/scenes", label: "Scenes" },
+  { href: "/participants", label: "Participants" },
   { href: "/authority/public", label: "Authority" },
   { href: "/about", label: "About" },
 ];

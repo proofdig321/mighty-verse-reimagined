@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import PageTopNav from "@/components/page-top-nav";
 
 type ProvenanceRow = {
   record_id: string;
@@ -42,6 +43,7 @@ export default async function AuthorityPublicPage() {
 
   return (
     <main className="min-h-screen bg-background">
+      <PageTopNav activePath="/authority/public" />
       <div className="mx-auto max-w-5xl px-6 py-10 space-y-10">
 
         <div className="space-y-2">
