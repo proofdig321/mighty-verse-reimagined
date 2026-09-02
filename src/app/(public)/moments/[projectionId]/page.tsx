@@ -238,22 +238,19 @@ export default async function MomentPage({
                 {title}
               </h1>
 
-              {/* Scene reference */}
-              {isScene && muralMasterId && (
+              {/* Scene identity — plain text, no self-link */}
+              {isScene && worldTitle && (
                 <p className="text-sm text-muted-foreground">
-                  Scene:{" "}
-                  <Link href={`/worlds/${muralMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
-                    {muralTitle ?? "Mural"}
-                  </Link>
+                  Scene: {worldTitle}
                 </p>
               )}
 
-              {/* Mural / Universe reference */}
-              {worldTitle && (
+              {/* Mural navigable parent context */}
+              {isScene && muralMasterId && muralTitle && (
                 <p className="text-sm text-muted-foreground">
                   Mural:{" "}
-                  <Link href={`/worlds/${master.master_id}`} className="text-foreground hover:opacity-70 transition-opacity">
-                    {worldTitle}
+                  <Link href={`/worlds/${muralMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
+                    {muralTitle}
                   </Link>
                 </p>
               )}
