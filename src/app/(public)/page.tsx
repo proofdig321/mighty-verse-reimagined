@@ -20,9 +20,9 @@ export default async function HomePage() {
   );
 
   return (
-    <div className="flex flex-col min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/" />
-      <main className="flex-1">
+      <div className="flex-1">
 
         {/* Hero — full-width text, no artwork panel */}
         <section className="border-b border-border">
@@ -91,7 +91,7 @@ export default async function HomePage() {
           )}
         </section>
 
-      </main>
+      </div>
     </div>
   );
 }

@@ -20,7 +20,6 @@ export default function SceneDeckClient({ scenes }: Props) {
   function shuffle() {
     setOrder((prev) => {
       const next = [...prev];
-      // Rotate: move first item to end
       next.push(next.shift()!);
       return next;
     });

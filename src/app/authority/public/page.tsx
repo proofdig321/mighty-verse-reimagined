@@ -1,5 +1,3 @@
-export const dynamic = "force-dynamic";
-
 import PageTopNav from "@/components/page-top-nav";
 import { Button } from "@/components/ui/button";
 

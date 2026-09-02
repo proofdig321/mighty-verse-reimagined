@@ -31,7 +31,6 @@ async function getData(): Promise<ParticipantItem[]> {
   return participants.map((p) => {
     const entry = (attrEntries ?? []).find((e) => e.participant_id === p.participant_id);
     const rawDesc = entry?.contribution_description ?? null;
-    // contribution_description format: "Canonical creator — Golden Shovel" — extract name after em dash
     const display_name = rawDesc?.includes("—")
       ? rawDesc.split("—").pop()?.trim() ?? null
       : rawDesc;

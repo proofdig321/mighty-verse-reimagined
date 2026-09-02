@@ -87,16 +87,26 @@ export default function WorldTabsClient({ masterId, description, murals, moments
       {active === "Scenes" && (
         <div className="space-y-2">
           {murals.length > 0 ? (
-            murals.map((m) => (
-              <MomentCard
-                key={m.master_id}
-                href={`/worlds/${m.master_id}`}
-                title={m.title}
-                typeLabel="Mural"
-                hasMedia={!!m.projection_id}
-                collectible={false}
-              />
-            ))
+            <>
+              {murals.map((m) => (
+                <MomentCard
+                  key={m.master_id}
+                  href={`/worlds/${m.master_id}`}
+                  title={m.title}
+                  typeLabel="Mural"
+                  hasMedia={!!m.projection_id}
+                  collectible={false}
+                />
+              ))}
+              <div className="pt-2">
+                <Link
+                  href={`/worlds/${masterId}/scenes`}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  View Scene Deck →
+                </Link>
+              </div>
+            </>
           ) : (
             <p className="text-sm text-muted-foreground">No scenes yet.</p>
           )}

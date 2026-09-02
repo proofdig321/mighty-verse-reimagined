@@ -218,7 +218,7 @@ export default async function WorldPage({
   if (data.canonical_type === "mural") {
     return (
       <main className="min-h-screen bg-background">
-        <PageTopNav />
+        <PageTopNav activePath="/murals" />
 
         {data.universe_master_id && (
           <div className="mx-auto max-w-7xl px-6 pt-4 pb-2">
@@ -318,8 +318,8 @@ export default async function WorldPage({
           {/* Stats row */}
           <div className="flex flex-wrap items-center gap-6 text-sm">
             <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-semibold text-foreground">{data.scenes.length || "—"}</span>
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">Scenes</span>
+              <span className="text-2xl font-semibold text-foreground">{data.murals.length || "—"}</span>
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">Murals</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="text-2xl font-semibold text-foreground">{data.moments.length || "—"}</span>

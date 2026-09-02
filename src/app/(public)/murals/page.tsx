@@ -59,10 +59,18 @@ export default async function MuralsPage() {
         </div>
 
         <div className="flex gap-3">
-          <select className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-muted-foreground" defaultValue="">
+          <select
+            className="h-8 rounded-md border border-border bg-card px-2.5 text-sm text-muted-foreground appearance-none cursor-default"
+            defaultValue=""
+            disabled
+          >
             <option value="">All Genres</option>
           </select>
-          <select className="h-8 rounded-lg border border-input bg-transparent px-2.5 text-sm text-muted-foreground" defaultValue="recent">
+          <select
+            className="h-8 rounded-md border border-border bg-card px-2.5 text-sm text-muted-foreground appearance-none cursor-default"
+            defaultValue="recent"
+            disabled
+          >
             <option value="recent">Most Recent</option>
           </select>
         </div>

@@ -10,15 +10,6 @@ import { Button } from "@/components/ui/button";
 import ArtworkFrame from "@/components/artwork-frame";
 import PageTopNav from "@/components/page-top-nav";
 
-const TYPE_LABELS: Record<string, string> = {
-  "universe": "Universe",
-  "creative-moment": "Creative Moment",
-  "mural": "Mural",
-  "scene": "Scene",
-  "interpretation": "Interpretation",
-  "other": "Work",
-};
-
 const PROJ_LABELS: Record<string, string> = {
   "experiential": "Experiential",
   "distributional": "Distributional",
