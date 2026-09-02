@@ -120,7 +120,7 @@ export default async function ProofOfRightsPage() {
                     </td>
                     <td className="px-4 py-3">
                       {isVerified
-                        ? <span className="text-xs text-green-400">Verified</span>
+                        ? <span className="text-xs text-green-400">Rights on file</span>
                         : <span className="text-xs text-amber-400">Needs review</span>}
                     </td>
                   </tr>

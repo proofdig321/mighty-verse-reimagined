@@ -199,7 +199,7 @@ export default function AuthorityWorkClient({
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <a href="/authority" className="hover:text-foreground transition-colors">Mighty Verse</a>
         <span className="opacity-30">/</span>
-        <a href="/authority/content" className="hover:text-foreground transition-colors">Authority</a>
+        <a href="/authority" className="hover:text-foreground transition-colors">Authority</a>
         <span className="opacity-30">/</span>
         <span className="text-foreground">{title}</span>
       </div>
