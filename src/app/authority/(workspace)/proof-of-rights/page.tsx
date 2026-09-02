@@ -75,7 +75,7 @@ export default async function ProofOfRightsPage() {
       <div className="grid grid-cols-2 gap-px sm:grid-cols-3 rounded-lg overflow-hidden border border-border bg-border">
         {[
           { label: "Total Assets", value: rows.length },
-          { label: "Rights Verified", value: verified.length },
+          { label: "Rights on File", value: verified.length },
           { label: "Needs Review", value: unverified.length },
         ].map(({ label, value }) => (
           <div key={label} className="bg-card px-5 py-4">
