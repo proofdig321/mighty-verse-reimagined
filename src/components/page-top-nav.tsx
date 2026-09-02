@@ -6,8 +6,8 @@ const NAV_LINKS = [
   { href: "/moments", label: "Moments" },
   { href: "/murals", label: "Murals" },
   { href: "/scenes", label: "Scenes" },
-  { href: "/participants", label: "Participants" },
   { href: "/authority/public", label: "Authority" },
+  { href: "/about", label: "About" },
 ];
 
 type Props = { activePath?: string };
@@ -23,22 +23,26 @@ export default function PageTopNav({ activePath = "" }: Props) {
               <Link
                 key={link.href}
                 href={link.href}
-                className="px-3 py-1.5 text-sm rounded-md transition-colors"
-                style={
+                className={[
+                  "px-3 py-1.5 text-sm transition-colors border-b-2",
                   isActive
-                    ? { color: "var(--accent-mv)", fontWeight: 600 }
-                    : undefined
-                }
+                    ? "text-foreground font-semibold"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                ].join(" ")}
+                style={isActive ? { borderBottomColor: "var(--accent-mv)" } : undefined}
               >
-                <span className={isActive ? "" : "text-muted-foreground hover:text-foreground"}>
-                  {link.label}
-                </span>
+                {link.label}
               </Link>
             );
           })}
         </nav>
         <div className="flex items-center gap-3">
-          <span className="text-muted-foreground text-sm cursor-default select-none">⌕</span>
+          <button
+            aria-label="Search"
+            className="text-muted-foreground hover:text-foreground transition-colors text-base leading-none"
+          >
+            ⌕
+          </button>
           <Link
             href="/auth/sign-in"
             className="px-3 py-1 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-90"

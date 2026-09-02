@@ -1,10 +1,8 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
 import MomentsFilterClient from "@/components/moments-filter-client";
-import { Button } from "@/components/ui/button";
 
 type MomentItem = {
   projection_id: string;
@@ -75,11 +73,6 @@ export default async function MomentsPage() {
           </p>
         </div>
         <MomentsFilterClient moments={moments} />
-        <div className="pt-2">
-          <Link href="/moments">
-            <Button variant="outline">View All Moments</Button>
-          </Link>
-        </div>
       </div>
     </main>
   );

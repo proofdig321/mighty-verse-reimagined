@@ -32,6 +32,9 @@ export default async function UniversesPage() {
           </p>
         </div>
         <UniversesFilterClient universes={universes} />
+        <div className="pt-2">
+          <p className="text-xs text-muted-foreground">{universes.length} universe{universes.length !== 1 ? "s" : ""}</p>
+        </div>
       </div>
     </main>
   );

@@ -1,55 +1,31 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
-import type { WorldData } from "@/app/api/worlds/[masterId]/route";
-import { Separator } from "@/components/ui/separator";
-import MediaHero from "@/components/media-hero";
-import MomentCard from "@/components/moment-card";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import MediaHero from "@/components/media-hero";
 import MediaVisual from "@/components/media-visual";
-import SceneDeck from "@/components/scene-deck";
+import WorldTabsClient from "@/components/world-tabs-client";
+import PageTopNav from "@/components/page-top-nav";
 
-const TYPE_LABELS: Record<string, string> = {
-  "universe": "Universe",
-  "creative-moment": "Creative Moment",
-  "mural": "Mural",
-  "scene": "Scene",
-  "interpretation": "Interpretation",
-  "other": "Work",
-};
-
-type MomentRow = {
-  master_id: string;
-  title: string | null;
-  scene_projection_id: string | null;
-};
-
-type MuralRow = {
-  master_id: string;
-  title: string | null;
-  projection_id: string | null;
-};
-
-type SceneRow = {
-  master_id: string;
-  title: string | null;
-  projection_id: string | null;
-};
+type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
+type MomentRow = { master_id: string; title: string | null; scene_projection_id: string | null };
+type SceneRow = { master_id: string; title: string | null; projection_id: string | null };
 
 type PageData = {
   canonical_type: string;
   master_id: string;
   title: string | null;
   description: string | null;
+  attribution_roles: string[];
   media: ProjectionMedia | null;
   projection_id: string | null;
   canonical_state_id: string | null;
-  // Universe-specific
   murals: MuralRow[];
   moments: MomentRow[];
   scenes: SceneRow[];
-  // Mural-specific
   universe_master_id: string | null;
   universe_title: string | null;
 };
@@ -84,7 +60,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
 
   const { data: master } = await svc
     .from("master")
-    .select("master_id, canonical_type, current_state_id, parent_master_id")
+    .select("master_id, canonical_type, current_state_id, parent_master_id, attribution_ref")
     .eq("master_id", masterId)
     .single();
   if (!master) return null;
@@ -98,23 +74,18 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     .single();
   if (!cs) return null;
 
-  const { data: proj } = await svc
-    .from("projection")
-    .select("projection_id")
-    .eq("canonical_state_id", cs.canonical_state_id)
-    .eq("projection_type", "experiential")
-    .single();
+  const [{ data: proj }, { data: pres }, { data: attrEntries }] = await Promise.all([
+    svc.from("projection").select("projection_id").eq("canonical_state_id", cs.canonical_state_id).eq("projection_type", "experiential").single(),
+    svc.from("work_presentation").select("title, description").eq("master_id", masterId).maybeSingle(),
+    master.attribution_ref
+      ? svc.from("attribution_entry").select("role_type").eq("attribution_id", master.attribution_ref).eq("public", true)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  const { data: pres } = await svc
-    .from("work_presentation")
-    .select("title, description")
-    .eq("master_id", masterId)
-    .maybeSingle();
-
+  const attributionRoles = (attrEntries ?? []).map((e) => e.role_type);
   const media = proj ? await resolveMedia(svc, proj.projection_id) : null;
 
   if (master.canonical_type === "universe") {
-    // Murals (direct children)
     const { data: muralMasters } = await svc
       .from("master")
       .select("master_id")
@@ -136,7 +107,6 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       projection_id: (muralProjs ?? []).find((p) => p.master_id === m.master_id)?.projection_id ?? null,
     }));
 
-    // Creative Moments (direct children)
     const { data: cmMasters } = await svc
       .from("master")
       .select("master_id")
@@ -159,6 +129,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       master_id: masterId,
       title: pres?.title ?? null,
       description: pres?.description ?? null,
+      attribution_roles: attributionRoles,
       media,
       projection_id: proj?.projection_id ?? null,
       canonical_state_id: cs.canonical_state_id,
@@ -171,7 +142,6 @@ async function getPageData(masterId: string): Promise<PageData | null> {
   }
 
   // Mural
-  // Scenes (children of this Mural)
   const { data: sceneChildren } = await svc
     .from("master")
     .select("master_id")
@@ -192,7 +162,6 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     projection_id: (sceneProjs ?? []).find((p) => p.master_id === s.master_id)?.projection_id ?? null,
   }));
 
-  // Resolve Universe parent for breadcrumb
   let universe_master_id: string | null = null;
   let universe_title: string | null = null;
   if (master.parent_master_id) {
@@ -206,6 +175,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     master_id: masterId,
     title: pres?.title ?? null,
     description: pres?.description ?? null,
+    attribution_roles: attributionRoles,
     media,
     projection_id: proj?.projection_id ?? null,
     canonical_state_id: cs.canonical_state_id,
@@ -239,52 +209,75 @@ export default async function WorldPage({
   const data = await getPageData(masterId);
   if (!data) notFound();
 
-  const typeLabel = TYPE_LABELS[data.canonical_type] ?? data.canonical_type;
-  const title = data.title ?? typeLabel;
+  const title = data.title ?? (data.canonical_type === "mural" ? "Mural" : "Universe");
+  const artistLabel = data.attribution_roles.length > 0
+    ? data.attribution_roles.map((r) => r.replace(/-/g, " ")).join(", ")
+    : null;
 
-  // ── MURAL LAYOUT ──────────────────────────────────────────────────────────
+  // ── MURAL LAYOUT — Section 06 ─────────────────────────────────────────────
   if (data.canonical_type === "mural") {
     return (
-      <main className="min-h-screen bg-background multiverse-page">
+      <main className="min-h-screen bg-background">
+        <PageTopNav />
 
-        {/* Breadcrumb → Universe */}
-        <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
-          {data.universe_master_id && (
-            <Link href={`/worlds/${data.universe_master_id}`}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+        {data.universe_master_id && (
+          <div className="mx-auto max-w-7xl px-6 pt-4 pb-2">
+            <Link
+              href={`/worlds/${data.universe_master_id}`}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
               <span>←</span>
               <span>{data.universe_title ?? "Universe"}</span>
             </Link>
-          )}
-        </div>
+          </div>
+        )}
 
-        {/* Full Mural animation */}
-          <div className="multiverse-stage">
-          <MediaHero
-          media={data.media}
-          projectionId={data.projection_id ?? ""}
-          masterId={data.master_id}
-          canonicalStateId={data.canonical_state_id ?? ""}
-          title={title}
-          typeLabel="Mural"
-          credit={data.description}
-          collectible={false}
-          />
+        {/* Two-column: player + scene sidebar */}
+        <div className="flex flex-col lg:flex-row lg:items-start">
+
+          {/* Left: player */}
+          <div className="flex-1 min-w-0 bg-black">
+            <MediaHero
+              media={data.media}
+              projectionId={data.projection_id ?? ""}
+              masterId={data.master_id}
+              canonicalStateId={data.canonical_state_id ?? ""}
+              title={`${data.universe_title ? `${data.universe_title} — ` : ""}${title}`}
+              typeLabel="Mural"
+              credit={data.description}
+              collectible={false}
+            />
           </div>
 
-        <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
-
-          {/* Scenes */}
-          {data.scenes.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scenes</h2>
-              <SceneDeck scenes={data.scenes.map((s) => ({ id: s.master_id, title: s.title, href: `/moments/${s.projection_id ?? s.master_id}` }))} />
-            </section>
-          )}
-
-          <Separator />
-          <div className="text-xs text-muted-foreground space-y-1">
-            <p>The complete visual expression of the {data.universe_title ?? "Universe"}.</p>
+          {/* Right: scene list sidebar */}
+          <div className="w-full lg:w-72 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card">
+            <div className="px-4 py-4 border-b border-border flex items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Scenes</p>
+              <p className="text-xs text-muted-foreground">1 of {data.scenes.length || "—"}</p>
+            </div>
+            <div className="divide-y divide-border">
+              {data.scenes.length > 0 ? (
+                data.scenes.map((s, i) => (
+                  <Link
+                    key={s.master_id}
+                    href={s.projection_id ? `/moments/${s.projection_id}` : "#"}
+                    className="flex items-start gap-3 px-4 py-3 hover:bg-accent transition-colors group"
+                  >
+                    <span className="text-xs text-muted-foreground w-4 shrink-0 pt-0.5">{i + 1}</span>
+                    <p className="text-sm text-foreground group-hover:opacity-80 transition-opacity truncate">
+                      {s.title ?? `Scene ${i + 1}`}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <p className="px-4 py-3 text-sm text-muted-foreground">No scenes yet.</p>
+              )}
+            </div>
+            <div className="px-4 py-4 border-t border-border">
+              <Link href={`/worlds/${masterId}/scenes`}>
+                <Button variant="outline" className="w-full text-xs">View Scene Deck</Button>
+              </Link>
+            </div>
           </div>
 
         </div>
@@ -292,77 +285,90 @@ export default async function WorldPage({
     );
   }
 
-  // ── UNIVERSE LAYOUT ───────────────────────────────────────────────────────
+  // ── UNIVERSE LAYOUT — Section 03 ──────────────────────────────────────────
+  const collectibleCount = 0;
+
   return (
-    <main className="min-h-screen bg-background multiverse-page">
+    <main className="min-h-screen bg-background">
+      <PageTopNav />
 
-      {/* Universe identity — no media hero, Universe is the container */}
-      <div className="multiverse-stage border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 py-16 space-y-4">
-          {data.media?.playback_id && <MediaVisual playbackId={data.media.playback_id} title={title} className="mb-8" />}
-          <p className="text-xs uppercase tracking-widest text-muted-foreground">{typeLabel}</p>
-          <h1
-            className="text-5xl md:text-7xl font-semibold leading-none tracking-tight text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            {title}
-          </h1>
-          {data.description && (
-            <p className="text-lg text-muted-foreground">{data.description}</p>
+      {/* Hero identity block */}
+      <div className="border-b border-border">
+        <div className="mx-auto max-w-5xl px-6 py-12 space-y-5">
+
+          {data.media?.playback_id && (
+            <MediaVisual playbackId={data.media.playback_id} title={title} className="mb-6 rounded-lg overflow-hidden" />
           )}
+
+          <div className="flex flex-wrap items-start gap-3">
+            <div className="space-y-1 flex-1 min-w-0">
+              <h1
+                className="text-4xl md:text-6xl font-semibold leading-none tracking-tight text-foreground"
+                style={{ fontFamily: "var(--font-display, inherit)" }}
+              >
+                {title}
+              </h1>
+              {artistLabel && (
+                <p className="text-base text-muted-foreground">by {artistLabel}</p>
+              )}
+            </div>
+            <Badge variant="outline" className="shrink-0 mt-1">Universe</Badge>
+          </div>
+
+          {/* Stats row */}
+          <div className="flex flex-wrap items-center gap-6 text-sm">
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xl font-semibold text-foreground">{data.scenes.length || "—"}</span>
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">Scenes</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xl font-semibold text-foreground">{data.moments.length || "—"}</span>
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">Moments</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xl font-semibold text-foreground">{collectibleCount || "—"}</span>
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">Collectibles</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="text-2xl font-semibold text-foreground">—</span>
+              <span className="text-muted-foreground text-xs uppercase tracking-wider">Holders</span>
+            </div>
+            <span
+              className="text-xs px-2 py-0.5 rounded-full border font-medium"
+              style={{ color: "var(--accent-mv)", borderColor: "var(--accent-mv)" }}
+            >
+              Base Network
+            </span>
+          </div>
+
+          {/* CTAs */}
+          <div className="flex flex-wrap gap-3 pt-1">
+            <Link href={`/worlds/${masterId}/scenes`}>
+              <Button style={{ background: "var(--accent-mv)" }} className="text-white font-semibold">
+                Enter Scene Deck
+              </Button>
+            </Link>
+            {data.murals[0] && (
+              <Link href={`/worlds/${data.murals[0].master_id}`}>
+                <Button variant="outline">View Mural</Button>
+              </Link>
+            )}
+          </div>
+
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 py-10 space-y-10">
-
-        {/* Mural — primary entry into the visual universe */}
-        {data.murals.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Mural</h2>
-            <div className="space-y-2">
-              {data.murals.map((m) => (
-                <MomentCard
-                  key={m.master_id}
-                  projectionId={undefined}
-                  title={m.title}
-                  typeLabel="Mural"
-                  hasMedia={false}
-                  collectible={false}
-                  href={`/worlds/${m.master_id}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Creative Moments */}
-        {data.moments.length > 0 && (
-          <section className="space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Creative Moments</h2>
-            <div className="space-y-2">
-              {data.moments.map((m) => (
-                <MomentCard
-                  key={m.master_id}
-                  projectionId={undefined}
-                  title={m.title}
-                  typeLabel="Creative Moment"
-                  hasMedia={false}
-                  collectible={false}
-                  href={`/creative-moments/${m.master_id}`}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        <Separator />
-        <div className="pt-2">
-          <Link href="/" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-            ← All Universes
-          </Link>
-        </div>
-
+      {/* Tabs */}
+      <div className="mx-auto max-w-5xl px-6 py-8">
+        <WorldTabsClient
+          masterId={masterId}
+          description={data.description}
+          murals={data.murals}
+          moments={data.moments}
+          attributionRoles={data.attribution_roles}
+        />
       </div>
+
     </main>
   );
 }

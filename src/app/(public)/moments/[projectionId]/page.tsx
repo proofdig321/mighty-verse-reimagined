@@ -26,13 +26,6 @@ const PROJ_LABELS: Record<string, string> = {
   "other": "Moment",
 };
 
-function formatMs(ms: number): string {
-  const totalSec = Math.floor(ms / 1000);
-  const m = Math.floor(totalSec / 60);
-  const s = totalSec % 60;
-  return `${m}:${s.toString().padStart(2, "0")}`;
-}
-
 type SceneMomentData = MomentData & {
   worldDescription: string | null;
   muralTitle: string | null;
@@ -201,9 +194,6 @@ export default async function MomentPage({
   const breadcrumbLabel = muralTitle ?? worldTitle ?? "Universe";
 
   const rarityLabel = projection.collectible_designated ? "Rare" : "Common";
-  const ownerDisplay = provenance.integrity_hash
-    ? `0x${provenance.integrity_hash.slice(0, 4)}...${provenance.integrity_hash.slice(-4)}`
-    : "—";
 
   return (
     <main className="min-h-screen bg-background">
@@ -301,7 +291,7 @@ export default async function MomentPage({
               {[
                 { label: "Rarity", value: rarityLabel },
                 { label: "Edition", value: `#— / —` },
-                { label: "Owner", value: ownerDisplay },
+                { label: "Owner", value: "—" },
                 { label: "Token ID", value: "—" },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-card border border-border rounded-lg px-3 py-2.5">

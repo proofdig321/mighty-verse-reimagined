@@ -23,17 +23,24 @@ async function getData(): Promise<ParticipantItem[]> {
 
   const ids = participants.map((p) => p.participant_id);
 
-  const { data: roles } = await svc
-    .from("participant_role")
-    .select("participant_id, role_type")
-    .in("participant_id", ids)
-    .eq("active", true);
+  const [{ data: roles }, { data: attrEntries }] = await Promise.all([
+    svc.from("participant_role").select("participant_id, role_type").in("participant_id", ids).eq("active", true),
+    svc.from("attribution_entry").select("participant_id, contribution_description").in("participant_id", ids).eq("public", true),
+  ]);
 
-  return participants.map((p) => ({
-    participant_id: p.participant_id,
-    display_name: null,
-    role: (roles ?? []).find((r) => r.participant_id === p.participant_id)?.role_type ?? null,
-  }));
+  return participants.map((p) => {
+    const entry = (attrEntries ?? []).find((e) => e.participant_id === p.participant_id);
+    const rawDesc = entry?.contribution_description ?? null;
+    // contribution_description format: "Canonical creator — Golden Shovel" — extract name after em dash
+    const display_name = rawDesc?.includes("—")
+      ? rawDesc.split("—").pop()?.trim() ?? null
+      : rawDesc;
+    return {
+      participant_id: p.participant_id,
+      display_name,
+      role: (roles ?? []).find((r) => r.participant_id === p.participant_id)?.role_type ?? null,
+    };
+  });
 }
 
 export default async function ParticipantsPublicPage() {
