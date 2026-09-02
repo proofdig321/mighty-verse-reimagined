@@ -7,7 +7,6 @@ const NAV_LINKS = [
   { href: "/murals", label: "Murals" },
   { href: "/scenes", label: "Scenes" },
   { href: "/authority/public", label: "Authority" },
-  { href: "/gallery", label: "Gallery" },
   { href: "/about", label: "About" },
 ];
 

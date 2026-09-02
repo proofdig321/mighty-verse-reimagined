@@ -1,7 +1,9 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import PageTopNav from "@/components/page-top-nav";
 import GalleryFilterClient from "@/components/gallery-filter-client";
 import { Button } from "@/components/ui/button";
 
@@ -37,11 +39,16 @@ async function getData(): Promise<MediaItem[]> {
 }
 
 export default async function MediaPage() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) redirect("/auth/sign-in");
+  const participantId = await getParticipantId(supabase);
+  if (!participantId) redirect("/auth/sign-in");
+
   const items = await getData();
 
   return (
     <main className="min-h-screen bg-background">
-      <PageTopNav activePath="/gallery" />
       <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
         <div>
           <h1
