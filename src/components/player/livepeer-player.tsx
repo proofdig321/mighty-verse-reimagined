@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, LoaderCircle } from "lucide-react";
 
 interface LivepeerPlayerProps {
   playbackId: string;
@@ -13,6 +14,7 @@ interface LivepeerPlayerProps {
 
 export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalStateId, startMs, endMs }: LivepeerPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
 
   useEffect(() => {
     const video = videoRef.current;
@@ -40,15 +42,17 @@ export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalSt
     fetch(`/api/livepeer/playback/${playbackId}`)
       .then(r => r.ok ? r.json() : null)
       .then(info => {
-        if (!info) return;
+        if (!info) { setState("error"); return; }
         const hls = info?.meta?.source?.find((s: { type: string; url: string }) => s.type === "html5/application/vnd.apple.mpegurl");
-        if (!hls) return;
+        if (!hls) { setState("error"); return; }
 
         const poster = hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png");
         if (poster && !video.poster) video.poster = poster;
 
         const onLoaded = () => attachRange();
         video.addEventListener("loadedmetadata", onLoaded, { once: true });
+        video.addEventListener("canplay", () => setState("ready"), { once: true });
+        video.addEventListener("error", () => setState("error"), { once: true });
 
         if (video.canPlayType("application/vnd.apple.mpegurl")) {
           video.src = hls.url;
@@ -62,7 +66,7 @@ export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalSt
           });
         }
       })
-      .catch(() => null);
+      .catch(() => setState("error"));
 
     const onPlay = () => fetch("/api/signals", {
       method: "POST",
@@ -75,10 +79,29 @@ export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalSt
   }, [playbackId, projectionId, masterId, canonicalStateId, startMs, endMs]);
 
   return (
-    <video
-      ref={videoRef}
-      controls
-      style={{ width: "100%", aspectRatio: "16/9", background: "#000", display: "block" }}
-    />
+    <div className="relative overflow-hidden rounded-lg border border-border bg-black shadow-2xl shadow-black/30">
+      <video
+        ref={videoRef}
+        controls
+        aria-label="Mighty Verse media player"
+        className="block aspect-video w-full bg-black object-contain"
+      />
+      {state === "loading" && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/35">
+          <div className="flex items-center gap-2 rounded-full border border-white/15 bg-black/55 px-3 py-2 text-xs text-white/80">
+            <LoaderCircle size={14} className="animate-spin" /> Loading media
+          </div>
+        </div>
+      )}
+      {state === "error" && (
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/75 p-6 text-center">
+          <div className="space-y-2 text-white/75">
+            <AlertCircle size={20} className="mx-auto text-destructive" />
+            <p className="text-sm">This media is unavailable right now.</p>
+            <p className="text-xs text-white/45">The publication record is still intact.</p>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
