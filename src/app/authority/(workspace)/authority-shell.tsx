@@ -26,7 +26,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="min-h-screen bg-background lg:flex">
+    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       {/* Mobile top bar */}
       <div className="fixed inset-x-0 top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -40,7 +40,11 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       </div>
 
       {/* Sidebar */}
-      <aside className={`${mobileNav ? "flex" : "hidden"} fixed inset-y-0 left-0 z-20 w-64 flex-col border-r border-border bg-card lg:static lg:flex lg:min-h-screen`}>
+      <aside className={`
+        ${mobileNav ? "flex" : "hidden"}
+        fixed inset-y-0 left-0 z-20 w-64 flex-col border-r border-border bg-card
+        lg:flex lg:static lg:inset-auto lg:min-h-screen lg:shrink-0
+      `}>
         {/* Sidebar header */}
         <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-border">
           <div>
@@ -88,8 +92,8 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       </aside>
 
       {/* Main */}
-      <div className="flex min-w-0 flex-1 flex-col pt-12 lg:pt-0">
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-8 pb-16 sm:px-6 lg:px-10">
+      <div className="min-w-0 flex-1 flex flex-col pt-12 lg:pt-0">
+        <main className="flex-1 w-full px-4 pt-8 pb-16 sm:px-6 lg:px-10">
           {children}
         </main>
       </div>
