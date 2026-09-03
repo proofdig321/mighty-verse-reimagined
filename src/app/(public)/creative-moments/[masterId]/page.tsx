@@ -100,7 +100,7 @@ export default async function CreativeMomentPage({
   if (!data) notFound();
 
   return (
-    <main className="min-h-screen bg-background multiverse-page">
+    <div className="min-h-screen bg-background multiverse-page">
 
       {/* Breadcrumb → Universe */}
       <div className="mx-auto max-w-7xl px-4 pt-5 pb-3">
@@ -152,6 +152,6 @@ export default async function CreativeMomentPage({
         <Separator />
 
       </div>
-    </main>
+    </div>
   );
 }

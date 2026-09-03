@@ -19,7 +19,7 @@ export default async function AboutPage() {
   ];
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/about" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-8">
 
@@ -57,6 +57,6 @@ export default async function AboutPage() {
         </Link>
 
       </div>
-    </main>
+    </div>
   );
 }

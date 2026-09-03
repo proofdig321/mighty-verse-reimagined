@@ -40,7 +40,7 @@ export default async function ScenesPage() {
   const scenes = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/scenes" />
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-10">
@@ -55,6 +55,6 @@ export default async function ScenesPage() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <SceneDeckClient scenes={scenes} />
       </div>
-    </main>
+    </div>
   );
 }

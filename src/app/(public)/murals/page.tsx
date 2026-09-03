@@ -44,7 +44,7 @@ export default async function MuralsPage() {
   const murals = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/murals" />
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-10">
@@ -73,6 +73,6 @@ export default async function MuralsPage() {
           <p className="text-sm text-muted-foreground">No murals yet.</p>
         )}
       </div>
-    </main>
+    </div>
   );
 }

@@ -187,7 +187,7 @@ export default async function MomentPage({
   const rarityLabel = projection.collectible_designated ? "Rare" : "Common";
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/moments" />
 
       <div className="mx-auto max-w-7xl px-6 py-8">
@@ -322,6 +322,6 @@ export default async function MomentPage({
         </details>
 
       </div>
-    </main>
+    </div>
   );
 }

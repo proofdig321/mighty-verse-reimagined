@@ -45,7 +45,7 @@ export default async function ParticipantsPublicPage() {
   const participants = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/participants" />
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-10">
@@ -58,6 +58,6 @@ export default async function ParticipantsPublicPage() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <ParticipantsFilterClient participants={participants} />
       </div>
-    </main>
+    </div>
   );
 }

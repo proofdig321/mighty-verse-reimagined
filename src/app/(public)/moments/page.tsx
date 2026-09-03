@@ -61,7 +61,7 @@ export default async function MomentsPage() {
   const moments = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/moments" />
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-10">
@@ -76,6 +76,6 @@ export default async function MomentsPage() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <MomentsFilterClient moments={moments} />
       </div>
-    </main>
+    </div>
   );
 }

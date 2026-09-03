@@ -217,7 +217,7 @@ export default async function WorldPage({
   // ── MURAL LAYOUT — Section 06 ─────────────────────────────────────────────
   if (data.canonical_type === "mural") {
     return (
-      <main className="min-h-screen bg-background">
+      <div className="min-h-screen bg-background">
         <PageTopNav activePath="/murals" />
 
         {data.universe_master_id && (
@@ -281,7 +281,7 @@ export default async function WorldPage({
           </div>
 
         </div>
-      </main>
+      </div>
     );
   }
 
@@ -289,10 +289,10 @@ export default async function WorldPage({
   const collectibleCount = 0;
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav />
 
-      {/* Hero identity block */}
+      {/* Hero identity block */
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-12 space-y-5">
 
@@ -369,6 +369,6 @@ export default async function WorldPage({
         />
       </div>
 
-    </main>
+    </div>
   );
 }

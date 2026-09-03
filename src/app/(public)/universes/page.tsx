@@ -17,7 +17,7 @@ export default async function UniversesPage() {
     }));
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/universes" />
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-10">
@@ -33,6 +33,6 @@ export default async function UniversesPage() {
         <UniversesFilterClient universes={universes} />
         <p className="text-xs text-muted-foreground">{universes.length} universe{universes.length !== 1 ? "s" : ""}</p>
       </div>
-    </main>
+    </div>
   );
 }

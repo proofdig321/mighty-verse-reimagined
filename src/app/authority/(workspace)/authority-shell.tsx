@@ -28,7 +28,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   return (
     <div className="min-h-screen bg-background flex flex-col lg:flex-row">
       {/* Mobile top bar */}
-      <div className="fixed inset-x-0 top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
+      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <button onClick={() => setMobileNav(true)} aria-label="Open navigation" className="text-muted-foreground hover:text-foreground mr-2">
             <Menu size={16} />
@@ -92,7 +92,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       </aside>
 
       {/* Main */}
-      <div className="min-w-0 flex-1 flex flex-col pt-12 lg:pt-0">
+      <div className="min-w-0 flex-1 flex flex-col">
         <main className="flex-1 w-full px-4 pt-8 pb-16 sm:px-6 lg:px-10">
           {children}
         </main>

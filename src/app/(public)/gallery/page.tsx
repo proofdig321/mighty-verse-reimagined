@@ -48,7 +48,7 @@ export default async function GalleryPage() {
   const items = await getData();
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/gallery" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
         <div>
@@ -67,6 +67,6 @@ export default async function GalleryPage() {
           <Button variant="outline">View Full Gallery</Button>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

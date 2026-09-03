@@ -32,7 +32,7 @@ export default async function ProfilePage() {
   );
 
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-sm px-4 pt-12 pb-16 space-y-6">
 
         <div>
@@ -77,6 +77,6 @@ export default async function ProfilePage() {
 
         <SignOutButton />
       </div>
-    </main>
+    </div>
   );
 }

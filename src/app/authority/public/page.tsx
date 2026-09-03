@@ -10,7 +10,7 @@ const INFO_BLOCKS = [
 
 export default function AuthorityPublicPage() {
   return (
-    <main className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <PageTopNav activePath="/authority/public" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-10">
 
@@ -41,6 +41,6 @@ export default function AuthorityPublicPage() {
         <Button variant="outline" disabled>Learn More</Button>
 
       </div>
-    </main>
+    </div>
   );
 }
