@@ -4,7 +4,6 @@ import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
 import ArtworkFrame from "@/components/artwork-frame";
-import { Button } from "@/components/ui/button";
 
 type MuralItem = {
   master_id: string;
@@ -47,49 +46,25 @@ export default async function MuralsPage() {
   return (
     <main className="min-h-screen bg-background">
       <PageTopNav activePath="/murals" />
-      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
-        <div>
-          <h1
-            className="text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
+      <div className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
             Mural Gallery
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Explore all animated murals.</p>
         </div>
-
-        <div className="flex gap-3">
-          <select
-            className="h-8 rounded-md border border-border bg-card px-2.5 text-sm text-muted-foreground appearance-none cursor-default"
-            defaultValue=""
-            disabled
-          >
-            <option value="">All Genres</option>
-          </select>
-          <select
-            className="h-8 rounded-md border border-border bg-card px-2.5 text-sm text-muted-foreground appearance-none cursor-default"
-            defaultValue="recent"
-            disabled
-          >
-            <option value="recent">Most Recent</option>
-          </select>
-        </div>
-
+      </div>
+      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
         {murals.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
             {murals.map((m) => (
               <Link key={m.master_id} href={`/worlds/${m.master_id}`} className="group space-y-2">
                 <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="16/9" />
                 <div>
-                  <p
-                    className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity"
-                    style={{ fontFamily: "var(--font-display, inherit)" }}
-                  >
+                  <p className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-display, inherit)" }}>
                     {m.title ?? "Untitled"}
                   </p>
-                  {m.artist && (
-                    <p className="text-xs text-muted-foreground truncate capitalize">{m.artist}</p>
-                  )}
+                  {m.artist && <p className="text-xs text-muted-foreground truncate capitalize">{m.artist}</p>}
                 </div>
               </Link>
             ))}
@@ -97,10 +72,6 @@ export default async function MuralsPage() {
         ) : (
           <p className="text-sm text-muted-foreground">No murals yet.</p>
         )}
-
-        <div className="pt-2">
-          <Button variant="outline">View All Murals</Button>
-        </div>
       </div>
     </main>
   );

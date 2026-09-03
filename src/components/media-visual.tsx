@@ -26,13 +26,13 @@ export default function MediaVisual({ playbackId, title, className = "", aspectR
   }, [playbackId]);
 
   return (
-    <div className={`relative overflow-hidden bg-[#171717] ${className}`} style={{ aspectRatio }}>
+    <div className={`relative overflow-hidden bg-card border border-border ${className}`} style={{ aspectRatio }}>
       {posterUrl ? (
-        // Livepeer's keyframe is presentation media, not authored artwork.
         // eslint-disable-next-line @next/next/no-img-element
         <img src={posterUrl} alt={title} className="h-full w-full object-cover" />
       ) : (
-        <div className="absolute inset-0 flex flex-col justify-end bg-[linear-gradient(145deg,#292929,#111)] p-5">
+        <div className="absolute inset-0 flex flex-col justify-end p-5"
+          style={{ background: "linear-gradient(145deg, oklch(0.22 0.06 280), oklch(0.13 0.03 280))" }}>
           <span className="text-[10px] uppercase tracking-[0.2em] text-white/45">{playbackId ? "Animation preview" : "Visual identity"}</span>
           <span className="mt-2 max-w-[18rem] font-[var(--font-display)] text-lg text-white/85">{title}</span>
         </div>

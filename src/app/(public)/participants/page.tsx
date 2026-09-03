@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
 import ParticipantsFilterClient from "@/components/participants-filter-client";
-import { Button } from "@/components/ui/button";
 
 type ParticipantItem = {
   participant_id: string;
@@ -48,20 +47,16 @@ export default async function ParticipantsPublicPage() {
   return (
     <main className="min-h-screen bg-background">
       <PageTopNav activePath="/participants" />
-      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
-        <div>
-          <h1
-            className="text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
+      <div className="border-b border-border">
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
             Creators & Participants
           </h1>
           <p className="text-sm text-muted-foreground mt-1">The people building the universes.</p>
         </div>
+      </div>
+      <div className="mx-auto max-w-7xl px-6 py-10">
         <ParticipantsFilterClient participants={participants} />
-        <div className="pt-2">
-          <Button variant="outline">View All Participants</Button>
-        </div>
       </div>
     </main>
   );
