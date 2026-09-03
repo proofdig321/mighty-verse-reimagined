@@ -126,14 +126,27 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html,
+  body {
+    width: 100%;
+    margin: 0;
+  }
   body {
     @apply bg-background text-foreground min-h-screen;
   }
   main {
     display: block;
+    width: 100%;
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .dashboard-content {
+    width: min(100%, 90rem);
+    margin-inline: auto;
   }
 }
 

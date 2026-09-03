@@ -94,7 +94,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       {/* Main */}
       <div className="min-w-0 flex-1 flex flex-col">
         <main className="flex-1 w-full px-4 pt-8 pb-16 sm:px-6 lg:px-10">
-          {children}
+          <div className="dashboard-content">{children}</div>
         </main>
       </div>
     </div>
