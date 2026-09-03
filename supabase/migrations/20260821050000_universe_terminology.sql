@@ -22,7 +22,14 @@
 -- 1. Rename the enum value
 --    Postgres renames in place — the single 'song-world' master row (05ccc0c6)
 --    is updated automatically. No data migration required.
-alter type public.canonical_type rename value 'song-world' to 'universe';
+do $$
+begin
+  if exists (select 1 from pg_enum where enumtypid = 'public.canonical_type'::regtype and enumlabel = 'song-world')
+     and not exists (select 1 from pg_enum where enumtypid = 'public.canonical_type'::regtype and enumlabel = 'universe') then
+    alter type public.canonical_type rename value 'song-world' to 'universe';
+  end if;
+end;
+$$;
 
 -- 2. Replace trigger function — update 'song-world' string literals to 'universe'
 create or replace function public.enforce_mural_parent_type()

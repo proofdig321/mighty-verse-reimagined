@@ -6,6 +6,7 @@ import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 const ISRC_PATTERN = /^[A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9]{5}$/;
 const WORK_TYPES = new Set(["song", "audio", "video", "animation", "other"]);
 const SOURCE_TYPES = new Set(["upload", "external-url", "livepeer-asset", "other"]);
+const CREDIT_ROLES = new Set(["primary_artist", "featured_artist", "composer", "lyricist", "producer", "director", "editor", "cinematographer", "performer", "writer", "contributor"]);
 
 function validHttpsUrl(value: unknown): value is string {
   if (typeof value !== "string") return false;
@@ -48,6 +49,17 @@ export async function POST(request: Request) {
     explicit_content = false,
     visibility = "draft",
     alt_text,
+    short_description,
+    original_language,
+    subgenre,
+    version,
+    edition,
+    original_release_date,
+    content_rating,
+    search_status = "pending",
+    featured = false,
+    display_order,
+    credits = [],
   } = body;
 
   if (!title?.trim() || !WORK_TYPES.has(work_type) || !SOURCE_TYPES.has(source_type)) {
@@ -68,6 +80,12 @@ export async function POST(request: Request) {
   if (!['draft', 'private', 'public'].includes(visibility)) {
     return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
   }
+  if (!['pending', 'indexed', 'excluded'].includes(search_status)) {
+    return NextResponse.json({ error: "Invalid search_status" }, { status: 400 });
+  }
+  if (!Array.isArray(credits) || credits.some((credit) => !credit || typeof credit.participant_id !== "string" || !CREDIT_ROLES.has(credit.role))) {
+    return NextResponse.json({ error: "Credits must contain participant_id and a valid role" }, { status: 400 });
+  }
 
   const auth = await validateAuthority(participantId, "create-canonical-state", master_id ?? null);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
@@ -81,6 +99,8 @@ export async function POST(request: Request) {
       title: title.trim(),
       alternate_title: alternate_title?.trim() || null,
       description: description?.trim() || null,
+      short_description: short_description?.trim() || null,
+      original_language: original_language?.trim() || null,
       creator_ref: creator_ref ?? null,
       creator_name: creator_name?.trim() || null,
       work_type,
@@ -95,14 +115,31 @@ export async function POST(request: Request) {
       provenance_notes: provenance_notes?.trim() || null,
       language: language?.trim() || null,
       genre: genre?.trim() || null,
+      subgenre: subgenre?.trim() || null,
+      version: version?.trim() || null,
+      edition: edition?.trim() || null,
       release_date: release_date || null,
+      original_release_date: original_release_date || null,
       explicit_content: Boolean(explicit_content),
+      content_rating: content_rating?.trim() || null,
       visibility,
+      search_status,
+      featured: Boolean(featured),
+      display_order: Number.isInteger(display_order) ? display_order : null,
       alt_text: alt_text?.trim() || null,
     })
     .select("intake_id, master_id, asset_id, title, work_type, isrc, isrc_status, source_type, source_url, source_provider, supplied_by, created_at")
     .single();
 
   if (error || !data) return NextResponse.json({ error: error?.message ?? "Failed to create media intake" }, { status: 500 });
+  if (credits.length) {
+    const { error: creditError } = await svc.from("media_intake_credit").insert(credits.map((credit: { participant_id: string; role: string }, index: number) => ({
+      intake_id: data.intake_id,
+      participant_id: credit.participant_id,
+      role: credit.role,
+      display_order: index,
+    })));
+    if (creditError) return NextResponse.json({ error: `Media intake created, but credits could not be saved: ${creditError.message}` }, { status: 500 });
+  }
   return NextResponse.json(data, { status: 201 });
 }

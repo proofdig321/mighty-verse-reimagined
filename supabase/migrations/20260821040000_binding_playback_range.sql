@@ -19,8 +19,8 @@
 -- =============================================================================
 
 alter table public.projection_media_binding
-  add column start_ms integer check (start_ms >= 0),
-  add column end_ms   integer check (end_ms > 0);
+  add column if not exists start_ms integer check (start_ms >= 0),
+  add column if not exists end_ms   integer check (end_ms > 0);
 
 comment on column public.projection_media_binding.start_ms is
   'Optional playback start offset in milliseconds for this projection''s use of the asset. NULL = play from beginning. NOT canonical Scene identity.';

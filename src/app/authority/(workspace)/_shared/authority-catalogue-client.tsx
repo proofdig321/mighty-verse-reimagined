@@ -526,10 +526,18 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
 function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [title, setTitle] = useState("");
   const [creatorName, setCreatorName] = useState("");
+  const [primaryArtistId, setPrimaryArtistId] = useState("");
+  const [featuredArtistIds, setFeaturedArtistIds] = useState("");
   const [alternateTitle, setAlternateTitle] = useState("");
   const [description, setDescription] = useState("");
   const [language, setLanguage] = useState("");
   const [genre, setGenre] = useState("");
+  const [subgenre, setSubgenre] = useState("");
+  const [originalLanguage, setOriginalLanguage] = useState("");
+  const [shortDescription, setShortDescription] = useState("");
+  const [contentRating, setContentRating] = useState("");
+  const [searchStatus, setSearchStatus] = useState("pending");
+  const [featured, setFeatured] = useState(false);
   const [releaseDate, setReleaseDate] = useState("");
   const [explicitContent, setExplicitContent] = useState(false);
   const [visibility, setVisibility] = useState("draft");
@@ -552,7 +560,13 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
       title,
       alternate_title: alternateTitle || null,
       description: description || null,
+      short_description: shortDescription || null,
+      original_language: originalLanguage || null,
       creator_name: creatorName || null,
+      credits: [
+        ...(primaryArtistId.trim() ? [{ participant_id: primaryArtistId.trim(), role: "primary_artist" }] : []),
+        ...featuredArtistIds.split(",").map(value => value.trim()).filter(Boolean).map(participant_id => ({ participant_id, role: "featured_artist" })),
+      ],
       work_type: workType,
       source_type: sourceType,
       source_url: sourceType === "external-url" ? sourceUrl : null,
@@ -564,9 +578,14 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
       provenance_notes: provenanceNotes || null,
       language: language || null,
       genre: genre || null,
+      subgenre: subgenre || null,
       release_date: releaseDate || null,
+      original_release_date: null,
+      content_rating: contentRating || null,
       explicit_content: explicitContent,
       visibility,
+      search_status: searchStatus,
+      featured,
       alt_text: altText || null,
     });
     setBusy(false);
@@ -584,12 +603,17 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
           </div>
           {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
         </div>
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Content identity</p>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input value={creatorName} onChange={e => setCreatorName(e.target.value)} placeholder="Artist / creator" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
           <input value={alternateTitle} onChange={e => setAlternateTitle(e.target.value)} placeholder="Alternate title (optional)" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         </div>
         <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" disabled={busy} rows={2} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input value={shortDescription} onChange={e => setShortDescription(e.target.value)} placeholder="Short description" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+          <input value={originalLanguage} onChange={e => setOriginalLanguage(e.target.value)} placeholder="Original language" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <select value={workType} onChange={e => setWorkType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
             <option value="animation">Animation</option><option value="video">Video</option><option value="song">Song</option><option value="audio">Audio</option><option value="other">Other</option>
@@ -615,10 +639,18 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
         <div className="grid grid-cols-2 gap-2">
           <input value={language} onChange={e => setLanguage(e.target.value)} placeholder="Language" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <input value={genre} onChange={e => setGenre(e.target.value)} placeholder="Genre / category" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input value={subgenre} onChange={e => setSubgenre(e.target.value)} placeholder="Subgenre" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <input type="date" value={releaseDate} onChange={e => setReleaseDate(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input value={contentRating} onChange={e => setContentRating(e.target.value)} placeholder="Content rating" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <select value={visibility} onChange={e => setVisibility(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm"><option value="draft">Draft</option><option value="private">Private</option><option value="public">Public</option></select>
         </div>
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Creative credits</p>
+        <input value={primaryArtistId} onChange={e => setPrimaryArtistId(e.target.value)} placeholder="Primary artist participant ID" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <input value={featuredArtistIds} onChange={e => setFeaturedArtistIds(e.target.value)} placeholder="Featured artist participant IDs, comma separated" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Publishing</p>
         <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={explicitContent} onChange={e => setExplicitContent(e.target.checked)} disabled={busy} /> Explicit content</label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)} disabled={busy} /> Feature in discovery</label>
+        <select value={searchStatus} onChange={e => setSearchStatus(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"><option value="pending">Search: pending</option><option value="indexed">Search: indexed</option><option value="excluded">Search: excluded</option></select>
         <input value={altText} onChange={e => setAltText(e.target.value)} placeholder="Artwork / thumbnail alt text" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         <textarea value={provenanceNotes} onChange={e => setProvenanceNotes(e.target.value)} placeholder="Provenance / production notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
         {message && <p className="text-destructive text-sm">{message}</p>}
