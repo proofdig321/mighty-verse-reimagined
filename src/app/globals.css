@@ -130,8 +130,8 @@
   body {
     @apply bg-background text-foreground min-h-screen;
   }
-  main {
-    @apply w-full;
+  html, body, main {
+    width: 100%;
   }
   html {
     @apply font-sans;
