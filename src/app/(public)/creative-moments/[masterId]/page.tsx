@@ -103,7 +103,7 @@ export default async function CreativeMomentPage({
     <main className="min-h-screen bg-background multiverse-page">
 
       {/* Breadcrumb → Universe */}
-      <div className="mx-auto max-w-5xl px-4 pt-5 pb-3">
+      <div className="mx-auto max-w-7xl px-4 pt-5 pb-3">
         {data.universe_master_id && (
           <Link href={`/worlds/${data.universe_master_id}`}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
@@ -115,7 +115,7 @@ export default async function CreativeMomentPage({
 
       {/* Identity */}
       <div className="multiverse-stage border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 py-12 space-y-3">
+        <div className="mx-auto max-w-7xl px-4 py-12 space-y-3">
           <h1
             className="text-5xl md:text-6xl font-semibold leading-none tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -128,7 +128,7 @@ export default async function CreativeMomentPage({
         </div>
       </div>
 
-      <div className="mx-auto max-w-5xl px-4 py-10 space-y-8">
+      <div className="mx-auto max-w-7xl px-4 py-10 space-y-8">
 
         {/* Scene association */}
         {data.scene_master_id ? (

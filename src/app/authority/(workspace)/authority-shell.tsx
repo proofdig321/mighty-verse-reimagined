@@ -26,10 +26,13 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="min-h-screen bg-background pt-14 lg:flex lg:pt-0">
-      {/* Top bar */}
-      <div className="fixed inset-x-0 top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:pl-64">
-        <div className="mx-auto flex max-w-[1400px] items-center gap-2 text-xs text-muted-foreground">
+    <div className="min-h-screen bg-background lg:flex">
+      {/* Mobile top bar */}
+      <div className="fixed inset-x-0 top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <button onClick={() => setMobileNav(true)} aria-label="Open navigation" className="text-muted-foreground hover:text-foreground mr-2">
+            <Menu size={16} />
+          </button>
           <span className="font-semibold text-foreground">Mighty Verse</span>
           <span className="opacity-30">/</span>
           <span>Authority</span>
@@ -85,12 +88,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       </aside>
 
       {/* Main */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 px-4 pt-4 lg:hidden">
-          <button onClick={() => setMobileNav(true)} aria-label="Open navigation" className="text-muted-foreground hover:text-foreground">
-            <Menu size={18} />
-          </button>
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col pt-12 lg:pt-0">
         <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-8 pb-16 sm:px-6 lg:px-10">
           {children}
         </main>

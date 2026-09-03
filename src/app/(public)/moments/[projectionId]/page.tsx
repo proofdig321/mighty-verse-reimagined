@@ -190,7 +190,7 @@ export default async function MomentPage({
     <main className="min-h-screen bg-background">
       <PageTopNav activePath="/moments" />
 
-      <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-6 py-8">
 
         {/* Breadcrumb */}
         <Link

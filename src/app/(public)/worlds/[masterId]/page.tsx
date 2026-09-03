@@ -294,7 +294,7 @@ export default async function WorldPage({
 
       {/* Hero identity block */}
       <div className="border-b border-border">
-        <div className="mx-auto max-w-5xl px-6 py-12 space-y-5">
+        <div className="mx-auto max-w-7xl px-6 py-12 space-y-5">
 
           {data.media?.playback_id && (
             <MediaVisual playbackId={data.media.playback_id} title={title} className="mb-6 rounded-lg overflow-hidden" />
@@ -359,7 +359,7 @@ export default async function WorldPage({
       </div>
 
       {/* Tabs */}
-      <div className="mx-auto max-w-5xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-6 py-8">
         <WorldTabsClient
           masterId={masterId}
           description={data.description}

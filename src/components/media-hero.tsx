@@ -42,7 +42,7 @@ export default function MediaHero({
 
       {/* Identity — below media, constrained */}
       <div className="bg-background border-b border-border">
-        <div className="mx-auto max-w-5xl px-4 py-6 space-y-3">
+        <div className="mx-auto max-w-7xl px-4 py-6 space-y-3">
           <div className="flex items-start justify-between gap-4">
             <h1
               className="text-3xl md:text-4xl font-semibold leading-tight tracking-tight text-foreground"

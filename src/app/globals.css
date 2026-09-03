@@ -172,8 +172,8 @@
     margin-left: clamp(1rem, 10vw, 8rem);
   }
 
-  .scene-deck { position: relative; display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 1rem; min-height: 22rem; padding: 2rem 1rem; perspective: 1000px; }
-  .scene-deck-card { position: relative; min-height: 16rem; border: 1px solid color-mix(in oklch, var(--accent-mv) 65%, var(--foreground)); background: linear-gradient(135deg, color-mix(in oklch, var(--accent-mv) 25%, var(--card)), var(--foreground)); box-shadow: 12px 14px 0 color-mix(in oklch, var(--foreground) 18%, transparent), 0 18px 30px color-mix(in oklch, var(--foreground) 20%, transparent); transform: rotate(var(--deck-rotation, 0deg)) translateZ(var(--deck-depth, 0px)); transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease; overflow: hidden; cursor: grab; }
+  .scene-deck { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(14rem, 1fr)); gap: 1.5rem; min-height: 26rem; padding: 2rem 0; perspective: 1000px; }
+  .scene-deck-card { position: relative; min-height: 20rem; border: 1px solid color-mix(in oklch, var(--accent-mv) 65%, var(--foreground)); background: linear-gradient(135deg, color-mix(in oklch, var(--accent-mv) 25%, var(--card)), var(--foreground)); box-shadow: 12px 14px 0 color-mix(in oklch, var(--foreground) 18%, transparent), 0 18px 30px color-mix(in oklch, var(--foreground) 20%, transparent); transform: rotate(var(--deck-rotation, 0deg)) translateZ(var(--deck-depth, 0px)); transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease; overflow: hidden; cursor: grab; }
   .scene-deck-card:hover, .scene-deck-card:focus-visible { transform: rotate(0deg) translateY(-10px) translateZ(30px); box-shadow: 16px 22px 0 color-mix(in oklch, var(--foreground) 22%, transparent), 0 24px 36px color-mix(in oklch, var(--foreground) 25%, transparent); }
   .scene-deck-card-0 { --deck-rotation: -3deg; --deck-depth: 12px; } .scene-deck-card-1 { --deck-rotation: 2deg; --deck-depth: 26px; } .scene-deck-card-2 { --deck-rotation: -1deg; --deck-depth: 6px; } .scene-deck-card-3 { --deck-rotation: 4deg; --deck-depth: 18px; } .scene-deck-card-4 { --deck-rotation: -4deg; --deck-depth: 10px; }
   .scene-deck-card::before, .scene-deck-card::after { content: ""; position: absolute; inset: 0.65rem; border: 1px solid color-mix(in oklch, var(--accent-mv) 60%, transparent); pointer-events: none; } .scene-deck-card::after { inset: 1.1rem; transform: rotate(45deg) scale(0.72); }
@@ -188,6 +188,6 @@
       margin-left: 0;
     }
 
-    .scene-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; min-height: 18rem; padding: 1rem 0.5rem; } .scene-deck-card { min-height: 12rem; }
+    .scene-deck { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; min-height: 20rem; padding: 1rem 0; } .scene-deck-card { min-height: 16rem; }
   }
 }

@@ -26,7 +26,7 @@ export default async function HomePage() {
 
         {/* Hero — full-width text, no artwork panel */}
         <section className="border-b border-border">
-          <div className="mx-auto max-w-5xl px-6 py-20 md:py-32 space-y-8">
+          <div className="mx-auto max-w-7xl px-6 py-20 md:py-32 space-y-8">
             <h1
               className="text-5xl md:text-7xl font-semibold leading-none tracking-tight text-foreground max-w-3xl"
               style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -48,7 +48,7 @@ export default async function HomePage() {
         </section>
 
         {/* Featured Universes */}
-        <section className="mx-auto max-w-5xl px-6 py-10">
+        <section className="mx-auto max-w-7xl px-6 py-10">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Featured Universes

@@ -48,7 +48,7 @@ export default async function ParticipantsPublicPage() {
   return (
     <main className="min-h-screen bg-background">
       <PageTopNav activePath="/participants" />
-      <div className="mx-auto max-w-5xl px-6 py-10 space-y-6">
+      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
         <div>
           <h1
             className="text-3xl font-semibold text-foreground"
