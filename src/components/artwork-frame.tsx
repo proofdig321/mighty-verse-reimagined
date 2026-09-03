@@ -20,9 +20,9 @@ export default function ArtworkFrame({ artworkUrl, alt = "", aspectRatio = "1/1"
       ) : (
         <div
           className="absolute inset-0 flex items-end p-4"
-          style={{ background: "linear-gradient(135deg, oklch(0.22 0.06 280) 0%, oklch(0.14 0.04 280) 100%)" }}
+          style={{ background: "linear-gradient(135deg, oklch(0.32 0.08 290) 0%, oklch(0.20 0.05 280) 100%)" }}
         >
-          <span className="text-xs uppercase tracking-widest text-muted-foreground/50 select-none">
+          <span className="text-xs uppercase tracking-widest text-white/40 select-none">
             Artwork
           </span>
         </div>
