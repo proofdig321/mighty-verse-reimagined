@@ -17,9 +17,12 @@ type Props = {
   projectionId: string;
   masterId: string;
   canonicalStateId: string;
+  seekToSeconds?: number | null;
+  onTimeUpdate?: (seconds: number) => void;
+  onDurationChange?: (seconds: number) => void;
 };
 
-export default function ProjectionMediaPlayer({ media, projectionId, masterId, canonicalStateId }: Props) {
+export default function ProjectionMediaPlayer({ media, projectionId, masterId, canonicalStateId, seekToSeconds, onTimeUpdate, onDurationChange }: Props) {
   if (!media || media.is_placeholder || !media.playback_id) {
     return (
       <div className="flex items-center justify-center w-full aspect-video bg-black">
@@ -41,6 +44,9 @@ export default function ProjectionMediaPlayer({ media, projectionId, masterId, c
       canonicalStateId={canonicalStateId}
       startMs={media.start_ms}
       endMs={media.end_ms}
+      seekToSeconds={seekToSeconds}
+      onTimeUpdate={onTimeUpdate}
+      onDurationChange={onDurationChange}
     />
   );
 }

@@ -529,6 +529,8 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
   const [workType, setWorkType] = useState("animation");
   const [sourceType, setSourceType] = useState("upload");
   const [sourceUrl, setSourceUrl] = useState("");
+  const [sourceProvider, setSourceProvider] = useState("");
+  const [externalIdentifier, setExternalIdentifier] = useState("");
   const [isrc, setIsrc] = useState("");
   const [isrcStatus, setIsrcStatus] = useState("not-applicable");
   const [versionLabel, setVersionLabel] = useState("");
@@ -544,6 +546,8 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
       work_type: workType,
       source_type: sourceType,
       source_url: sourceType === "external-url" ? sourceUrl : null,
+      source_provider: sourceProvider || null,
+      external_identifier: externalIdentifier || null,
       isrc: isrc || null,
       isrc_status: workType === "song" || workType === "audio" ? isrcStatus : "not-applicable",
       version_label: versionLabel || null,
@@ -576,6 +580,10 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
           <option value="upload">Local upload</option><option value="external-url">Authorised external URL</option><option value="livepeer-asset">Existing Livepeer asset</option>
         </select>
         {sourceType === "external-url" && <input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://… (YouTube references are preserved, never downloaded)" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />}
+        <div className="grid grid-cols-2 gap-2">
+          <input value={sourceProvider} onChange={e => setSourceProvider(e.target.value)} placeholder="Source / platform" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input value={externalIdentifier} onChange={e => setExternalIdentifier(e.target.value)} placeholder="External ID (ISRC/URI)" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+        </div>
         {(workType === "song" || workType === "audio") && (
           <div className="grid grid-cols-2 gap-2">
             <select value={isrcStatus} onChange={e => setIsrcStatus(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">

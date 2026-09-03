@@ -2,6 +2,11 @@
 
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
+import MediaTimeline from "@/components/player/media-timeline";
+import { findActiveScene, type SceneTiming } from "@/lib/media/timing";
+import SceneDeck from "@/components/scene-deck";
+import type { SceneDeckItem } from "@/components/scene-deck";
+import { useState } from "react";
 
 type Props = {
   media: ProjectionMedia | null;
@@ -12,6 +17,8 @@ type Props = {
   typeLabel: string;
   credit: string | null;
   collectible: boolean;
+  timelineScenes?: SceneTiming[];
+  deckScenes?: SceneDeckItem[];
   // artwork slot — null until genuine artwork exists
   artworkUrl?: string | null;
 };
@@ -25,7 +32,26 @@ export default function MediaHero({
   typeLabel,
   credit,
   collectible,
+  timelineScenes = [],
+  deckScenes = [],
 }: Props) {
+  const [currentTime, setCurrentTime] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [seekToSeconds, setSeekToSeconds] = useState<number | null>(null);
+  const [selectedSceneId, setSelectedSceneId] = useState<string | null>(timelineScenes[0]?.id ?? null);
+
+  function selectScene(sceneId: string) {
+    setSelectedSceneId(sceneId);
+    const scene = timelineScenes.find((item) => item.id === sceneId);
+    if (scene) setSeekToSeconds(scene.startMs / 1000);
+  }
+
+  function handleTimeUpdate(seconds: number) {
+    setCurrentTime(seconds);
+    const activeSceneId = findActiveScene(timelineScenes, seconds * 1000);
+    if (activeSceneId) setSelectedSceneId(activeSceneId);
+  }
+
   return (
     <div className="w-full">
       {/* Video — full bleed, no max-width constraint */}
@@ -36,9 +62,28 @@ export default function MediaHero({
             projectionId={projectionId}
             masterId={masterId}
             canonicalStateId={canonicalStateId}
+            seekToSeconds={seekToSeconds}
+            onTimeUpdate={handleTimeUpdate}
+            onDurationChange={setDuration}
           />
         </div>
       </div>
+
+      <div className="mx-auto w-full max-w-7xl px-4 py-4">
+        <MediaTimeline
+          currentTime={currentTime}
+          duration={duration}
+          scenes={timelineScenes}
+          onSeek={setSeekToSeconds}
+          onSelectScene={(scene) => selectScene(scene.id)}
+        />
+      </div>
+
+      {deckScenes.length > 0 && (
+        <div className="mx-auto w-full max-w-7xl px-4 pb-10">
+          <SceneDeck scenes={deckScenes} selectedId={selectedSceneId} onSelect={selectScene} />
+        </div>
+      )}
 
       {/* Identity — below media, constrained */}
       <div className="bg-background border-b border-border">

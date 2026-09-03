@@ -6,13 +6,12 @@ import type { ProjectionMedia } from "@/components/player/projection-media-playe
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import MediaHero from "@/components/media-hero";
-import MediaVisual from "@/components/media-visual";
 import WorldTabsClient from "@/components/world-tabs-client";
 import PageTopNav from "@/components/page-top-nav";
 
 type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
 type MomentRow = { master_id: string; title: string | null; scene_projection_id: string | null };
-type SceneRow = { master_id: string; title: string | null; projection_id: string | null };
+type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; start_ms: number | null; end_ms: number | null };
 
 type PageData = {
   canonical_type: string;
@@ -156,10 +155,32 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       ])
     : [{ data: [] }, { data: [] }];
 
+  const sceneProjectionIds = (sceneProjs ?? []).map((projection) => projection.projection_id);
+  const { data: sceneBindings } = sceneProjectionIds.length
+    ? await svc.from("projection_media_binding").select("projection_id, asset_id, start_ms, end_ms").in("projection_id", sceneProjectionIds).eq("binding_type", "primary").eq("access_level", "public")
+    : { data: [] };
+  const sceneAssetIds = (sceneBindings ?? []).map((binding) => binding.asset_id);
+  const { data: sceneAssets } = sceneAssetIds.length
+    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", sceneAssetIds)
+    : { data: [] };
+
   const scenes: SceneRow[] = (sceneChildren ?? []).map((s) => ({
     master_id: s.master_id,
     title: (scenePres ?? []).find((p) => p.master_id === s.master_id)?.title ?? null,
     projection_id: (sceneProjs ?? []).find((p) => p.master_id === s.master_id)?.projection_id ?? null,
+    playback_id: (() => {
+      const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === s.master_id)?.projection_id;
+      const binding = (sceneBindings ?? []).find((item) => item.projection_id === projectionId);
+      return (sceneAssets ?? []).find((asset) => asset.asset_id === binding?.asset_id)?.storage_ref ?? null;
+    })(),
+    start_ms: (() => {
+      const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === s.master_id)?.projection_id;
+      return (sceneBindings ?? []).find((item) => item.projection_id === projectionId)?.start_ms ?? null;
+    })(),
+    end_ms: (() => {
+      const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === s.master_id)?.projection_id;
+      return (sceneBindings ?? []).find((item) => item.projection_id === projectionId)?.end_ms ?? null;
+    })(),
   }));
 
   let universe_master_id: string | null = null;
@@ -246,6 +267,10 @@ export default async function WorldPage({
               typeLabel="Mural"
               credit={data.description}
               collectible={false}
+              timelineScenes={data.scenes
+                .filter((scene) => scene.playback_id === data.media?.playback_id && scene.start_ms != null && scene.end_ms != null)
+                .map((scene) => ({ id: scene.master_id, title: scene.title, startMs: scene.start_ms!, endMs: scene.end_ms! }))}
+              deckScenes={data.scenes.map((scene) => ({ id: scene.master_id, title: scene.title, playbackId: scene.playback_id }))}
             />
           </div>
 
@@ -296,8 +321,17 @@ export default async function WorldPage({
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-12 space-y-5">
 
-          {data.media?.playback_id && (
-            <MediaVisual playbackId={data.media.playback_id} title={title} className="mb-6 rounded-lg overflow-hidden" />
+          {data.media?.playback_id && data.projection_id && data.canonical_state_id && (
+            <MediaHero
+              media={data.media}
+              projectionId={data.projection_id}
+              masterId={data.master_id}
+              canonicalStateId={data.canonical_state_id}
+              title={title}
+              typeLabel="Universe"
+              credit={data.description}
+              collectible={false}
+            />
           )}
 
           <div className="flex flex-wrap items-start gap-3">

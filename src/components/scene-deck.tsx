@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Dices, GripVertical } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { Button } from "@/components/ui/button";
 
 export type SceneDeckItem = { id: string; title: string | null; href?: string; playbackId?: string | null };
 
-type Props = { scenes: SceneDeckItem[]; description?: string; onSelect?: (id: string) => void };
+type Props = { scenes: SceneDeckItem[]; description?: string; selectedId?: string | null; onSelect?: (id: string) => void };
 
 function shuffleItems(items: SceneDeckItem[]) {
   const next = [...items];
@@ -19,14 +19,15 @@ function shuffleItems(items: SceneDeckItem[]) {
   return next;
 }
 
-export default function SceneDeck({ scenes, description = "Explore the scenes and creative moments inside this World.", onSelect }: Props) {
+export default function SceneDeck({ scenes, description = "Explore the scenes and creative moments inside this World.", selectedId, onSelect }: Props) {
   const [items, setItems] = useState(scenes);
-  const [selectedId, setSelectedId] = useState<string | null>(scenes[0]?.id ?? null);
+  const [internalSelectedId, setInternalSelectedId] = useState<string | null>(scenes[0]?.id ?? null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  const draggedInteraction = useRef(false);
 
   function selectScene(id: string) {
-    setSelectedId(id);
+    setInternalSelectedId(id);
     onSelect?.(id);
   }
 
@@ -60,7 +61,7 @@ export default function SceneDeck({ scenes, description = "Explore the scenes an
       <div className="scene-deck" aria-label={`${items.length} Scenes`}>
         {items.map((scene, index) => (
           <div key={scene.id} className="shrink-0">
-            {scene.href ? <Link href={scene.href} className="block" onClick={(event) => { if (draggedId) event.preventDefault(); }}>{sceneCard(scene, index)}</Link> : sceneCard(scene, index)}
+            {scene.href ? <Link href={scene.href} className="block" onClick={(event) => { if (draggedInteraction.current || draggedId) { event.preventDefault(); draggedInteraction.current = false; } }}>{sceneCard(scene, index)}</Link> : sceneCard(scene, index)}
           </div>
         ))}
       </div>
@@ -76,12 +77,12 @@ export default function SceneDeck({ scenes, description = "Explore the scenes an
         draggable
         onClick={() => selectScene(scene.id)}
         onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectScene(scene.id); } }}
-        onDragStart={() => setDraggedId(scene.id)}
+        onDragStart={() => { draggedInteraction.current = true; setDraggedId(scene.id); }}
         onDragOver={(event) => { event.preventDefault(); setDropTargetId(scene.id); }}
         onDrop={(event) => { event.preventDefault(); event.stopPropagation(); moveItem(scene.id); }}
-        onDragEnd={() => { setDraggedId(null); setDropTargetId(null); }}
+        onDragEnd={() => { setDraggedId(null); setDropTargetId(null); window.setTimeout(() => { draggedInteraction.current = false; }, 200); }}
         aria-label={`Scene ${index + 1}: ${scene.title ?? "Untitled"}`}
-        className={`scene-deck-card scene-deck-card-${index % 5} ${selectedId === scene.id ? "scene-deck-card-selected" : ""} ${draggedId === scene.id ? "scene-deck-card-dragging" : ""} ${dropTargetId === scene.id && draggedId !== scene.id ? "scene-deck-card-drop-target" : ""}`}
+              className={`scene-deck-card scene-deck-card-${index % 5} ${(selectedId ?? internalSelectedId) === scene.id ? "scene-deck-card-selected" : ""} ${draggedId === scene.id ? "scene-deck-card-dragging" : ""} ${dropTargetId === scene.id && draggedId !== scene.id ? "scene-deck-card-drop-target" : ""}`}
       >
         {scene.playbackId ? <MediaVisual playbackId={scene.playbackId} title={scene.title ?? "Scene"} className="absolute inset-0 h-full w-full border-0" /> : <><span className="scene-deck-mark" aria-hidden="true">MV</span><span className="scene-deck-lines" aria-hidden="true" /></>}
         <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white/90"><GripVertical size={11} /> {String(index + 1).padStart(2, "0")}</span>

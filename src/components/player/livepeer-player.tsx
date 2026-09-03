@@ -10,11 +10,26 @@ interface LivepeerPlayerProps {
   canonicalStateId: string;
   startMs: number | null;
   endMs: number | null;
+  seekToSeconds?: number | null;
+  onTimeUpdate?: (seconds: number) => void;
+  onDurationChange?: (seconds: number) => void;
 }
 
-export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalStateId, startMs, endMs }: LivepeerPlayerProps) {
+export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalStateId, startMs, endMs, seekToSeconds, onTimeUpdate, onDurationChange }: LivepeerPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const onTimeUpdateRef = useRef(onTimeUpdate);
+  const onDurationChangeRef = useRef(onDurationChange);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    onTimeUpdateRef.current = onTimeUpdate;
+    onDurationChangeRef.current = onDurationChange;
+  }, [onTimeUpdate, onDurationChange]);
+
+  useEffect(() => {
+    if (seekToSeconds == null || !videoRef.current || !Number.isFinite(seekToSeconds)) return;
+    videoRef.current.currentTime = seekToSeconds;
+  }, [seekToSeconds]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -75,7 +90,15 @@ export function LivepeerPlayer({ playbackId, projectionId, masterId, canonicalSt
     }).catch(() => null);
 
     video.addEventListener("play", onPlay);
-    return () => video.removeEventListener("play", onPlay);
+    const handleTimeUpdate = () => onTimeUpdateRef.current?.(video.currentTime);
+    const handleDurationChange = () => onDurationChangeRef.current?.(video.duration);
+    video.addEventListener("timeupdate", handleTimeUpdate);
+    video.addEventListener("durationchange", handleDurationChange);
+    return () => {
+      video.removeEventListener("play", onPlay);
+      video.removeEventListener("timeupdate", handleTimeUpdate);
+      video.removeEventListener("durationchange", handleDurationChange);
+    };
   }, [playbackId, projectionId, masterId, canonicalStateId, startMs, endMs]);
 
   return (
