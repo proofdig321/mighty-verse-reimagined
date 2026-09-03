@@ -68,9 +68,9 @@ export default function MomentsFilterClient({ moments }: Props) {
       </div>
 
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+        <div className="artifact-grid">
           {filtered.map((m) => (
-            <Link key={m.projection_id} href={`/moments/${m.projection_id}`} className="group space-y-2">
+            <Link key={m.projection_id} href={`/moments/${m.projection_id}`} className="artifact-card group">
               <div className="relative">
                 <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="2/3" />
                 {m.has_media && (
@@ -81,7 +81,7 @@ export default function MomentsFilterClient({ moments }: Props) {
                   </div>
                 )}
               </div>
-              <div>
+              <div className="artifact-copy">
                 <p className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity">
                   {m.title ?? "Untitled"}
                 </p>

@@ -526,6 +526,14 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
 function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
   const [title, setTitle] = useState("");
   const [creatorName, setCreatorName] = useState("");
+  const [alternateTitle, setAlternateTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [language, setLanguage] = useState("");
+  const [genre, setGenre] = useState("");
+  const [releaseDate, setReleaseDate] = useState("");
+  const [explicitContent, setExplicitContent] = useState(false);
+  const [visibility, setVisibility] = useState("draft");
+  const [altText, setAltText] = useState("");
   const [workType, setWorkType] = useState("animation");
   const [sourceType, setSourceType] = useState("upload");
   const [sourceUrl, setSourceUrl] = useState("");
@@ -542,6 +550,8 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
     setBusy(true); setMessage(null);
     const result = await api("/api/authority/media-intake", {
       title,
+      alternate_title: alternateTitle || null,
+      description: description || null,
       creator_name: creatorName || null,
       work_type: workType,
       source_type: sourceType,
@@ -552,6 +562,12 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
       isrc_status: workType === "song" || workType === "audio" ? isrcStatus : "not-applicable",
       version_label: versionLabel || null,
       provenance_notes: provenanceNotes || null,
+      language: language || null,
+      genre: genre || null,
+      release_date: releaseDate || null,
+      explicit_content: explicitContent,
+      visibility,
+      alt_text: altText || null,
     });
     setBusy(false);
     if (result.error) { setMessage(`Error: ${result.error}`); return; }
@@ -569,7 +585,11 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
           {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
         </div>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
-        <input value={creatorName} onChange={e => setCreatorName(e.target.value)} placeholder="Artist / creator" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <input value={creatorName} onChange={e => setCreatorName(e.target.value)} placeholder="Artist / creator" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+          <input value={alternateTitle} onChange={e => setAlternateTitle(e.target.value)} placeholder="Alternate title (optional)" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        </div>
+        <textarea value={description} onChange={e => setDescription(e.target.value)} placeholder="Description" disabled={busy} rows={2} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
         <div className="grid grid-cols-2 gap-2">
           <select value={workType} onChange={e => setWorkType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm">
             <option value="animation">Animation</option><option value="video">Video</option><option value="song">Song</option><option value="audio">Audio</option><option value="other">Other</option>
@@ -592,6 +612,14 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
             <input value={isrc} onChange={e => setIsrc(e.target.value.toUpperCase())} placeholder="ISRC" disabled={busy || isrcStatus !== "verified"} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           </div>
         )}
+        <div className="grid grid-cols-2 gap-2">
+          <input value={language} onChange={e => setLanguage(e.target.value)} placeholder="Language" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input value={genre} onChange={e => setGenre(e.target.value)} placeholder="Genre / category" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input type="date" value={releaseDate} onChange={e => setReleaseDate(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <select value={visibility} onChange={e => setVisibility(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm"><option value="draft">Draft</option><option value="private">Private</option><option value="public">Public</option></select>
+        </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={explicitContent} onChange={e => setExplicitContent(e.target.checked)} disabled={busy} /> Explicit content</label>
+        <input value={altText} onChange={e => setAltText(e.target.value)} placeholder="Artwork / thumbnail alt text" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         <textarea value={provenanceNotes} onChange={e => setProvenanceNotes(e.target.value)} placeholder="Provenance / production notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
         {message && <p className="text-destructive text-sm">{message}</p>}
         <Button size="sm" disabled={busy || !title.trim() || (sourceType === "external-url" && !sourceUrl.trim())} onClick={submit}>Create intake record</Button>

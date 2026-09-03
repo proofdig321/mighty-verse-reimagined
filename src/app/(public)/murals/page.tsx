@@ -44,23 +44,24 @@ export default async function MuralsPage() {
   const murals = await getData();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/murals" />
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
+      <div className="public-hero">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Visual expressions of Worlds</p>
+          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
             Mural Gallery
           </h1>
           <p className="text-sm text-muted-foreground mt-1">Explore all animated murals.</p>
         </div>
       </div>
-      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
+      <div className="mx-auto max-w-7xl space-y-8 px-6 py-12">
         {murals.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-5">
+          <div className="artifact-grid">
             {murals.map((m) => (
-              <Link key={m.master_id} href={`/worlds/${m.master_id}`} className="group space-y-2">
+              <Link key={m.master_id} href={`/worlds/${m.master_id}`} className="artifact-card group">
                 <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="16/9" />
-                <div>
+                <div className="artifact-copy">
                   <p className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-display, inherit)" }}>
                     {m.title ?? "Untitled"}
                   </p>

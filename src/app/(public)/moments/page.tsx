@@ -61,11 +61,12 @@ export default async function MomentsPage() {
   const moments = await getData();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/moments" />
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
+      <div className="public-hero">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Creative artifacts</p>
+          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
             All Moments
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -73,7 +74,7 @@ export default async function MomentsPage() {
           </p>
         </div>
       </div>
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-6 py-12">
         <MomentsFilterClient moments={moments} />
       </div>
     </div>

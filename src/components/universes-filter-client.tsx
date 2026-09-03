@@ -41,11 +41,11 @@ export default function UniversesFilterClient({ universes }: Props) {
       </div>
 
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+        <div className="artifact-grid">
           {filtered.map((u) => (
-            <Link key={u.master_id} href={`/worlds/${u.master_id}`} className="group space-y-2">
+            <Link key={u.master_id} href={`/worlds/${u.master_id}`} className="artifact-card group">
               <ArtworkFrame artworkUrl={null} alt={u.title ?? ""} aspectRatio="2/3" />
-              <div>
+              <div className="artifact-copy">
                 <p
                   className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity"
                   style={{ fontFamily: "var(--font-display, inherit)" }}

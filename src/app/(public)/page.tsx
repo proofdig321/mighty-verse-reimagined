@@ -20,13 +20,15 @@ export default async function HomePage() {
   );
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/" />
       <div className="flex-1">
 
         {/* Hero — full-width text, no artwork panel */}
-        <section className="border-b border-border">
-          <div className="mx-auto max-w-7xl px-6 py-20 md:py-32 space-y-8">
+        <section className="public-hero">
+          <div className="relative z-10 mx-auto grid max-w-7xl gap-12 px-6 py-20 md:grid-cols-[1.2fr_0.8fr] md:items-end md:py-28">
+            <div className="space-y-8">
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">A living catalogue of worlds</p>
             <h1
               className="text-5xl md:text-7xl font-semibold leading-none tracking-tight text-foreground max-w-3xl"
               style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -44,11 +46,17 @@ export default async function HomePage() {
               </Link>
               <Button variant="outline" disabled>Watch Trailer</Button>
             </div>
+            </div>
+            <div className="hidden space-y-4 border-l border-border/70 pl-6 md:block">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground">The experience</p>
+              <p className="max-w-xs text-lg leading-relaxed text-foreground/80">Move from World to Mural to Scene and discover the Creative Moments inside.</p>
+              <div className="flex gap-6 text-xs text-muted-foreground"><span><strong className="block text-2xl text-foreground">01</strong>Worlds</span><span><strong className="block text-2xl text-foreground">∞</strong>Moments</span></div>
+            </div>
           </div>
         </section>
 
         {/* Featured Universes */}
-        <section className="mx-auto max-w-7xl px-6 py-10">
+        <section className="mx-auto max-w-7xl px-6 py-14">
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Featured Universes
@@ -59,15 +67,15 @@ export default async function HomePage() {
           </div>
 
           {featured.length > 0 ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
+            <div className="artifact-grid">
               {featured.map((w: DiscoveryUniverse) => (
                 <Link
                   key={w.master_id}
                   href={`/worlds/${w.master_id}`}
-                  className="group space-y-2"
+                  className="artifact-card group"
                 >
                   <ArtworkFrame artworkUrl={null} alt={w.title ?? ""} aspectRatio="2/3" />
-                  <div>
+                  <div className="artifact-copy">
                     <p
                       className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity"
                       style={{ fontFamily: "var(--font-display, inherit)" }}

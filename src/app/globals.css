@@ -155,6 +155,54 @@
 }
 
 @layer components {
+  .public-page {
+    min-height: 100vh;
+    background: color-mix(in oklch, var(--background) 94%, var(--primary));
+  }
+
+  .public-hero {
+    position: relative;
+    overflow: hidden;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(115deg, color-mix(in oklch, var(--card) 82%, var(--primary)), var(--background) 65%);
+  }
+
+  .public-hero::after {
+    content: "";
+    position: absolute;
+    inset: 0 0 0 58%;
+    background: repeating-linear-gradient(135deg, transparent 0 18px, color-mix(in oklch, var(--primary) 13%, transparent) 19px 20px);
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .artifact-card {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--card) 88%, transparent);
+    transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+  }
+
+  .artifact-card:hover,
+  .artifact-card:focus-visible {
+    border-color: color-mix(in oklch, var(--primary) 70%, var(--border));
+    background: var(--card);
+    transform: translateY(-3px);
+  }
+
+  .artifact-card > .artifact-copy {
+    padding: 0.75rem 0.85rem 0.9rem;
+  }
+
+  .artifact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+    gap: 1rem;
+  }
+
   .dashboard-content {
     width: min(100%, 90rem);
     margin-inline: auto;

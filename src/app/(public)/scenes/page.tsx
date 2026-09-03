@@ -56,11 +56,12 @@ export default async function ScenesPage() {
   const scenes = await getData();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/scenes" />
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
+      <div className="public-hero">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Sequence and discovery</p>
+          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
             Scene Deck
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -68,7 +69,7 @@ export default async function ScenesPage() {
           </p>
         </div>
       </div>
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-6 py-12">
         <SceneDeckClient scenes={scenes} />
       </div>
     </div>

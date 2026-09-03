@@ -54,6 +54,13 @@ export default function MediaHero({
 
   return (
     <div className="w-full">
+      <div className="bg-background border-b border-border">
+        <div className="mx-auto max-w-7xl px-4 py-6 space-y-2">
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{typeLabel}</p>
+          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>{title}</h1>
+          {credit && <p className="max-w-2xl text-sm text-muted-foreground">{credit}</p>}
+        </div>
+      </div>
       {/* Video — full bleed, no max-width constraint */}
       <div className="w-full bg-black">
         <div className="mx-auto" style={{ maxWidth: "1280px" }}>
@@ -85,31 +92,7 @@ export default function MediaHero({
         </div>
       )}
 
-      {/* Identity — below media, constrained */}
-      <div className="bg-background border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 py-6 space-y-3">
-          <div className="flex items-start justify-between gap-4">
-            <h1
-              className="text-3xl md:text-4xl font-semibold leading-tight tracking-tight text-foreground"
-              style={{ fontFamily: "var(--font-display, inherit)" }}
-            >
-              {title}
-            </h1>
-            {collectible && (
-              <span
-                className="shrink-0 mt-1.5 text-xs font-medium px-2.5 py-1 rounded-full border"
-                style={{ color: "var(--accent-mv)", borderColor: "var(--accent-mv)" }}
-              >
-                collectible
-              </span>
-            )}
-          </div>
-          <p className="text-muted-foreground text-xs uppercase tracking-widest">{typeLabel}</p>
-          {credit && (
-            <p className="text-muted-foreground text-sm">{credit}</p>
-          )}
-        </div>
-      </div>
+      {collectible && <div className="mx-auto max-w-7xl px-4 pb-6 text-xs font-medium uppercase tracking-widest text-accent-mv">Collectible experience</div>}
     </div>
   );
 }

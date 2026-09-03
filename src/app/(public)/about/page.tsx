@@ -19,13 +19,14 @@ export default async function AboutPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/about" />
 
       {/* Page header */}
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
+      <div className="public-hero">
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
+          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">The Mighty Verse model</p>
+          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
             About Mighty Verse
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -34,7 +35,7 @@ export default async function AboutPage() {
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-6 py-10 space-y-12">
+      <div className="mx-auto max-w-7xl space-y-14 px-6 py-12">
 
         {/* Mission */}
         <div className="max-w-3xl space-y-4">
@@ -50,9 +51,9 @@ export default async function AboutPage() {
         {/* Stats */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">The Universe So Far</p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="artifact-grid">
             {stats.map(({ label, value }) => (
-              <div key={label} className="bg-card border border-border rounded-lg px-6 py-5">
+              <div key={label} className="artifact-card artifact-copy">
                 <p className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
                   {value}
                 </p>
@@ -65,14 +66,14 @@ export default async function AboutPage() {
         {/* Pillars */}
         <div>
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">How It Works</p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="artifact-grid">
             {[
               { icon: "🔭", label: "Discover", desc: "Explore song universes, murals and creative moments freely. No wallet required." },
               { icon: "⚡", label: "Collect", desc: "Own authorised projections of canonical creative moments as Cards, Editions and more." },
               { icon: "✦", label: "Participate", desc: "Contribute to the universe. Attribution and provenance are built into every work." },
               { icon: "⬡", label: "Authority", desc: "Canonical authority is held by Mighty Verse. Provenance is public and verifiable." },
             ].map(({ icon, label, desc }) => (
-              <div key={label} className="bg-card border border-border rounded-lg px-5 py-5 space-y-2">
+              <div key={label} className="artifact-card artifact-copy space-y-2">
                 <span className="text-2xl">{icon}</span>
                 <p className="text-sm font-semibold text-foreground">{label}</p>
                 <p className="text-xs text-muted-foreground leading-relaxed">{desc}</p>

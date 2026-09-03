@@ -8,7 +8,7 @@ export default function ArtworkFrame({ artworkUrl, alt = "", aspectRatio = "1/1"
   return (
     <div
       style={{ aspectRatio, position: "relative", overflow: "hidden" }}
-      className="w-full bg-card border border-border rounded-md"
+      className="w-full bg-card border border-border rounded-md transition-transform duration-300 group-hover:scale-[1.02]"
     >
       {artworkUrl ? (
         // eslint-disable-next-line @next/next/no-img-element

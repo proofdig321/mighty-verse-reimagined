@@ -29,6 +29,8 @@ export async function POST(request: Request) {
     master_id,
     asset_id,
     title,
+    alternate_title,
+    description,
     creator_ref,
     creator_name,
     work_type,
@@ -40,6 +42,12 @@ export async function POST(request: Request) {
     source_provider,
     external_identifier,
     provenance_notes,
+    language,
+    genre,
+    release_date,
+    explicit_content = false,
+    visibility = "draft",
+    alt_text,
   } = body;
 
   if (!title?.trim() || !WORK_TYPES.has(work_type) || !SOURCE_TYPES.has(source_type)) {
@@ -57,6 +65,9 @@ export async function POST(request: Request) {
   if (source_type === "external-url" && !validHttpsUrl(source_url)) {
     return NextResponse.json({ error: "An HTTPS source_url is required for external sources" }, { status: 400 });
   }
+  if (!['draft', 'private', 'public'].includes(visibility)) {
+    return NextResponse.json({ error: "Invalid visibility" }, { status: 400 });
+  }
 
   const auth = await validateAuthority(participantId, "create-canonical-state", master_id ?? null);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
@@ -68,6 +79,8 @@ export async function POST(request: Request) {
       master_id: master_id ?? null,
       asset_id: asset_id ?? null,
       title: title.trim(),
+      alternate_title: alternate_title?.trim() || null,
+      description: description?.trim() || null,
       creator_ref: creator_ref ?? null,
       creator_name: creator_name?.trim() || null,
       work_type,
@@ -80,6 +93,12 @@ export async function POST(request: Request) {
       external_identifier: external_identifier?.trim() || null,
       supplied_by: participantId,
       provenance_notes: provenance_notes?.trim() || null,
+      language: language?.trim() || null,
+      genre: genre?.trim() || null,
+      release_date: release_date || null,
+      explicit_content: Boolean(explicit_content),
+      visibility,
+      alt_text: alt_text?.trim() || null,
     })
     .select("intake_id, master_id, asset_id, title, work_type, isrc, isrc_status, source_type, source_url, source_provider, supplied_by, created_at")
     .single();
