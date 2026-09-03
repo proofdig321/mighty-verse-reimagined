@@ -130,6 +130,9 @@
   body {
     @apply bg-background text-foreground min-h-screen;
   }
+  main {
+    @apply w-full;
+  }
   html {
     @apply font-sans;
   }
