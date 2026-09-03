@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import ArtworkFrame from "@/components/artwork-frame";
 import PageTopNav from "@/components/page-top-nav";
+import ProjectionMediaPlayer from "@/components/player/projection-media-player";
 
 const PROJ_LABELS: Record<string, string> = {
   "experiential": "Experiential",
@@ -217,7 +218,16 @@ export default async function MomentPage({
                   </span>
                 </div>
               )}
-              <ArtworkFrame artworkUrl={null} alt={title} aspectRatio="2/3" />
+              {media?.playback_id ? (
+                <ProjectionMediaPlayer
+                  media={media}
+                  projectionId={projection.projection_id}
+                  masterId={master.master_id}
+                  canonicalStateId={canonical_state.canonical_state_id}
+                />
+              ) : (
+                <ArtworkFrame artworkUrl={null} alt={title} aspectRatio="2/3" />
+              )}
             </div>
             <p
               className="text-lg font-semibold text-foreground text-center uppercase tracking-wide"

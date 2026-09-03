@@ -14,6 +14,9 @@ type MomentItem = {
   has_media: boolean;
   playback_id: string | null;
   canonical_type: string | null;
+  context_title: string | null;
+  context_type: string | null;
+  context_href: string | null;
 };
 
 type Props = { moments: MomentItem[] };
@@ -98,6 +101,11 @@ export default function MomentsFilterClient({ moments }: Props) {
                     {PROJ_LABELS[m.projection_type] ?? m.projection_type}
                   </span>
                 </div>
+                {m.context_title && m.context_href && (
+                  <p className="text-xs text-accent-mv truncate">
+                    {m.context_type === "mural" ? "Mural" : "Universe"}: {m.context_title}
+                  </p>
+                )}
               </div>
             </Link>
           ))}

@@ -12,6 +12,9 @@ type MomentItem = {
   has_media: boolean;
   playback_id: string | null;
   canonical_type: string | null;
+  context_title: string | null;
+  context_type: string | null;
+  context_href: string | null;
 };
 
 async function getData(): Promise<MomentItem[]> {
@@ -31,8 +34,16 @@ async function getData(): Promise<MomentItem[]> {
     svc.from("projection_presentation").select("projection_id, title").in("projection_id", ids),
     svc.from("work_presentation").select("master_id, title").in("master_id", masterIds),
     svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", ids).eq("access_level", "public"),
-    masterIds.length ? svc.from("master").select("master_id, canonical_type").in("master_id", masterIds) : Promise.resolve({ data: [] }),
+    masterIds.length ? svc.from("master").select("master_id, canonical_type, parent_master_id").in("master_id", masterIds) : Promise.resolve({ data: [] }),
   ]);
+
+  const parentIds = (masters ?? []).map((master) => master.parent_master_id).filter(Boolean);
+  const [{ data: parentMasters }, { data: parentPresentations }] = parentIds.length
+    ? await Promise.all([
+        svc.from("master").select("master_id, canonical_type").in("master_id", parentIds),
+        svc.from("work_presentation").select("master_id, title").in("master_id", parentIds),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
@@ -66,6 +77,18 @@ async function getData(): Promise<MomentItem[]> {
     has_media: hasMediaMap.get(p.projection_id) ?? false,
     playback_id: playbackMap.get(p.projection_id) ?? null,
     canonical_type: (masters ?? []).find((m) => m.master_id === p.master_id)?.canonical_type ?? null,
+    context_title: (() => {
+      const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;
+      return (parentPresentations ?? []).find((presentation) => presentation.master_id === parentId)?.title ?? null;
+    })(),
+    context_type: (() => {
+      const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;
+      return (parentMasters ?? []).find((parent) => parent.master_id === parentId)?.canonical_type ?? null;
+    })(),
+    context_href: (() => {
+      const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;
+      return parentId ? `/worlds/${parentId}` : null;
+    })(),
   }));
 }
 
