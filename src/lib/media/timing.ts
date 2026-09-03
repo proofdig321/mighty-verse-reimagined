@@ -7,7 +7,7 @@ export type SceneTiming = {
 
 export function clampTime(time: number, duration: number) {
   if (!Number.isFinite(time) || time < 0) return 0;
-  if (!Number.isFinite(duration) || duration <= 0) return time;
+  if (!Number.isFinite(duration) || duration <= 0) return 0;
   return Math.min(time, duration);
 }
 
@@ -25,9 +25,12 @@ export function validateSceneTiming(scene: SceneTiming, durationMs?: number) {
 export function sortSceneTimings(scenes: SceneTiming[], durationMs?: number) {
   return scenes
     .filter((scene) => validateSceneTiming(scene, durationMs))
-    .sort((a, b) => a.startMs - b.startMs);
+    .map((scene, index) => ({ scene, index }))
+    .sort((a, b) => a.scene.startMs - b.scene.startMs || a.index - b.index)
+    .map(({ scene }) => scene);
 }
 
 export function findActiveScene(scenes: SceneTiming[], timeMs: number) {
+  // Earlier scene order wins when valid scene ranges overlap.
   return scenes.find((scene) => timeMs >= scene.startMs && timeMs < scene.endMs)?.id ?? null;
 }

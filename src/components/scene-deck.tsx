@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dices, GripVertical } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { Button } from "@/components/ui/button";
@@ -26,6 +26,12 @@ export default function SceneDeck({ scenes, description = "Explore the scenes an
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const draggedInteraction = useRef(false);
 
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setItems(scenes);
+    setInternalSelectedId(selectedId ?? scenes[0]?.id ?? null);
+  }, [scenes, selectedId]);
+
   function selectScene(id: string) {
     setInternalSelectedId(id);
     onSelect?.(id);
@@ -44,6 +50,17 @@ export default function SceneDeck({ scenes, description = "Explore the scenes an
     });
     setDropTargetId(null);
     setDraggedId(null);
+  }
+
+  function moveByKeyboard(id: string, direction: -1 | 1) {
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === id);
+      const target = index + direction;
+      if (index < 0 || target < 0 || target >= current.length) return current;
+      const next = [...current];
+      [next[index], next[target]] = [next[target], next[index]];
+      return next;
+    });
   }
 
   return (
@@ -87,6 +104,10 @@ export default function SceneDeck({ scenes, description = "Explore the scenes an
         {scene.playbackId ? <MediaVisual playbackId={scene.playbackId} title={scene.title ?? "Scene"} className="absolute inset-0 h-full w-full border-0" /> : <><span className="scene-deck-mark" aria-hidden="true">MV</span><span className="scene-deck-lines" aria-hidden="true" /></>}
         <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white/90"><GripVertical size={11} /> {String(index + 1).padStart(2, "0")}</span>
         <span className="absolute inset-x-4 bottom-4 z-10 text-sm font-medium text-white drop-shadow-md">{scene.title ?? "Undisclosed Scene"}</span>
+        <span className="absolute bottom-3 right-3 z-20 flex gap-1">
+          <button type="button" aria-label={`Move ${scene.title ?? "scene"} earlier`} disabled={index === 0} onClick={(event) => { event.stopPropagation(); moveByKeyboard(scene.id, -1); }} className="rounded bg-black/60 px-1.5 py-1 text-[10px] text-white disabled:opacity-40">←</button>
+          <button type="button" aria-label={`Move ${scene.title ?? "scene"} later`} disabled={index === items.length - 1} onClick={(event) => { event.stopPropagation(); moveByKeyboard(scene.id, 1); }} className="rounded bg-black/60 px-1.5 py-1 text-[10px] text-white disabled:opacity-40">→</button>
+        </span>
       </div>
     );
   }
