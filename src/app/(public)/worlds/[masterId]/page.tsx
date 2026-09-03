@@ -292,7 +292,7 @@ export default async function WorldPage({
     <div className="min-h-screen bg-background">
       <PageTopNav />
 
-      {/* Hero identity block */
+      {/* Hero identity block */}
       <div className="border-b border-border">
         <div className="mx-auto max-w-7xl px-6 py-12 space-y-5">
 
