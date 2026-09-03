@@ -550,7 +550,10 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
   const [isrc, setIsrc] = useState("");
   const [isrcStatus, setIsrcStatus] = useState("not-applicable");
   const [versionLabel, setVersionLabel] = useState("");
+  const [edition, setEdition] = useState("");
+  const [originalReleaseDate, setOriginalReleaseDate] = useState("");
   const [provenanceNotes, setProvenanceNotes] = useState("");
+  const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
@@ -575,12 +578,14 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
       isrc: isrc || null,
       isrc_status: workType === "song" || workType === "audio" ? isrcStatus : "not-applicable",
       version_label: versionLabel || null,
+      version: versionLabel || null,
+      edition: edition || null,
       provenance_notes: provenanceNotes || null,
       language: language || null,
       genre: genre || null,
       subgenre: subgenre || null,
       release_date: releaseDate || null,
-      original_release_date: null,
+      original_release_date: originalReleaseDate || null,
       content_rating: contentRating || null,
       explicit_content: explicitContent,
       visibility,
@@ -603,7 +608,14 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
           </div>
           {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
         </div>
-        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Content identity</p>
+        <div className="grid grid-cols-4 gap-1" role="tablist" aria-label="Intake steps">
+          {["Media & identity", "Presentation", "Credits & provenance", "Review"].map((label, index) => {
+            const stepNumber = index + 1;
+            return <button key={label} type="button" role="tab" aria-selected={step === stepNumber} onClick={() => setStep(stepNumber)} className={`border-b-2 px-1 py-2 text-[10px] font-medium sm:text-xs ${step === stepNumber ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{stepNumber}. {label}</button>;
+          })}
+        </div>
+        <div hidden={step !== 1}>
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Media & identity</p>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <input value={creatorName} onChange={e => setCreatorName(e.target.value)} placeholder="Artist / creator" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
@@ -619,7 +631,11 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
             <option value="animation">Animation</option><option value="video">Video</option><option value="song">Song</option><option value="audio">Audio</option><option value="other">Other</option>
           </select>
           <input value={versionLabel} onChange={e => setVersionLabel(e.target.value)} placeholder="Version / release" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input value={edition} onChange={e => setEdition(e.target.value)} placeholder="Edition" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
         </div>
+        </div>
+        <div hidden={step !== 2}>
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Presentation & audience</p>
         <select value={sourceType} onChange={e => setSourceType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
           <option value="upload">Local upload</option><option value="external-url">Authorised external URL</option><option value="livepeer-asset">Existing Livepeer asset</option>
         </select>
@@ -641,6 +657,7 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
           <input value={genre} onChange={e => setGenre(e.target.value)} placeholder="Genre / category" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <input value={subgenre} onChange={e => setSubgenre(e.target.value)} placeholder="Subgenre" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <input type="date" value={releaseDate} onChange={e => setReleaseDate(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
+          <input type="date" value={originalReleaseDate} onChange={e => setOriginalReleaseDate(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <input value={contentRating} onChange={e => setContentRating(e.target.value)} placeholder="Content rating" disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm" />
           <select value={visibility} onChange={e => setVisibility(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm"><option value="draft">Draft</option><option value="private">Private</option><option value="public">Public</option></select>
         </div>
@@ -652,9 +669,27 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
         <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)} disabled={busy} /> Feature in discovery</label>
         <select value={searchStatus} onChange={e => setSearchStatus(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"><option value="pending">Search: pending</option><option value="indexed">Search: indexed</option><option value="excluded">Search: excluded</option></select>
         <input value={altText} onChange={e => setAltText(e.target.value)} placeholder="Artwork / thumbnail alt text" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        </div>
+        <div hidden={step !== 3}>
+        <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Credits & provenance</p>
         <textarea value={provenanceNotes} onChange={e => setProvenanceNotes(e.target.value)} placeholder="Provenance / production notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
-        {message && <p className="text-destructive text-sm">{message}</p>}
-        <Button size="sm" disabled={busy || !title.trim() || (sourceType === "external-url" && !sourceUrl.trim())} onClick={submit}>Create intake record</Button>
+        </div>
+        <div hidden={step !== 4} className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
+          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Review before submission</p>
+          <p className="text-sm text-foreground"><span className="font-medium">{title || "Untitled media"}</span>{creatorName ? ` by ${creatorName}` : ""}</p>
+          <dl className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-2">
+            <div><dt className="font-medium text-foreground">Work</dt><dd>{workType}{versionLabel ? ` · ${versionLabel}` : ""}</dd></div>
+            <div><dt className="font-medium text-foreground">Publishing</dt><dd>{visibility} · {searchStatus}{featured ? " · featured" : ""}</dd></div>
+            <div><dt className="font-medium text-foreground">Credits</dt><dd>{primaryArtistId ? "Primary artist linked" : "No participant credit"}{featuredArtistIds ? " · featured artists linked" : ""}</dd></div>
+            <div><dt className="font-medium text-foreground">Source</dt><dd>{sourceType}{sourceProvider ? ` · ${sourceProvider}` : ""}</dd></div>
+          </dl>
+          <p className="text-xs text-muted-foreground">Submission creates the intake record. Upload processing remains a separate Livepeer status flow.</p>
+        </div>
+        <div className="flex flex-wrap justify-between gap-2">
+          <Button type="button" size="sm" variant="outline" disabled={busy || step === 1} onClick={() => setStep(current => current - 1)}>Back</Button>
+          {step < 4 ? <Button type="button" size="sm" disabled={busy || (step === 1 && !title.trim())} onClick={() => setStep(current => current + 1)}>Continue</Button> : <Button size="sm" disabled={busy || !title.trim() || (sourceType === "external-url" && !sourceUrl.trim())} onClick={submit}>Create intake record</Button>}
+        </div>
+        {message && <p role="alert" className="text-destructive text-sm">{message}</p>}
       </CardContent>
     </Card>
   );
