@@ -22,7 +22,7 @@ const CORE_PRINCIPLES = [
 export default function Nav() {
   return (
     <aside
-      className="sticky top-0 h-screen flex-shrink-0 flex flex-col w-56 border-r border-border overflow-y-auto"
+      className="sticky top-0 hidden h-screen w-56 flex-shrink-0 flex-col border-r border-border overflow-y-auto lg:flex"
       style={{ background: "var(--sidebar)" }}
     >
       {/* Logo */}

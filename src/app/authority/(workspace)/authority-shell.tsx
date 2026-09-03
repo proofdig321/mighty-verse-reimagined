@@ -26,7 +26,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="min-h-screen bg-background flex flex-col lg:flex-row">
+    <div className="multiverse-page min-h-screen bg-background flex flex-col lg:flex-row">
       {/* Mobile top bar */}
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">

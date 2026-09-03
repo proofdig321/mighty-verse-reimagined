@@ -126,6 +126,10 @@
   * {
     @apply border-border outline-ring/50;
   }
+  ::selection {
+    background: color-mix(in oklch, var(--primary) 35%, transparent);
+    color: var(--foreground);
+  }
   html,
   body {
     width: 100%;
@@ -141,6 +145,13 @@
   html {
     @apply font-sans;
   }
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    outline-offset: 3px;
+  }
 }
 
 @layer components {
@@ -153,8 +164,9 @@
 @layer components {
   .multiverse-page {
     background-color: var(--background);
-    background-image: linear-gradient(to right, color-mix(in oklch, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 5%, transparent) 1px, transparent 1px);
-    background-size: 48px 48px;
+    background-image: radial-gradient(circle at 76% 8%, color-mix(in oklch, var(--primary) 12%, transparent), transparent 28rem), linear-gradient(to right, color-mix(in oklch, var(--foreground) 5%, transparent) 1px, transparent 1px), linear-gradient(to bottom, color-mix(in oklch, var(--foreground) 5%, transparent) 1px, transparent 1px);
+    background-size: auto, 48px 48px, 48px 48px;
+    background-attachment: fixed;
   }
 
   .multiverse-stage {
