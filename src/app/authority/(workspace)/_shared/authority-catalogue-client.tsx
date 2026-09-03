@@ -682,6 +682,7 @@ function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => vo
         </div>
         <div hidden={step !== 3}>
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Credits & provenance</p>
+        <p className="text-xs text-muted-foreground">Select participant identities for credits. Technical values are derived by media processing and are not manually claimed here.</p>
         <textarea value={provenanceNotes} onChange={e => setProvenanceNotes(e.target.value)} placeholder="Provenance / production notes" disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm resize-none" />
         </div>
         <div hidden={step !== 4} className="space-y-3 rounded-md border border-border bg-muted/20 p-3">
