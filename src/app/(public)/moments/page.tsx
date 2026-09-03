@@ -10,6 +10,7 @@ type MomentItem = {
   projection_type: string;
   collectible_designated: boolean;
   has_media: boolean;
+  playback_id: string | null;
 };
 
 async function getData(): Promise<MomentItem[]> {
@@ -39,6 +40,12 @@ async function getData(): Promise<MomentItem[]> {
     (assets ?? []).filter((a) => a.storage_ref?.startsWith("seed:placeholder:")).map((a) => a.asset_id)
   );
 
+  const playbackMap = new Map<string, string>();
+  for (const binding of bindings ?? []) {
+    const storageRef = (assets ?? []).find((asset) => asset.asset_id === binding.asset_id)?.storage_ref;
+    if (storageRef && !storageRef.startsWith("seed:placeholder:")) playbackMap.set(binding.projection_id, storageRef);
+  }
+
   const hasMediaMap = new Map<string, boolean>();
   for (const b of bindings ?? []) {
     if (!hasMediaMap.has(b.projection_id)) {
@@ -54,6 +61,7 @@ async function getData(): Promise<MomentItem[]> {
     projection_type: p.projection_type,
     collectible_designated: p.collectible_designated,
     has_media: hasMediaMap.get(p.projection_id) ?? false,
+    playback_id: playbackMap.get(p.projection_id) ?? null,
   }));
 }
 

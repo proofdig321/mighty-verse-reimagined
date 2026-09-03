@@ -334,20 +334,17 @@ export default async function WorldPage({
             />
           )}
 
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="space-y-1 flex-1 min-w-0">
-              <h1
-                className="text-4xl md:text-6xl font-semibold leading-none tracking-tight text-foreground"
-                style={{ fontFamily: "var(--font-display, inherit)" }}
-              >
-                {title}
-              </h1>
-              {artistLabel && (
-                <p className="text-base text-muted-foreground">by {artistLabel}</p>
-              )}
+          {!data.media?.playback_id && (
+            <div className="flex flex-wrap items-start gap-3">
+              <div className="space-y-1 flex-1 min-w-0">
+                <h1 className="text-4xl md:text-6xl font-semibold leading-none tracking-tight text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
+                  {title}
+                </h1>
+                {artistLabel && <p className="text-base text-muted-foreground">by {artistLabel}</p>}
+              </div>
+              <Badge variant="outline" className="shrink-0 mt-1">Universe</Badge>
             </div>
-            <Badge variant="outline" className="shrink-0 mt-1">Universe</Badge>
-          </div>
+          )}
 
           {/* Stats row */}
           <div className="flex flex-wrap items-center gap-6 text-sm">

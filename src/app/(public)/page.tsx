@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import ArtworkFrame from "@/components/artwork-frame";
+import MediaVisual from "@/components/media-visual";
 import PageTopNav from "@/components/page-top-nav";
 import { Button } from "@/components/ui/button";
 
@@ -74,7 +75,7 @@ export default async function HomePage() {
                   href={`/worlds/${w.master_id}`}
                   className="artifact-card group"
                 >
-                  <ArtworkFrame artworkUrl={null} alt={w.title ?? ""} aspectRatio="2/3" />
+                  {w.visual_playback_id ? <MediaVisual playbackId={w.visual_playback_id} title={w.title ?? "Universe"} aspectRatio="1/1" /> : <ArtworkFrame artworkUrl={null} alt={w.title ?? ""} aspectRatio="2/3" />}
                   <div className="artifact-copy">
                     <p
                       className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity"

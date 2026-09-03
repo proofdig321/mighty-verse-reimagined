@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import ArtworkFrame from "@/components/artwork-frame";
+import MediaVisual from "@/components/media-visual";
 
 type MomentItem = {
   projection_id: string;
@@ -11,6 +12,7 @@ type MomentItem = {
   projection_type: string;
   collectible_designated: boolean;
   has_media: boolean;
+  playback_id: string | null;
 };
 
 type Props = { moments: MomentItem[] };
@@ -72,7 +74,7 @@ export default function MomentsFilterClient({ moments }: Props) {
           {filtered.map((m) => (
             <Link key={m.projection_id} href={`/moments/${m.projection_id}`} className="artifact-card group">
               <div className="relative">
-                <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="2/3" />
+                {m.playback_id ? <MediaVisual playbackId={m.playback_id} title={m.title ?? "Creative Moment"} aspectRatio="1/1" /> : <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="2/3" />}
                 {m.has_media && (
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="w-8 h-8 rounded-full flex items-center justify-center bg-black/60">

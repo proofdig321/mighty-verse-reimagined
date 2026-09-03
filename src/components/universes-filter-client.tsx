@@ -4,12 +4,14 @@ import { useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import ArtworkFrame from "@/components/artwork-frame";
+import MediaVisual from "@/components/media-visual";
 
 type UniverseItem = {
   master_id: string;
   title: string | null;
   attribution_roles: string[];
   projection_count: number;
+  playback_id: string | null;
 };
 
 type Props = { universes: UniverseItem[] };
@@ -44,7 +46,7 @@ export default function UniversesFilterClient({ universes }: Props) {
         <div className="artifact-grid">
           {filtered.map((u) => (
             <Link key={u.master_id} href={`/worlds/${u.master_id}`} className="artifact-card group">
-              <ArtworkFrame artworkUrl={null} alt={u.title ?? ""} aspectRatio="2/3" />
+              {u.playback_id ? <MediaVisual playbackId={u.playback_id} title={u.title ?? "Universe"} aspectRatio="1/1" /> : <ArtworkFrame artworkUrl={null} alt={u.title ?? ""} aspectRatio="2/3" />}
               <div className="artifact-copy">
                 <p
                   className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity"
