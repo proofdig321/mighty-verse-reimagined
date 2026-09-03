@@ -225,8 +225,8 @@ export default function AuthorityClient() {
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
           {[
-            { step: "01", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media" },
-            { step: "02", label: "Upload media", sub: "Send video to Livepeer", href: "/authority/media" },
+            { step: "01", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media/intake" },
+            { step: "02", label: "Upload media", sub: "Send video to Livepeer", href: "/authority/media/intake" },
             { step: "03", label: "Rights review", sub: "Confirm provenance", href: "/authority/proof-of-rights" },
           ].map(item => (
             <a key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
@@ -241,12 +241,31 @@ export default function AuthorityClient() {
 
       <Separator className="opacity-30" />
 
-      {/* ── Module handoffs ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-px sm:grid-cols-3 rounded-lg overflow-hidden border border-border bg-border">
+      {/* ── Canonical entities ───────────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 gap-px sm:grid-cols-4 rounded-lg overflow-hidden border border-border bg-border">
         {[
-          { label: "Media Gallery", sub: "Audio and video assets", href: "/authority/media" },
-          { label: "Participants", sub: "People and roles", href: "/authority/participants" },
-          { label: "Proof of Rights", sub: "Rights and provenance", href: "/authority/proof-of-rights" },
+          { label: "Universes",        sub: "Top-level canonical containers", href: "/authority/universes" },
+          { label: "Murals",           sub: "Canonical Murals",               href: "/authority/murals" },
+          { label: "Scenes",           sub: "Canonical Scenes",               href: "/authority/scenes" },
+          { label: "Creative Moments", sub: "Canonical Creative Moments",     href: "/authority/creative-moments" },
+        ].map(({ label, sub, href }) => (
+          <a key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
+            <div>
+              <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground/60">{sub}</p>
+            </div>
+            <ArrowRight size={13} className="text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
+          </a>
+        ))}
+      </div>
+
+      {/* ── Module handoffs ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-px sm:grid-cols-4 rounded-lg overflow-hidden border border-border bg-border">
+        {[
+          { label: "Media Gallery",   sub: "Audio and video assets",  href: "/authority/media" },
+          { label: "Add Media",       sub: "Register new intake",      href: "/authority/media/intake" },
+          { label: "Participants",    sub: "People and roles",         href: "/authority/participants" },
+          { label: "Proof of Rights", sub: "Rights and provenance",    href: "/authority/proof-of-rights" },
         ].map(({ label, sub, href }) => (
           <a key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
             <div>

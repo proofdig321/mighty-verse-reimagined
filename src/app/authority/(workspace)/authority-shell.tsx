@@ -2,14 +2,34 @@
 
 import { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Film, LayoutDashboard, Menu, ShieldCheck, Users, X } from "lucide-react";
+import { Clapperboard, Film, Globe, LayoutDashboard, Layers, Menu, ShieldCheck, Sparkles, Upload, Users, X } from "lucide-react";
 
 const NAV_GROUPS = [
   {
     label: "Workspace",
     links: [
-      { label: "Dashboard",       href: "/authority",                icon: LayoutDashboard },
-      { label: "Media Gallery",   href: "/authority/media",          icon: Film },
+      { label: "Dashboard", href: "/authority", icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: "Canonical",
+    links: [
+      { label: "Universes",        href: "/authority/universes",        icon: Globe },
+      { label: "Murals",           href: "/authority/murals",           icon: Layers },
+      { label: "Scenes",           href: "/authority/scenes",           icon: Clapperboard },
+      { label: "Creative Moments", href: "/authority/creative-moments", icon: Sparkles },
+    ],
+  },
+  {
+    label: "Media",
+    links: [
+      { label: "Gallery",     href: "/authority/media",        icon: Film },
+      { label: "Add Media",   href: "/authority/media/intake", icon: Upload },
+    ],
+  },
+  {
+    label: "Rights",
+    links: [
       { label: "Participants",    href: "/authority/participants",    icon: Users },
       { label: "Proof of Rights", href: "/authority/proof-of-rights", icon: ShieldCheck },
     ],
