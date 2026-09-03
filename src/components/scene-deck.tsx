@@ -3,24 +3,31 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Dices, GripVertical } from "lucide-react";
+import MediaVisual from "@/components/media-visual";
+import { Button } from "@/components/ui/button";
 
-export type SceneDeckItem = { id: string; title: string | null; href: string };
+export type SceneDeckItem = { id: string; title: string | null; href?: string; playbackId?: string | null };
 
-type Props = { scenes: SceneDeckItem[] };
+type Props = { scenes: SceneDeckItem[]; description?: string; onSelect?: (id: string) => void };
 
-export default function SceneDeck({ scenes }: Props) {
+function shuffleItems(items: SceneDeckItem[]) {
+  const next = [...items];
+  for (let i = next.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [next[i], next[j]] = [next[j], next[i]];
+  }
+  return next;
+}
+
+export default function SceneDeck({ scenes, description = "Explore the scenes and creative moments inside this World.", onSelect }: Props) {
   const [items, setItems] = useState(scenes);
+  const [selectedId, setSelectedId] = useState<string | null>(scenes[0]?.id ?? null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
+  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
 
-  function shuffle() {
-    setItems((current) => {
-      const next = [...current];
-      for (let i = next.length - 1; i > 0; i -= 1) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [next[i], next[j]] = [next[j], next[i]];
-      }
-      return next;
-    });
+  function selectScene(id: string) {
+    setSelectedId(id);
+    onSelect?.(id);
   }
 
   function moveItem(targetId: string) {
@@ -34,6 +41,7 @@ export default function SceneDeck({ scenes }: Props) {
       next.splice(to, 0, moved);
       return next;
     });
+    setDropTargetId(null);
     setDraggedId(null);
   }
 
@@ -44,31 +52,41 @@ export default function SceneDeck({ scenes }: Props) {
           <p className="text-xs uppercase tracking-widest text-muted-foreground">Children of the Mural</p>
           <h2 id="scene-deck-heading" className="mt-1 text-3xl font-semibold" style={{ fontFamily: "var(--font-display, inherit)" }}>Scene Deck</h2>
         </div>
-        <button type="button" onClick={shuffle} aria-label="Shuffle scenes" title="Shuffle scenes" className="inline-flex items-center gap-2 rounded-md border border-border bg-card px-3 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent-mv hover:bg-accent focus-visible:outline-2 focus-visible:outline-offset-2">
-          <Dices size={15} /> Shuffle
-        </button>
+        <Button type="button" variant="outline" size="sm" onClick={() => setItems((current) => shuffleItems(current))} aria-label="Shuffle scenes" title="Shuffle scenes">
+          <Dices size={15} /> Shuffle scenes
+        </Button>
       </div>
-      <p className="text-sm text-muted-foreground">Explore the hidden creative moments inside this Mural.</p>
+      <p className="text-sm text-muted-foreground">{description}</p>
       <div className="scene-deck" aria-label={`${items.length} Scenes`}>
         {items.map((scene, index) => (
-          <Link
-            key={scene.id}
-            href={scene.href}
-            draggable
-            onDragStart={() => setDraggedId(scene.id)}
-            onDragOver={(event) => event.preventDefault()}
-            onDrop={() => moveItem(scene.id)}
-            onDragEnd={() => setDraggedId(null)}
-            aria-label={scene.title ? `Open Scene: ${scene.title}` : "Open Scene"}
-            className={`scene-deck-card scene-deck-card-${index % 5}${draggedId === scene.id ? " opacity-50 scale-95" : ""}`}
-          >
-            <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-black/45 px-2 py-1 text-[10px] font-semibold text-white/80"><GripVertical size={11} /> {String(index + 1).padStart(2, "0")}</span>
-            <span className="scene-deck-mark" aria-hidden="true">MV</span>
-            <span className="scene-deck-lines" aria-hidden="true" />
-            <span className="absolute inset-x-4 bottom-4 z-10 text-sm font-medium text-white/90">{scene.title ?? "Undisclosed Scene"}</span>
-          </Link>
+          <div key={scene.id} className="shrink-0">
+            {scene.href ? <Link href={scene.href} className="block" onClick={(event) => { if (draggedId) event.preventDefault(); }}>{sceneCard(scene, index)}</Link> : sceneCard(scene, index)}
+          </div>
         ))}
       </div>
+      <p className="text-xs text-muted-foreground">Drag a card to change the presentation order.</p>
     </section>
   );
+
+  function sceneCard(scene: SceneDeckItem, index: number) {
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        draggable
+        onClick={() => selectScene(scene.id)}
+        onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectScene(scene.id); } }}
+        onDragStart={() => setDraggedId(scene.id)}
+        onDragOver={(event) => { event.preventDefault(); setDropTargetId(scene.id); }}
+        onDrop={(event) => { event.preventDefault(); event.stopPropagation(); moveItem(scene.id); }}
+        onDragEnd={() => { setDraggedId(null); setDropTargetId(null); }}
+        aria-label={`Scene ${index + 1}: ${scene.title ?? "Untitled"}`}
+        className={`scene-deck-card scene-deck-card-${index % 5} ${selectedId === scene.id ? "scene-deck-card-selected" : ""} ${draggedId === scene.id ? "scene-deck-card-dragging" : ""} ${dropTargetId === scene.id && draggedId !== scene.id ? "scene-deck-card-drop-target" : ""}`}
+      >
+        {scene.playbackId ? <MediaVisual playbackId={scene.playbackId} title={scene.title ?? "Scene"} className="absolute inset-0 h-full w-full border-0" /> : <><span className="scene-deck-mark" aria-hidden="true">MV</span><span className="scene-deck-lines" aria-hidden="true" /></>}
+        <span className="absolute left-4 top-4 z-10 inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold text-white/90"><GripVertical size={11} /> {String(index + 1).padStart(2, "0")}</span>
+        <span className="absolute inset-x-4 bottom-4 z-10 text-sm font-medium text-white drop-shadow-md">{scene.title ?? "Undisclosed Scene"}</span>
+      </div>
+    );
+  }
 }

@@ -10,6 +10,7 @@ type SceneItem = {
   master_id: string;
   title: string | null;
   projection_id: string | null;
+  playback_id: string | null;
 };
 
 async function getData(masterId: string): Promise<{ universeTitle: string | null; scenes: SceneItem[] }> {
@@ -55,12 +56,27 @@ async function getData(masterId: string): Promise<{ universeTitle: string | null
     svc.from("projection").select("master_id, projection_id").in("master_id", sceneIds).eq("projection_type", "experiential"),
   ]);
 
+    const projectionIds = (sceneProjs ?? []).map((projection) => projection.projection_id);
+    const { data: bindings } = projectionIds.length
+      ? await svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", projectionIds).eq("binding_type", "primary").eq("access_level", "public")
+      : { data: [] };
+    const assetIds = (bindings ?? []).map((binding) => binding.asset_id);
+    const { data: assets } = assetIds.length
+      ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
+      : { data: [] };
+
   return {
     universeTitle: pres?.title ?? null,
     scenes: sceneIds.map((id) => ({
       master_id: id,
       title: (scenePres ?? []).find((p) => p.master_id === id)?.title ?? null,
       projection_id: (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id ?? null,
+      playback_id: (() => {
+        const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === id)?.projection_id;
+        const assetId = (bindings ?? []).find((binding) => binding.projection_id === projectionId)?.asset_id;
+        const storageRef = (assets ?? []).find((asset) => asset.asset_id === assetId)?.storage_ref;
+        return storageRef && !storageRef.startsWith("seed:placeholder:") ? storageRef : null;
+      })(),
     })),
   };
 }
