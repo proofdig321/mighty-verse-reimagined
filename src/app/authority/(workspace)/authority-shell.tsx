@@ -26,7 +26,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   }
 
   return (
-    <div className="multiverse-page min-h-screen bg-background flex flex-col lg:flex-row">
+    <div className="multiverse-page min-h-screen overflow-x-hidden bg-background flex flex-col lg:flex-row">
       {/* Mobile top bar */}
       <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -43,7 +43,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       <aside className={`
         ${mobileNav ? "flex" : "hidden"}
         fixed inset-y-0 left-0 z-20 w-64 flex-col border-r border-border bg-card
-        lg:flex lg:static lg:inset-auto lg:min-h-screen lg:shrink-0
+        lg:flex lg:static lg:inset-auto lg:min-h-screen lg:shrink-0 scrollbar-hidden
       `}>
         {/* Sidebar header */}
         <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-border">

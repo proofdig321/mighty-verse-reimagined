@@ -241,24 +241,25 @@ export default function AuthorityWorkClient({
       </div>
 
       {/* Publishing journey */}
-      <div className="space-y-2">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publishing Journey</p>
-        <div className="flex flex-wrap items-center gap-x-0 gap-y-2">
-          {journey.map((step, i) => (
-            <div key={step.label} className="flex items-center">
-              {i > 0 && <span className="px-1 text-muted-foreground/30 text-xs">→</span>}
-              <span className={`text-xs ${
-                step.state === "complete"        ? "text-green-400" :
-                step.state === "blocked"         ? "text-red-400 font-medium" :
-                step.state === "current"         ? "text-foreground font-medium" :
-                step.state === "not-applicable"  ? "text-muted-foreground/25" :
-                                                   "text-muted-foreground/50"
-              }`}>
-                {step.state === "complete" ? "✓ " : step.state === "blocked" ? "! " : step.state === "not-applicable" ? "" : "○ "}
-                {step.label}
-              </span>
-            </div>
-          ))}
+      <div className="space-y-3">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publishing Journey</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">Complete each stage to make this work ready to publish.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {journey.map((step, i) => {
+            const complete = step.state === "complete";
+            const blocked = step.state === "blocked";
+            return (
+              <div key={step.label} className={`rounded-lg border p-3 ${complete ? "border-emerald-500/40 bg-emerald-500/10" : blocked ? "border-destructive/40 bg-destructive/10" : "border-border bg-card/40"}`}>
+                <div className="mb-3 flex items-center justify-between">
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${complete ? "bg-emerald-500 text-emerald-950" : blocked ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${complete ? "text-emerald-400" : blocked ? "text-destructive" : "text-muted-foreground/60"}`}>{complete ? "Done" : blocked ? "Blocked" : step.state === "current" ? "Next" : "Pending"}</span>
+                </div>
+                <p className="min-h-8 text-xs font-medium leading-tight text-foreground">{step.label}</p>
+              </div>
+            );
+          })}
         </div>
         {!status.ready && (
           <p className="text-xs text-muted-foreground pt-1">

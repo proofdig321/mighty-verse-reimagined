@@ -159,6 +159,14 @@
     width: min(100%, 90rem);
     margin-inline: auto;
   }
+
+  .scrollbar-hidden {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer components {

@@ -49,19 +49,28 @@ function AggregateJourney({ records }: { records: WorkRecord[] }) {
   });
 
   return (
-    <div className="space-y-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publishing Journey</p>
-      <div className="flex flex-wrap items-center gap-x-0 gap-y-2">
+    <div className="space-y-3">
+      <div className="flex items-end justify-between gap-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Publishing Journey</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">Move each work from canonical record to publishable experience.</p>
+        </div>
+        <span className="shrink-0 text-xs text-muted-foreground">{records.filter(r => r.status.ready).length}/{records.length} ready</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-8">
         {counts.map((s, i) => {
           const allDone = s.n === s.total && s.total > 0;
           const noneDone = s.n === 0;
           return (
-            <div key={s.label} className="flex items-center">
-              {i > 0 && <span className="px-1 text-muted-foreground/30 text-xs">→</span>}
-              <span className={`text-xs ${allDone ? "text-green-400" : noneDone ? "text-muted-foreground/40" : "text-amber-400"}`}>
-                {allDone ? "✓" : noneDone ? "○" : "◑"} {s.label}
-                {!allDone && s.total > 0 && <span className="ml-0.5 text-[10px] opacity-60">{s.n}/{s.total}</span>}
-              </span>
+            <div key={s.label} className={`rounded-lg border p-3 ${allDone ? "border-emerald-500/40 bg-emerald-500/10" : noneDone ? "border-border bg-card/40" : "border-amber-500/40 bg-amber-500/10"}`}>
+              <div className="mb-3 flex items-center justify-between">
+                <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${allDone ? "bg-emerald-500 text-emerald-950" : noneDone ? "bg-muted text-muted-foreground" : "bg-amber-500 text-amber-950"}`}>{i + 1}</span>
+                <span className={`text-xs font-semibold ${allDone ? "text-emerald-400" : noneDone ? "text-muted-foreground/50" : "text-amber-400"}`}>{s.n}/{s.total}</span>
+              </div>
+              <p className="min-h-8 text-xs font-medium leading-tight text-foreground">{s.label}</p>
+              <div className="mt-3 h-1 overflow-hidden rounded-full bg-muted">
+                <div className={`h-full rounded-full ${allDone ? "bg-emerald-400" : "bg-amber-400"}`} style={{ width: `${s.total ? (s.n / s.total) * 100 : 0}%` }} />
+              </div>
             </div>
           );
         })}
