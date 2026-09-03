@@ -217,6 +217,30 @@ export default function AuthorityClient() {
 
       <Separator className="opacity-30" />
 
+      {/* ── Start publishing ─────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Start publishing</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">Bring media into the Mighty Verse workflow, then review its presentation and rights.</p>
+        </div>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
+          {[
+            { step: "01", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media" },
+            { step: "02", label: "Upload media", sub: "Send video to Livepeer", href: "/authority/media" },
+            { step: "03", label: "Rights review", sub: "Confirm provenance", href: "/authority/proof-of-rights" },
+          ].map(item => (
+            <a key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
+              <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">{item.step}</span>
+              <p className="mt-2 text-sm font-medium text-foreground">{item.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground/70">{item.sub}</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">Open workflow <ArrowRight size={12} /></span>
+            </a>
+          ))}
+        </div>
+      </section>
+
+      <Separator className="opacity-30" />
+
       {/* ── Module handoffs ──────────────────────────────────────────────────── */}
       <div className="grid grid-cols-1 gap-px sm:grid-cols-3 rounded-lg overflow-hidden border border-border bg-border">
         {[
