@@ -143,3 +143,51 @@ export async function POST(request: Request) {
   }
   return NextResponse.json(data, { status: 201 });
 }
+
+async function authorisedIntakeContext() {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  const participantId = await getParticipantId(supabase);
+  if (!participantId) return { error: NextResponse.json({ error: "No participant record" }, { status: 403 }) };
+  return { participantId, svc: getServiceClient() };
+}
+
+export async function GET(request: Request) {
+  const context = await authorisedIntakeContext();
+  if ("error" in context) return context.error;
+  const intakeId = new URL(request.url).searchParams.get("intake_id");
+  const query = context.svc.from("media_intake").select("*").order("created_at", { ascending: false });
+  const { data, error } = intakeId ? await query.eq("intake_id", intakeId).maybeSingle() : await query.limit(50);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const rows = Array.isArray(data) ? data : data ? [data] : [];
+  const { data: credits } = rows.length
+    ? await context.svc.from("media_intake_credit").select("intake_id, participant_id, role, display_order").in("intake_id", rows.map(row => row.intake_id)).order("display_order")
+    : { data: [] };
+  return NextResponse.json(rows.map(row => ({ ...row, credits: (credits ?? []).filter(credit => credit.intake_id === row.intake_id) })));
+}
+
+export async function PATCH(request: Request) {
+  const context = await authorisedIntakeContext();
+  if ("error" in context) return context.error;
+  const body = await request.json();
+  const { intake_id, credits = [], ...fields } = body;
+  if (typeof intake_id !== "string") return NextResponse.json({ error: "intake_id is required" }, { status: 400 });
+  const { data: existingIntake } = await context.svc.from("media_intake").select("master_id").eq("intake_id", intake_id).maybeSingle();
+  if (!existingIntake) return NextResponse.json({ error: "Media intake record not found" }, { status: 404 });
+  const auth = await validateAuthority(context.participantId, "create-canonical-state", existingIntake.master_id ?? null);
+  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  const allowed = ["title", "alternate_title", "description", "short_description", "original_language", "creator_name", "work_type", "version_label", "version", "edition", "language", "genre", "subgenre", "release_date", "original_release_date", "explicit_content", "content_rating", "visibility", "search_status", "featured", "alt_text", "source_type", "source_url", "source_provider", "external_identifier", "isrc", "isrc_status", "provenance_notes"];
+  const update = Object.fromEntries(Object.entries(fields).filter(([key]) => allowed.includes(key)));
+  if (!update.title || !WORK_TYPES.has(String(update.work_type)) || !SOURCE_TYPES.has(String(update.source_type))) return NextResponse.json({ error: "title, work_type, and source_type are required" }, { status: 400 });
+  if (!Array.isArray(credits) || credits.some((credit) => !credit || typeof credit.participant_id !== "string" || !CREDIT_ROLES.has(credit.role))) return NextResponse.json({ error: "Credits contain an invalid participant or role" }, { status: 400 });
+  const { error } = await context.svc.from("media_intake").update({ ...update, updated_at: new Date().toISOString() }).eq("intake_id", intake_id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { error: deleteError } = await context.svc.from("media_intake_credit").delete().eq("intake_id", intake_id);
+  if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+  if (credits.length) {
+    const { error: creditError } = await context.svc.from("media_intake_credit").insert(credits.map((credit: { participant_id: string; role: string }, index: number) => ({ intake_id, participant_id: credit.participant_id, role: credit.role, display_order: index })));
+    if (creditError) return NextResponse.json({ error: creditError.message }, { status: 500 });
+  }
+  return NextResponse.json({ intake_id, updated: true });
+}

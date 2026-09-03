@@ -25,9 +25,9 @@ export const PROJECTION_TYPES = ["experiential", "distributional", "archival", "
 
 export function shortId(id: string) { return id.slice(0, 8); }
 
-export async function api(path: string, body?: unknown) {
+export async function api(path: string, body?: unknown, method?: "POST" | "PATCH") {
   const res = await fetch(path, {
-    method: body ? "POST" : "GET",
+    method: body ? (method ?? "POST") : "GET",
     headers: body ? { "Content-Type": "application/json" } : undefined,
     body: body ? JSON.stringify(body) : undefined,
   });

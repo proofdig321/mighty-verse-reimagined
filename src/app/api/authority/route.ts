@@ -104,8 +104,12 @@ export async function GET() {
       : Promise.resolve({ data: [] }),
     svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("status", "active"),
     svc.from("media_asset").select("asset_id, asset_type, storage_ref, format, duration_ms, created_at"),
-    svc.from("media_intake").select("asset_id, master_id, title").not("asset_id", "is", null),
+    svc.from("media_intake").select("*").order("created_at", { ascending: false }),
   ]);
+
+  const { data: mediaIntakeCredits } = mediaIntake?.length
+    ? await svc.from("media_intake_credit").select("intake_id, participant_id, role, display_order").in("intake_id", mediaIntake.map((item) => item.intake_id)).order("display_order")
+    : { data: [] };
 
   const primaryAuthority = authorities[0];
 
@@ -129,6 +133,8 @@ export async function GET() {
         ? participant.identity_link.find((link: { active: boolean; identity_ref: string }) => link.active)?.identity_ref ?? participant.participant_id.slice(0, 8)
         : participant.participant_id.slice(0, 8),
     })),
+    mediaIntakes: (mediaIntake ?? []).map((intake) => ({ ...intake, credits: (mediaIntakeCredits ?? []).filter((credit) => credit.intake_id === intake.intake_id) })),
+    mediaIntakeCredits: mediaIntakeCredits ?? [],
     mediaAssets: (mediaAssets ?? []).map((asset) => {
       const intake = (mediaIntake ?? []).find((item) => item.asset_id === asset.asset_id);
       return { ...asset, title: intake?.title ?? null, master_id: intake?.master_id ?? null };

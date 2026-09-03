@@ -30,6 +30,8 @@ type AuthorityData = {
   realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
   participants: { participant_id: string; label: string }[];
   mediaAssets: { asset_id: string; asset_type: string; storage_ref: string; format: string | null; duration_ms: number | null; created_at: string; title: string | null; master_id: string | null }[];
+  mediaIntakes: IntakeRecord[];
+  mediaIntakeCredits: { intake_id: string; participant_id: string; role: string; display_order: number }[];
 };
 
 const CANONICAL_TYPES = ["universe", "creative-moment", "mural", "scene", "interpretation", "other"] as const;
@@ -533,36 +535,39 @@ function useIntakeDraft<T>(field: string, initial: T) {
   return [value, setValue] as const;
 }
 
-function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => void; onCancel: () => void; participants: { participant_id: string; label: string }[] }) {
-  const [title, setTitle] = useIntakeDraft("title", "");
-  const [creatorName, setCreatorName] = useIntakeDraft("creatorName", "");
-  const [primaryArtistId, setPrimaryArtistId] = useIntakeDraft("primaryArtistId", "");
-  const [featuredArtistIds, setFeaturedArtistIds] = useIntakeDraft("featuredArtistIds", "");
-  const [alternateTitle, setAlternateTitle] = useIntakeDraft("alternateTitle", "");
-  const [description, setDescription] = useIntakeDraft("description", "");
-  const [language, setLanguage] = useIntakeDraft("language", "");
-  const [genre, setGenre] = useIntakeDraft("genre", "");
-  const [subgenre, setSubgenre] = useIntakeDraft("subgenre", "");
-  const [originalLanguage, setOriginalLanguage] = useIntakeDraft("originalLanguage", "");
-  const [shortDescription, setShortDescription] = useIntakeDraft("shortDescription", "");
-  const [contentRating, setContentRating] = useIntakeDraft("contentRating", "");
-  const [searchStatus, setSearchStatus] = useIntakeDraft("searchStatus", "pending");
-  const [featured, setFeatured] = useIntakeDraft("featured", false);
-  const [releaseDate, setReleaseDate] = useIntakeDraft("releaseDate", "");
-  const [explicitContent, setExplicitContent] = useIntakeDraft("explicitContent", false);
-  const [visibility, setVisibility] = useIntakeDraft("visibility", "draft");
-  const [altText, setAltText] = useIntakeDraft("altText", "");
-  const [workType, setWorkType] = useIntakeDraft("workType", "animation");
-  const [sourceType, setSourceType] = useIntakeDraft("sourceType", "upload");
-  const [sourceUrl, setSourceUrl] = useIntakeDraft("sourceUrl", "");
-  const [sourceProvider, setSourceProvider] = useIntakeDraft("sourceProvider", "");
-  const [externalIdentifier, setExternalIdentifier] = useIntakeDraft("externalIdentifier", "");
-  const [isrc, setIsrc] = useIntakeDraft("isrc", "");
-  const [isrcStatus, setIsrcStatus] = useIntakeDraft("isrcStatus", "not-applicable");
-  const [versionLabel, setVersionLabel] = useIntakeDraft("versionLabel", "");
-  const [edition, setEdition] = useIntakeDraft("edition", "");
-  const [originalReleaseDate, setOriginalReleaseDate] = useIntakeDraft("originalReleaseDate", "");
-  const [provenanceNotes, setProvenanceNotes] = useIntakeDraft("provenanceNotes", "");
+type IntakeRecord = { intake_id: string; title: string; alternate_title?: string | null; description?: string | null; short_description?: string | null; original_language?: string | null; creator_name?: string | null; work_type: string; version_label?: string | null; version?: string | null; edition?: string | null; language?: string | null; genre?: string | null; subgenre?: string | null; release_date?: string | null; original_release_date?: string | null; explicit_content?: boolean; content_rating?: string | null; visibility: string; search_status: string; featured?: boolean; alt_text?: string | null; source_type: string; source_url?: string | null; source_provider?: string | null; external_identifier?: string | null; isrc?: string | null; isrc_status: string; provenance_notes?: string | null; credits?: { participant_id: string; role: string }[] };
+
+function MediaIntakePanel({ onDone, onCancel, participants, intake }: { onDone: () => void; onCancel: () => void; participants: { participant_id: string; label: string }[]; intake?: IntakeRecord }) {
+  const [title, setTitle] = useIntakeDraft("title", intake?.title ?? "");
+  const [creatorName, setCreatorName] = useIntakeDraft("creatorName", intake?.creator_name ?? "");
+  const [creditParticipant, setCreditParticipant] = useState("");
+  const [creditRole, setCreditRole] = useState("primary_artist");
+  const [creditRows, setCreditRows] = useIntakeDraft<{ participant_id: string; role: string }[]>("creditRows", intake?.credits?.map(({ participant_id, role }) => ({ participant_id, role })) ?? []);
+  const [alternateTitle, setAlternateTitle] = useIntakeDraft("alternateTitle", intake?.alternate_title ?? "");
+  const [description, setDescription] = useIntakeDraft("description", intake?.description ?? "");
+  const [language, setLanguage] = useIntakeDraft("language", intake?.language ?? "");
+  const [genre, setGenre] = useIntakeDraft("genre", intake?.genre ?? "");
+  const [subgenre, setSubgenre] = useIntakeDraft("subgenre", intake?.subgenre ?? "");
+  const [originalLanguage, setOriginalLanguage] = useIntakeDraft("originalLanguage", intake?.original_language ?? "");
+  const [shortDescription, setShortDescription] = useIntakeDraft("shortDescription", intake?.short_description ?? "");
+  const [contentRating, setContentRating] = useIntakeDraft("contentRating", intake?.content_rating ?? "");
+  const [searchStatus, setSearchStatus] = useIntakeDraft("searchStatus", intake?.search_status ?? "pending");
+  const [featured, setFeatured] = useIntakeDraft("featured", intake?.featured ?? false);
+  const [releaseDate, setReleaseDate] = useIntakeDraft("releaseDate", intake?.release_date ?? "");
+  const [explicitContent, setExplicitContent] = useIntakeDraft("explicitContent", intake?.explicit_content ?? false);
+  const [visibility, setVisibility] = useIntakeDraft("visibility", intake?.visibility ?? "draft");
+  const [altText, setAltText] = useIntakeDraft("altText", intake?.alt_text ?? "");
+  const [workType, setWorkType] = useIntakeDraft("workType", intake?.work_type ?? "animation");
+  const [sourceType, setSourceType] = useIntakeDraft("sourceType", intake?.source_type ?? "upload");
+  const [sourceUrl, setSourceUrl] = useIntakeDraft("sourceUrl", intake?.source_url ?? "");
+  const [sourceProvider, setSourceProvider] = useIntakeDraft("sourceProvider", intake?.source_provider ?? "");
+  const [externalIdentifier, setExternalIdentifier] = useIntakeDraft("externalIdentifier", intake?.external_identifier ?? "");
+  const [isrc, setIsrc] = useIntakeDraft("isrc", intake?.isrc ?? "");
+  const [isrcStatus, setIsrcStatus] = useIntakeDraft("isrcStatus", intake?.isrc_status ?? "not-applicable");
+  const [versionLabel, setVersionLabel] = useIntakeDraft("versionLabel", intake?.version_label ?? intake?.version ?? "");
+  const [edition, setEdition] = useIntakeDraft("edition", intake?.edition ?? "");
+  const [originalReleaseDate, setOriginalReleaseDate] = useIntakeDraft("originalReleaseDate", intake?.original_release_date ?? "");
+  const [provenanceNotes, setProvenanceNotes] = useIntakeDraft("provenanceNotes", intake?.provenance_notes ?? "");
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -570,16 +575,14 @@ function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => vo
   async function submit() {
     setBusy(true); setMessage(null);
     const result = await api("/api/authority/media-intake", {
+      ...(intake?.intake_id ? { intake_id: intake.intake_id } : {}),
       title,
       alternate_title: alternateTitle || null,
       description: description || null,
       short_description: shortDescription || null,
       original_language: originalLanguage || null,
       creator_name: creatorName || null,
-      credits: [
-        ...(primaryArtistId.trim() ? [{ participant_id: primaryArtistId.trim(), role: "primary_artist" }] : []),
-        ...featuredArtistIds.split(",").map(value => value.trim()).filter(Boolean).map(participant_id => ({ participant_id, role: "featured_artist" })),
-      ],
+      credits: creditRows,
       work_type: workType,
       source_type: sourceType,
       source_url: sourceType === "external-url" ? sourceUrl : null,
@@ -602,10 +605,16 @@ function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => vo
       search_status: searchStatus,
       featured,
       alt_text: altText || null,
-    });
+    }, intake?.intake_id ? "PATCH" : "POST");
     setBusy(false);
     if (result.error) { setMessage(`Error: ${result.error}`); return; }
     onDone();
+  }
+
+  function addCredit() {
+    if (!creditParticipant || creditRows.some(row => row.participant_id === creditParticipant && row.role === creditRole)) return;
+    setCreditRows([...creditRows, { participant_id: creditParticipant, role: creditRole }]);
+    setCreditParticipant("");
   }
 
   return (
@@ -672,8 +681,12 @@ function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => vo
           <select value={visibility} onChange={e => setVisibility(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm"><option value="draft">Draft</option><option value="private">Private</option><option value="public">Public</option></select>
         </div>
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Creative credits</p>
-        <select value={primaryArtistId} onChange={e => setPrimaryArtistId(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"><option value="">Primary artist participant</option>{participants.map(participant => <option key={participant.participant_id} value={participant.participant_id}>{participant.label}</option>)}</select>
-        <input value={featuredArtistIds} onChange={e => setFeaturedArtistIds(e.target.value)} placeholder="Featured artist participant IDs, comma separated" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_10rem_auto]">
+          <select value={creditParticipant} onChange={e => setCreditParticipant(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"><option value="">Select participant</option>{participants.map(participant => <option key={participant.participant_id} value={participant.participant_id}>{participant.label}</option>)}</select>
+          <select value={creditRole} onChange={e => setCreditRole(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"><option value="primary_artist">Primary artist</option><option value="featured_artist">Featured artist</option><option value="composer">Composer</option><option value="lyricist">Lyricist</option><option value="producer">Producer</option><option value="director">Director</option><option value="editor">Editor</option><option value="cinematographer">Cinematographer</option><option value="performer">Performer</option><option value="writer">Writer</option><option value="contributor">Contributor</option></select>
+          <Button type="button" size="sm" variant="outline" disabled={busy || !creditParticipant} onClick={addCredit}>Add credit</Button>
+        </div>
+        {creditRows.length > 0 && <ul className="space-y-1">{creditRows.map((row, index) => <li key={`${row.participant_id}-${row.role}`} className="flex items-center justify-between gap-2 rounded border border-border px-3 py-2 text-xs"><span>{participants.find(participant => participant.participant_id === row.participant_id)?.label ?? row.participant_id} · {row.role.replace(/_/g, " ")}</span><button type="button" className="text-muted-foreground hover:text-destructive" onClick={() => setCreditRows(creditRows.filter((_, rowIndex) => rowIndex !== index))}>Remove</button></li>)}</ul>}
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Publishing</p>
         <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={explicitContent} onChange={e => setExplicitContent(e.target.checked)} disabled={busy} /> Explicit content</label>
         <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={featured} onChange={e => setFeatured(e.target.checked)} disabled={busy} /> Feature in discovery</label>
@@ -691,7 +704,7 @@ function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => vo
           <dl className="grid grid-cols-1 gap-2 text-xs text-muted-foreground sm:grid-cols-2">
             <div><dt className="font-medium text-foreground">Work</dt><dd>{workType}{versionLabel ? ` · ${versionLabel}` : ""}</dd></div>
             <div><dt className="font-medium text-foreground">Publishing</dt><dd>{visibility} · {searchStatus}{featured ? " · featured" : ""}</dd></div>
-            <div><dt className="font-medium text-foreground">Credits</dt><dd>{primaryArtistId ? "Primary artist linked" : "No participant credit"}{featuredArtistIds ? " · featured artists linked" : ""}</dd></div>
+            <div><dt className="font-medium text-foreground">Credits</dt><dd>{creditRows.length ? `${creditRows.length} participant credit${creditRows.length === 1 ? "" : "s"}` : "No participant credit"}</dd></div>
             <div><dt className="font-medium text-foreground">Source</dt><dd>{sourceType}{sourceProvider ? ` · ${sourceProvider}` : ""}</dd></div>
           </dl>
           <p className="text-xs text-muted-foreground">Submission creates the intake record. Upload processing remains a separate Livepeer status flow.</p>
@@ -720,6 +733,7 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
   const [msg, setMsg] = useState<string | null>(null);
   const [showRegister, setShowRegister] = useState(false);
   const [showIntake, setShowIntake] = useState(false);
+  const [editingIntake, setEditingIntake] = useState<IntakeRecord | undefined>();
   const [canonicalType, setCanonicalType] = useState<string>("universe");
   const [attachingProjId, setAttachingProjId] = useState<string | null>(null);
   const [attachingMasterId, setAttachingMasterId] = useState<string | null>(null);
@@ -755,7 +769,7 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>;
   if (!data) return <p className="text-muted-foreground p-6 text-sm">Loading\u2026</p>;
 
-  const { masters, states, projections, bindings, presentations, projectionPresentations, realizations, participants } = data;
+  const { masters, states, projections, bindings, presentations, projectionPresentations, realizations, participants, mediaIntakes } = data;
 
   const workRecords: WorkRecord[] = masters.map(master => {
     const state = states.find(s => s.master_id === master.master_id);
@@ -851,7 +865,8 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
         </CardContent></Card>
       )}
 
-      {showIntake && <MediaIntakePanel participants={participants} onDone={async () => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />}
+      {mediaIntakes.length > 0 && <section className="space-y-3"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Saved media intake</p><div className="divide-y divide-border rounded-lg border border-border bg-card">{mediaIntakes.map(intake => <div key={intake.intake_id} className="flex items-center justify-between gap-3 px-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{intake.title}</p><p className="text-xs text-muted-foreground">{intake.work_type} · {intake.visibility} · {intake.search_status}</p></div><Button size="sm" variant="outline" onClick={() => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(intake); setShowIntake(true); }}>Edit metadata</Button></div>)}</div></section>}
+      {showIntake && <MediaIntakePanel intake={editingIntake} participants={participants} onDone={async () => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(undefined); setShowIntake(false); await load(); }} onCancel={() => { setEditingIntake(undefined); setShowIntake(false); }} />}
       {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
     </div>
   );
