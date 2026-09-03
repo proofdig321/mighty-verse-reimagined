@@ -523,36 +523,46 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
   );
 }
 
-function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: () => void }) {
-  const [title, setTitle] = useState("");
-  const [creatorName, setCreatorName] = useState("");
-  const [primaryArtistId, setPrimaryArtistId] = useState("");
-  const [featuredArtistIds, setFeaturedArtistIds] = useState("");
-  const [alternateTitle, setAlternateTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [language, setLanguage] = useState("");
-  const [genre, setGenre] = useState("");
-  const [subgenre, setSubgenre] = useState("");
-  const [originalLanguage, setOriginalLanguage] = useState("");
-  const [shortDescription, setShortDescription] = useState("");
-  const [contentRating, setContentRating] = useState("");
-  const [searchStatus, setSearchStatus] = useState("pending");
-  const [featured, setFeatured] = useState(false);
-  const [releaseDate, setReleaseDate] = useState("");
-  const [explicitContent, setExplicitContent] = useState(false);
-  const [visibility, setVisibility] = useState("draft");
-  const [altText, setAltText] = useState("");
-  const [workType, setWorkType] = useState("animation");
-  const [sourceType, setSourceType] = useState("upload");
-  const [sourceUrl, setSourceUrl] = useState("");
-  const [sourceProvider, setSourceProvider] = useState("");
-  const [externalIdentifier, setExternalIdentifier] = useState("");
-  const [isrc, setIsrc] = useState("");
-  const [isrcStatus, setIsrcStatus] = useState("not-applicable");
-  const [versionLabel, setVersionLabel] = useState("");
-  const [edition, setEdition] = useState("");
-  const [originalReleaseDate, setOriginalReleaseDate] = useState("");
-  const [provenanceNotes, setProvenanceNotes] = useState("");
+function useIntakeDraft<T>(field: string, initial: T) {
+  const storageKey = `mighty-verse-intake-${field}`;
+  const [value, setValue] = useState<T>(() => {
+    if (typeof window === "undefined") return initial;
+    try { const saved = window.localStorage.getItem(storageKey); return saved ? JSON.parse(saved) as T : initial; } catch { return initial; }
+  });
+  useEffect(() => { window.localStorage.setItem(storageKey, JSON.stringify(value)); }, [storageKey, value]);
+  return [value, setValue] as const;
+}
+
+function MediaIntakePanel({ onDone, onCancel, participants }: { onDone: () => void; onCancel: () => void; participants: { participant_id: string; label: string }[] }) {
+  const [title, setTitle] = useIntakeDraft("title", "");
+  const [creatorName, setCreatorName] = useIntakeDraft("creatorName", "");
+  const [primaryArtistId, setPrimaryArtistId] = useIntakeDraft("primaryArtistId", "");
+  const [featuredArtistIds, setFeaturedArtistIds] = useIntakeDraft("featuredArtistIds", "");
+  const [alternateTitle, setAlternateTitle] = useIntakeDraft("alternateTitle", "");
+  const [description, setDescription] = useIntakeDraft("description", "");
+  const [language, setLanguage] = useIntakeDraft("language", "");
+  const [genre, setGenre] = useIntakeDraft("genre", "");
+  const [subgenre, setSubgenre] = useIntakeDraft("subgenre", "");
+  const [originalLanguage, setOriginalLanguage] = useIntakeDraft("originalLanguage", "");
+  const [shortDescription, setShortDescription] = useIntakeDraft("shortDescription", "");
+  const [contentRating, setContentRating] = useIntakeDraft("contentRating", "");
+  const [searchStatus, setSearchStatus] = useIntakeDraft("searchStatus", "pending");
+  const [featured, setFeatured] = useIntakeDraft("featured", false);
+  const [releaseDate, setReleaseDate] = useIntakeDraft("releaseDate", "");
+  const [explicitContent, setExplicitContent] = useIntakeDraft("explicitContent", false);
+  const [visibility, setVisibility] = useIntakeDraft("visibility", "draft");
+  const [altText, setAltText] = useIntakeDraft("altText", "");
+  const [workType, setWorkType] = useIntakeDraft("workType", "animation");
+  const [sourceType, setSourceType] = useIntakeDraft("sourceType", "upload");
+  const [sourceUrl, setSourceUrl] = useIntakeDraft("sourceUrl", "");
+  const [sourceProvider, setSourceProvider] = useIntakeDraft("sourceProvider", "");
+  const [externalIdentifier, setExternalIdentifier] = useIntakeDraft("externalIdentifier", "");
+  const [isrc, setIsrc] = useIntakeDraft("isrc", "");
+  const [isrcStatus, setIsrcStatus] = useIntakeDraft("isrcStatus", "not-applicable");
+  const [versionLabel, setVersionLabel] = useIntakeDraft("versionLabel", "");
+  const [edition, setEdition] = useIntakeDraft("edition", "");
+  const [originalReleaseDate, setOriginalReleaseDate] = useIntakeDraft("originalReleaseDate", "");
+  const [provenanceNotes, setProvenanceNotes] = useIntakeDraft("provenanceNotes", "");
   const [step, setStep] = useState(1);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -662,7 +672,7 @@ function MediaIntakePanel({ onDone, onCancel }: { onDone: () => void; onCancel: 
           <select value={visibility} onChange={e => setVisibility(e.target.value)} disabled={busy} className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm"><option value="draft">Draft</option><option value="private">Private</option><option value="public">Public</option></select>
         </div>
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Creative credits</p>
-        <input value={primaryArtistId} onChange={e => setPrimaryArtistId(e.target.value)} placeholder="Primary artist participant ID" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
+        <select value={primaryArtistId} onChange={e => setPrimaryArtistId(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"><option value="">Primary artist participant</option>{participants.map(participant => <option key={participant.participant_id} value={participant.participant_id}>{participant.label}</option>)}</select>
         <input value={featuredArtistIds} onChange={e => setFeaturedArtistIds(e.target.value)} placeholder="Featured artist participant IDs, comma separated" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Publishing</p>
         <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={explicitContent} onChange={e => setExplicitContent(e.target.checked)} disabled={busy} /> Explicit content</label>
@@ -840,7 +850,7 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
         </CardContent></Card>
       )}
 
-      {showIntake && <MediaIntakePanel onDone={async () => { setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />}
+      {showIntake && <MediaIntakePanel participants={participants} onDone={async () => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setShowIntake(false); await load(); }} onCancel={() => setShowIntake(false)} />}
       {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
     </div>
   );
