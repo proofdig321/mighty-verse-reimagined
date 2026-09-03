@@ -24,8 +24,9 @@ async function getData(): Promise<MomentItem[]> {
 
   const ids = projections.map((p) => p.projection_id);
 
-  const [{ data: presentations }, { data: bindings }] = await Promise.all([
+  const [{ data: presentations }, { data: workPresentations }, { data: bindings }] = await Promise.all([
     svc.from("projection_presentation").select("projection_id, title").in("projection_id", ids),
+    svc.from("work_presentation").select("master_id, title").in("master_id", projections.map(p => p.master_id)),
     svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", ids).eq("access_level", "public"),
   ]);
 
@@ -47,7 +48,9 @@ async function getData(): Promise<MomentItem[]> {
 
   return projections.map((p) => ({
     projection_id: p.projection_id,
-    title: (presentations ?? []).find((pp) => pp.projection_id === p.projection_id)?.title ?? null,
+    title: (presentations ?? []).find((pp) => pp.projection_id === p.projection_id)?.title
+        ?? (workPresentations ?? []).find((wp) => wp.master_id === p.master_id)?.title
+        ?? null,
     projection_type: p.projection_type,
     collectible_designated: p.collectible_designated,
     has_media: hasMediaMap.get(p.projection_id) ?? false,
