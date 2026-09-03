@@ -5,23 +5,13 @@ import { getServiceClient } from "@/lib/authority/validate";
 import MomentCard from "@/components/moment-card";
 import { Separator } from "@/components/ui/separator";
 
-const SCENE_TO_CM: Record<string, string> = {
-  "bebb65d2-21ed-4bc9-9fa0-a4857df30a43": "32422bb4-d03c-465d-8348-942e49ae0051",
-  "df15ec76-6bd8-4956-bbaa-755f72b2b8f8": "3b0de6b4-2ca0-43c0-8561-7dc1c0697435",
-  "65490a92-8faf-42ea-a391-0e6473360f5c": "2745a50a-5417-4613-b23b-ef4857ab112e",
-};
-const CM_TO_SCENE = Object.fromEntries(Object.entries(SCENE_TO_CM).map(([sceneId, momentId]) => [momentId, sceneId]));
-
 type CMPageData = {
   master_id: string;
   title: string | null;
   description: string | null;
   universe_master_id: string | null;
   universe_title: string | null;
-  scene_master_id: string | null;
-  scene_title: string | null;
-  scene_projection_id: string | null;
-  scene_description: string | null;
+  projection_id: string | null;
 };
 
 async function getCMData(masterId: string): Promise<CMPageData | null> {
@@ -49,21 +39,12 @@ async function getCMData(masterId: string): Promise<CMPageData | null> {
     universe_title = uPres?.title ?? null;
   }
 
-  // Temporary application-layer bridge documented in Build 14 until mural_moment_context exists.
-  const scene_master_id = CM_TO_SCENE[masterId] ?? null;
-  let scene_title: string | null = null;
-  let scene_projection_id: string | null = null;
-  let scene_description: string | null = null;
-
-  if (scene_master_id) {
-    const [{ data: scenePres }, { data: sceneProj }] = await Promise.all([
-      svc.from("work_presentation").select("title, description").eq("master_id", scene_master_id).maybeSingle(),
-      svc.from("projection").select("projection_id").eq("master_id", scene_master_id).eq("projection_type", "experiential").maybeSingle(),
-    ]);
-    scene_title = scenePres?.title ?? null;
-    scene_description = scenePres?.description ?? null;
-    scene_projection_id = sceneProj?.projection_id ?? null;
-  }
+  const { data: projection } = await svc
+    .from("projection")
+    .select("projection_id")
+    .eq("master_id", masterId)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
 
   return {
     master_id: masterId,
@@ -71,10 +52,7 @@ async function getCMData(masterId: string): Promise<CMPageData | null> {
     description: pres?.description ?? null,
     universe_master_id,
     universe_title,
-    scene_master_id,
-    scene_title,
-    scene_projection_id,
-    scene_description,
+    projection_id: projection?.projection_id ?? null,
   };
 }
 
@@ -130,23 +108,20 @@ export default async function CreativeMomentPage({
 
       <div className="mx-auto max-w-7xl px-4 py-10 space-y-8">
 
-        {/* Scene association */}
-        {data.scene_master_id ? (
+        {/* A projection is the Creative Moment's audience-facing representation. */}
+        {data.projection_id ? (
           <section className="space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Scene</h2>
+            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Moment Card</h2>
             <MomentCard
-              projectionId={data.scene_projection_id ?? undefined}
-              title={data.scene_title}
-              typeLabel="Scene"
-              hasMedia={!!data.scene_projection_id}
+              projectionId={data.projection_id}
+              title={data.title}
+              typeLabel="Creative Moment representation"
+              hasMedia={false}
               collectible={false}
             />
-            {data.scene_description && (
-              <p className="text-xs text-muted-foreground italic">{data.scene_description}</p>
-            )}
           </section>
         ) : (
-          <p className="text-sm text-muted-foreground">Scene not available</p>
+          <p className="text-sm text-muted-foreground">No Moment Card representation yet.</p>
         )}
 
         <Separator />

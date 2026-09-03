@@ -10,7 +10,7 @@ import WorldTabsClient from "@/components/world-tabs-client";
 import PageTopNav from "@/components/page-top-nav";
 
 type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
-type MomentRow = { master_id: string; title: string | null; scene_projection_id: string | null };
+type MomentRow = { master_id: string; title: string | null; projection_id: string | null };
 type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; start_ms: number | null; end_ms: number | null };
 
 type PageData = {
@@ -113,14 +113,17 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       .eq("canonical_type", "creative-moment")
       .not("current_state_id", "is", null);
     const cmIds = (cmMasters ?? []).map((m) => m.master_id);
-    const { data: cmPres } = cmIds.length
-      ? await svc.from("work_presentation").select("master_id, title").in("master_id", cmIds)
-      : { data: [] };
+    const [{ data: cmPres }, { data: cmProjs }] = cmIds.length
+      ? await Promise.all([
+          svc.from("work_presentation").select("master_id, title").in("master_id", cmIds),
+          svc.from("projection").select("master_id, projection_id").in("master_id", cmIds),
+        ])
+      : [{ data: [] }, { data: [] }];
 
     const moments: MomentRow[] = (cmMasters ?? []).map((m) => ({
       master_id: m.master_id,
       title: (cmPres ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
-      scene_projection_id: null,
+      projection_id: (cmProjs ?? []).find((projection) => projection.master_id === m.master_id)?.projection_id ?? null,
     }));
 
     return {

@@ -6,7 +6,7 @@ import MomentCard from "@/components/moment-card";
 import ArtworkFrame from "@/components/artwork-frame";
 
 type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
-type MomentRow = { master_id: string; title: string | null; scene_projection_id: string | null };
+type MomentRow = { master_id: string; title: string | null; projection_id: string | null };
 
 type Props = {
   masterId: string;
@@ -119,10 +119,10 @@ export default function WorldTabsClient({ masterId, description, murals, moments
             moments.map((m) => (
               <MomentCard
                 key={m.master_id}
-                href={m.scene_projection_id ? `/moments/${m.scene_projection_id}` : `/creative-moments/${m.master_id}`}
+                href={m.projection_id ? `/moments/${m.projection_id}` : `/creative-moments/${m.master_id}`}
                 title={m.title}
                 typeLabel="Creative Moment"
-                hasMedia={!!m.scene_projection_id}
+                hasMedia={false}
                 collectible={false}
               />
             ))
