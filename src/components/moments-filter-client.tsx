@@ -13,6 +13,7 @@ type MomentItem = {
   collectible_designated: boolean;
   has_media: boolean;
   playback_id: string | null;
+  canonical_type: string | null;
 };
 
 type Props = { moments: MomentItem[] };
@@ -87,9 +88,16 @@ export default function MomentsFilterClient({ moments }: Props) {
                 <p className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity">
                   {m.title ?? "Untitled"}
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {PROJ_LABELS[m.projection_type] ?? m.projection_type}
-                </p>
+                <div className="flex items-center gap-1">
+                  {m.canonical_type && (
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {m.canonical_type === "scene" ? "Scene" : m.canonical_type === "creative-moment" ? "Moment" : m.canonical_type}
+                    </span>
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {PROJ_LABELS[m.projection_type] ?? m.projection_type}
+                  </span>
+                </div>
               </div>
             </Link>
           ))}

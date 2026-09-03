@@ -256,6 +256,20 @@ export default async function MomentPage({
               )}
             </div>
 
+            {/* Attribution/Creator context */}
+            {attribution.roles.length > 0 && (
+              <div className="space-y-1.5">
+                <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Creator</p>
+                <div className="flex flex-wrap gap-2">
+                  {attribution.roles.map((role, idx) => (
+                    <span key={idx} className="text-sm text-foreground capitalize">
+                      {role.role_type?.replace(/-/g, " ")}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Description */}
             {presentation?.description ? (
               <p className="text-sm text-muted-foreground leading-relaxed">{presentation.description}</p>

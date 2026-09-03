@@ -11,6 +11,7 @@ type MomentItem = {
   collectible_designated: boolean;
   has_media: boolean;
   playback_id: string | null;
+  canonical_type: string | null;
 };
 
 async function getData(): Promise<MomentItem[]> {
@@ -24,11 +25,13 @@ async function getData(): Promise<MomentItem[]> {
   if (!projections?.length) return [];
 
   const ids = projections.map((p) => p.projection_id);
+  const masterIds = projections.map((p) => p.master_id);
 
-  const [{ data: presentations }, { data: workPresentations }, { data: bindings }] = await Promise.all([
+  const [{ data: presentations }, { data: workPresentations }, { data: bindings }, { data: masters }] = await Promise.all([
     svc.from("projection_presentation").select("projection_id, title").in("projection_id", ids),
-    svc.from("work_presentation").select("master_id, title").in("master_id", projections.map(p => p.master_id)),
+    svc.from("work_presentation").select("master_id, title").in("master_id", masterIds),
     svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", ids).eq("access_level", "public"),
+    masterIds.length ? svc.from("master").select("master_id, canonical_type").in("master_id", masterIds) : Promise.resolve({ data: [] }),
   ]);
 
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
@@ -62,6 +65,7 @@ async function getData(): Promise<MomentItem[]> {
     collectible_designated: p.collectible_designated,
     has_media: hasMediaMap.get(p.projection_id) ?? false,
     playback_id: playbackMap.get(p.projection_id) ?? null,
+    canonical_type: (masters ?? []).find((m) => m.master_id === p.master_id)?.canonical_type ?? null,
   }));
 }
 
