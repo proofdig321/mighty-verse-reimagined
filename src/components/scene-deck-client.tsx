@@ -14,7 +14,6 @@ type Props = { scenes: SceneItem[] };
 
 export default function SceneDeckClient({ scenes }: Props) {
   const [order, setOrder] = useState<SceneItem[]>(scenes);
-  const [gridView, setGridView] = useState(false);
   const [selected, setSelected] = useState<string | null>(order[0]?.master_id ?? null);
 
   function shuffle() {
@@ -40,52 +39,21 @@ export default function SceneDeckClient({ scenes }: Props) {
         >
           ✦ Shuffle
         </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setGridView((v) => !v)}
-        >
-          {gridView ? "Deck View" : "Grid View"}
-        </Button>
       </div>
 
-      {gridView ? (
-        <div className="scene-deck">
-          {order.map((s, i) => (
-            <SceneCard
-              key={s.master_id}
-              scene={s}
-              index={i}
-              selected={selected === s.master_id}
-              onSelect={setSelected}
-            />
-          ))}
-        </div>
-      ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4 -mx-1 px-1">
-          {order.map((s, i) => (
-            <SceneCard
-              key={s.master_id}
-              scene={s}
-              index={i}
-              selected={selected === s.master_id}
-              onSelect={setSelected}
-            />
-          ))}
-        </div>
-      )}
+      <div className="scene-deck">
+        {order.map((s, i) => (
+          <SceneCard
+            key={s.master_id}
+            scene={s}
+            index={i}
+            selected={selected === s.master_id}
+            onSelect={setSelected}
+          />
+        ))}
+      </div>
 
-      {/* Timeline scrubber */}
       <div className="space-y-2">
-        <input
-          type="range"
-          min={0}
-          max={Math.max(order.length - 1, 1)}
-          defaultValue={0}
-          className="w-full accent-[var(--accent-mv)]"
-          style={{ accentColor: "var(--accent-mv)" }}
-          readOnly
-        />
         <p className="text-xs text-muted-foreground text-center">Drag cards to reorder your timeline</p>
       </div>
     </div>

@@ -68,9 +68,9 @@ export default function MomentsFilterClient({ moments }: Props) {
       </div>
 
       {filtered.length > 0 ? (
-        <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-5">
           {filtered.map((m) => (
-            <Link key={m.projection_id} href={`/moments/${m.projection_id}`} className="group shrink-0 w-36 space-y-2">
+            <Link key={m.projection_id} href={`/moments/${m.projection_id}`} className="group space-y-2">
               <div className="relative">
                 <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="2/3" />
                 {m.has_media && (
