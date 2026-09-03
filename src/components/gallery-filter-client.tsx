@@ -60,22 +60,21 @@ function AssetPreview({ item }: { item: MediaItem }) {
   // Audio: intentional audio placeholder
   if (isAudio) {
     return (
-      <div className="w-full bg-zinc-900 border border-border flex items-center justify-center" style={{ aspectRatio: "16/9" }}>
+      <div className="w-full bg-card border border-border rounded-md flex items-center justify-center" style={{ aspectRatio: "16/9" }}>
         <div className="text-center space-y-1">
-          <Music size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground/40" />
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/40">Audio</p>
+          <Music size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground" />
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Audio</p>
         </div>
       </div>
     );
   }
 
-  // Document: intentional document placeholder
   if (isDoc) {
     return (
-      <div className="w-full bg-zinc-900 border border-border flex items-center justify-center" style={{ aspectRatio: "16/9" }}>
+      <div className="w-full bg-card border border-border rounded-md flex items-center justify-center" style={{ aspectRatio: "16/9" }}>
         <div className="text-center space-y-1">
-          <FileText size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground/40" />
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground/40">Document</p>
+          <FileText size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground" />
+          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Document</p>
         </div>
       </div>
     );
