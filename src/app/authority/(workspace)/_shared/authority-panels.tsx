@@ -1,10 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api, responseData, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS, type JourneyStep } from "./authority-utils";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+export function formatTimelineMs(value: number | null) {
+  if (value == null) return "--:--.---";
+  const totalSeconds = Math.floor(value / 1000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
+}
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
 
@@ -201,5 +209,165 @@ export function CreateExperiencePanel({ stateId, masterId, busy, onCreate }: Cre
       </select>
       <Button size="sm" disabled={busy} onClick={() => onCreate(stateId, masterId, expType)}>Create Experience</Button>
     </div>
+  );
+}
+
+// ─── TimelineEditor (video player version) ────────────────────────────────────
+
+type TimelineBinding = {
+  binding_id: string;
+  projection_id: string;
+  start_ms: number | null;
+  end_ms: number | null;
+  media_asset: { storage_ref: string } | null;
+};
+
+type TimelineEditorProps = {
+  binding: TimelineBinding;
+  masterId: string;
+  onDone: () => void;
+  onCancel: () => void;
+};
+
+export function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorProps) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const hlsRef = useRef<{ destroy: () => void } | null>(null);
+  const [currentMs, setCurrentMs] = useState(0);
+  const [durationMs, setDurationMs] = useState(0);
+  const [startMs, setStartMs] = useState(binding.start_ms ?? 0);
+  const [endMs, setEndMs] = useState(binding.end_ms ?? 0);
+  const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const startRef = useRef(startMs);
+  const endRef = useRef(endMs);
+  const previewingRef = useRef(previewing);
+
+  useEffect(() => { startRef.current = startMs; endRef.current = endMs; previewingRef.current = previewing; }, [endMs, previewing, startMs]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    const playbackId = binding.media_asset?.storage_ref;
+    if (!video || !playbackId) return;
+
+    const onTimeUpdate = () => {
+      const value = Math.round(video.currentTime * 1000);
+      setCurrentMs(value);
+      if (previewingRef.current && endRef.current > startRef.current && value >= endRef.current) {
+        video.pause();
+        video.currentTime = startRef.current / 1000;
+        setPreviewing(false);
+      }
+    };
+    const onLoadedMetadata = () => setDurationMs(Math.round(video.duration * 1000));
+    video.addEventListener("timeupdate", onTimeUpdate);
+    video.addEventListener("loadedmetadata", onLoadedMetadata);
+
+    fetch(`/api/livepeer/playback/${playbackId}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(info => {
+        const hls = info?.meta?.source?.find((s: { type: string; url: string }) => s.type === "html5/application/vnd.apple.mpegurl");
+        if (!hls) throw new Error("No HLS source.");
+        setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+        if (video.canPlayType("application/vnd.apple.mpegurl")) {
+          video.src = hls.url;
+        } else {
+          import("hls.js").then(({ default: Hls }) => {
+            if (!Hls.isSupported()) throw new Error("HLS not supported.");
+            const hlsPlayer = new Hls();
+            hlsRef.current = hlsPlayer;
+            hlsPlayer.loadSource(hls.url);
+            hlsPlayer.attachMedia(video);
+          });
+        }
+      })
+      .catch(err => setMessage(`Error: ${err instanceof Error ? err.message : "Unable to load preview"}`));
+
+    return () => {
+      video.pause();
+      video.removeEventListener("timeupdate", onTimeUpdate);
+      video.removeEventListener("loadedmetadata", onLoadedMetadata);
+      hlsRef.current?.destroy();
+      hlsRef.current = null;
+    };
+  }, [binding.media_asset?.storage_ref]);
+
+  async function saveRange() {
+    if (!Number.isInteger(startMs) || !Number.isInteger(endMs) || endMs <= startMs) {
+      setMessage("Error: End must be greater than start."); return;
+    }
+    setBusy(true); setMessage(null);
+    const res = await fetch("/api/authority/media/timeline", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, start_ms: startMs, end_ms: endMs }),
+    });
+    const result = await responseData(res);
+    setBusy(false);
+    if (!res.ok || result.error) { setMessage(`Error: ${result.error ?? "Save failed"}`); return; }
+    onDone();
+  }
+
+  function previewRange() {
+    const video = videoRef.current;
+    if (!video || endMs <= startMs) return;
+    video.currentTime = startMs / 1000;
+    setPreviewing(true);
+    void video.play();
+  }
+
+  async function selectThumbnail() {
+    if (!thumbnailUrl) return;
+    setBusy(true); setMessage(null);
+    const res = await fetch("/api/authority/media/artwork", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ master_id: masterId, projection_id: binding.projection_id, thumbnail_url: thumbnailUrl }),
+    });
+    const result = await responseData(res);
+    setBusy(false);
+    if (!res.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to select thumbnail"}`); return; }
+    setMessage("Livepeer thumbnail selected as representative artwork.");
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-4 space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <span className="text-foreground text-sm font-medium block">Timeline</span>
+            <span className="text-muted-foreground text-xs">Play the video, then set start and end points.</span>
+          </div>
+          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
+        </div>
+        <video ref={videoRef} controls className="w-full aspect-video bg-black rounded" />
+        {thumbnailUrl && (
+          <div className="space-y-2">
+            <p className="text-muted-foreground text-xs uppercase tracking-wide">Thumbnail preview</p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={thumbnailUrl} alt="Generated video thumbnail" className="w-32 aspect-video object-cover border border-border rounded" />
+            <Button size="sm" variant="outline" onClick={selectThumbnail} disabled={busy}>Use as artwork</Button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Badge variant="outline">Current {formatTimelineMs(currentMs)}</Badge>
+          <Badge variant="outline">Duration {formatTimelineMs(durationMs)}</Badge>
+          <Badge variant="secondary">{formatTimelineMs(startMs)} → {formatTimelineMs(endMs)}</Badge>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <Button size="sm" variant="outline" onClick={() => setStartMs(currentMs)}>Set Start</Button>
+          <Button size="sm" variant="outline" onClick={() => setEndMs(currentMs)}>Set End</Button>
+          <label className="text-muted-foreground text-xs">Start (ms)<input type="number" min="0" value={startMs} onChange={e => setStartMs(Number(e.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5 text-sm" /></label>
+          <label className="text-muted-foreground text-xs">End (ms)<input type="number" min="1" value={endMs} onChange={e => setEndMs(Number(e.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5 text-sm" /></label>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={previewRange} disabled={endMs <= startMs}>Preview range</Button>
+          <Button size="sm" variant="outline" onClick={() => { setStartMs(0); setEndMs(durationMs); setPreviewing(false); }}>Reset</Button>
+          <Button size="sm" onClick={saveRange} disabled={busy || endMs <= startMs}>Save exact range</Button>
+        </div>
+        {message && <p className={`text-sm ${message.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{message}</p>}
+      </CardContent>
+    </Card>
   );
 }

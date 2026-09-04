@@ -12,6 +12,7 @@ import {
 import {
   PresentationPanel, ProjectionPresentationPanel,
   RealizationPanel, CreateExperiencePanel,
+  TimelineEditor, formatTimelineMs,
 } from "../_shared/authority-panels";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ type Presentation = { master_id: string; title: string; description: string | nu
 type ProjPresentation = { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null };
 type Realization = { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null };
 type Participant = { participant_id: string; label: string };
+type ChildItem = { master_id: string; title: string | null; canonical_type: string };
 
 type Props = {
   authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
@@ -36,9 +38,13 @@ type Props = {
   projectionPresentations: ProjPresentation[];
   realizations: Realization[];
   participants: Participant[];
+  parentTitle: string | null;
+  parentMasterId: string | null;
+  childItems: ChildItem[];
+  rightsHolderLabel: string | null;
 };
 
-// ─── AttachVideoPanel (contextual — dashboard version has full staged UX) ─────
+// ─── AttachVideoPanel ─────────────────────────────────────────────────────────
 
 function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { projId: string; masterId: string; workTitle: string; onDone: () => void; onCancel: () => void }) {
   const [file, setFile] = useState<File | null>(null);
@@ -80,6 +86,10 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { p
           if (phase !== "ready") throw new Error("Processing timed out");
           const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, livepeer_asset_id: session.asset_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis });
           if (attach.error) throw new Error(attach.error);
+          // B3: link the intake record for this master to the newly created asset
+          if (attach.asset_id) {
+            await api("/api/authority/media-intake", { action: "link-asset", master_id: masterId, asset_id: attach.asset_id }, "PATCH");
+          }
           setMsg("Video attached.");
           onDone();
         } catch (err) {
@@ -90,43 +100,16 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { p
   );
 }
 
-// ─── TimelineEditor (contextual — dashboard version has full video player) ────
-
-function TimelineEditor({ binding, masterId, onDone, onCancel }: { binding: Binding; masterId: string; onDone: () => void; onCancel: () => void }) {
-  const [startMs, setStartMs] = useState(binding.start_ms ?? 0);
-  const [endMs, setEndMs] = useState(binding.end_ms ?? 0);
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  return (
-    <Card><CardContent className="pt-4 space-y-4">
-      <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Set timeline</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-muted-foreground text-xs">Start (ms)<input type="number" min="0" value={startMs} onChange={e => setStartMs(Number(e.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5 text-sm" /></label>
-        <label className="text-muted-foreground text-xs">End (ms)<input type="number" min="1" value={endMs} onChange={e => setEndMs(Number(e.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5 text-sm" /></label>
-      </div>
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
-      <Button size="sm" disabled={busy || endMs <= startMs} onClick={async () => {
-        setBusy(true); setMsg(null);
-        const res = await fetch("/api/authority/media/timeline", { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ binding_id: binding.binding_id, master_id: masterId, start_ms: startMs, end_ms: endMs }) });
-        const r = await responseData(res);
-        setBusy(false);
-        if (!res.ok || r.error) { setMsg(`Error: ${r.error ?? "Save failed"}`); return; }
-        onDone();
-      }}>Save timeline</Button>
-    </CardContent></Card>
-  );
-}
-
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AuthorityWorkClient({
   master, states, projections, bindings, presentation,
   projectionPresentations, realizations, participants,
+  parentTitle, parentMasterId, childItems, rightsHolderLabel,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
 
-  // Panel state
   const [attachingProjId, setAttachingProjId] = useState<string | null>(null);
   const [presentingMaster, setPresentingMaster] = useState(false);
   const [presentingProjId, setPresentingProjId] = useState<string | null>(null);
@@ -136,7 +119,6 @@ export default function AuthorityWorkClient({
   const [rightsHolderRef, setRightsHolderRef] = useState("");
   const [rightsBasis, setRightsBasis] = useState("");
 
-  // Derive work record
   const state = states[0];
   const projection = projections[0];
   const binding = projection ? bindings.find(b => b.projection_id === projection.projection_id) : undefined;
@@ -145,9 +127,22 @@ export default function AuthorityWorkClient({
 
   const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
   const title = presentation?.title ?? projPres?.title ?? typeLabel;
-  const statusLabel = status.ready ? "Ready to publish" : status.needs;
   const journey = getJourneySteps(master, status);
   const nextStep = getNextAction(master, status);
+
+  // B5: breadcrumb list page per type
+  const listHref: Record<string, string> = {
+    universe: "/authority/universes",
+    mural: "/authority/murals",
+    scene: "/authority/scenes",
+    "creative-moment": "/authority/creative-moments",
+  };
+  const listLabel: Record<string, string> = {
+    universe: "Universes",
+    mural: "Murals",
+    scene: "Scenes",
+    "creative-moment": "Creative Moments",
+  };
 
   async function act(label: string, path: string, body: unknown) {
     setBusy(true); setMsg(null);
@@ -157,48 +152,30 @@ export default function AuthorityWorkClient({
     setMsg(`${label} succeeded. Refresh to see updated state.`);
   }
 
-  // Active panel — only one open at a time
-  if (presentingMaster) {
-    return (
-      <div className="space-y-6">
-        <PresentationPanel masterId={master.master_id} existing={presentation} onDone={() => { setPresentingMaster(false); window.location.reload(); }} onCancel={() => setPresentingMaster(false)} />
-      </div>
-    );
-  }
-  if (presentingProjId && projection) {
-    return (
-      <div className="space-y-6">
-        <ProjectionPresentationPanel projectionId={presentingProjId} masterId={master.master_id} existing={projPres} onDone={() => { setPresentingProjId(null); window.location.reload(); }} onCancel={() => setPresentingProjId(null)} />
-      </div>
-    );
-  }
-  if (attachingProjId && projection) {
-    return (
-      <div className="space-y-6">
-        <AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} />
-      </div>
-    );
-  }
-  if (editingTimelineBindingId && binding) {
-    return (
-      <div className="space-y-6">
-        <TimelineEditor binding={binding} masterId={master.master_id} onDone={() => { setEditingTimelineBindingId(null); window.location.reload(); }} onCancel={() => setEditingTimelineBindingId(null)} />
-      </div>
-    );
-  }
-  if (editingRealizationBindingId && binding) {
-    return (
-      <div className="space-y-6">
-        <RealizationPanel bindingId={binding.binding_id} masterId={master.master_id} workTitle={title} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} />
-      </div>
-    );
-  }
+  if (presentingMaster) return <div className="space-y-6"><PresentationPanel masterId={master.master_id} existing={presentation} onDone={() => { setPresentingMaster(false); window.location.reload(); }} onCancel={() => setPresentingMaster(false)} /></div>;
+  if (presentingProjId && projection) return <div className="space-y-6"><ProjectionPresentationPanel projectionId={presentingProjId} masterId={master.master_id} existing={projPres} onDone={() => { setPresentingProjId(null); window.location.reload(); }} onCancel={() => setPresentingProjId(null)} /></div>;
+  if (attachingProjId && projection) return <div className="space-y-6"><AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} /></div>;
+  if (editingTimelineBindingId && binding) return <div className="space-y-6"><TimelineEditor binding={binding} masterId={master.master_id} onDone={() => { setEditingTimelineBindingId(null); window.location.reload(); }} onCancel={() => setEditingTimelineBindingId(null)} /></div>;
+  if (editingRealizationBindingId && binding) return <div className="space-y-6"><RealizationPanel bindingId={binding.binding_id} masterId={master.master_id} workTitle={title} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} /></div>;
 
   return (
     <div className="space-y-10">
-      {/* Breadcrumb + back */}
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+
+      {/* B5: Contextual breadcrumb */}
+      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         <Link href="/authority" className="hover:text-foreground transition-colors">Authority</Link>
+        {listHref[master.canonical_type] && (
+          <>
+            <span className="opacity-30">/</span>
+            <Link href={listHref[master.canonical_type]} className="hover:text-foreground transition-colors">{listLabel[master.canonical_type]}</Link>
+          </>
+        )}
+        {parentMasterId && parentTitle && (
+          <>
+            <span className="opacity-30">/</span>
+            <Link href={`/authority/${parentMasterId}`} className="hover:text-foreground transition-colors">{parentTitle}</Link>
+          </>
+        )}
         <span className="opacity-30">/</span>
         <span className="text-foreground">{title}</span>
       </div>
@@ -207,33 +184,24 @@ export default function AuthorityWorkClient({
       <div className="space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{typeLabel}</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
-        <p className="text-sm text-muted-foreground">
-          {status.ready ? "Ready to publish" : status.needs}
-        </p>
+        <p className="text-sm text-muted-foreground">{status.ready ? "Ready to publish" : status.needs}</p>
       </div>
 
-      {/* Six-stage tracker */}
+      {/* Six-stage tracker — Media cell respects creative-moment */}
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-        {([
-          ["Identity",   status.hasState],
-          ["Rights",     status.rightsVerified],
-          ["Experience", status.hasExperience],
-          ["Media",      status.playable],
-          ["Artwork",    status.hasArtwork],
-          ["Timeline",   !status.needsTimeline],
-        ] as [string, boolean][]).map(([label, complete]) => (
-          <div
-            key={label}
-            className={`rounded-lg border px-3 py-3 ${
-              complete
-                ? "border-violet-800/60 bg-violet-950/30"
-                : "border-border bg-card/50"
-            }`}
-          >
-            <div className={`mb-2.5 h-0.5 rounded-full ${complete ? "bg-violet-500" : "bg-border"}`} />
+        {(([
+          ["Identity",   status.hasState,       false],
+          ["Rights",     status.rightsVerified,  false],
+          ["Experience", status.hasExperience,   false],
+          ["Media",      status.playable,        master.canonical_type === "creative-moment"],
+          ["Artwork",    status.hasArtwork,      false],
+          ["Timeline",   !status.needsTimeline,  master.canonical_type !== "scene"],
+        ] as [string, boolean, boolean][])).map(([label, complete, notApplicable]) => (
+          <div key={label} className={`rounded-lg border px-3 py-3 ${notApplicable ? "border-border bg-card/20 opacity-40" : complete ? "border-violet-800/60 bg-violet-950/30" : "border-border bg-card/50"}`}>
+            <div className={`mb-2.5 h-0.5 rounded-full ${notApplicable ? "bg-border" : complete ? "bg-violet-500" : "bg-border"}`} />
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
-            <p className={`mt-1 text-xs ${complete ? "text-violet-400" : "text-muted-foreground/50"}`}>
-              {complete ? "Complete" : "Pending"}
+            <p className={`mt-1 text-xs ${notApplicable ? "text-muted-foreground/30" : complete ? "text-violet-400" : "text-muted-foreground/50"}`}>
+              {notApplicable ? "N/A" : complete ? "Complete" : "Pending"}
             </p>
           </div>
         ))}
@@ -249,25 +217,22 @@ export default function AuthorityWorkClient({
           {journey.map((step, i) => {
             const complete = step.state === "complete";
             const blocked = step.state === "blocked";
+            const na = step.state === "not-applicable";
             return (
-              <div key={step.label} className={`rounded-lg border p-3 ${complete ? "border-emerald-500/40 bg-emerald-500/10" : blocked ? "border-destructive/40 bg-destructive/10" : "border-border bg-card/40"}`}>
+              <div key={step.label} className={`rounded-lg border p-3 ${na ? "border-border bg-card/20 opacity-40" : complete ? "border-emerald-500/40 bg-emerald-500/10" : blocked ? "border-destructive/40 bg-destructive/10" : "border-border bg-card/40"}`}>
                 <div className="mb-3 flex items-center justify-between">
-                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${complete ? "bg-emerald-500 text-emerald-950" : blocked ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
-                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${complete ? "text-emerald-400" : blocked ? "text-destructive" : "text-muted-foreground/60"}`}>{complete ? "Done" : blocked ? "Blocked" : step.state === "current" ? "Next" : "Pending"}</span>
+                  <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${na ? "bg-muted text-muted-foreground/30" : complete ? "bg-emerald-500 text-emerald-950" : blocked ? "bg-destructive text-destructive-foreground" : "bg-muted text-muted-foreground"}`}>{i + 1}</span>
+                  <span className={`text-[10px] font-semibold uppercase tracking-wide ${na ? "text-muted-foreground/30" : complete ? "text-emerald-400" : blocked ? "text-destructive" : "text-muted-foreground/60"}`}>{na ? "N/A" : complete ? "Done" : blocked ? "Blocked" : step.state === "current" ? "Next" : "Pending"}</span>
                 </div>
                 <p className="min-h-8 text-xs font-medium leading-tight text-foreground">{step.label}</p>
               </div>
             );
           })}
         </div>
-        {!status.ready && (
-          <p className="text-xs text-muted-foreground pt-1">
-            <span className="text-foreground font-medium">Next:</span> {nextStep}
-          </p>
-        )}
+        {!status.ready && <p className="text-xs text-muted-foreground pt-1"><span className="text-foreground font-medium">Next:</span> {nextStep}</p>}
       </div>
 
-      {/* Overview / Media / Presentation */}
+      {/* Overview / Media / Presentation / Rights */}
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Overview</p>
@@ -275,17 +240,68 @@ export default function AuthorityWorkClient({
         </div>
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Media</p>
-          <p className="text-sm text-foreground/80">{status.playable ? "Playable media attached" : "No playable media"}</p>
+          {/* Scene: show saved timing inline */}
+          {master.canonical_type === "scene" && binding && (
+            <p className="text-sm font-mono text-foreground/80">
+              {binding.start_ms != null && binding.end_ms != null
+                ? <>{formatTimelineMs(binding.start_ms)} → {formatTimelineMs(binding.end_ms)}</>
+                : <span className="font-sans text-muted-foreground/60 italic">Timeline not set</span>}
+            </p>
+          )}
+          {master.canonical_type !== "scene" && (
+            <p className="text-sm text-foreground/80">{status.playable ? "Playable media attached" : "No playable media"}</p>
+          )}
           <Button size="sm" variant="outline" disabled={!projection} onClick={() => { if (projection) setAttachingProjId(projection.projection_id); }}>
             {status.playable ? "Replace media" : "Attach media"}
           </Button>
         </div>
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Presentation</p>
-          <p className="text-sm text-foreground/80">{status.hasArtwork ? "Artwork ready" : "No artwork"}</p>
-          <Button size="sm" variant="outline" onClick={() => setPresentingMaster(true)}>Edit artwork &amp; title</Button>
+          {/* Rights: show holder when verified */}
+          {status.rightsVerified && binding?.media_asset ? (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Rights</p>
+              <p className="text-sm text-foreground">
+                {rightsHolderLabel ?? "Recorded, identity unavailable"}
+              </p>
+              <p className="text-xs text-muted-foreground">{binding.media_asset.rights_basis}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Presentation</p>
+              <p className="text-sm text-foreground/80">{status.hasArtwork ? "Artwork ready" : "No artwork"}</p>
+              <Button size="sm" variant="outline" onClick={() => setPresentingMaster(true)}>Edit artwork &amp; title</Button>
+            </>
+          )}
         </div>
       </div>
+
+      {/* B5: Children context — Murals for Universe, Scenes for Mural */}
+      {childItems.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {master.canonical_type === "universe" ? "Murals" : "Scenes"}
+            <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground/60">{childItems.length}</span>
+          </p>
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <tbody className="divide-y divide-border">
+                {childItems.map(c => (
+                  <tr key={c.master_id} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-2.5 text-foreground">
+                      {c.title ?? <span className="italic text-muted-foreground">Untitled</span>}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      <Link href={`/authority/${c.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        Open →
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Contextual actions */}
       {status.hasState && !status.hasExperience && state && (
@@ -301,6 +317,11 @@ export default function AuthorityWorkClient({
         {status.hasExperience && (
           <button type="button" onClick={() => setPresentingProjId(projection!.projection_id)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
             {projPres ? "Edit moment title" : "Set moment title"}
+          </button>
+        )}
+        {status.rightsVerified && (
+          <button type="button" onClick={() => setPresentingMaster(true)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            Edit artwork &amp; title
           </button>
         )}
         {master.canonical_type === "scene" && binding && (

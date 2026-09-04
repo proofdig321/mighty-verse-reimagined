@@ -29,17 +29,30 @@ async function getData(assetId: string) {
   ]);
 
   const projIds = (bindings ?? []).map((b) => b.projection_id);
-  const [{ data: projections }, { data: intakeCredits }, { data: rightsParticipant }] = await Promise.all([
+  const rawCredits = intake
+    ? (await svc.from("media_intake_credit").select("participant_id, role, display_order").eq("intake_id", intake.intake_id).order("display_order")).data ?? []
+    : [];
+  const creditParticipantIds = [...new Set(rawCredits.map((c) => c.participant_id))];
+
+  const [{ data: projections }, { data: rightsParticipant }, { data: creditParticipants }] = await Promise.all([
     projIds.length
       ? svc.from("projection").select("projection_id, master_id, projection_type").in("projection_id", projIds)
-      : Promise.resolve({ data: [] }),
-    intake
-      ? svc.from("media_intake_credit").select("participant_id, role, display_order").eq("intake_id", intake.intake_id).order("display_order")
       : Promise.resolve({ data: [] }),
     asset.rights_holder_ref
       ? svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("participant_id", asset.rights_holder_ref).maybeSingle()
       : Promise.resolve({ data: null }),
+    creditParticipantIds.length
+      ? svc.from("participant").select("participant_id, identity_link(identity_ref, active)").in("participant_id", creditParticipantIds)
+      : Promise.resolve({ data: [] }),
   ]);
+
+  function resolveLabel(participantId: string, rows: { participant_id: string; identity_link: unknown }[] | null): string {
+    const p = (rows ?? []).find((r) => r.participant_id === participantId);
+    if (!p) return participantId.slice(0, 8) + "…";
+    return Array.isArray(p.identity_link)
+      ? (p.identity_link as { active: boolean; identity_ref: string }[]).find((l) => l.active)?.identity_ref ?? participantId.slice(0, 8) + "…"
+      : participantId.slice(0, 8) + "…";
+  }
 
   const masterIds = [...new Set((projections ?? []).map((p) => p.master_id))];
   const { data: presentations } = masterIds.length
@@ -52,9 +65,15 @@ async function getData(assetId: string) {
         : null) ?? asset.rights_holder_ref?.slice(0, 8)
     : null;
 
+  const intakeCredits = rawCredits.map((c) => ({
+    participant_id: c.participant_id,
+    role: c.role,
+    label: resolveLabel(c.participant_id, creditParticipants as { participant_id: string; identity_link: unknown }[] | null),
+  }));
+
   return {
     asset,
-    intake: intake ? { ...intake, credits: intakeCredits ?? [] } : null,
+    intake: intake ? { ...intake, credits: intakeCredits } : null,
     bindings: (bindings ?? []).map((b) => {
       const proj = (projections ?? []).find((p) => p.projection_id === b.projection_id);
       const pres = proj ? (presentations ?? []).find((p) => p.master_id === proj.master_id) : null;
@@ -164,17 +183,14 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Credits</p>
                 <ul className="space-y-0.5">
-                  {intake.credits.map((c: { participant_id: string; role: string }) => (
+                  {intake.credits.map((c: { participant_id: string; role: string; label: string }) => (
                     <li key={`${c.participant_id}-${c.role}`} className="text-xs text-muted-foreground">
-                      {c.participant_id.slice(0, 8)}… · {c.role.replace(/_/g, " ")}
+                      {c.label} · {c.role.replace(/_/g, " ")}
                     </li>
                   ))}
                 </ul>
               </div>
             )}
-            <a href={`/authority/media/intake`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              Edit intake record →
-            </a>
           </div>
         </div>
       )}

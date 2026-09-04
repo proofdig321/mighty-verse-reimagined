@@ -171,6 +171,34 @@ export async function PATCH(request: Request) {
   const context = await authorisedIntakeContext();
   if ("error" in context) return context.error;
   const body = await request.json();
+
+  // Narrow operation: link an asset_id to an intake record by master_id.
+  // Called automatically after successful upload/ingest when intake exists for the master.
+  if (body.action === "link-asset") {
+    const { master_id, asset_id } = body;
+    if (typeof master_id !== "string" || typeof asset_id !== "string") {
+      return NextResponse.json({ error: "master_id and asset_id required" }, { status: 400 });
+    }
+    const auth = await validateAuthority(context.participantId, "create-canonical-state", master_id);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+    // Find the most recent unlinked intake for this master
+    const { data: intake } = await context.svc
+      .from("media_intake")
+      .select("intake_id")
+      .eq("master_id", master_id)
+      .is("asset_id", null)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (!intake) return NextResponse.json({ linked: false, reason: "no-unlinked-intake" });
+    const { error } = await context.svc
+      .from("media_intake")
+      .update({ asset_id })
+      .eq("intake_id", intake.intake_id);
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ linked: true, intake_id: intake.intake_id, asset_id });
+  }
+
   const { intake_id, credits = [], ...fields } = body;
   if (typeof intake_id !== "string") return NextResponse.json({ error: "intake_id is required" }, { status: 400 });
   const { data: existingIntake } = await context.svc.from("media_intake").select("master_id").eq("intake_id", intake_id).maybeSingle();

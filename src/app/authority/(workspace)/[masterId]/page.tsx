@@ -33,7 +33,6 @@ export default async function AuthorityWorkPage({
   const masterAuthorities = authorities.filter((a) => a.scope_type === "master");
   const visibleMasterIds = masterAuthorities.map((a) => a.scope_subject_id).filter(Boolean) as string[];
 
-  // Verify this masterId is within authority scope
   if (!platformAuthority && !visibleMasterIds.includes(masterId)) notFound();
 
   const { data: master } = await svc
@@ -63,6 +62,58 @@ export default async function AuthorityWorkPage({
     svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("status", "active"),
   ]);
 
+  // B5: parent context
+  let parentTitle: string | null = null;
+  if (master.parent_master_id) {
+    const { data: parentPres } = await svc
+      .from("work_presentation")
+      .select("title")
+      .eq("master_id", master.parent_master_id)
+      .maybeSingle();
+    parentTitle = parentPres?.title ?? null;
+  }
+
+  // B5: children (murals for universe, scenes for mural)
+  let childItems: { master_id: string; title: string | null; canonical_type: string }[] = [];
+  const childType = master.canonical_type === "universe" ? "mural" : master.canonical_type === "mural" ? "scene" : null;
+  if (childType) {
+    const { data: childMasters } = await svc
+      .from("master")
+      .select("master_id, canonical_type")
+      .eq("parent_master_id", masterId)
+      .eq("canonical_type", childType)
+      .order("created_at", { ascending: true });
+    if (childMasters?.length) {
+      const childIds = childMasters.map((c) => c.master_id);
+      const { data: childPres } = await svc
+        .from("work_presentation")
+        .select("master_id, title")
+        .in("master_id", childIds);
+      childItems = childMasters.map((c) => ({
+        master_id: c.master_id,
+        canonical_type: c.canonical_type,
+        title: (childPres ?? []).find((p) => p.master_id === c.master_id)?.title ?? null,
+      }));
+    }
+  }
+
+  // Rights holder label: resolve from the binding's media_asset.rights_holder_ref
+  let rightsHolderLabel: string | null = null;
+  const firstBinding = (bindings ?? [])[0] as unknown as { media_asset: { rights_holder_ref: string | null } | null } | undefined;
+  const rightsHolderRef = firstBinding?.media_asset?.rights_holder_ref ?? null;
+  if (rightsHolderRef) {
+    const { data: rhParticipant } = await svc
+      .from("participant")
+      .select("participant_id, identity_link(identity_ref, active)")
+      .eq("participant_id", rightsHolderRef)
+      .maybeSingle();
+    if (rhParticipant) {
+      rightsHolderLabel = Array.isArray(rhParticipant.identity_link)
+        ? (rhParticipant.identity_link as { active: boolean; identity_ref: string }[]).find((l) => l.active)?.identity_ref ?? null
+        : null;
+    }
+  }
+
   const authority = {
     authority_id: authorities[0].authority_id,
     authority_type: authorities[0].authority_type,
@@ -88,6 +139,10 @@ export default async function AuthorityWorkPage({
       projectionPresentations={(projectionPresentations ?? []) as never}
       realizations={realizations ?? []}
       participants={participantList}
+      parentTitle={parentTitle}
+      parentMasterId={master.parent_master_id}
+      childItems={childItems}
+      rightsHolderLabel={rightsHolderLabel}
     />
   );
 }
