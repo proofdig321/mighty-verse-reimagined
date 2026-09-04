@@ -9,6 +9,8 @@ import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
+import { formatIsrcDisplay, isIsrcEligible, type IsrcStatus } from "@/lib/media/isrc";
+import { IsrcWorkflowPanel } from "./isrc-workflow-panel";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
@@ -63,6 +65,14 @@ async function getData(assetId: string) {
         .maybeSingle()
     : { data: null };
 
+  // Active ISRC registrant for the assignment workflow
+  const { data: registrant } = await svc
+    .from("isrc_registrant")
+    .select("registrant_id, registrant_name, prefix_code")
+    .eq("active", true)
+    .limit(1)
+    .maybeSingle();
+
   const masterIds = [...new Set((projections ?? []).map((p) => p.master_id))];
   const { data: presentations } = masterIds.length
     ? await svc.from("work_presentation").select("master_id, title").in("master_id", masterIds)
@@ -107,6 +117,7 @@ async function getData(assetId: string) {
     realization: realization ?? null,
     splitSheet,
     readiness,
+    registrant: registrant ?? null,
   };
 }
 
@@ -121,7 +132,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const data = await getData(assetId);
   if (!data) notFound();
 
-  const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness } = data;
+  const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness, registrant } = data;
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
   const isThumbnail = asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail");
   const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
@@ -240,19 +251,37 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
       {realization && (
         <div className="space-y-3">
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Recording Identity</p>
-          <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
+          <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-4">
             <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
               <div><dt className="text-muted-foreground">Type</dt><dd className="text-foreground">{realization.realization_type}</dd></div>
               {realization.version_label && <div><dt className="text-muted-foreground">Version</dt><dd className="text-foreground">{realization.version_label}</dd></div>}
-              {realization.isrc && <div><dt className="text-muted-foreground">ISRC</dt><dd className="text-foreground font-mono">{realization.isrc}</dd></div>}
-              {realization.isrc_status && realization.isrc_status !== "not-applicable" && (
-                <div><dt className="text-muted-foreground">ISRC status</dt><dd className="text-foreground">{realization.isrc_status}</dd></div>
-              )}
               {realization.rights_basis && <div><dt className="text-muted-foreground">Rights basis</dt><dd className="text-foreground">{realization.rights_basis}</dd></div>}
             </dl>
             {realization.production_notes && (
               <p className="text-xs text-muted-foreground">{realization.production_notes}</p>
             )}
+
+            {/* ISRC workflow */}
+            <div className="border-t border-border pt-3 space-y-2">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">ISRC</p>
+              {isIsrcEligible(realization.realization_type) ? (
+                <IsrcWorkflowPanel
+                  realizationId={realization.realization_id}
+                  masterId={realization.master_id}
+                  realizationType={realization.realization_type}
+                  currentIsrc={realization.isrc ?? null}
+                  currentIsrcStatus={(realization.isrc_status ?? "not-applicable") as IsrcStatus}
+                  hasRights={!!realization.rights_holder_ref}
+                  recordingTitle={title}
+                  versionLabel={realization.version_label ?? null}
+                  registrant={registrant}
+                />
+              ) : (
+                <p className="text-xs text-muted-foreground/50 italic">
+                  Not applicable — {realization.realization_type} recordings do not require an ISRC.
+                </p>
+              )}
+            </div>
           </div>
         </div>
       )}

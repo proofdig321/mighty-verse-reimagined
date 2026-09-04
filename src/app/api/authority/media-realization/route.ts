@@ -5,7 +5,7 @@ import { createMediaRealization } from "@/lib/authority/operations";
 import { validateAuthority, getServiceClient } from "@/lib/authority/validate";
 
 const ISRC_PATTERN = /^[A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9]{5}$/;
-const VALID_ISRC_STATUSES = new Set(["verified", "not-provided", "not-applicable", "pending", "assignment-required"]);
+const VALID_ISRC_STATUSES = new Set(["verified", "not-provided", "not-applicable", "pending", "assignment-required", "assigned"]);
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -48,11 +48,11 @@ export async function PATCH(request: Request) {
   if (isrc_status && !VALID_ISRC_STATUSES.has(isrc_status)) {
     return NextResponse.json({ error: "Invalid isrc_status" }, { status: 400 });
   }
-  if (isrc_status === "verified" && (typeof isrc !== "string" || !ISRC_PATTERN.test(isrc))) {
-    return NextResponse.json({ error: "A valid ISRC is required when isrc_status is verified" }, { status: 400 });
+  if ((isrc_status === "verified" || isrc_status === "assigned") && (typeof isrc !== "string" || !ISRC_PATTERN.test(isrc))) {
+    return NextResponse.json({ error: `A valid ISRC is required when isrc_status is ${isrc_status}` }, { status: 400 });
   }
-  if (isrc && isrc_status !== "verified") {
-    return NextResponse.json({ error: "ISRC must be omitted unless isrc_status is verified" }, { status: 400 });
+  if (isrc && isrc_status !== "verified" && isrc_status !== "assigned") {
+    return NextResponse.json({ error: "ISRC must be omitted unless isrc_status is verified or assigned" }, { status: 400 });
   }
 
   const auth = await validateAuthority(participantId, "create-canonical-state", master_id);

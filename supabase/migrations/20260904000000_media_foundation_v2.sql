@@ -68,7 +68,7 @@ where provider is null
 -- =============================================================================
 
 create table if not exists public.media_upload_session (
-  session_id          uuid primary key default uuid_generate_v4(),
+  session_id          uuid primary key default gen_random_uuid(),
   intake_id           uuid references public.media_intake(intake_id),
   projection_id       uuid not null references public.projection(projection_id),
   master_id           uuid not null references public.master(master_id),
@@ -169,7 +169,7 @@ comment on column public.media_realization.version_label is
 -- =============================================================================
 
 create table if not exists public.media_split_sheet (
-  split_sheet_id      uuid primary key default uuid_generate_v4(),
+  split_sheet_id      uuid primary key default gen_random_uuid(),
   realization_id      uuid references public.media_realization(realization_id),
   master_id           uuid references public.master(master_id),
   applicable          boolean not null default true,
@@ -220,7 +220,7 @@ grant select, insert, update, delete on public.media_split_sheet to service_role
 -- =============================================================================
 
 create table if not exists public.media_split_sheet_participant (
-  entry_id            uuid primary key default uuid_generate_v4(),
+  entry_id            uuid primary key default gen_random_uuid(),
   split_sheet_id      uuid not null references public.media_split_sheet(split_sheet_id) on delete cascade,
   participant_id      uuid not null references public.participant(participant_id),
   role                text not null,

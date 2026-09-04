@@ -26,7 +26,7 @@ export function deriveMediaReadiness(input: ReadinessInput): MediaReadiness {
 
   const playable = hasAsset && !isPlaceholder;
   const isrcApplicable = workType === "song" || workType === "audio";
-  const isrcComplete = !isrcApplicable || isrcStatus === "verified" || isrcStatus === "not-provided";
+  const isrcComplete = !isrcApplicable || isrcStatus === "verified" || isrcStatus === "assigned" || isrcStatus === "not-provided";
 
   const steps: MediaReadinessStep[] = [
     { label: "Ingested", state: playable ? "complete" : hasAsset ? "pending" : "pending" },
