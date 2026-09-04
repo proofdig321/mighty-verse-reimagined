@@ -8,13 +8,14 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/media/timing";
+import { deriveMediaReadiness } from "@/lib/media/readiness";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
 
   const { data: asset } = await svc
     .from("media_asset")
-    .select("asset_id, asset_type, storage_ref, format, duration_ms, created_at, rights_holder_ref, rights_basis, width, height, codec, container, bitrate_kbps, audio_presence, audio_channels, sample_rate_hz, captions_available")
+    .select("asset_id, asset_type, storage_ref, format, duration_ms, created_at, rights_holder_ref, rights_basis, width, height, codec, container, bitrate_kbps, audio_presence, audio_channels, sample_rate_hz, captions_available, provider, provider_asset_id, intake_id, realization_id")
     .eq("asset_id", assetId)
     .maybeSingle();
 
@@ -25,7 +26,9 @@ async function getData(assetId: string) {
       .from("projection_media_binding")
       .select("binding_id, projection_id, binding_type, access_level, start_ms, end_ms, realization_id")
       .eq("asset_id", assetId),
-    svc.from("media_intake").select("*").eq("asset_id", assetId).maybeSingle(),
+    asset.intake_id
+      ? svc.from("media_intake").select("*").eq("intake_id", asset.intake_id).maybeSingle()
+      : svc.from("media_intake").select("*").eq("asset_id", assetId).maybeSingle(),
   ]);
 
   const projIds = (bindings ?? []).map((b) => b.projection_id);
@@ -34,7 +37,7 @@ async function getData(assetId: string) {
     : [];
   const creditParticipantIds = [...new Set(rawCredits.map((c) => c.participant_id))];
 
-  const [{ data: projections }, { data: rightsParticipant }, { data: creditParticipants }] = await Promise.all([
+  const [{ data: projections }, { data: rightsParticipant }, { data: creditParticipants }, { data: realization }] = await Promise.all([
     projIds.length
       ? svc.from("projection").select("projection_id, master_id, projection_type").in("projection_id", projIds)
       : Promise.resolve({ data: [] }),
@@ -44,7 +47,26 @@ async function getData(assetId: string) {
     creditParticipantIds.length
       ? svc.from("participant").select("participant_id, identity_link(identity_ref, active)").in("participant_id", creditParticipantIds)
       : Promise.resolve({ data: [] }),
+    asset.realization_id
+      ? svc.from("media_realization").select("realization_id, master_id, realization_type, rights_holder_ref, rights_basis, production_notes, isrc, isrc_status, version_label").eq("realization_id", asset.realization_id).maybeSingle()
+      : Promise.resolve({ data: null }),
   ]);
+
+  // Split sheet for this realization
+  const { data: splitSheet } = realization
+    ? await svc
+        .from("media_split_sheet")
+        .select("split_sheet_id, applicable, not_applicable_reason, status, effective_date, agreement_reference")
+        .eq("realization_id", realization.realization_id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    : { data: null };
+
+  const masterIds = [...new Set((projections ?? []).map((p) => p.master_id))];
+  const { data: presentations } = masterIds.length
+    ? await svc.from("work_presentation").select("master_id, title").in("master_id", masterIds)
+    : { data: [] };
 
   function resolveLabel(participantId: string, rows: { participant_id: string; identity_link: unknown }[] | null): string {
     const p = (rows ?? []).find((r) => r.participant_id === participantId);
@@ -54,15 +76,8 @@ async function getData(assetId: string) {
       : participantId.slice(0, 8) + "…";
   }
 
-  const masterIds = [...new Set((projections ?? []).map((p) => p.master_id))];
-  const { data: presentations } = masterIds.length
-    ? await svc.from("work_presentation").select("master_id, title").in("master_id", masterIds)
-    : { data: [] };
-
   const rightsLabel = rightsParticipant
-    ? (Array.isArray((rightsParticipant as { identity_link: { active: boolean; identity_ref: string }[] }).identity_link)
-        ? (rightsParticipant as { identity_link: { active: boolean; identity_ref: string }[] }).identity_link.find((l) => l.active)?.identity_ref
-        : null) ?? asset.rights_holder_ref?.slice(0, 8)
+    ? resolveLabel(asset.rights_holder_ref!, [rightsParticipant as { participant_id: string; identity_link: unknown }])
     : null;
 
   const intakeCredits = rawCredits.map((c) => ({
@@ -70,6 +85,15 @@ async function getData(assetId: string) {
     role: c.role,
     label: resolveLabel(c.participant_id, creditParticipants as { participant_id: string; identity_link: unknown }[] | null),
   }));
+
+  const readiness = deriveMediaReadiness({
+    hasAsset: !asset.storage_ref.startsWith("seed:placeholder:") && !asset.storage_ref.startsWith("http"),
+    isPlaceholder: asset.storage_ref.startsWith("seed:placeholder:"),
+    hasRights: !!asset.rights_holder_ref,
+    hasCredits: rawCredits.length > 0,
+    isrcStatus: intake?.isrc_status ?? realization?.isrc_status ?? null,
+    workType: intake?.work_type ?? null,
+  });
 
   return {
     asset,
@@ -80,6 +104,9 @@ async function getData(assetId: string) {
       return { ...b, masterTitle: pres?.title ?? null, masterId: proj?.master_id ?? null, projectionType: proj?.projection_type ?? null };
     }),
     rightsLabel,
+    realization: realization ?? null,
+    splitSheet,
+    readiness,
   };
 }
 
@@ -94,9 +121,15 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const data = await getData(assetId);
   if (!data) notFound();
 
-  const { asset, intake, bindings, rightsLabel } = data;
+  const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness } = data;
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
+  const isThumbnail = asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail");
   const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
+
+  // Livepeer thumbnail for video assets
+  const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail"
+    ? `https://vod-cdn.lp-playback.studio/${asset.storage_ref}/thumbnails/keyframes_0.png`
+    : null;
 
   return (
     <div className="space-y-10">
@@ -104,21 +137,59 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <Link href="/authority" className="hover:text-foreground transition-colors">Authority</Link>
         <ChevronRight size={12} />
-        <Link href="/authority/media" className="hover:text-foreground transition-colors">Media</Link>
+        <Link href="/authority/media" className="hover:text-foreground transition-colors">Media Library</Link>
         <ChevronRight size={12} />
         <span className="text-foreground">{title}</span>
       </div>
 
       {/* Header */}
-      <div className="space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media Asset</p>
-        <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-        <div className="flex flex-wrap gap-2 pt-1">
-          <Badge variant="outline">{asset.asset_type}</Badge>
-          {asset.format && <Badge variant="outline">{asset.format}</Badge>}
-          {asset.duration_ms && <Badge variant="outline">{formatDuration(asset.duration_ms / 1000)}</Badge>}
-          {isPlaceholder && <Badge variant="destructive">Placeholder</Badge>}
+      <div className="flex items-start gap-6">
+        {thumbnailUrl && (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={thumbnailUrl}
+            alt={title}
+            className="hidden sm:block w-32 aspect-video rounded-lg object-cover border border-border shrink-0"
+          />
+        )}
+        <div className="space-y-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media Asset</p>
+          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Badge variant="outline">{asset.asset_type}</Badge>
+            {intake?.work_type && <Badge variant="outline">{intake.work_type}</Badge>}
+            {asset.format && <Badge variant="outline">{asset.format}</Badge>}
+            {asset.duration_ms && <Badge variant="outline">{formatDuration(asset.duration_ms / 1000)}</Badge>}
+            {isPlaceholder && <Badge variant="destructive">Placeholder</Badge>}
+          </div>
         </div>
+      </div>
+
+      {/* Readiness checklist */}
+      <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Readiness</p>
+          <span className={`text-xs font-semibold ${readiness.overall === "ready" ? "text-emerald-400" : readiness.overall === "playable" ? "text-violet-400" : "text-amber-400"}`}>
+            {readiness.overall === "ready" ? "Ready" : readiness.overall === "playable" ? "Playable" : readiness.overall === "processing" ? "Processing" : "Intake"}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          {readiness.steps.map((step) => (
+            <div key={step.label} className="flex items-center gap-1.5 text-xs">
+              <span className={step.state === "complete" ? "text-emerald-400" : step.state === "not-applicable" ? "text-muted-foreground/30" : "text-muted-foreground/50"}>
+                {step.state === "complete" ? "✓" : step.state === "not-applicable" ? "—" : "○"}
+              </span>
+              <span className={step.state === "complete" ? "text-foreground" : step.state === "not-applicable" ? "text-muted-foreground/30" : "text-muted-foreground/60"}>
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+        {readiness.blockers.length > 0 && (
+          <p className="text-xs text-muted-foreground/60">
+            Not ready: {readiness.blockers.join(" · ")}
+          </p>
+        )}
       </div>
 
       {/* Overview grid */}
@@ -149,13 +220,61 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
           </dl>
         </div>
 
-        {/* Storage */}
+        {/* Storage / Provider */}
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Storage</p>
           <p className="text-xs font-mono text-muted-foreground break-all">{asset.storage_ref}</p>
+          {asset.provider && (
+            <p className="text-xs text-muted-foreground">
+              Provider: <span className="text-foreground/70">{asset.provider}</span>
+              {asset.provider_asset_id && (
+                <span className="ml-1 font-mono text-muted-foreground/50">{asset.provider_asset_id.slice(0, 12)}…</span>
+              )}
+            </p>
+          )}
           <p className="text-xs text-muted-foreground">{new Date(asset.created_at).toLocaleDateString()}</p>
         </div>
       </div>
+
+      {/* Recording identity */}
+      {realization && (
+        <div className="space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Recording Identity</p>
+          <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
+            <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2 md:grid-cols-3">
+              <div><dt className="text-muted-foreground">Type</dt><dd className="text-foreground">{realization.realization_type}</dd></div>
+              {realization.version_label && <div><dt className="text-muted-foreground">Version</dt><dd className="text-foreground">{realization.version_label}</dd></div>}
+              {realization.isrc && <div><dt className="text-muted-foreground">ISRC</dt><dd className="text-foreground font-mono">{realization.isrc}</dd></div>}
+              {realization.isrc_status && realization.isrc_status !== "not-applicable" && (
+                <div><dt className="text-muted-foreground">ISRC status</dt><dd className="text-foreground">{realization.isrc_status}</dd></div>
+              )}
+              {realization.rights_basis && <div><dt className="text-muted-foreground">Rights basis</dt><dd className="text-foreground">{realization.rights_basis}</dd></div>}
+            </dl>
+            {realization.production_notes && (
+              <p className="text-xs text-muted-foreground">{realization.production_notes}</p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Split sheet */}
+      {realization && (
+        <div className="space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Split Sheet</p>
+          <div className="rounded-lg border border-border bg-card/50 px-4 py-4">
+            {splitSheet ? (
+              <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+                <div><dt className="text-muted-foreground">Applicable</dt><dd className="text-foreground">{splitSheet.applicable ? "Yes" : `No — ${splitSheet.not_applicable_reason ?? "not applicable"}`}</dd></div>
+                <div><dt className="text-muted-foreground">Status</dt><dd className="text-foreground">{splitSheet.status}</dd></div>
+                {splitSheet.effective_date && <div><dt className="text-muted-foreground">Effective</dt><dd className="text-foreground">{splitSheet.effective_date}</dd></div>}
+                {splitSheet.agreement_reference && <div><dt className="text-muted-foreground">Agreement ref</dt><dd className="text-foreground font-mono text-muted-foreground/70">{splitSheet.agreement_reference}</dd></div>}
+              </dl>
+            ) : (
+              <p className="text-sm text-muted-foreground/60 italic">No split sheet recorded for this realization.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Intake record */}
       {intake && (
@@ -171,6 +290,9 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
               {intake.isrc && <div><dt className="text-muted-foreground">ISRC</dt><dd className="text-foreground font-mono">{intake.isrc}</dd></div>}
               {intake.release_date && <div><dt className="text-muted-foreground">Release date</dt><dd className="text-foreground">{intake.release_date}</dd></div>}
               {intake.source_provider && <div><dt className="text-muted-foreground">Source</dt><dd className="text-foreground">{intake.source_provider}</dd></div>}
+              {intake.source_type === "external-url" && intake.source_url && (
+                <div className="sm:col-span-2"><dt className="text-muted-foreground">Source URL</dt><dd className="text-foreground font-mono text-muted-foreground/70 break-all">{intake.source_url} <span className="text-muted-foreground/40 font-sans">(reference only — not ingested)</span></dd></div>
+              )}
             </dl>
             {intake.description && <p className="text-sm text-muted-foreground">{intake.description}</p>}
             {intake.provenance_notes && (
@@ -230,9 +352,9 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
                     <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">{b.access_level}</td>
                     <td className="px-4 py-3 text-right">
                       {b.masterId && (
-                        <a href={`/authority/${b.masterId}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        <Link href={`/authority/${b.masterId}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
                           Open <ChevronRight size={13} />
-                        </a>
+                        </Link>
                       )}
                     </td>
                   </tr>
@@ -241,6 +363,14 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             </table>
           </div>
         )}
+      </div>
+
+      {/* Distribution */}
+      <div className="space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribution</p>
+        <div className="rounded-lg border border-border bg-card/30 px-4 py-4">
+          <p className="text-sm text-muted-foreground/60 italic">Not yet distributed. Distribution integrations are a future phase.</p>
+        </div>
       </div>
     </div>
   );

@@ -313,7 +313,8 @@ export async function attachMediaBinding(
   livepeerAssetId: string,
   rightsHolderRef?: string | null,
   rightsBasis?: string | null,
-  realizationId?: string | null
+  realizationId?: string | null,
+  intakeId?: string | null
 ): Promise<OperationResult<{ binding_id: string; asset_id: string; variant_id: string }>> {
   const auth = await validateAuthority(participantId, "authorise-projection", masterId);
   if ("error" in auth) return { error: auth.error };
@@ -328,7 +329,8 @@ export async function attachMediaBinding(
     "public",
     rightsHolderRef,
     rightsBasis ?? "rights recorded during ingest",
-    realizationId ?? null
+    realizationId ?? null,
+    intakeId ?? null
   );
 
   await logOperation(auth.authority_id, "attach-media-binding", result.binding_id, "media-binding", "accepted");

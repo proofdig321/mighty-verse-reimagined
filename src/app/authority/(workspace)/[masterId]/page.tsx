@@ -114,6 +114,16 @@ export default async function AuthorityWorkPage({
     }
   }
 
+  // Load the most recent intake for this master (for deterministic upload linkage)
+  const { data: masterIntake } = await svc
+    .from("media_intake")
+    .select("intake_id")
+    .eq("master_id", masterId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const intakeId = masterIntake?.intake_id ?? null;
+
   const authority = {
     authority_id: authorities[0].authority_id,
     authority_type: authorities[0].authority_type,
@@ -143,6 +153,7 @@ export default async function AuthorityWorkPage({
       parentMasterId={master.parent_master_id}
       childItems={childItems}
       rightsHolderLabel={rightsHolderLabel}
+      intakeId={intakeId}
     />
   );
 }

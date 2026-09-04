@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ type AuthorityData = {
   realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
   participants: { participant_id: string; label: string }[];
   mediaAssets: { asset_id: string; asset_type: string; storage_ref: string; format: string | null; duration_ms: number | null; created_at: string; title: string | null; master_id: string | null }[];
+  mediaIntakes?: { intake_id: string; asset_id: string | null; work_type: string; title: string }[];
 };
 
 type WorkRecord = {
@@ -237,6 +239,63 @@ export default function AuthorityClient() {
             </a>
           ))}
         </div>
+      </section>
+
+      <Separator className="opacity-30" />
+
+      {/* ── Media Library ────────────────────────────────────────────────────── */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Media Library</p>
+            <p className="mt-1 text-xs text-muted-foreground/70">Recent media assets in the Golden Shovel catalogue.</p>
+          </div>
+          <Link href="/authority/media" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+            View all →
+          </Link>
+        </div>
+        {data.mediaAssets.length === 0 ? (
+          <div className="rounded-lg border border-border bg-card/30 px-5 py-6 text-center">
+            <p className="text-sm text-muted-foreground">No media assets yet.</p>
+            <Link href="/authority/media/intake" className="mt-2 inline-block text-xs text-muted-foreground underline hover:text-foreground">Add media →</Link>
+          </div>
+        ) : (
+          <div className="divide-y divide-border rounded-lg border border-border overflow-hidden">
+            {data.mediaAssets
+              .filter(a => !a.storage_ref.startsWith("seed:placeholder:") && !a.storage_ref.startsWith("thumbnail:"))
+              .slice(0, 4)
+              .map(asset => {
+                const intake = data.mediaIntakes?.find((i: { asset_id: string | null }) => i.asset_id === asset.asset_id);
+                const hasRights = !!(bindings.find(b => b.asset_id === asset.asset_id)?.media_asset?.rights_holder_ref);
+                const thumbUrl = !asset.storage_ref.startsWith("http")
+                  ? `https://vod-cdn.lp-playback.studio/${asset.storage_ref}/thumbnails/keyframes_0.png`
+                  : null;
+                return (
+                  <a key={asset.asset_id} href={`/authority/media/${asset.asset_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
+                    <div className="w-14 h-9 rounded bg-muted/40 shrink-0 overflow-hidden flex items-center justify-center">
+                      {thumbUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={thumbUrl} alt="" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-[10px] text-muted-foreground/40">{intake?.work_type ?? asset.asset_type}</span>
+                      )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">
+                        {asset.title ?? <span className="font-mono text-xs text-muted-foreground">{asset.storage_ref.slice(0, 14)}…</span>}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {intake?.work_type ?? asset.asset_type}
+                        {asset.duration_ms ? ` · ${Math.floor(asset.duration_ms / 60000)}:${String(Math.floor((asset.duration_ms % 60000) / 1000)).padStart(2, "0")}` : ""}
+                        {hasRights ? " · Rights ✓" : " · Rights?"}
+                      </p>
+                    </div>
+                    <ChevronRight size={14} className="text-muted-foreground/40 shrink-0" />
+                  </a>
+                );
+              })}
+          </div>
+        )}
       </section>
 
       <Separator className="opacity-30" />

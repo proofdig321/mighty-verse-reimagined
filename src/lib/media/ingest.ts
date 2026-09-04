@@ -27,7 +27,8 @@ export async function ingestLivepeerAsset(
   accessLevel: AccessLevel = "public",
   rightsHolderRef?: string | null,
   rightsBasis?: string | null,
-  realizationId?: string | null
+  realizationId?: string | null,
+  intakeId?: string | null
 ): Promise<IngestResult> {
   const supabase = getServiceClient();
 
@@ -64,11 +65,10 @@ export async function ingestLivepeerAsset(
 
     if (existingBinding) {
       if (realizationId) {
-        const { error: realizationError } = await supabase
+        await supabase
           .from("projection_media_binding")
           .update({ realization_id: realizationId })
           .eq("binding_id", existingBinding.binding_id);
-        if (realizationError) throw new Error(`Failed to associate media realization: ${realizationError.message}`);
       }
       const { data: existingAsset } = await supabase
         .from("media_asset")
@@ -81,6 +81,15 @@ export async function ingestLivepeerAsset(
           .from("media_asset")
           .update({ rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis ?? "rights recorded during ingest" })
           .eq("asset_id", existingBinding.asset_id);
+      }
+
+      // Deterministic intake linkage: update intake_id on the asset if provided
+      if (intakeId) {
+        await supabase
+          .from("media_asset")
+          .update({ intake_id: intakeId })
+          .eq("asset_id", existingBinding.asset_id)
+          .is("intake_id", null);
       }
 
       const { data: existingVariant } = await supabase
@@ -121,6 +130,14 @@ export async function ingestLivepeerAsset(
       throw new Error(`Failed to insert projection_media_binding: ${bindingError?.message}`);
     }
 
+    if (intakeId) {
+      await supabase
+        .from("media_asset")
+        .update({ intake_id: intakeId })
+        .eq("asset_id", reuseAssetId)
+        .is("intake_id", null);
+    }
+
     return {
       asset_id: reuseAssetId,
       variant_id: existingVariant?.variant_id ?? "",
@@ -144,6 +161,11 @@ export async function ingestLivepeerAsset(
       duration_ms: mapped.durationMs,
       rights_holder_ref: rightsHolderRef,
       rights_basis: rightsBasis ?? "rights recorded during ingest",
+      // Provider identity — preserved for recovery/reconciliation
+      provider: "livepeer",
+      provider_asset_id: livepeerAssetId,
+      // Deterministic intake linkage
+      intake_id: intakeId ?? null,
     })
     .select("asset_id")
     .single();

@@ -503,6 +503,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
                   livepeer_asset_id: asset_id,
                   rights_holder_ref: rightsHolderRef || null,
                   rights_basis: rightsBasis || null,
+                  session_id: session.session_id ?? null,
                 }),
               }).then(responseData);
 

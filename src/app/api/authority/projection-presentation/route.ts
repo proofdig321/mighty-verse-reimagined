@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const participantId = await getParticipantId(supabase);
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
-  const { projection_id, master_id, title, description, artwork_asset_id } = await request.json();
+  const { projection_id, master_id, title, description, description_md, artwork_asset_id } = await request.json();
   if (!projection_id || !master_id || !title?.trim()) {
     return NextResponse.json({ error: "projection_id, master_id, and title required" }, { status: 400 });
   }
@@ -42,12 +42,13 @@ export async function POST(request: Request) {
         projection_id,
         title: title.trim(),
         description: description?.trim() ?? null,
+        description_md: description_md?.trim() ?? null,
         artwork_asset_id: artwork_asset_id ?? null,
         updated_at: new Date().toISOString(),
       },
       { onConflict: "projection_id" }
     )
-    .select("presentation_id, projection_id, title, description, artwork_asset_id")
+    .select("presentation_id, projection_id, title, description, description_md, artwork_asset_id")
     .single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

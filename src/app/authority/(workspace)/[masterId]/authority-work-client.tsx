@@ -42,11 +42,12 @@ type Props = {
   parentMasterId: string | null;
   childItems: ChildItem[];
   rightsHolderLabel: string | null;
+  intakeId: string | null;
 };
 
 // ─── AttachVideoPanel ─────────────────────────────────────────────────────────
 
-function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { projId: string; masterId: string; workTitle: string; onDone: () => void; onCancel: () => void }) {
+function AttachVideoPanel({ projId, masterId, workTitle, intakeId, onDone, onCancel }: { projId: string; masterId: string; workTitle: string; intakeId?: string | null; onDone: () => void; onCancel: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [rightsHolderRef, setRightsHolderRef] = useState("");
   const [rightsBasis, setRightsBasis] = useState("");
@@ -65,7 +66,8 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { p
         if (!file) return;
         setBusy(true); setMsg(null);
         try {
-          const session = await api("/api/authority/media/upload-session", { name: file.name, projection_id: projId, master_id: masterId });
+          // Pass intake_id through the session for deterministic linkage
+          const session = await api("/api/authority/media/upload-session", { name: file.name, projection_id: projId, master_id: masterId, intake_id: intakeId ?? null });
           if (session.error || !session.upload_url || !session.asset_id) throw new Error(session.error ?? "Upload session failed");
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
@@ -84,12 +86,9 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { p
             if (phase === "failed") throw new Error("Livepeer processing failed");
           }
           if (phase !== "ready") throw new Error("Processing timed out");
-          const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, livepeer_asset_id: session.asset_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis });
+          // Pass intake_id and session_id for deterministic linkage and session state update
+          const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, livepeer_asset_id: session.asset_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis, intake_id: intakeId ?? null, session_id: session.session_id ?? null });
           if (attach.error) throw new Error(attach.error);
-          // B3: link the intake record for this master to the newly created asset
-          if (attach.asset_id) {
-            await api("/api/authority/media-intake", { action: "link-asset", master_id: masterId, asset_id: attach.asset_id }, "PATCH");
-          }
           setMsg("Video attached.");
           onDone();
         } catch (err) {
@@ -105,7 +104,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: { p
 export default function AuthorityWorkClient({
   master, states, projections, bindings, presentation,
   projectionPresentations, realizations, participants,
-  parentTitle, parentMasterId, childItems, rightsHolderLabel,
+  parentTitle, parentMasterId, childItems, rightsHolderLabel, intakeId,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -154,7 +153,7 @@ export default function AuthorityWorkClient({
 
   if (presentingMaster) return <div className="space-y-6"><PresentationPanel masterId={master.master_id} existing={presentation} onDone={() => { setPresentingMaster(false); window.location.reload(); }} onCancel={() => setPresentingMaster(false)} /></div>;
   if (presentingProjId && projection) return <div className="space-y-6"><ProjectionPresentationPanel projectionId={presentingProjId} masterId={master.master_id} existing={projPres} onDone={() => { setPresentingProjId(null); window.location.reload(); }} onCancel={() => setPresentingProjId(null)} /></div>;
-  if (attachingProjId && projection) return <div className="space-y-6"><AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} /></div>;
+  if (attachingProjId && projection) return <div className="space-y-6"><AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} intakeId={intakeId} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} /></div>;
   if (editingTimelineBindingId && binding) return <div className="space-y-6"><TimelineEditor binding={binding} masterId={master.master_id} onDone={() => { setEditingTimelineBindingId(null); window.location.reload(); }} onCancel={() => setEditingTimelineBindingId(null)} /></div>;
   if (editingRealizationBindingId && binding) return <div className="space-y-6"><RealizationPanel bindingId={binding.binding_id} masterId={master.master_id} workTitle={title} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} /></div>;
 

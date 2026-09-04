@@ -46,7 +46,7 @@ export function WorkJourney({ steps }: { steps: JourneyStep[] }) {
 
 type PresentationPanelProps = {
   masterId: string;
-  existing: { title: string; description: string | null; artwork_asset_id?: string | null } | undefined | null;
+  existing: { title: string; description: string | null; description_md?: string | null; artwork_asset_id?: string | null } | undefined | null;
   onDone: () => void;
   onCancel: () => void;
 };
@@ -54,6 +54,7 @@ type PresentationPanelProps = {
 export function PresentationPanel({ masterId, existing, onDone, onCancel }: PresentationPanelProps) {
   const [title, setTitle] = useState(existing?.title ?? "");
   const [description, setDescription] = useState(existing?.description ?? "");
+  const [descriptionMd, setDescriptionMd] = useState(existing?.description_md ?? "");
   const [artworkAssetId, setArtworkAssetId] = useState(existing?.artwork_asset_id ?? "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -66,12 +67,17 @@ export function PresentationPanel({ masterId, existing, onDone, onCancel }: Pres
           {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
         </div>
         <input type="text" placeholder="Title" value={title} onChange={e => setTitle(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50" />
-        <textarea placeholder="Description (optional)" value={description} onChange={e => setDescription(e.target.value)} disabled={busy} rows={3} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none" />
+        <textarea placeholder="Short description (plain text)" value={description} onChange={e => setDescription(e.target.value)} disabled={busy} rows={2} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50 resize-none" />
+        <div className="space-y-1">
+          <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Editorial description (Markdown)</p>
+          <textarea placeholder="Full editorial description — supports **bold**, _italic_, headings, lists, links" value={descriptionMd} onChange={e => setDescriptionMd(e.target.value)} disabled={busy} rows={5} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm font-mono outline-none focus:ring-2 focus:ring-ring/50 resize-y" />
+          <p className="text-[10px] text-muted-foreground/50">Stored as Markdown. Renders on web, strips to plain text for distribution copy.</p>
+        </div>
         <input type="text" placeholder="Representative artwork asset ID (optional)" value={artworkAssetId} onChange={e => setArtworkAssetId(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
         {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
         <Button size="sm" disabled={busy || !title.trim()} onClick={async () => {
           setBusy(true); setMsg(null);
-          const res = await api("/api/authority/presentation", { master_id: masterId, title, description: description || null, artwork_asset_id: artworkAssetId || null });
+          const res = await api("/api/authority/presentation", { master_id: masterId, title, description: description || null, description_md: descriptionMd || null, artwork_asset_id: artworkAssetId || null });
           setBusy(false);
           if (res.error) { setMsg(`Error: ${res.error}`); return; }
           onDone();
