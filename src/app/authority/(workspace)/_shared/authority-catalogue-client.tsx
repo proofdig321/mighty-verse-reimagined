@@ -1,5 +1,6 @@
 "use client";
 
+import NextImage from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Activity, Archive, BarChart3, ChevronRight, Database, FileText, Image, MoreHorizontal, PlaySquare, Plus, Search, ShieldCheck, Upload, Video } from "lucide-react";
@@ -93,7 +94,7 @@ function WorkCard({
             </span>
             <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} /><StatusBadge label={status.needs} good={status.ready} /></div>
           </div>
-          {artworkUrl && <img src={artworkUrl} alt="" className="h-12 w-20 shrink-0 rounded object-cover" />}
+          {artworkUrl && <NextImage src={artworkUrl} alt="" width={80} height={48} className="h-12 w-20 shrink-0 rounded object-cover" />}
         </div>
 
         <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">

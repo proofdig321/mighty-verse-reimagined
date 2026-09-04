@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
@@ -76,17 +77,17 @@ export default async function MediaGalleryPage() {
             {assets.length > 0 && <span className="ml-2 text-muted-foreground/60">{assets.length} asset{assets.length !== 1 ? "s" : ""}</span>}
           </p>
         </div>
-        <a
+        <Link
           href="/authority/media/intake"
           className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-accent/30 transition-colors shrink-0"
         >
           <Plus size={13} /> Add Media
-        </a>
+        </Link>
       </div>
 
       {/* Assets */}
       {assets.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No media assets found. <a href="/authority/media/intake" className="underline hover:text-foreground">Add media →</a></p>
+        <p className="text-sm text-muted-foreground">No media assets found. <Link href="/authority/media/intake" className="underline hover:text-foreground">Add media →</Link></p>
       ) : (
         <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">

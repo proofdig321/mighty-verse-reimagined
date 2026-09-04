@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -197,9 +198,7 @@ export default function AuthorityWorkClient({
     <div className="space-y-10">
       {/* Breadcrumb + back */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <a href="/authority" className="hover:text-foreground transition-colors">Mighty Verse</a>
-        <span className="opacity-30">/</span>
-        <a href="/authority" className="hover:text-foreground transition-colors">Authority</a>
+        <Link href="/authority" className="hover:text-foreground transition-colors">Authority</Link>
         <span className="opacity-30">/</span>
         <span className="text-foreground">{title}</span>
       </div>

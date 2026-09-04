@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
@@ -82,9 +83,9 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
     <div className="space-y-10">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <a href="/authority" className="hover:text-foreground transition-colors">Authority</a>
+        <Link href="/authority" className="hover:text-foreground transition-colors">Authority</Link>
         <ChevronRight size={12} />
-        <a href="/authority/media" className="hover:text-foreground transition-colors">Media</a>
+        <Link href="/authority/media" className="hover:text-foreground transition-colors">Media</Link>
         <ChevronRight size={12} />
         <span className="text-foreground">{title}</span>
       </div>
