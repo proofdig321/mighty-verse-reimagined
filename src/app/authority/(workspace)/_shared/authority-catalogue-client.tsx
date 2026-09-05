@@ -193,25 +193,48 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
 
-    fetch(`/api/livepeer/playback/${playbackId}`)
-      .then(response => response.ok ? response.json() : null)
-      .then(info => {
-        const hls = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl");
-        if (!hls) throw new Error("No playable HLS source returned.");
-        setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-        if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = hls.url;
-        } else {
-          import("hls.js").then(({ default: Hls }) => {
-            if (!Hls.isSupported()) throw new Error("This browser cannot play the media stream.");
-            const hlsPlayer = new Hls();
-            hlsRef.current = hlsPlayer;
-            hlsPlayer.loadSource(hls.url);
-            hlsPlayer.attachMedia(video);
-          });
-        }
-      })
-      .catch(error => setMessage(`Error: ${error instanceof Error ? error.message : "Unable to load preview"}`));
+    // Resolve playback URL — Mux assets use stream.mux.com, Livepeer assets use the proxy
+    const hlsUrl = playbackId.startsWith("http")
+      ? playbackId
+      : playbackId.match(/^[a-zA-Z0-9]{8,}[a-zA-Z0-9]{4,}$/)
+      ? `https://stream.mux.com/${playbackId}.m3u8`
+      : null;
+
+    if (!hlsUrl) {
+      // Livepeer fallback via proxy
+      fetch(`/api/livepeer/playback/${playbackId}`)
+        .then(response => response.ok ? response.json() : null)
+        .then(info => {
+          const hls = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl");
+          if (!hls) throw new Error("No playable HLS source returned.");
+          setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+          if (video.canPlayType("application/vnd.apple.mpegurl")) {
+            video.src = hls.url;
+          } else {
+            import("hls.js").then(({ default: Hls }) => {
+              if (!Hls.isSupported()) throw new Error("This browser cannot play the media stream.");
+              const hlsPlayer = new Hls();
+              hlsRef.current = hlsPlayer;
+              hlsPlayer.loadSource(hls.url);
+              hlsPlayer.attachMedia(video);
+            });
+          }
+        })
+        .catch(error => setMessage(`Error: ${error instanceof Error ? error.message : "Unable to load preview"}`));
+      return;
+    }
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
+    } else {
+      import("hls.js").then(({ default: Hls }) => {
+        if (!Hls.isSupported()) { setMessage("Error: This browser cannot play the media stream."); return; }
+        const hlsPlayer = new Hls();
+        hlsRef.current = hlsPlayer;
+        hlsPlayer.loadSource(hlsUrl);
+        hlsPlayer.attachMedia(video);
+      });
+    }
 
     return () => {
       video.pause();
@@ -259,7 +282,7 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
     const result = await responseData(response);
     setBusy(false);
     if (!response.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to select thumbnail"}`); return; }
-    setMessage("Livepeer thumbnail selected as representative artwork.");
+    setMessage("Thumbnail selected as representative artwork.");
   }
 
   return (
@@ -278,7 +301,7 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
             <p className="text-muted-foreground text-xs uppercase tracking-wide">Representative artwork preview</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={thumbnailUrl} alt="Generated video thumbnail" className="w-32 aspect-video object-cover border border-border" />
-            <Button size="sm" variant="outline" onClick={selectThumbnail} disabled={busy}>Use Livepeer thumbnail as artwork</Button>
+            <Button size="sm" variant="outline" onClick={selectThumbnail} disabled={busy}>Use thumbnail as artwork</Button>
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -324,7 +347,6 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
   const [uploadStage, setUploadStage] = useState<"selecting" | "validating" | "uploading" | "processing" | "ready" | "failed">("selecting");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Accept video and audio — Livepeer accepts both
   const ACCEPTED_TYPES = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
 
   function isAcceptedFile(f: File): boolean {
@@ -334,15 +356,15 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
 
   const statusMessage =
     uploadStage === "selecting"
-      ? "Select a video file to begin the Livepeer upload flow."
+      ? "Select a media file to begin the upload."
       : uploadStage === "validating"
       ? "Checking the selected file and intake metadata."
       : uploadStage === "uploading"
-      ? "Uploading to Livepeer…"
+      ? "Uploading…"
       : uploadStage === "processing"
-      ? "Livepeer is preparing your video for playback."
+      ? "Media is being prepared for playback."
       : uploadStage === "ready"
-      ? "Video is ready to attach."
+      ? "Media is ready to attach."
       : "Upload status unknown.";
 
   return (
@@ -451,11 +473,11 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
                 body: JSON.stringify({ name: uploadFile.name, projection_id: projId, master_id: masterId }),
               }).then(responseData);
 
-              if (session.error || !session.upload_url || !session.asset_id) {
-                throw new Error(`${workTitle} — Video upload could not be started. ${session.error ?? "The upload session was incomplete."} Next: try the upload again.`);
+              if (session.error || !session.upload_url || !session.session_id) {
+                throw new Error(`${workTitle} — Upload could not be started. ${session.error ?? "The upload session was incomplete."} Next: try the upload again.`);
               }
 
-              const { upload_url, asset_id } = session;
+              const { upload_url, session_id } = session;
 
               await new Promise<void>((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -465,7 +487,6 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
                 xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
                 xhr.onerror = () => reject(new Error("Upload network error"));
                 xhr.open("PUT", upload_url);
-                // Do NOT set Content-Type — Livepeer's pre-signed URL handles it
                 xhr.send(uploadFile);
               });
 
@@ -473,16 +494,16 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
               setUploadStage("processing");
 
               let phase = "uploading";
-              for (let attempt = 0; phase !== "ready" && attempt < 120; attempt += 1) {
-                await new Promise(r => setTimeout(r, 3000));
-                const statusResponse = await fetch(`/api/authority/media/upload-session/${asset_id}`);
+              for (let attempt = 0; phase !== "ingested" && phase !== "ready" && attempt < 60; attempt += 1) {
+                await new Promise(r => setTimeout(r, 5000));
+                const statusResponse = await fetch(`/api/authority/media/upload-session/${session_id}`);
                 const status = await responseData(statusResponse);
-                if (!statusResponse.ok || status.error) throw new Error(`${workTitle} — Video processing could not be verified. ${status.error ?? "The service returned an invalid processing status."} Next: retry processing or check the media service.`);
+                if (!statusResponse.ok || status.error) throw new Error(`${workTitle} — Media processing could not be verified. ${status.error ?? "The service returned an invalid processing status."} Next: retry or check the media service.`);
                 phase = status.phase ?? "unknown";
                 setUploadPhase(phase);
-                if (phase === "failed") { setUploadMsg("Error: Livepeer processing failed"); setUploadStage("failed"); return; }
+                if (phase === "failed") { setUploadMsg("Error: Media processing failed"); setUploadStage("failed"); return; }
               }
-              if (phase !== "ready") throw new Error("Livepeer processing did not become ready in time.");
+              if (phase !== "ingested" && phase !== "ready") throw new Error("Media processing timed out.");
 
               setUploadStage("ready");
 
@@ -492,15 +513,14 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
                 body: JSON.stringify({
                   projection_id: projId,
                   master_id: masterId,
-                  livepeer_asset_id: asset_id,
+                  session_id,
                   rights_holder_ref: rightsHolderRef || null,
                   rights_basis: rightsBasis || null,
-                  session_id: session.session_id ?? null,
                 }),
               }).then(responseData);
 
-              if (attach.error) { setUploadMsg(`${workTitle} — Video connection failed. ${attach.error} Next: confirm the video and rights details, then retry.`); return; }
-              setUploadMsg("Video attached. World and Moment are now playable.");
+              if (attach.error) { setUploadMsg(`${workTitle} — Media attachment failed. ${attach.error} Next: confirm the media and rights details, then retry.`); return; }
+              setUploadMsg("Media attached.");
               setUploadFile(null); setRightsHolderRef(""); setRightsBasis(""); setUploadProgress(null); setUploadPhase(null); setUploadStage("ready");
               if (fileInputRef.current) fileInputRef.current.value = "";
               onDone();
@@ -701,7 +721,7 @@ function MediaIntakePanel({ onDone, onCancel, participants, intake }: { onDone: 
             <div><dt className="font-medium text-foreground">Credits</dt><dd>{creditRows.length ? `${creditRows.length} participant credit${creditRows.length === 1 ? "" : "s"}` : "No participant credit"}</dd></div>
             <div><dt className="font-medium text-foreground">Source</dt><dd>{sourceType}{sourceProvider ? ` · ${sourceProvider}` : ""}</dd></div>
           </dl>
-          <p className="text-xs text-muted-foreground">Submission creates the intake record. Upload processing remains a separate Livepeer status flow.</p>
+          <p className="text-xs text-muted-foreground">Submission creates the intake record. Upload and media processing happen after the intake record is created.</p>
         </div>
         <div className="flex flex-wrap justify-between gap-2">
           <Button type="button" size="sm" variant="outline" disabled={busy || step === 1} onClick={() => setStep(current => current - 1)}>Back</Button>

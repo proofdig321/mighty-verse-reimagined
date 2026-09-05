@@ -35,7 +35,7 @@ export default async function MediaIntakePage() {
         <h1 className="text-3xl font-semibold tracking-tight">Add Media</h1>
         <p className="text-sm text-muted-foreground">
           Register a new media intake record — identity, source, ISRC state, credits, and provenance.
-          Upload and Livepeer processing happen after the intake record is created.
+          Upload and media processing happen after the intake record is created.
         </p>
       </div>
       <div className="max-w-2xl">

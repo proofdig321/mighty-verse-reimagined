@@ -56,7 +56,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   const [msg, setMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Accept video and audio — Livepeer accepts both
+  // Accept video and audio
   const ACCEPTED_TYPES = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
   const isAudio = file?.type.startsWith("audio/") || (file?.name && /\.(mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(file.name));
 
@@ -130,7 +130,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
             xhr.open("PUT", session.upload_url);
             xhr.send(file);
           });
-          setMsg("Uploading… processing with Mux.");
+          setMsg("Uploading… processing media.");
           let phase = "uploading";
           for (let i = 0; phase !== "ingested" && phase !== "ready" && i < 60; i++) {
             await new Promise(r => setTimeout(r, 5000));
