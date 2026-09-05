@@ -3,6 +3,22 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 
+// Infer image format from URL path extension.
+// Returns a MIME type string or null if unrecognised.
+function inferImageFormat(url: string): string | null {
+  const ext = url.split("?")[0].split(".").pop()?.toLowerCase();
+  const map: Record<string, string> = {
+    jpg: "image/jpeg", jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    gif: "image/gif",
+    tiff: "image/tiff", tif: "image/tiff",
+    svg: "image/svg+xml",
+    avif: "image/avif",
+  };
+  return ext ? (map[ext] ?? null) : null;
+}
+
 export async function POST(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -25,6 +41,9 @@ export async function POST(request: Request) {
   const auth = await validateAuthority(participantId, "create-canonical-state", master_id);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
 
+  // Infer format from URL extension; do not assume image/png for all artwork
+  const format = inferImageFormat(parsedUrl.toString()) ?? "image/unknown";
+
   const svc = getServiceClient();
   const { data: artwork, error: artworkError } = await svc
     .from("media_asset")
@@ -32,7 +51,7 @@ export async function POST(request: Request) {
       asset_type: "thumbnail",
       storage_ref: parsedUrl.toString(),
       integrity_hash: `thumbnail:${parsedUrl.toString()}`,
-      format: "image/png",
+      format,
     })
     .select("asset_id, storage_ref")
     .single();

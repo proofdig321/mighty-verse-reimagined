@@ -497,7 +497,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
                 {/* File picker */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Video file</label>
+                  <label className="text-sm font-medium text-foreground">Media file</label>
                   <div
                     className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors cursor-pointer ${videoFile ? "border-[var(--accent-mv)]/60 bg-accent/10" : "border-border hover:border-[var(--accent-mv)]/40"}`}
                     onClick={() => fileInputRef.current?.click()}
@@ -505,13 +505,13 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                     onDrop={(e) => {
                       e.preventDefault();
                       const f = e.dataTransfer.files[0];
-                      if (f && f.type.startsWith("video/")) setVideoFile(f);
+                      if (f && (f.type.startsWith("video/") || f.type.startsWith("audio/") || /\.(mp4|mov|mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(f.name))) setVideoFile(f);
                     }}
                   >
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="video/mp4,video/*"
+                      accept="video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*"
                       className="sr-only"
                       onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
                     />

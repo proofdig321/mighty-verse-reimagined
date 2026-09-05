@@ -324,6 +324,14 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
   const [uploadStage, setUploadStage] = useState<"selecting" | "validating" | "uploading" | "processing" | "ready" | "failed">("selecting");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Accept video and audio — Livepeer accepts both
+  const ACCEPTED_TYPES = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
+
+  function isAcceptedFile(f: File): boolean {
+    return f.type.startsWith("video/") || f.type.startsWith("audio/") ||
+      /\.(mp4|mov|avi|mkv|webm|mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(f.name);
+  }
+
   const statusMessage =
     uploadStage === "selecting"
       ? "Select a video file to begin the Livepeer upload flow."
@@ -341,7 +349,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
     <Card>
       <CardContent className="pt-4 space-y-4">
         <div className="flex items-center justify-between">
-          <span className="text-foreground text-sm font-medium">Attach Video</span>
+          <span className="text-foreground text-sm font-medium">Attach Media</span>
           {!uploadBusy && (
             <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
           )}
@@ -372,7 +380,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
           <input
             ref={fileInputRef}
             type="file"
-            accept="video/mp4,video/*"
+            accept={ACCEPTED_TYPES}
             disabled={uploadBusy}
             onChange={e => { setUploadFile(e.target.files?.[0] ?? null); setUploadMsg(null); }}
             className="sr-only"
@@ -392,8 +400,8 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
               </div>
             ) : (
               <div className="space-y-1">
-                <p className="text-foreground text-sm">＋ Choose MP4 video</p>
-                <p className="text-muted-foreground text-xs">MP4 · Full video · Uploads directly to Mighty Verse</p>
+                <p className="text-foreground text-sm">＋ Choose video or audio file</p>
+                <p className="text-muted-foreground text-xs">MP4, MOV, MP3, WAV, FLAC, M4A, OGG and more</p>
               </div>
             )}
           </button>
@@ -434,7 +442,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
             if (!uploadFile) return;
             setUploadBusy(true); setUploadMsg(null); setUploadProgress(null); setUploadPhase(null); setUploadStage("validating");
             try {
-              if (!uploadFile.type.startsWith("video/")) throw new Error("Select a video file.");
+              if (!isAcceptedFile(uploadFile)) throw new Error("Select a video or audio file.");
               if (!rightsHolderRef || !rightsBasis) throw new Error("Rights holder and rights basis are required for a new upload.");
               setUploadStage("uploading");
               const session = await fetch("/api/authority/media/upload-session", {

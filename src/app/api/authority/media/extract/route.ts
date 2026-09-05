@@ -1,14 +1,17 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { extractFileMetadata, detectIsrcConflict } from "@/lib/media/metadata-extract";
+import { extractFileMetadata, detectIsrcConflict, detectMediaClassFromBytes } from "@/lib/media/metadata-extract";
 
 // POST /api/authority/media/extract
 // Body: multipart/form-data with field "file" (the media file)
 // Optional: "canonical_isrc" (string) — the canonical ISRC to check against
 //
-// Returns extracted metadata and any ISRC conflict report.
+// Returns extracted metadata, magic-byte validation result, and any ISRC conflict report.
 // Called before provider ingestion to detect pre-existing metadata.
 // Extracted ISRC is evidence only — never automatically applied to canonical records.
+//
+// Content-type security: magic-byte detection is performed on the actual file bytes.
+// A file whose detected type conflicts with its claimed MIME type is flagged as spoofed.
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -37,7 +40,11 @@ export async function POST(request: Request) {
   const mimeType = file.type || null;
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const extracted = await extractFileMetadata(buffer, mimeType, filename);
+
+  // Magic-byte content-type validation
+  const { mediaClass: magicClass, detectedMime, spoofed } = await detectMediaClassFromBytes(buffer, mimeType, filename);
+
+  const extracted = await extractFileMetadata(buffer, detectedMime ?? mimeType, filename);
 
   const conflict = detectIsrcConflict(
     extracted,
@@ -47,8 +54,20 @@ export async function POST(request: Request) {
   return NextResponse.json({
     extracted,
     conflict,
+    // Content-type security report
+    contentTypeValidation: {
+      claimedMime: mimeType,
+      detectedMime,
+      mediaClass: magicClass,
+      spoofed,
+      warning: spoofed
+        ? `Content-type mismatch: file claims ${mimeType} but magic bytes indicate ${detectedMime}. This file may be misnamed or malicious.`
+        : null,
+    },
     // Guidance for the Authority operator
-    guidance: conflict.conflict
+    guidance: spoofed
+      ? "Content-type mismatch detected. Do not ingest this file without operator review."
+      : conflict.conflict
       ? "ISRC conflict detected. The uploaded file contains a different ISRC than the canonical record. The operator must resolve this before proceeding."
       : conflict.embeddedIsrc && !conflict.canonicalIsrc
       ? "The uploaded file contains an ISRC. Review and confirm whether this should become the canonical ISRC for this realization."

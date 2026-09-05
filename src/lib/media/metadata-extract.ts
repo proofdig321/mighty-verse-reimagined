@@ -11,7 +11,21 @@
 
 import type { ExtractedFileMetadata, MediaClass } from "./metadata-types";
 
-/** Detect media class from MIME type and/or file magic bytes. */
+/**
+ * Detect media class from MIME type and/or filename extension.
+ *
+ * Handles:
+ *   - audio/mpeg, audio/mp3, .mp3                → audio-mp3
+ *   - audio/* (FLAC, WAV, AIFF, M4A, OGG, OPUS)  → audio-other
+ *   - application/ogg, .ogg, .opus               → audio-other (OGG container)
+ *   - video/* (.mp4, .mov, .webm, .mkv)           → video
+ *   - image/jpeg, image/png, image/webp, image/tiff → image-raster
+ *   - image/gif, image/svg+xml, .svg, .gif        → image-other
+ *   - everything else                             → unknown
+ *
+ * Note: file-type magic-byte detection is available via detectMediaClassFromBytes()
+ * for server-side validation where the actual file buffer is available.
+ */
 export function detectMediaClass(mimeType: string | null, filename?: string): MediaClass {
   const mime = (mimeType ?? "").toLowerCase();
   const ext = (filename ?? "").split(".").pop()?.toLowerCase() ?? "";
@@ -19,7 +33,9 @@ export function detectMediaClass(mimeType: string | null, filename?: string): Me
   if (mime === "audio/mpeg" || mime === "audio/mp3" || ext === "mp3") return "audio-mp3";
   if (
     mime.startsWith("audio/") ||
-    ["flac", "wav", "aiff", "aif", "m4a", "ogg", "opus", "wma"].includes(ext)
+    // OGG containers: file-type returns application/ogg; browsers may send audio/ogg
+    mime === "application/ogg" || mime === "video/ogg" ||
+    ["flac", "wav", "aiff", "aif", "m4a", "aac", "ogg", "oga", "opus", "wma"].includes(ext)
   ) return "audio-other";
   if (
     mime === "video/mp4" || mime === "video/quicktime" || mime === "video/x-msvideo" ||
@@ -32,6 +48,37 @@ export function detectMediaClass(mimeType: string | null, filename?: string): Me
   ) return "image-raster";
   if (mime.startsWith("image/") || ["gif", "svg", "bmp", "ico"].includes(ext)) return "image-other";
   return "unknown";
+}
+
+/**
+ * Detect media class from actual file bytes using magic-byte detection.
+ * More reliable than MIME/extension alone — detects spoofed or misnamed files.
+ *
+ * Falls back to detectMediaClass(mimeType, filename) if magic detection is
+ * inconclusive (e.g. SVG, plain text, or very small buffers).
+ *
+ * Used server-side before provider ingestion to validate file content.
+ */
+export async function detectMediaClassFromBytes(
+  buffer: Buffer,
+  mimeType: string | null,
+  filename?: string
+): Promise<{ mediaClass: MediaClass; detectedMime: string | null; spoofed: boolean }> {
+  const { fileTypeFromBuffer } = await import("file-type");
+  const detected = await fileTypeFromBuffer(buffer);
+  const detectedMime = detected?.mime ?? null;
+
+  // If magic detection found something, use it as the authoritative signal
+  if (detectedMime) {
+    const magicClass = detectMediaClass(detectedMime, detected?.ext);
+    const claimedClass = detectMediaClass(mimeType, filename);
+    // Spoofed = claimed class differs from magic-detected class
+    const spoofed = claimedClass !== magicClass && claimedClass !== "unknown";
+    return { mediaClass: magicClass, detectedMime, spoofed };
+  }
+
+  // Magic inconclusive (SVG, plain text, etc.) — fall back to MIME/extension
+  return { mediaClass: detectMediaClass(mimeType, filename), detectedMime: null, spoofed: false };
 }
 
 /**

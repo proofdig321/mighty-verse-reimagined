@@ -55,30 +55,40 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Accept video and audio — Livepeer accepts both
+  const ACCEPTED_TYPES = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
+  const isAudio = file?.type.startsWith("audio/") || (file?.name && /\.(mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(file.name));
+
+  function isAcceptedFile(f: File): boolean {
+    return f.type.startsWith("video/") || f.type.startsWith("audio/") ||
+      /\.(mp4|mov|avi|mkv|webm|mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(f.name);
+  }
+
   return (
     <Card><CardContent className="pt-4 space-y-4">
-      <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Attach Video</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
+      <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Attach Media</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
 
       {/* File drop zone */}
       <div
         className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-6 text-center cursor-pointer transition-colors ${file ? "border-[var(--accent-mv)]/60 bg-accent/10" : "border-border hover:border-[var(--accent-mv)]/40"}`}
         onClick={() => !busy && fileInputRef.current?.click()}
         onDragOver={(e) => e.preventDefault()}
-        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith("video/")) setFile(f); }}
+        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && isAcceptedFile(f)) setFile(f); }}
       >
-        <input ref={fileInputRef} type="file" accept="video/mp4,video/*" disabled={busy} className="sr-only" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+        <input ref={fileInputRef} type="file" accept={ACCEPTED_TYPES} disabled={busy} className="sr-only" onChange={e => setFile(e.target.files?.[0] ?? null)} />
         {file ? (
           <>
-            <span className="text-xl">🎬</span>
+            <span className="text-xl">{isAudio ? "🎵" : "🎬"}</span>
             <p className="text-sm font-medium text-foreground">{file.name}</p>
             <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
             <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
           </>
         ) : (
           <>
-            <span className="text-xl opacity-30">📹</span>
-            <p className="text-sm text-muted-foreground">Click or drag a video file here</p>
-            <p className="text-xs text-muted-foreground/60">MP4 recommended</p>
+            <span className="text-xl opacity-30">📁</span>
+            <p className="text-sm text-muted-foreground">Click or drag a video or audio file here</p>
+            <p className="text-xs text-muted-foreground/60">MP4, MOV, MP3, WAV, FLAC, M4A, OGG and more</p>
           </>
         )}
       </div>

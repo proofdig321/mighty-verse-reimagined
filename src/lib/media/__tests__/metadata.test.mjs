@@ -20,6 +20,11 @@
  *  14. Canonical metadata hash — changes when ISRC changes
  *  15. Sidecar staleness detection
  *  16. Idempotency — embedding twice does not corrupt
+ *  17. OGG classified as audio-other (application/ogg container)
+ *  18. Magic-byte detection — MP3 bytes detected correctly
+ *  19. Magic-byte detection — JPEG bytes detected correctly
+ *  20. Magic-byte detection — spoofed file flagged
+ *  21. Magic-byte detection — unknown bytes fall back to MIME
  */
 
 import assert from "node:assert/strict";
@@ -37,7 +42,7 @@ async function test(name, fn) {
 
 // ─── Import modules ───────────────────────────────────────────────────────────
 
-const { detectMediaClass, extractFileMetadata, detectIsrcConflict } = await import("../metadata-extract.js");
+const { detectMediaClass, extractFileMetadata, detectIsrcConflict, detectMediaClassFromBytes } = await import("../metadata-extract.js");
 const { hashCanonicalMetadata } = await import("../metadata-build.js");
 const { embedMp3Metadata, embedImageMetadata } = await import("../metadata-embed.js");
 const NodeID3 = (await import("node-id3")).default;
@@ -258,3 +263,56 @@ await test("embedMp3Metadata: idempotent — embedding twice preserves ISRC", as
 });
 
 console.log("\nDone.\n");
+
+// 17. OGG classified as audio-other (application/ogg container)
+await test("detectMediaClass: OGG application/ogg is audio-other", () => {
+  assert.equal(detectMediaClass("application/ogg", "track.ogg"), "audio-other");
+});
+await test("detectMediaClass: video/ogg is audio-other", () => {
+  assert.equal(detectMediaClass("video/ogg", "track.ogg"), "audio-other");
+});
+await test("detectMediaClass: .ogg extension is audio-other", () => {
+  assert.equal(detectMediaClass(null, "track.ogg"), "audio-other");
+});
+await test("detectMediaClass: .aac extension is audio-other", () => {
+  assert.equal(detectMediaClass(null, "track.aac"), "audio-other");
+});
+
+// 18. Magic-byte detection — MP3 bytes detected correctly
+await test("detectMediaClassFromBytes: MP3 magic bytes", async () => {
+  const buf = makeMinimalMp3(null);
+  const result = await detectMediaClassFromBytes(buf, "audio/mpeg", "track.mp3");
+  assert.equal(result.mediaClass, "audio-mp3");
+  assert.equal(result.spoofed, false);
+});
+
+// 19. Magic-byte detection — JPEG bytes detected correctly
+await test("detectMediaClassFromBytes: JPEG magic bytes", async () => {
+  const buf = await makeMinimalJpeg();
+  const result = await detectMediaClassFromBytes(buf, "image/jpeg", "photo.jpg");
+  assert.equal(result.mediaClass, "image-raster");
+  assert.equal(result.detectedMime, "image/jpeg");
+  assert.equal(result.spoofed, false);
+});
+
+// 20. Magic-byte detection — spoofed file flagged
+await test("detectMediaClassFromBytes: spoofed JPEG claimed as audio/mpeg", async () => {
+  const buf = await makeMinimalJpeg();
+  // Claim it's an MP3 but it's actually a JPEG
+  const result = await detectMediaClassFromBytes(buf, "audio/mpeg", "track.mp3");
+  assert.equal(result.mediaClass, "image-raster"); // magic wins
+  assert.equal(result.spoofed, true);              // mismatch flagged
+});
+
+// 21. Magic-byte detection — unknown bytes fall back to MIME
+await test("detectMediaClassFromBytes: unknown bytes fall back to MIME", async () => {
+  const buf = Buffer.from("<svg xmlns=\"http://www.w3.org/2000/svg\"></svg>");
+  // SVG has no magic bytes — file-type returns undefined
+  const result = await detectMediaClassFromBytes(buf, "image/svg+xml", "icon.svg");
+  // Falls back to MIME/extension detection
+  assert.equal(result.mediaClass, "image-other");
+  assert.equal(result.detectedMime, null);
+  assert.equal(result.spoofed, false);
+});
+
+console.log("\nDone (extended).\n");

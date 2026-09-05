@@ -291,13 +291,16 @@ export async function checkMetadataConsistency(
  * Synchronise the portable canonical representation (sidecar) after canonical state changes.
  * Idempotent — safe to call multiple times.
  * The sidecar is derived from canonical state; this call re-derives and stores it.
+ *
+ * mediaClass is not known at sync time (no file buffer available); set to null in result.
+ * The sidecar content is format-agnostic — mediaClass does not affect sidecar correctness.
  */
-export async function syncSidecar(assetId: string, meta: CanonicalMediaMetadata): Promise<MetadataEmbedResult> {
+export async function syncSidecar(assetId: string, meta: CanonicalMediaMetadata): Promise<Omit<MetadataEmbedResult, "mediaClass"> & { mediaClass: null }> {
   const contentHash = hashCanonicalMetadata(meta);
   const { path, error } = await storeSidecar(assetId, meta, contentHash);
   const warnings = error ? [`Portable representation sync failed: ${error}`] : [];
   return {
-    mediaClass: "unknown",
+    mediaClass: null,
     embedded: false,
     sidecarStored: !error,
     sidecarPath: path,
