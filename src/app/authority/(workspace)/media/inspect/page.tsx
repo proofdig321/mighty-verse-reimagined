@@ -73,7 +73,9 @@ async function getAssetIdentity(assetId: string): Promise<AssetIdentity | null> 
 
   if (!asset) return null;
   if (!asset.provider) return null;
-  if (asset.asset_type !== "video" && asset.asset_type !== "audio") return null;
+  // Accept original, video, and audio asset types
+  const inspectable = ["original", "video", "audio"];
+  if (!inspectable.includes(asset.asset_type)) return null;
 
   const { data: intake } = asset.intake_id
     ? await svc.from("media_intake").select("title, work_type").eq("intake_id", asset.intake_id).maybeSingle()

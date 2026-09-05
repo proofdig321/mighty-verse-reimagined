@@ -190,8 +190,8 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             {isPlaceholder && <Badge variant="destructive">Placeholder</Badge>}
           </div>
         </div>
-        {/* Inspect Media action — only for playable video assets */}
-        {!isPlaceholder && (asset.asset_type === "video" || asset.asset_type === "audio") && asset.provider && (
+        {/* Inspect Media action — for any non-placeholder asset with a provider */}
+        {!isPlaceholder && !isThumbnail && asset.provider && (
           <Link
             href={`/authority/media/inspect?assetId=${assetId}`}
             className="shrink-0"

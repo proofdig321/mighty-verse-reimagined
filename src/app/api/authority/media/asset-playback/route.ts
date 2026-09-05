@@ -36,8 +36,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Asset has no provider — cannot resolve playback" }, { status: 422 });
   }
 
-  if (asset.asset_type !== "video" && asset.asset_type !== "audio") {
-    return NextResponse.json({ error: `Unsupported media class for inspection: ${asset.asset_type}` }, { status: 422 });
+  // Only original/video/audio assets are inspectable
+  const inspectableTypes = ["original", "video", "audio"];
+  if (!inspectableTypes.includes(asset.asset_type)) {
+    return NextResponse.json({ error: `Unsupported asset type for inspection: ${asset.asset_type}` }, { status: 422 });
   }
 
   // Resolve delivery variant for the HLS endpoint
@@ -62,6 +64,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: `Unknown provider: ${asset.provider}` }, { status: 422 });
   }
 
+  // Derive media class: original/video assets are video, audio assets are audio
   const mediaClass: MediaClass = asset.asset_type === "audio" ? "audio" : "video";
   const playbackSource = provider.buildPlaybackSource(asset.storage_ref, mediaClass);
 

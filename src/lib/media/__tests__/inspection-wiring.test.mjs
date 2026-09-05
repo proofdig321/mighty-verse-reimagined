@@ -84,8 +84,9 @@ test("inspect navigation: Super Hero Ego asset ID produces correct URL", () => {
 
 function resolvePlaybackSource(asset, deliveryVariant) {
   if (!asset.provider) return { error: "Asset has no provider" };
-  if (asset.asset_type !== "video" && asset.asset_type !== "audio") {
-    return { error: `Unsupported media class: ${asset.asset_type}` };
+  const inspectable = ["original", "video", "audio"];
+  if (!inspectable.includes(asset.asset_type)) {
+    return { error: `Unsupported asset type: ${asset.asset_type}` };
   }
   const mediaClass = asset.asset_type === "audio" ? "audio" : "video";
   let hlsUrl;
@@ -100,7 +101,7 @@ function resolvePlaybackSource(asset, deliveryVariant) {
 }
 
 test("playback resolution: mux video resolves HLS URL", () => {
-  const asset = { asset_type: "video", provider: "mux", storage_ref: "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4" };
+  const asset = { asset_type: "original", provider: "mux", storage_ref: "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4" };
   const result = resolvePlaybackSource(asset, null);
   assert.ok(!result.error);
   assert.ok(result.hls_url.includes("stream.mux.com"));
@@ -108,14 +109,14 @@ test("playback resolution: mux video resolves HLS URL", () => {
 });
 
 test("playback resolution: delivery_variant endpoint takes precedence", () => {
-  const asset = { asset_type: "video", provider: "mux", storage_ref: "abc" };
+  const asset = { asset_type: "original", provider: "mux", storage_ref: "abc" };
   const variant = { endpoint_ref: "https://stream.mux.com/REAL_PLAYBACK.m3u8" };
   const result = resolvePlaybackSource(asset, variant);
   assert.equal(result.hls_url, "https://stream.mux.com/REAL_PLAYBACK.m3u8");
 });
 
 test("playback resolution: livepeer uses proxy endpoint", () => {
-  const asset = { asset_type: "video", provider: "livepeer", storage_ref: "5a112ddzzuvlq3a5" };
+  const asset = { asset_type: "original", provider: "livepeer", storage_ref: "5a112ddzzuvlq3a5" };
   const result = resolvePlaybackSource(asset, null);
   assert.ok(!result.error);
   assert.ok(result.hls_url.includes("livepeer") || result.hls_url.includes("5a112ddzzuvlq3a5"));
@@ -142,9 +143,10 @@ test("playback resolution: unknown provider returns error", () => {
 });
 
 test("playback resolution: Super Hero Ego asset resolves correctly", () => {
+  // Real DB values: asset_type='original', provider='mux'
   const asset = {
-    asset_id: "795c057e",
-    asset_type: "video",
+    asset_id: "795c057e-2967-4e93-8f5e-06297c674cb0",
+    asset_type: "original",
     provider: "mux",
     storage_ref: "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4",
     duration_ms: 254800,
@@ -156,6 +158,12 @@ test("playback resolution: Super Hero Ego asset resolves correctly", () => {
   assert.equal(result.provider, "mux");
   assert.equal(result.media_class, "video");
   assert.ok(result.hls_url.includes("JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4"));
+});
+
+test("playback resolution: asset_type original is inspectable", () => {
+  const asset = { asset_type: "original", provider: "mux", storage_ref: "abc" };
+  const result = resolvePlaybackSource(asset, null);
+  assert.ok(!result.error, "original type must be inspectable");
 });
 
 // ─── Canonical safety ─────────────────────────────────────────────────────────
