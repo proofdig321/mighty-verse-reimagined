@@ -200,25 +200,28 @@ export default function CreateWorkClient({ universes, murals, participants, curr
   // ── Done screen ─────────────────────────────────────────────────────────────
   if (step === "done" && createdMasterId) {
     return (
-      <div className="space-y-8 max-w-xl">
-        <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Create Work</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Work created</h1>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 max-w-lg mx-auto text-center px-4">
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-full text-3xl"
+          style={{ background: "color-mix(in oklch, var(--accent-mv-gold) 15%, var(--card))", border: "2px solid var(--accent-mv-gold)" }}
+        >
+          ✓
         </div>
-        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-5 py-5 space-y-2">
-          <p className="text-sm font-medium text-emerald-400">
-            {TYPE_LABELS[workType]} created and authorised
-          </p>
-          <p className="text-xs text-muted-foreground">
-            {title.trim() ? `"${title.trim()}"` : "Untitled"} — canonical state authorised, experiential projection created
-            {canHaveMedia && hasVideo && videoFile ? ", video attached." : "."}
+        <div className="space-y-2">
+          <h1 className="text-3xl font-semibold tracking-tight" style={{ color: "var(--accent-mv-gold)" }}>
+            {TYPE_LABELS[workType]} Created
+          </h1>
+          <p className="text-base text-foreground font-medium">{title.trim() || "Untitled"}</p>
+          <p className="text-sm text-muted-foreground">
+            Canonical state authorised · Projection created
+            {canHaveMedia && hasVideo && videoFile ? " · Video attached" : ""}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
-          <Button onClick={() => router.push(`/authority/${createdMasterId}`)}>
+        <div className="flex flex-wrap gap-3 justify-center">
+          <Button size="lg" onClick={() => router.push(`/authority/${createdMasterId}`)}>
             Open work →
           </Button>
-          <Button variant="outline" onClick={() => {
+          <Button size="lg" variant="outline" onClick={() => {
             setStep("type"); setTitle(""); setDescription(""); setParentMasterId("");
             setVideoFile(null); setRightsHolderRef(currentParticipantId); setRightsBasis("owned");
             setHasVideo(true); setCreatedMasterId(null); setError(null);
@@ -232,26 +235,98 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
   // ── Creating screen ─────────────────────────────────────────────────────────
   if (step === "creating") {
+    const ALL_STAGES = [
+      { key: "register",   label: "Registering work" },
+      { key: "state",      label: "Authorising canonical state" },
+      { key: "projection", label: "Creating projection" },
+      { key: "session",    label: "Starting upload session" },
+      { key: "upload",     label: "Uploading video" },
+      { key: "process",    label: "Processing video" },
+      { key: "attach",     label: "Attaching media" },
+    ];
+    const stages = canHaveMedia && hasVideo && videoFile ? ALL_STAGES : ALL_STAGES.slice(0, 3);
+    const s = statusLine.toLowerCase();
+    const stageIdx = s.includes("attaching") ? stages.length - 1
+      : s.includes("processing") ? stages.findIndex(x => x.key === "process")
+      : s.includes("uploading")  ? stages.findIndex(x => x.key === "upload")
+      : s.includes("starting")   ? stages.findIndex(x => x.key === "session")
+      : s.includes("creating")   ? stages.findIndex(x => x.key === "projection")
+      : s.includes("authoris")   ? stages.findIndex(x => x.key === "state")
+      : 0;
+    const isUploading  = s.includes("uploading");
+    const isProcessing = s.includes("processing");
+    const processPhase = statusLine.match(/\(([^)]+)\)/)?.[1];
+
     return (
-      <div className="space-y-8 max-w-xl">
-        <div className="space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Create Work</p>
-          <h1 className="text-3xl font-semibold tracking-tight">Creating…</h1>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 max-w-lg mx-auto px-4">
+        <div className="relative flex h-20 w-20 items-center justify-center">
+          <svg className="absolute inset-0 h-full w-full animate-spin" viewBox="0 0 96 96" fill="none">
+            <circle cx="48" cy="48" r="44" stroke="var(--border)" strokeWidth="4" />
+            <path d="M48 4 A44 44 0 0 1 92 48" stroke="var(--accent-mv)" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+          <span className="text-2xl">⚡</span>
         </div>
-        <div className="space-y-4">
-          <p className="text-sm text-muted-foreground animate-pulse">{statusLine}</p>
-          {uploadProgress > 0 && uploadProgress < 100 && (
-            <div className="space-y-1">
-              <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                <div
-                  className="h-full rounded-full transition-all"
-                  style={{ width: `${uploadProgress}%`, background: "var(--accent-mv)" }}
-                />
+
+        <div className="text-center space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight">Creating {TYPE_LABELS[workType]}…</h1>
+          <p className="text-sm text-muted-foreground">{title.trim() || "Untitled"}</p>
+        </div>
+
+        <div className="w-full space-y-2">
+          {stages.map((stage, i) => {
+            const done   = i < stageIdx;
+            const active = i === stageIdx;
+            return (
+              <div
+                key={stage.key}
+                className="flex items-center gap-3 rounded-lg px-4 py-3 transition-all"
+                style={{
+                  background: active ? "color-mix(in oklch, var(--accent-mv) 12%, var(--card))" : "var(--card)",
+                  border: `1px solid ${active ? "color-mix(in oklch, var(--accent-mv) 50%, transparent)" : "var(--border)"}`,
+                  opacity: i > stageIdx ? 0.35 : 1,
+                }}
+              >
+                <span
+                  className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-bold"
+                  style={{
+                    background: done ? "var(--accent-mv)" : active ? "color-mix(in oklch, var(--accent-mv) 25%, var(--card))" : "var(--muted)",
+                    color: done ? "#fff" : active ? "var(--accent-mv)" : "var(--muted-foreground)",
+                    border: active ? "1px solid var(--accent-mv)" : "none",
+                  }}
+                >
+                  {done ? "✓" : i + 1}
+                </span>
+                <span className="text-sm flex-1" style={{ color: active ? "var(--foreground)" : "var(--muted-foreground)", fontWeight: active ? 500 : 400 }}>
+                  {stage.label}
+                  {active && isProcessing && processPhase && (
+                    <span className="ml-2 text-xs" style={{ color: "var(--accent-mv)" }}>({processPhase})</span>
+                  )}
+                </span>
+                {active && !isUploading && (
+                  <span className="text-xs animate-pulse" style={{ color: "var(--accent-mv)" }}>●</span>
+                )}
               </div>
-              <p className="text-xs text-muted-foreground">{uploadProgress}%</p>
-            </div>
-          )}
+            );
+          })}
         </div>
+
+        {isUploading && (
+          <div className="w-full space-y-2">
+            <div className="flex justify-between text-xs">
+              <span className="text-muted-foreground">Uploading video</span>
+              <span className="font-semibold" style={{ color: "var(--accent-mv)" }}>{uploadProgress}%</span>
+            </div>
+            <div className="h-3 w-full rounded-full overflow-hidden" style={{ background: "var(--muted)" }}>
+              <div
+                className="h-full rounded-full transition-all duration-300"
+                style={{ width: `${uploadProgress}%`, background: "linear-gradient(90deg, var(--accent-mv), var(--accent-mv-gold))" }}
+              />
+            </div>
+            <p className="text-xs text-center text-muted-foreground">
+              {uploadProgress < 100 ? "Do not close this page" : "Upload complete — processing…"}
+            </p>
+          </div>
+        )}
       </div>
     );
   }
