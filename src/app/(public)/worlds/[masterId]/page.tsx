@@ -274,7 +274,9 @@ export default async function WorldPage({
                 {title}
               </h1>
               {data.description && (
-                <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">{data.description}</p>
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
+                  {data.description.length > 160 ? data.description.slice(0, 160).trimEnd() + "…" : data.description}
+                </p>
               )}
             </div>
           </div>
@@ -374,6 +376,11 @@ export default async function WorldPage({
                 >
                   {title}
                 </h1>
+                {data.description && (
+                  <p className="mt-2 max-w-lg text-sm text-muted-foreground leading-relaxed">
+                    {data.description.length > 160 ? data.description.slice(0, 160).trimEnd() + "\u2026" : data.description}
+                  </p>
+                )}
               </div>
               <Badge variant="outline" className="shrink-0 mt-1 text-sm px-3 py-1">Universe</Badge>
             </div>

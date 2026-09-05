@@ -46,9 +46,14 @@ export default function WorldTabsClient({ masterId, description, murals, moments
       {active === "Overview" && (
         <div className="grid md:grid-cols-[1fr_auto] gap-10 items-start">
           <div className="space-y-5 max-w-2xl">
-            {!description && (
-              <p className="text-sm text-muted-foreground italic">No description yet.</p>
-            )}
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground mb-2">About this Universe</p>
+              {description ? (
+                <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
+              ) : (
+                <p className="text-sm text-muted-foreground italic">No description yet.</p>
+              )}
+            </div>
             {attributionRoles.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {attributionRoles.map((r) => (
