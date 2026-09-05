@@ -69,6 +69,158 @@ function AggregateJourney({ records }: { records: WorkRecord[] }) {
   );
 }
 
+// ─── IsrcRegistrantSection ────────────────────────────────────────────────────
+
+type Registrant = {
+  registrant_id: string;
+  registrant_name: string;
+  prefix_code: string;
+  country_code: string | null;
+  registrant_code: string | null;
+  effective_from: string;
+  active: boolean;
+  notes: string | null;
+};
+
+function IsrcRegistrantSection() {
+  const [registrants, setRegistrants] = useState<Registrant[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [adding, setAdding] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [name, setName] = useState("");
+  const [prefix, setPrefix] = useState("");
+  const [notes, setNotes] = useState("");
+
+  useEffect(() => {
+    fetch("/api/authority/isrc/registrant")
+      .then(r => r.ok ? r.json() : [])
+      .then(data => { setRegistrants(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, []);
+
+  async function submit() {
+    setBusy(true); setMsg(null);
+    const res = await fetch("/api/authority/isrc/registrant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ registrant_name: name.trim(), prefix_code: prefix.trim().toUpperCase(), notes: notes.trim() || null }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) { setMsg(data.error ?? "Failed to add registrant"); return; }
+    setRegistrants(prev => [data, ...prev]);
+    setName(""); setPrefix(""); setNotes(""); setAdding(false);
+  }
+
+  const active = registrants.find(r => r.active);
+
+  return (
+    <section className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">ISRC Registrant</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">The active prefix used for ISRC assignment. Required before any ISRC can be assigned.</p>
+        </div>
+        {!adding && (
+          <div className="flex items-center gap-3">
+            <button onClick={() => { setAdding(true); setMsg(null); }} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              + Configure prefix
+            </button>
+            {!active && (
+              <button
+                onClick={async () => {
+                  setBusy(true); setMsg(null);
+                  const res = await fetch("/api/authority/isrc/seed", { method: "POST" });
+                  const d = await res.json();
+                  setBusy(false);
+                  if (d.seeded) {
+                    setRegistrants(prev => [d.registrant, ...prev]);
+                    setMsg(null);
+                  } else {
+                    setMsg(d.reason ?? d.error ?? "Seed failed");
+                  }
+                }}
+                disabled={busy}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors disabled:opacity-40"
+              >
+                Seed from env
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-muted-foreground animate-pulse">Loading…</p>
+      ) : active ? (
+        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/5 px-4 py-3 space-y-1">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-mono font-semibold text-foreground tracking-widest">{active.prefix_code}</span>
+            <span className="text-[10px] font-semibold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400">Active</span>
+          </div>
+          <p className="text-xs text-muted-foreground">{active.registrant_name}</p>
+          {active.notes && <p className="text-xs text-muted-foreground/60">{active.notes}</p>}
+        </div>
+      ) : (
+        <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+          <p className="text-xs font-semibold text-amber-400">No active ISRC prefix configured</p>
+          <p className="text-xs text-muted-foreground mt-1">ISRC assignment is blocked until a registrant prefix is configured.</p>
+        </div>
+      )}
+
+      {adding && (
+        <div className="rounded-lg border border-border bg-card/60 px-4 py-4 space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Add ISRC Registrant</p>
+          <input
+            value={name} onChange={e => setName(e.target.value)} placeholder="Registrant name *"
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+          />
+          <input
+            value={prefix} onChange={e => setPrefix(e.target.value.toUpperCase())} placeholder="Prefix code (e.g. ZAXYZ) *"
+            maxLength={5}
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm font-mono"
+          />
+          <p className="text-[10px] text-muted-foreground/60">5 characters: 2-letter country code + 3-character registrant code. Assigned by your national ISRC agency.</p>
+          <input
+            value={notes} onChange={e => setNotes(e.target.value)} placeholder="Notes (optional)"
+            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+          />
+          {msg && <p className="text-xs text-destructive">{msg}</p>}
+          <div className="flex gap-2">
+            <button
+              onClick={submit} disabled={busy || !name.trim() || prefix.length !== 5}
+              className="px-3 py-1.5 text-xs rounded-md bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white font-semibold transition-colors"
+            >
+              {busy ? "Saving…" : "Save registrant"}
+            </button>
+            <button onClick={() => { setAdding(false); setMsg(null); }} className="px-3 py-1.5 text-xs rounded-md border border-border text-muted-foreground hover:text-foreground transition-colors">
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
+
+      {registrants.length > 1 && (
+        <details className="group">
+          <summary className="cursor-pointer list-none text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors select-none">
+            <span className="group-open:hidden">+</span><span className="hidden group-open:inline">−</span> All registrants ({registrants.length})
+          </summary>
+          <div className="mt-2 space-y-1">
+            {registrants.map(r => (
+              <div key={r.registrant_id} className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="font-mono">{r.prefix_code}</span>
+                <span>{r.registrant_name}</span>
+                {r.active && <span className="text-emerald-400">active</span>}
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
+
 export default function AuthorityClient() {
   const [data, setData] = useState<AuthorityData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -255,8 +407,10 @@ export default function AuthorityClient() {
               .map(asset => {
                 const intake = data.mediaIntakes?.find((i: { asset_id: string | null }) => i.asset_id === asset.asset_id);
                 const hasRights = !!(bindings.find(b => b.asset_id === asset.asset_id)?.media_asset?.rights_holder_ref);
-                const thumbUrl = !asset.storage_ref.startsWith("http")
-                  ? `https://vod-cdn.lp-playback.studio/${asset.storage_ref}/thumbnails/keyframes_0.png`
+                const thumbUrl = !asset.storage_ref.startsWith("http") && !asset.storage_ref.startsWith("seed:") && !asset.storage_ref.startsWith("thumbnail:")
+                  ? `https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyor6526t4tcmtmqa/catalyst-vod-com/hls/${asset.storage_ref}/thumbnails/keyframes_0.png`
+                  : asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail"
+                  ? asset.storage_ref
                   : null;
                 return (
                   <a key={asset.asset_id} href={`/authority/media/${asset.asset_id}`} className="flex items-center gap-3 px-4 py-3 hover:bg-muted/20 transition-colors">
@@ -323,6 +477,13 @@ export default function AuthorityClient() {
           </Link>
         ))}
       </div>
+
+      <Separator className="opacity-30" />
+
+      {/* ── ISRC Configuration ───────────────────────────────────────────────── */}
+      <IsrcRegistrantSection />
+
+      <Separator className="opacity-30" />
 
       {/* ── Canonical record ─────────────────────────────────────────────────── */}
       <details id="canonical" className="group">

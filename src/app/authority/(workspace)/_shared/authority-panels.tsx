@@ -135,7 +135,7 @@ type RealizationPanelProps = {
 };
 
 export function RealizationPanel({ bindingId, masterId, workTitle, participants, onDone, onCancel }: RealizationPanelProps) {
-  const [type, setType] = useState("animated-video");
+  const [type, setType] = useState("music-video");
   const [rightsHolderRef, setRightsHolderRef] = useState("");
   const [rightsBasis, setRightsBasis] = useState("");
   const [notes, setNotes] = useState("");
@@ -173,9 +173,11 @@ export function RealizationPanel({ bindingId, masterId, workTitle, participants,
           {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
         </div>
         <select value={type} onChange={e => setType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+          <option value="music-video">Music video recording (ISRC-eligible)</option>
+          <option value="original-recording">Original recording (ISRC-eligible)</option>
+          <option value="live-performance">Live performance recording (ISRC-eligible)</option>
+          <option value="broadcast-recording">Broadcast recording (ISRC-eligible)</option>
           <option value="animated-video">Animated video</option>
-          <option value="music-video">Music video</option>
-          <option value="original-recording">Original recording</option>
           <option value="visualisation">Visualisation</option>
           <option value="other">Other</option>
         </select>
