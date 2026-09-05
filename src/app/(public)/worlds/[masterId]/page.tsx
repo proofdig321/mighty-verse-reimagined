@@ -236,9 +236,6 @@ export default async function WorldPage({
   if (!data) notFound();
 
   const title = data.title ?? (data.canonical_type === "mural" ? "Mural" : "Universe");
-  const artistLabel = data.attribution_roles.length > 0
-    ? data.attribution_roles.map((r) => r.replace(/-/g, " ")).join(", ")
-    : null;
 
   // ── MURAL LAYOUT — Section 06 ─────────────────────────────────────────────
   if (data.canonical_type === "mural") {
@@ -377,12 +374,6 @@ export default async function WorldPage({
                 >
                   {title}
                 </h1>
-                {artistLabel && (
-                  <p className="text-base text-muted-foreground">by {artistLabel}</p>
-                )}
-                {data.description && (
-                  <p className="max-w-lg text-sm text-muted-foreground leading-relaxed">{data.description}</p>
-                )}
               </div>
               <Badge variant="outline" className="shrink-0 mt-1 text-sm px-3 py-1">Universe</Badge>
             </div>
