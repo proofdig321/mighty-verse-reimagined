@@ -284,9 +284,9 @@ export default async function WorldPage({
         </div>
 
         {/* Two-column: player + scene sidebar */}
-        <div className="flex flex-col lg:flex-row">
+        <div className="flex flex-col lg:flex-row lg:items-start">
 
-          {/* Left: player */}
+          {/* Left: player — takes natural video height */}
           <div className="flex-1 min-w-0 bg-black">
             <MediaHero
               media={data.media}
@@ -300,45 +300,43 @@ export default async function WorldPage({
               timelineScenes={data.scenes
                 .filter((scene) => scene.playback_id === data.media?.playback_id && scene.start_ms != null && scene.end_ms != null)
                 .map((scene) => ({ id: scene.master_id, title: scene.title, startMs: scene.start_ms!, endMs: scene.end_ms! }))}
-              deckScenes={data.scenes.map((scene) => ({ id: scene.master_id, title: scene.title, playbackId: scene.playback_id }))}
+              deckScenes={[]}
             />
           </div>
 
-          {/* Right: scene list sidebar */}
-          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50">
-            <div className="flex flex-col" style={{ height: "100%" }}>
-              <div className="px-5 py-4 border-b border-border shrink-0">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
-                <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
-              </div>
-              <div className="flex-1 overflow-y-auto scrollbar-hidden divide-y divide-border min-h-0">
-                {data.scenes.length > 0 ? (
-                  data.scenes.map((s, i) => (
-                    <Link
-                      key={s.master_id}
-                      href={s.projection_id ? `/moments/${s.projection_id}` : "#"}
-                      className="flex items-start gap-3 px-5 py-3.5 hover:bg-accent/50 transition-colors group"
+          {/* Right: scene list sidebar — sticky beside the video */}
+          <div className="w-full lg:w-72 xl:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto scrollbar-hidden">
+            <div className="px-5 py-4 border-b border-border">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
+              <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
+            </div>
+            <div className="divide-y divide-border">
+              {data.scenes.length > 0 ? (
+                data.scenes.map((s, i) => (
+                  <Link
+                    key={s.master_id}
+                    href={s.projection_id ? `/moments/${s.projection_id}` : "#"}
+                    className="flex items-start gap-3 px-5 py-3.5 hover:bg-accent/50 transition-colors group"
+                  >
+                    <span
+                      className="text-xs font-mono w-5 shrink-0 pt-0.5"
+                      style={{ color: "var(--accent-mv)" }}
                     >
-                      <span
-                        className="text-xs font-mono w-5 shrink-0 pt-0.5"
-                        style={{ color: "var(--accent-mv)" }}
-                      >
-                        {String(i + 1).padStart(2, "0")}
-                      </span>
-                      <p className="text-sm text-foreground group-hover:opacity-80 transition-opacity">
-                        {s.title ?? `Scene ${i + 1}`}
-                      </p>
-                    </Link>
-                  ))
-                ) : (
-                  <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
-                )}
-              </div>
-              <div className="px-5 py-4 border-t border-border shrink-0">
-                <Link href={`/worlds/${data.universe_master_id}/scenes`}>
-                  <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
-                </Link>
-              </div>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <p className="text-sm text-foreground group-hover:opacity-80 transition-opacity">
+                      {s.title ?? `Scene ${i + 1}`}
+                    </p>
+                  </Link>
+                ))
+              ) : (
+                <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
+              )}
+            </div>
+            <div className="px-5 py-4 border-t border-border">
+              <Link href={`/worlds/${data.universe_master_id}/scenes`}>
+                <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
+              </Link>
             </div>
           </div>
 

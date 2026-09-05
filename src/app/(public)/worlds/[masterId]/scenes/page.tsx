@@ -112,7 +112,7 @@ export default async function UniverseScenesPage({
             Shuffle the deck to reveal hidden creative moments. Create your own timeline.
           </p>
         </div>
-        <SceneDeckClient scenes={scenes} />
+        <SceneDeckClient scenes={scenes} hideHeader />
       </div>
     </div>
   );

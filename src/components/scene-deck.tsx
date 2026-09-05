@@ -20,6 +20,7 @@ type Props = {
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   faceDownUntilSelected?: boolean;
+  hideHeader?: boolean;
 };
 
 function shuffleItems(items: SceneDeckItem[]) {
@@ -38,6 +39,7 @@ export default function SceneDeck({
   selectedId,
   onSelect,
   faceDownUntilSelected = true,
+  hideHeader = false,
 }: Props) {
   const [items, setItems] = useState(scenes);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
@@ -190,6 +192,7 @@ export default function SceneDeck({
     <section aria-labelledby="scene-deck-heading">
 
       {/* Header row */}
+      {!hideHeader && (
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
@@ -226,6 +229,33 @@ export default function SceneDeck({
           </Button>
         </div>
       </div>
+      )}
+
+      {hideHeader && (
+      <div className="flex items-center justify-end gap-2 mb-5">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => setItems((current) => shuffleItems(current))}
+          aria-label="Shuffle scenes"
+        >
+          <Dices size={14} />
+          Shuffle
+        </Button>
+        <Button
+          type="button"
+          variant={gridView ? "default" : "outline"}
+          size="sm"
+          onClick={() => setGridView((v) => !v)}
+          aria-label="Toggle grid view"
+          aria-pressed={gridView}
+        >
+          {gridView ? <Rows3 size={14} /> : <LayoutGrid size={14} />}
+          {gridView ? "Deck" : "Grid View"}
+        </Button>
+      </div>
+      )}
 
       {/* Grid view */}
       {gridView ? (
