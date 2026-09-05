@@ -1,8 +1,10 @@
 export const dynamic = "force-dynamic";
 
+import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
 import SceneDeckClient from "@/components/scene-deck-client";
+import { Button } from "@/components/ui/button";
 
 type SceneItem = {
   master_id: string;
@@ -80,7 +82,17 @@ export default async function ScenesPage() {
     <div className="public-page">
       <PageTopNav activePath="/scenes" />
       <div className="mx-auto max-w-7xl px-6 py-10">
-        <SceneDeckClient scenes={scenes} faceDownUntilSelected label="From the Mural" />
+        <div className="flex items-start justify-between gap-4 mb-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-1" style={{ color: "var(--accent-mv)" }}>Children of the Mural</p>
+            <h1 className="text-3xl font-semibold" style={{ fontFamily: "var(--font-display, inherit)" }}>Scene Deck</h1>
+            <p className="text-sm text-muted-foreground mt-1">Shuffle the deck to reveal hidden creative moments. Create your own timeline.</p>
+          </div>
+          <Link href="/editor" className="shrink-0 mt-1">
+            <Button variant="outline" size="sm">Build Experience →</Button>
+          </Link>
+        </div>
+        <SceneDeckClient scenes={scenes} faceDownUntilSelected label="From the Mural" hideHeader />
       </div>
     </div>
   );
