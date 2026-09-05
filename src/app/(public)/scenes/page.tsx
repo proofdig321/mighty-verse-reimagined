@@ -48,11 +48,10 @@ export default async function ScenesPage() {
             master_id: s.master_id,
             title: s.title,
             projection_id: s.projection_id,
-            // No playback_id — scenes don't have their own media yet.
-            // This ensures all cards render face-down until selected.
             playback_id: null,
           }))}
           faceDownUntilSelected
+          label="Scene Deck"
         />
       </div>
     </div>

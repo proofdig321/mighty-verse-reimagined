@@ -277,25 +277,105 @@
     margin-left: clamp(1rem, 10vw, 8rem);
   }
 
-  .scene-deck { position: relative; display: flex; gap: 1.25rem; min-height: 22rem; overflow-x: auto; overflow-y: hidden; padding: 2rem 1rem 2rem 0; perspective: 1000px; overscroll-behavior-inline: contain; scrollbar-width: none; }  .scene-deck::-webkit-scrollbar { display: none; }
-  .scene-deck-card { position: relative; flex: 0 0 clamp(12rem, 22vw, 17rem); min-height: 19rem; border: 1px solid color-mix(in oklch, var(--accent-mv) 65%, transparent); background: linear-gradient(135deg, color-mix(in oklch, var(--accent-mv) 30%, var(--card)), var(--card)); box-shadow: 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent), 0 18px 30px color-mix(in oklch, var(--background) 40%, transparent); transform: rotate(var(--deck-rotation, 0deg)) translateZ(var(--deck-depth, 0px)); transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease; overflow: hidden; cursor: grab; }
-  .scene-deck-card:hover, .scene-deck-card:focus-visible { transform: rotate(0deg) translateY(-10px) translateZ(30px); box-shadow: 16px 22px 0 color-mix(in oklch, var(--background) 50%, transparent), 0 24px 36px color-mix(in oklch, var(--accent-mv) 20%, transparent); }
-  .scene-deck-card-selected { border-color: var(--accent-mv-gold); box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-mv-gold) 75%, transparent), 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent); }
-  .scene-deck-card-dragging { opacity: 0.45; transform: rotate(0deg) scale(0.96) translateY(-8px); cursor: grabbing; }
-  .scene-deck-card-drop-target { border-color: var(--accent-mv); box-shadow: -6px 0 0 var(--accent-mv), 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent); }
-  .scene-deck-card-0 { --deck-rotation: -3deg; --deck-depth: 12px; } .scene-deck-card-1 { --deck-rotation: 2deg; --deck-depth: 26px; } .scene-deck-card-2 { --deck-rotation: -1deg; --deck-depth: 6px; } .scene-deck-card-3 { --deck-rotation: 4deg; --deck-depth: 18px; } .scene-deck-card-4 { --deck-rotation: -4deg; --deck-depth: 10px; }
-  .scene-deck-card::before, .scene-deck-card::after { content: ""; position: absolute; inset: 0.65rem; border: 1px solid color-mix(in oklch, var(--accent-mv) 60%, transparent); pointer-events: none; } .scene-deck-card::after { inset: 1.1rem; transform: rotate(45deg) scale(0.72); }
-  .scene-deck-mark { position: absolute; inset: 50% auto auto 50%; transform: translate(-50%, -50%); color: var(--accent-mv); font-family: var(--font-display, inherit); font-size: 2rem; letter-spacing: 0.2em; } .scene-deck-lines { position: absolute; inset: 20% 15%; border-top: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent); border-bottom: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent); transform: skewY(-28deg); }
+  .scene-deck {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: 1.25rem;
+    min-height: 22rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 2rem 1rem 2rem 0;
+    perspective: 1000px;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+  .scene-deck::-webkit-scrollbar { display: none; }
+
+  .scene-deck-card {
+    position: relative;
+    flex: 0 0 clamp(12rem, 22vw, 17rem);
+    height: 19rem;
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 65%, transparent);
+    background: linear-gradient(135deg, color-mix(in oklch, var(--accent-mv) 30%, var(--card)), var(--card));
+    box-shadow: 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent), 0 18px 30px color-mix(in oklch, var(--background) 40%, transparent);
+    transform: rotate(var(--deck-rotation, 0deg)) translateZ(var(--deck-depth, 0px));
+    transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+    overflow: hidden;
+    cursor: grab;
+    border-radius: var(--radius);
+  }
+  .scene-deck-card:hover,
+  .scene-deck-card:focus-visible {
+    transform: rotate(0deg) translateY(-10px) translateZ(30px);
+    box-shadow: 16px 22px 0 color-mix(in oklch, var(--background) 50%, transparent), 0 24px 36px color-mix(in oklch, var(--accent-mv) 20%, transparent);
+  }
+  .scene-deck-card-selected {
+    border-color: var(--accent-mv-gold);
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-mv-gold) 75%, transparent), 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent);
+  }
+  .scene-deck-card-dragging {
+    opacity: 0.45;
+    transform: rotate(0deg) scale(0.96) translateY(-8px);
+    cursor: grabbing;
+  }
+  .scene-deck-card-drop-target {
+    border-color: var(--accent-mv);
+    box-shadow: -6px 0 0 var(--accent-mv), 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent);
+  }
+  .scene-deck-card-0 { --deck-rotation: -3deg; --deck-depth: 12px; }
+  .scene-deck-card-1 { --deck-rotation: 2deg;  --deck-depth: 26px; }
+  .scene-deck-card-2 { --deck-rotation: -1deg; --deck-depth: 6px;  }
+  .scene-deck-card-3 { --deck-rotation: 4deg;  --deck-depth: 18px; }
+  .scene-deck-card-4 { --deck-rotation: -4deg; --deck-depth: 10px; }
+
+  .scene-deck-card::before,
+  .scene-deck-card::after {
+    content: "";
+    position: absolute;
+    inset: 0.65rem;
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 60%, transparent);
+    pointer-events: none;
+  }
+  .scene-deck-card::after {
+    inset: 1.1rem;
+    transform: rotate(45deg) scale(0.72);
+  }
+
+  .scene-deck-mark {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: var(--accent-mv);
+    font-family: var(--font-display, inherit);
+    font-size: 2rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+  }
+  .scene-deck-lines {
+    position: absolute;
+    inset: 20% 15%;
+    border-top: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent);
+    border-bottom: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent);
+    transform: skewY(-28deg);
+  }
 
   @media (max-width: 640px) {
     .depth-panel::before {
       inset: 10px -10px -10px 10px;
     }
-
     .spatial-world-offset {
       margin-left: 0;
     }
-
-    .scene-deck { gap: 1rem; min-height: 18rem; padding: 1rem 0 1.5rem; } .scene-deck-card { flex-basis: 12rem; min-height: 16rem; }
+    .scene-deck {
+      gap: 1rem;
+      min-height: 18rem;
+      padding: 1rem 0 1.5rem;
+    }
+    .scene-deck-card {
+      flex-basis: 12rem;
+      height: 16rem;
+    }
   }
 }

@@ -302,9 +302,9 @@ export default async function WorldPage({
             />
           </div>
 
-          {/* Right: scene list sidebar — height matches left column via flex stretch */}
-          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 h-full">
-            <div className="flex flex-col h-full">
+          {/* Right: scene list sidebar */}
+          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50">
+            <div className="flex flex-col" style={{ height: "100%" }}>
               <div className="px-5 py-4 border-b border-border shrink-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
                 <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>

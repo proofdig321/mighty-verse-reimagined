@@ -16,6 +16,7 @@ export type SceneDeckItem = {
 type Props = {
   scenes: SceneDeckItem[];
   description?: string;
+  label?: string;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   faceDownUntilSelected?: boolean;
@@ -33,6 +34,7 @@ function shuffleItems(items: SceneDeckItem[]) {
 export default function SceneDeck({
   scenes,
   description = "Shuffle the deck to reveal hidden creative moments. Create your own timeline.",
+  label = "Children of the Mural",
   selectedId,
   onSelect,
   faceDownUntilSelected = true,
@@ -190,7 +192,7 @@ export default function SceneDeck({
       {/* Header row */}
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
-          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Children of the Mural</p>
+          <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
           <h2
             id="scene-deck-heading"
             className="mt-1 text-3xl font-semibold"

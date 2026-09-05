@@ -12,12 +12,14 @@ type SceneItem = {
 type Props = {
   scenes: SceneItem[];
   faceDownUntilSelected?: boolean;
+  label?: string;
 };
 
-export default function SceneDeckClient({ scenes, faceDownUntilSelected }: Props) {
+export default function SceneDeckClient({ scenes, faceDownUntilSelected, label }: Props) {
   return (
     <SceneDeck
       faceDownUntilSelected={faceDownUntilSelected}
+      label={label}
       scenes={scenes.map((scene) => ({
         id: scene.master_id,
         title: scene.title,
