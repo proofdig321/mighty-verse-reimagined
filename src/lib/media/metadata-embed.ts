@@ -1,21 +1,24 @@
 /**
- * Metadata embedding and sidecar storage.
+ * Metadata embedding and portable canonical representation storage.
+ *
+ * Authority hierarchy:
+ *   Supabase canonical records → generate → embedded metadata / sidecar
+ *   Embedded metadata is NEVER promoted back to canonical without explicit Authority review.
  *
  * Embedding strategy by media class:
  *   audio-mp3      → ID3v2 tags via node-id3 (TSRC for ISRC, TIT2, TPE1, TCOP)
- *   audio-other    → sidecar only (no ffmpeg available)
- *   video          → sidecar only (Livepeer holds bytes; no direct access)
+ *   audio-other    → portable sidecar only (no ffmpeg available)
+ *   video          → portable sidecar only (Livepeer holds bytes; no direct embedding)
  *   image-raster   → XMP via sharp (dc:title, dc:creator, xmpRights, plus sidecar)
- *   image-other    → sidecar only
- *   unknown        → sidecar only
+ *   image-other    → portable sidecar only
+ *   unknown        → portable sidecar only
  *
- * Sidecar storage:
+ * Portable canonical representation (sidecar):
  *   Supabase Storage bucket: media-metadata
  *   Path: {assetId}/metadata.json
- *   Content: CanonicalMediaMetadata JSON
- *
- * The database remains canonical. Embedded/sidecar metadata is a
- * portable provenance representation derived from canonical records.
+ *   Content: CanonicalMediaMetadata JSON + _contentHash
+ *   The sidecar is a portable representation of canonical state.
+ *   It is NOT itself canonical. The Supabase database remains authoritative.
  */
 
 import { createClient } from "@supabase/supabase-js";
@@ -32,9 +35,9 @@ function getServiceClient() {
 
 const SIDECAR_BUCKET = "media-metadata";
 
-// ─── Sidecar ─────────────────────────────────────────────────────────────────
+// ─── Portable canonical representation (sidecar) ─────────────────────────────
 
-/** Store or update the sidecar JSON for an asset. */
+/** Store or update the portable canonical representation for an asset. */
 async function storeSidecar(
   assetId: string,
   meta: CanonicalMediaMetadata,
@@ -55,7 +58,7 @@ async function storeSidecar(
   return { path, error: null };
 }
 
-/** Read the sidecar JSON for an asset. Returns null if not found. */
+/** Read the portable canonical representation for an asset. Returns null if not found. */
 export async function readSidecar(assetId: string): Promise<(CanonicalMediaMetadata & { _contentHash?: string }) | null> {
   const svc = getServiceClient();
   const { data, error } = await svc.storage
@@ -78,12 +81,16 @@ export async function readSidecar(assetId: string): Promise<(CanonicalMediaMetad
  * Returns the modified buffer.
  *
  * Tags written:
- *   TIT2 — title
- *   TPE1 — artist/creator
- *   TALB — album (work title / master title)
- *   TCOP — copyright
- *   TSRC — ISRC (only when assigned and eligible)
+ *   TIT2 — title (from canonical work presentation)
+ *   TPE1 — primary artist/performer (meta.creator — NOT the rights holder)
+ *   TALB — album (work title)
+ *   TCOP — copyright (year + rights holder label)
+ *   TSRC — ISRC (only when canonically assigned and eligible)
  *   COMM — provenance comment with Mighty Verse asset ID
+ *
+ * Note: TPE1 uses meta.creator (performer credit), not meta.rightsHolderLabel.
+ * Rights holder information is encoded in TCOP (copyright).
+ * These are distinct concepts and must not be conflated.
  */
 export async function embedMp3Metadata(
   buffer: Buffer,
@@ -97,8 +104,10 @@ export async function embedMp3Metadata(
   const tags: Record<string, unknown> = {
     ...existing,
     title: meta.title ?? (existing.title as string | undefined) ?? undefined,
+    // TPE1 = primary artist/performer, not rights holder
     artist: meta.creator ?? (existing.artist as string | undefined) ?? undefined,
     album: meta.title ?? (existing.album as string | undefined) ?? undefined,
+    // TCOP = copyright: year + rights holder (rights holder is the copyright owner)
     copyright: meta.rightsBasis
       ? `${meta.copyrightYear ?? ""} ${meta.rightsHolderLabel ?? meta.rightsHolder ?? ""}`.trim()
       : (existing.copyright as string | undefined) ?? undefined,
@@ -133,11 +142,11 @@ export async function embedMp3Metadata(
  * Returns the modified buffer in the same format.
  *
  * XMP fields written:
- *   dc:title
- *   dc:creator
- *   dc:description
- *   xmpRights:WebStatement (rights basis)
- *   xmp:Identifier (Mighty Verse asset ID)
+ *   dc:title       — work title
+ *   dc:creator     — primary artist/performer (meta.creator, NOT rights holder)
+ *   dc:description — work description
+ *   xmpRights:WebStatement — rights basis
+ *   xmp:Identifier — Mighty Verse asset ID
  */
 export async function embedImageMetadata(
   buffer: Buffer,
@@ -161,6 +170,7 @@ function buildXmp(meta: CanonicalMediaMetadata): string {
     s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
   const title = meta.title ? escape(meta.title) : "";
+  // dc:creator = primary artist/performer, not rights holder
   const creator = meta.creator ? escape(meta.creator) : "";
   const description = meta.description ? escape(meta.description) : "";
   const rights = meta.rightsBasis ? escape(meta.rightsBasis) : "";
@@ -188,11 +198,14 @@ ${isrcLine}    </rdf:Description>
 // ─── Main orchestration ───────────────────────────────────────────────────────
 
 /**
- * Embed metadata into a file buffer and store a sidecar.
+ * Embed metadata into a file buffer and store a portable canonical representation (sidecar).
  *
- * For Livepeer-hosted video/audio-other: sidecar only (we don't hold bytes).
+ * For Livepeer-hosted video/audio-other: sidecar only (original bytes are provider-managed).
  * For MP3 buffers: ID3v2 embedding + sidecar.
  * For raster images: XMP embedding + sidecar.
+ *
+ * The sidecar is a portable canonical representation derived from Supabase.
+ * It is NOT itself canonical. The Supabase database remains authoritative.
  *
  * Returns the (possibly modified) buffer and the embed result.
  */
@@ -222,14 +235,14 @@ export async function embedMetadata(
       warnings.push(`Image XMP embedding failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (mediaClass === "video") {
-    warnings.push("Video: native metadata embedding requires ffmpeg which is not available in this environment. Sidecar stored.");
+    warnings.push("Video: original bytes are provider-managed (Livepeer). Portable canonical representation stored as sidecar.");
   } else if (mediaClass === "audio-other") {
-    warnings.push(`${mediaClass}: native embedding requires ffmpeg. Sidecar stored.`);
+    warnings.push(`${mediaClass}: native embedding requires ffmpeg (not available). Portable canonical representation stored as sidecar.`);
   }
 
-  // Always store sidecar
+  // Always store portable canonical representation
   const { path: sidecarPath, error: sidecarError } = await storeSidecar(meta.mediaAssetId, meta, contentHash);
-  if (sidecarError) warnings.push(`Sidecar storage failed: ${sidecarError}`);
+  if (sidecarError) warnings.push(`Portable representation storage failed: ${sidecarError}`);
 
   return {
     buffer: outputBuffer,
@@ -247,8 +260,11 @@ export async function embedMetadata(
 // ─── Consistency check ────────────────────────────────────────────────────────
 
 /**
- * Check consistency between canonical metadata and stored sidecar.
- * Used by the Authority UI to show metadata status.
+ * Check consistency between canonical state and the stored portable representation (sidecar).
+ * Used by the Authority UI to show metadata synchronisation status.
+ *
+ * embeddedIsrc is always null for Livepeer-hosted assets because the original bytes
+ * are provider-managed and cannot be read back. This is expected, not an error.
  */
 export async function checkMetadataConsistency(
   assetId: string,
@@ -261,7 +277,7 @@ export async function checkMetadataConsistency(
   return {
     assetId,
     canonicalIsrc: canonicalMeta.isrc,
-    embeddedIsrc: null, // Cannot read from Livepeer HLS; would require original file
+    embeddedIsrc: null, // Cannot read from Livepeer HLS; original bytes are provider-managed
     sidecarIsrc: sidecar?.isrc ?? null,
     isrcConsistent: !sidecar || sidecar.isrc === canonicalMeta.isrc,
     sidecarPresent: !!sidecar,
@@ -272,13 +288,14 @@ export async function checkMetadataConsistency(
 }
 
 /**
- * Synchronise sidecar after canonical metadata changes (e.g. ISRC assignment).
+ * Synchronise the portable canonical representation (sidecar) after canonical state changes.
  * Idempotent — safe to call multiple times.
+ * The sidecar is derived from canonical state; this call re-derives and stores it.
  */
 export async function syncSidecar(assetId: string, meta: CanonicalMediaMetadata): Promise<MetadataEmbedResult> {
   const contentHash = hashCanonicalMetadata(meta);
   const { path, error } = await storeSidecar(assetId, meta, contentHash);
-  const warnings = error ? [`Sidecar sync failed: ${error}`] : [];
+  const warnings = error ? [`Portable representation sync failed: ${error}`] : [];
   return {
     mediaClass: "unknown",
     embedded: false,

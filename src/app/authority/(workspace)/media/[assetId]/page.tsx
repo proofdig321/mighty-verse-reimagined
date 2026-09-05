@@ -410,6 +410,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
         assetId={assetId}
         initialMeta={canonicalMeta}
         initialReport={metadataReport}
+        intakeIsrc={intake?.isrc ?? null}
       />
 
       {/* Distribution */}
