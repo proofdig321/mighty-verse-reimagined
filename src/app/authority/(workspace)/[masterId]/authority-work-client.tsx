@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import {
@@ -47,26 +47,69 @@ type Props = {
 
 // ─── AttachVideoPanel ─────────────────────────────────────────────────────────
 
-function AttachVideoPanel({ projId, masterId, workTitle, intakeId, onDone, onCancel }: { projId: string; masterId: string; workTitle: string; intakeId?: string | null; onDone: () => void; onCancel: () => void }) {
+function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants, onDone, onCancel }: { projId: string; masterId: string; workTitle: string; intakeId?: string | null; participants: Participant[]; onDone: () => void; onCancel: () => void }) {
   const [file, setFile] = useState<File | null>(null);
-  const [rightsHolderRef, setRightsHolderRef] = useState("");
-  const [rightsBasis, setRightsBasis] = useState("");
+  const [rightsHolderRef, setRightsHolderRef] = useState(participants.find(p => p.participant_id === participants[0]?.participant_id)?.participant_id ?? "");
+  const [rightsBasis, setRightsBasis] = useState("owned");
   const [progress, setProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   return (
     <Card><CardContent className="pt-4 space-y-4">
       <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Attach Video</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
-      <input value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} placeholder="Rights holder participant ID" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
-      <input value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} placeholder="Rights basis (e.g. owned, licensed)" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
-      <input type="file" accept="video/mp4,video/*" disabled={busy} onChange={e => setFile(e.target.files?.[0] ?? null)} className="text-sm text-muted-foreground" />
-      {busy && progress !== null && <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full bg-foreground transition-all" style={{ width: `${progress}%` }} /></div>}
+
+      {/* File drop zone */}
+      <div
+        className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-6 text-center cursor-pointer transition-colors ${file ? "border-[var(--accent-mv)]/60 bg-accent/10" : "border-border hover:border-[var(--accent-mv)]/40"}`}
+        onClick={() => !busy && fileInputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={(e) => { e.preventDefault(); const f = e.dataTransfer.files[0]; if (f && f.type.startsWith("video/")) setFile(f); }}
+      >
+        <input ref={fileInputRef} type="file" accept="video/mp4,video/*" disabled={busy} className="sr-only" onChange={e => setFile(e.target.files?.[0] ?? null)} />
+        {file ? (
+          <>
+            <span className="text-xl">🎬</span>
+            <p className="text-sm font-medium text-foreground">{file.name}</p>
+            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+            <button type="button" disabled={busy} onClick={e => { e.stopPropagation(); setFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }} className="text-xs text-muted-foreground hover:text-destructive">Remove</button>
+          </>
+        ) : (
+          <>
+            <span className="text-xl opacity-30">📹</span>
+            <p className="text-sm text-muted-foreground">Click or drag a video file here</p>
+            <p className="text-xs text-muted-foreground/60">MP4 recommended</p>
+          </>
+        )}
+      </div>
+
+      {/* Rights holder dropdown */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Rights holder</label>
+        <select value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+          <option value="">Select rights holder…</option>
+          {participants.map(p => <option key={p.participant_id} value={p.participant_id}>{p.label}</option>)}
+        </select>
+      </div>
+
+      {/* Rights basis */}
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-muted-foreground uppercase tracking-widest">Rights basis</label>
+        <select value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+          <option value="owned">Owned — original work, all rights held</option>
+          <option value="licensed">Licensed — rights licensed from third party</option>
+          <option value="commissioned">Commissioned — work for hire / commissioned</option>
+          <option value="co-owned">Co-owned — jointly held rights</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+
+      {busy && progress !== null && <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden"><div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: "var(--accent-mv)" }} /></div>}
       {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
       <Button size="sm" disabled={busy || !file || !rightsHolderRef || !rightsBasis} onClick={async () => {
         if (!file) return;
         setBusy(true); setMsg(null);
         try {
-          // Pass intake_id through the session for deterministic linkage
           const session = await api("/api/authority/media/upload-session", { name: file.name, projection_id: projId, master_id: masterId, intake_id: intakeId ?? null });
           if (session.error || !session.upload_url || !session.asset_id) throw new Error(session.error ?? "Upload session failed");
           await new Promise<void>((resolve, reject) => {
@@ -77,6 +120,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, onDone, onCan
             xhr.open("PUT", session.upload_url);
             xhr.send(file);
           });
+          setMsg("Uploading… processing with Livepeer.");
           let phase = "uploading";
           for (let i = 0; phase !== "ready" && i < 120; i++) {
             await new Promise(r => setTimeout(r, 3000));
@@ -84,9 +128,9 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, onDone, onCan
             if (s.error) throw new Error(s.error);
             phase = s.phase ?? "unknown";
             if (phase === "failed") throw new Error("Livepeer processing failed");
+            setMsg(`Processing… (${phase})`);
           }
           if (phase !== "ready") throw new Error("Processing timed out");
-          // Pass intake_id and session_id for deterministic linkage and session state update
           const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, livepeer_asset_id: session.asset_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis, intake_id: intakeId ?? null, session_id: session.session_id ?? null });
           if (attach.error) throw new Error(attach.error);
           setMsg("Video attached.");
@@ -153,7 +197,7 @@ export default function AuthorityWorkClient({
 
   if (presentingMaster) return <div className="space-y-6"><PresentationPanel masterId={master.master_id} existing={presentation} onDone={() => { setPresentingMaster(false); window.location.reload(); }} onCancel={() => setPresentingMaster(false)} /></div>;
   if (presentingProjId && projection) return <div className="space-y-6"><ProjectionPresentationPanel projectionId={presentingProjId} masterId={master.master_id} existing={projPres} onDone={() => { setPresentingProjId(null); window.location.reload(); }} onCancel={() => setPresentingProjId(null)} /></div>;
-  if (attachingProjId && projection) return <div className="space-y-6"><AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} intakeId={intakeId} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} /></div>;
+  if (attachingProjId && projection) return <div className="space-y-6"><AttachVideoPanel projId={attachingProjId} masterId={master.master_id} workTitle={title} intakeId={intakeId} participants={participants} onDone={() => { setAttachingProjId(null); window.location.reload(); }} onCancel={() => setAttachingProjId(null)} /></div>;
   if (editingTimelineBindingId && binding) return <div className="space-y-6"><TimelineEditor binding={binding} masterId={master.master_id} onDone={() => { setEditingTimelineBindingId(null); window.location.reload(); }} onCancel={() => setEditingTimelineBindingId(null)} /></div>;
   if (editingRealizationBindingId && binding) return <div className="space-y-6"><RealizationPanel bindingId={binding.binding_id} masterId={master.master_id} workTitle={title} participants={participants} onDone={() => { setEditingRealizationBindingId(null); window.location.reload(); }} onCancel={() => setEditingRealizationBindingId(null)} /></div>;
 
