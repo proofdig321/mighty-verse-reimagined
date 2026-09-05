@@ -137,9 +137,9 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const isThumbnail = asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail");
   const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
 
-  // Livepeer thumbnail for video assets
-  const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail"
-    ? `https://vod-cdn.lp-playback.studio/${asset.storage_ref}/thumbnails/keyframes_0.png`
+  // Livepeer thumbnail for video assets — storage_ref is the playback ID
+  const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail" && asset.provider === "livepeer"
+    ? `https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyor6526t4tcmtmqa/catalyst-vod-com/hls/${asset.storage_ref}/thumbnails/keyframes_0.png`
     : null;
 
   return (
