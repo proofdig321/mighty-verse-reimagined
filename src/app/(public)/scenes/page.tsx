@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
-import SceneDeckClient from "@/components/scene-deck-client";
+import SceneStack from "@/components/scene-stack";
 
 type SceneItem = {
   master_id: string;
@@ -58,9 +58,14 @@ export default async function ScenesPage() {
   return (
     <div className="public-page">
       <PageTopNav activePath="/scenes" />
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <SceneDeckClient scenes={scenes} faceDownUntilSelected />
-      </div>
+      <SceneStack
+        scenes={scenes.map((s) => ({
+          id: s.master_id,
+          title: s.title,
+          href: s.projection_id ? `/moments/${s.projection_id}` : undefined,
+          playbackId: s.playback_id,
+        }))}
+      />
     </div>
   );
 }

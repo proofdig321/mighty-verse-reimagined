@@ -302,16 +302,14 @@ export default async function WorldPage({
             />
           </div>
 
-          {/* Right: scene list sidebar */}
-          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50">
-            <div className="sticky top-0">
-              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
-                  <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
-                </div>
+          {/* Right: scene list sidebar — height locked to left column */}
+          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 lg:self-start lg:sticky lg:top-0">
+            <div className="flex flex-col" style={{ maxHeight: "100vh" }}>
+              <div className="px-5 py-4 border-b border-border shrink-0">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
+                <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
               </div>
-              <div className="divide-y divide-border max-h-[60vh] overflow-y-auto scrollbar-hidden">
+              <div className="flex-1 overflow-y-auto scrollbar-hidden divide-y divide-border">
                 {data.scenes.length > 0 ? (
                   data.scenes.map((s, i) => (
                     <Link
@@ -320,7 +318,7 @@ export default async function WorldPage({
                       className="flex items-start gap-3 px-5 py-3.5 hover:bg-accent/50 transition-colors group"
                     >
                       <span
-                        className="text-xs font-mono text-muted-foreground w-5 shrink-0 pt-0.5"
+                        className="text-xs font-mono w-5 shrink-0 pt-0.5"
                         style={{ color: "var(--accent-mv)" }}
                       >
                         {String(i + 1).padStart(2, "0")}
@@ -334,7 +332,7 @@ export default async function WorldPage({
                   <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
                 )}
               </div>
-              <div className="px-5 py-4 border-t border-border">
+              <div className="px-5 py-4 border-t border-border shrink-0">
                 <Link href={`/worlds/${data.universe_master_id}/scenes`}>
                   <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
                 </Link>
