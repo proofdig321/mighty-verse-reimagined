@@ -279,6 +279,15 @@ async function handleAssetReady(data: MuxEventData) {
     // Non-fatal — asset and variant were created successfully
   }
 
+  // Link intake record to asset if intake_id is present
+  if (session.intake_id) {
+    await svc
+      .from("media_intake")
+      .update({ asset_id: asset.asset_id })
+      .eq("intake_id", session.intake_id)
+      .is("asset_id", null); // Only set if not already linked
+  }
+
   console.info(`[mux-webhook] asset.ready: created asset=${asset.asset_id} for session=${session.session_id} media_class=${providerAsset.mediaClass}`);
 }
 

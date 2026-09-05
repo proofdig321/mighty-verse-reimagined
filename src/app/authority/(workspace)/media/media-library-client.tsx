@@ -209,7 +209,20 @@ function IntakeUploadPanel({ intake, onDone, onCancel }: { intake: UnlinkedIntak
       }
 
       if (currentPhase !== "ingested" && currentPhase !== "ready") {
-        throw new Error("Processing timed out. The media may still be processing — check the Media Library shortly.");
+        // Attempt automatic reconciliation before giving up
+        setMsg("Processing timed out — attempting reconciliation…");
+        const reconcileRes = await fetch("/api/authority/media/reconcile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: session.session_id }),
+        });
+        const reconcileData = await reconcileRes.json();
+        if (reconcileRes.ok && (reconcileData.reconciled || reconcileData.already_ingested)) {
+          setMsg("Media reconciled and ready in the Media Library.");
+          setTimeout(onDone, 1500);
+          return;
+        }
+        throw new Error("Processing timed out and reconciliation failed. The media may still be processing — check the Media Library shortly.");
       }
 
       setMsg("Media processed and ready in the Media Library.");
