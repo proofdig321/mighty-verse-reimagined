@@ -42,10 +42,11 @@ async function getData(masterId: string): Promise<{ universeTitle: string | null
 
   const { data: sceneChildren } = await svc
     .from("master")
-    .select("master_id")
+    .select("master_id, sort_order")
     .in("parent_master_id", muralIds)
     .eq("canonical_type", "scene")
     .not("current_state_id", "is", null)
+    .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
   const sceneIds = (sceneChildren ?? []).map((s) => s.master_id);

@@ -143,13 +143,15 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     };
   }
 
-  // Mural
+  // Mural — Scenes ordered by canonical sort_order, then created_at
   const { data: sceneChildren } = await svc
     .from("master")
-    .select("master_id")
+    .select("master_id, sort_order")
     .eq("parent_master_id", masterId)
     .eq("canonical_type", "scene")
-    .not("current_state_id", "is", null);
+    .not("current_state_id", "is", null)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
   const sceneIds = (sceneChildren ?? []).map((s) => s.master_id);
   const [{ data: scenePres }, { data: sceneProjs }] = sceneIds.length
     ? await Promise.all([

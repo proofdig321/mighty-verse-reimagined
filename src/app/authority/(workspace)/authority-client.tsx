@@ -215,8 +215,8 @@ export default function AuthorityClient() {
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
           {[
-            { step: "01", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media/intake" },
-            { step: "02", label: "Upload media", sub: "Send video to Livepeer", href: "/authority/media/intake" },
+            { step: "01", label: "Create Work", sub: "Register a new creative work", href: "/authority/create" },
+            { step: "02", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media/intake" },
             { step: "03", label: "Rights review", sub: "Confirm provenance", href: "/authority/proof-of-rights" },
           ].map(item => (
             <Link key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">

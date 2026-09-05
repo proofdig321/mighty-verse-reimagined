@@ -88,19 +88,29 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
   let cmMasterId: string | null = null;
 
   if (isScene) {
-    const sourceStateId = (cs?.content_refs as { source_canonical_state_id?: string } | null)?.source_canonical_state_id ?? null;
-    if (sourceStateId) {
-      const { data: muralState } = await svc.from("canonical_state").select("canonical_state_id, master_id").eq("canonical_state_id", sourceStateId).single() as { data: { canonical_state_id: string; master_id: string } | null };
-      if (muralState) {
-        muralMasterId = muralState.master_id;
-        const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralState.master_id).maybeSingle();
-        muralTitle = muralPres?.title ?? null;
-        const { data: muralMaster } = await svc.from("master").select("parent_master_id").eq("master_id", muralState.master_id).single();
-        worldMasterId = muralMaster?.parent_master_id ?? null;
-      }
+    // Resolve mural parent via master hierarchy
+    const { data: sceneMaster } = await svc.from("master").select("parent_master_id").eq("master_id", proj.master_id).single();
+    if (sceneMaster?.parent_master_id) {
+      muralMasterId = sceneMaster.parent_master_id;
+      const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralMasterId).maybeSingle();
+      muralTitle = muralPres?.title ?? null;
+      const { data: muralMaster } = await svc.from("master").select("parent_master_id").eq("master_id", muralMasterId).single();
+      worldMasterId = muralMaster?.parent_master_id ?? null;
     }
-    cmMasterId = null;
-    cmTitle = null;
+    // Resolve primary Creative Moment from scene_moment join table
+    const { data: sm } = await svc
+      .from("scene_moment")
+      .select("moment_master_id")
+      .eq("scene_master_id", proj.master_id)
+      .eq("relationship_type", "primary")
+      .order("sort_order", { ascending: true, nullsFirst: false })
+      .limit(1)
+      .maybeSingle();
+    if (sm?.moment_master_id) {
+      cmMasterId = sm.moment_master_id;
+      const { data: cmPres } = await svc.from("work_presentation").select("title").eq("master_id", sm.moment_master_id).maybeSingle();
+      cmTitle = cmPres?.title ?? null;
+    }
   }
 
   return {
@@ -176,7 +186,7 @@ export default async function MomentPage({
   if (!moment) notFound();
 
   const { projection, canonical_state, master, provenance, attribution, media, presentation,
-          worldTitle, muralTitle, muralMasterId, worldMasterId } = moment;
+          worldTitle, muralTitle, muralMasterId, worldMasterId, cmTitle, cmMasterId } = moment;
 
   const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
   const isScene = master.canonical_type === "scene";
@@ -261,6 +271,16 @@ export default async function MomentPage({
                   Mural:{" "}
                   <Link href={`/worlds/${muralMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
                     {muralTitle}
+                  </Link>
+                </p>
+              )}
+
+              {/* Creative Moment — from scene_moment relationship */}
+              {isScene && cmMasterId && cmTitle && (
+                <p className="text-sm text-muted-foreground">
+                  Creative Moment:{" "}
+                  <Link href={`/creative-moments/${cmMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
+                    {cmTitle}
                   </Link>
                 </p>
               )}

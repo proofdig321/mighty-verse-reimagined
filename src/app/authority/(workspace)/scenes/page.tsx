@@ -6,6 +6,7 @@ import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import { ChevronRight } from "lucide-react";
 import { formatDuration } from "@/lib/media/timing";
+import SceneOrderClient from "./scene-order-client";
 
 function formatMs(ms: number | null) {
   if (ms == null) return null;
@@ -16,9 +17,10 @@ async function getData() {
   const svc = getServiceClient();
   const { data: masters } = await svc
     .from("master")
-    .select("master_id, canonical_type, parent_master_id, created_at")
+    .select("master_id, canonical_type, parent_master_id, sort_order, created_at")
     .eq("canonical_type", "scene")
-    .order("created_at", { ascending: false });
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
 
   if (!masters?.length) return [];
 
@@ -51,6 +53,7 @@ async function getData() {
     return {
       master_id: m.master_id,
       parent_master_id: m.parent_master_id,
+      sort_order: m.sort_order ?? null,
       title: pres?.title ?? null,
       muralTitle: parentPres?.title ?? null,
       startMs: binding?.start_ms ?? null,
@@ -82,7 +85,10 @@ export default async function ScenesPage() {
       {scenes.length === 0 ? (
         <p className="text-sm text-muted-foreground">No scenes registered yet.</p>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
+        <>
+          <SceneOrderClient scenes={scenes.map((s) => ({ master_id: s.master_id, title: s.title, sort_order: s.sort_order }))} />
+
+          <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/20">
               <tr>
@@ -128,6 +134,7 @@ export default async function ScenesPage() {
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );
