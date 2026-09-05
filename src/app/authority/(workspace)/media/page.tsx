@@ -15,6 +15,7 @@ export type MediaLibraryItem = {
   asset_id: string;
   asset_type: string;
   storage_ref: string;
+  provider: string | null;
   format: string | null;
   duration_ms: number | null;
   rights_holder_ref: string | null;
@@ -31,7 +32,7 @@ export type MediaLibraryItem = {
   mural_title: string | null;
   scene_title: string | null;
   canonical_context_type: string | null;
-  // Thumbnail from Livepeer (derived from storage_ref)
+  // Thumbnail URL (provider-aware)
   thumbnail_url: string | null;
   // Readiness
   readiness_overall: string;
@@ -44,7 +45,7 @@ async function getData() {
   const [{ data: assets }, { data: intakes }] = await Promise.all([
     svc
       .from("media_asset")
-      .select("asset_id, asset_type, storage_ref, format, duration_ms, rights_holder_ref, rights_basis, created_at")
+      .select("asset_id, asset_type, storage_ref, provider, format, duration_ms, rights_holder_ref, rights_basis, created_at")
       .order("created_at", { ascending: false }),
     svc
       .from("media_intake")
@@ -176,19 +177,25 @@ async function getData() {
       workType: intake?.work_type ?? null,
     });
 
-    // Livepeer thumbnail: derive from playbackId (storage_ref for video assets)
+    // Provider-aware thumbnail derivation
     let thumbnail_url: string | null = null;
-    if (!isThumbnail && !isPlaceholder && a.asset_type !== "thumbnail" && a.asset_type !== "metadata") {
-      // Livepeer keyframe thumbnail pattern
-      thumbnail_url = `https://vod-cdn.lp-playback.studio/${a.storage_ref}/thumbnails/keyframes_0.png`;
-    } else if (isThumbnail) {
+    if (isThumbnail) {
       thumbnail_url = a.storage_ref.startsWith("thumbnail:") ? null : a.storage_ref;
+    } else if (!isPlaceholder && a.asset_type !== "thumbnail" && a.asset_type !== "metadata") {
+      if (a.provider === "mux") {
+        // Mux image API: storage_ref is the playback ID
+        thumbnail_url = `https://image.mux.com/${a.storage_ref}/thumbnail.jpg?time=5&width=320`;
+      } else if (a.provider === "livepeer" || !a.provider) {
+        // Livepeer keyframe thumbnail pattern
+        thumbnail_url = `https://vod-cdn.lp-playback.studio/${a.storage_ref}/thumbnails/keyframes_0.png`;
+      }
     }
 
     return {
       asset_id: a.asset_id,
       asset_type: a.asset_type,
       storage_ref: a.storage_ref,
+      provider: a.provider ?? null,
       format: a.format,
       duration_ms: a.duration_ms,
       rights_holder_ref: a.rights_holder_ref,

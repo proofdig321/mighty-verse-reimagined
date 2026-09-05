@@ -5,8 +5,9 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ScanSearch } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { formatIsrcDisplay, isIsrcEligible, type IsrcStatus } from "@/lib/media/isrc";
@@ -148,9 +149,13 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const isThumbnail = asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail");
   const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
 
-  // Livepeer thumbnail for video assets — storage_ref is the playback ID
-  const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail" && asset.provider === "livepeer"
-    ? `https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyor6526t4tcmtmqa/catalyst-vod-com/hls/${asset.storage_ref}/thumbnails/keyframes_0.png`
+  // Provider-aware thumbnail for the asset detail header
+  const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail"
+    ? asset.provider === "mux"
+      ? `https://image.mux.com/${asset.storage_ref}/thumbnail.jpg?time=5&width=320`
+      : asset.provider === "livepeer"
+        ? `https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyor6526t4tcmtmqa/catalyst-vod-com/hls/${asset.storage_ref}/thumbnails/keyframes_0.png`
+        : null
     : null;
 
   return (
@@ -174,10 +179,10 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             className="hidden sm:block w-32 aspect-video rounded-lg object-cover border border-border shrink-0"
           />
         )}
-        <div className="space-y-1 min-w-0">
+        <div className="flex-1 min-w-0 space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media Asset</p>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <div className="flex flex-wrap gap-2 pt-1">
+          <div className="flex flex-wrap items-center gap-2 pt-1">
             <Badge variant="outline">{asset.asset_type}</Badge>
             {intake?.work_type && <Badge variant="outline">{intake.work_type}</Badge>}
             {asset.format && <Badge variant="outline">{asset.format}</Badge>}
@@ -185,6 +190,18 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             {isPlaceholder && <Badge variant="destructive">Placeholder</Badge>}
           </div>
         </div>
+        {/* Inspect Media action — only for playable video assets */}
+        {!isPlaceholder && (asset.asset_type === "video" || asset.asset_type === "audio") && asset.provider && (
+          <Link
+            href={`/authority/media/inspect?assetId=${assetId}`}
+            className="shrink-0"
+          >
+            <Button variant="outline" size="sm" className="gap-1.5">
+              <ScanSearch size={14} />
+              Inspect Media
+            </Button>
+          </Link>
+        )}
       </div>
 
       {/* Readiness checklist */}

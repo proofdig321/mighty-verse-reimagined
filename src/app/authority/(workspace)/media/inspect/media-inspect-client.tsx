@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useCallback } from "react";
+import { useRef, useState, useCallback, useEffect } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -27,8 +27,21 @@ type CanonicalScene = {
   end_ms: number | null;
 };
 
+type AssetIdentity = {
+  asset_id: string;
+  title: string | null;
+  provider: string;
+  storage_ref: string;
+  duration_ms: number | null;
+  width: number | null;
+  height: number | null;
+  audio_presence: boolean | null;
+  work_type: string | null;
+};
+
 type Props = {
   canonicalScenes: CanonicalScene[];
+  assetIdentity: AssetIdentity | null;
 };
 
 function formatMs(ms: number | null): string {
@@ -51,13 +64,15 @@ function ConfidenceBadge({ confidence }: { confidence: SceneCandidate["confidenc
   );
 }
 
-export default function MediaInspectClient({ canonicalScenes }: Props) {
+export default function MediaInspectClient({ canonicalScenes, assetIdentity }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [autoLoading, setAutoLoading] = useState(false);
   const [metadata, setMetadata] = useState<BrowserMediaMetadata | null>(null);
   const [frames, setFrames] = useState<SampledFrame[]>([]);
   const [deltas, setDeltas] = useState<FrameDelta[]>([]);
@@ -71,6 +86,25 @@ export default function MediaInspectClient({ canonicalScenes }: Props) {
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustStart, setAdjustStart] = useState(0);
   const [adjustEnd, setAdjustEnd] = useState(0);
+
+  // Auto-load the asset when assetIdentity is provided via URL param
+  const loadedAssetRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!assetIdentity || loadedAssetRef.current === assetIdentity.asset_id) return;
+    loadedAssetRef.current = assetIdentity.asset_id;
+    setAutoLoading(true);
+    setLoadError(null);
+    fetch(`/api/authority/media/asset-playback?assetId=${assetIdentity.asset_id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.error) throw new Error(data.error);
+        if (!data.hls_url) throw new Error("No playback URL resolved for this asset");
+        loadMuxUrl(data.hls_url);
+      })
+      .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load asset"))
+      .finally(() => setAutoLoading(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assetIdentity?.asset_id]);
 
   // Load a local file into the video element
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -189,6 +223,25 @@ export default function MediaInspectClient({ canonicalScenes }: Props) {
   return (
     <div className="space-y-6">
 
+      {/* Asset identity — shown when navigated from a specific asset */}
+      {assetIdentity && (
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Inspecting Asset</p>
+          <div className="flex flex-wrap items-center gap-3">
+            <p className="text-base font-semibold text-foreground">{assetIdentity.title ?? assetIdentity.asset_id.slice(0, 8) + "…"}</p>
+            <span className="text-xs text-muted-foreground capitalize">{assetIdentity.provider}</span>
+            <span className="text-xs text-muted-foreground">{assetIdentity.work_type ?? assetIdentity.asset_id.slice(0, 8)}</span>
+          </div>
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            {assetIdentity.duration_ms != null && <span>Duration: {(assetIdentity.duration_ms / 1000).toFixed(1)}s</span>}
+            {assetIdentity.width && assetIdentity.height && <span>Resolution: {assetIdentity.width}×{assetIdentity.height}</span>}
+            {assetIdentity.audio_presence != null && <span>Audio: {assetIdentity.audio_presence ? "Yes" : "No"}</span>}
+          </div>
+          {autoLoading && <p className="text-xs text-muted-foreground">Resolving playback source…</p>}
+          {loadError && <p className="text-xs text-destructive">{loadError}</p>}
+        </div>
+      )}
+
       {/* Media source */}
       <Card>
         <CardContent className="pt-4 space-y-4">
@@ -246,11 +299,16 @@ export default function MediaInspectClient({ canonicalScenes }: Props) {
           />
 
           {metadata && (
-            <div className="flex flex-wrap gap-2 text-xs">
-              <Badge variant="outline">Duration {formatMs(metadata.durationMs)}</Badge>
-              {metadata.hasVideo && <Badge variant="outline">{metadata.videoWidth}×{metadata.videoHeight}</Badge>}
-              <Badge variant="outline">{metadata.hasVideo ? "Video" : "Audio only"}</Badge>
-              <Badge variant="secondary" className="text-[10px]">Frame rate: server-side only</Badge>
+            <div className="space-y-2">
+              <div className="flex flex-wrap gap-2 text-xs">
+                <Badge variant="outline">Duration {formatMs(metadata.durationMs)}</Badge>
+                {metadata.hasVideo && <Badge variant="outline">{metadata.videoWidth}×{metadata.videoHeight}</Badge>}
+                <Badge variant="outline">{metadata.hasVideo ? "Video" : "Audio only"}</Badge>
+                <Badge variant="secondary" className="text-[10px]">Frame rate: server-side only</Badge>
+              </div>
+              <p className="text-[10px] text-muted-foreground/60">
+                Browser evidence — observed directly from the loaded media. Frame rate requires server-side extraction.
+              </p>
             </div>
           )}
         </CardContent>
@@ -624,49 +682,56 @@ export default function MediaInspectClient({ canonicalScenes }: Props) {
 
       {/* Canonical scenes reference */}
       {canonicalScenes.length > 0 && (
-        <Card>
-          <CardContent className="pt-4 space-y-3">
-            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Canonical Scenes — {canonicalScenes.length} scenes
-            </p>
-            <p className="text-xs text-muted-foreground">
-              These are the authoritative Scene boundaries from the database. They are not modified by this tool.
-            </p>
-            <div className="divide-y divide-border rounded-md border border-border overflow-hidden">
-              {canonicalScenes.map((scene, i) => (
-                <div key={scene.master_id} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-[10px] font-bold text-muted-foreground/50 shrink-0">
-                      {String(i + 1).padStart(2, "0")}
-                    </span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-foreground truncate">
-                        {scene.title ?? <span className="italic text-muted-foreground">Untitled</span>}
-                      </p>
-                      <p className="font-mono text-xs text-muted-foreground">
-                        {formatMs(scene.start_ms)} → {formatMs(scene.end_ms)}
-                        {scene.start_ms != null && scene.end_ms != null && (
-                          <span className="ml-2 font-sans">
-                            ({((scene.end_ms - scene.start_ms) / 1000).toFixed(1)}s)
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Badge variant="secondary" className="text-[10px]">CANONICAL</Badge>
-                    {scene.start_ms != null && (
-                      <Button size="sm" variant="outline" onClick={() => jumpTo(scene.start_ms!)}>
-                        Jump
-                      </Button>
-                    )}
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Canonical Scenes — {canonicalScenes.length} scenes
+          </p>
+          <p className="text-xs text-muted-foreground">
+            These are the authoritative Scene boundaries from the database. They are not modified by this tool.
+          </p>
+          <div className="divide-y divide-border rounded-md border border-border overflow-hidden">
+            {canonicalScenes.map((scene, i) => (
+              <div key={scene.master_id} className="flex items-center justify-between gap-3 px-3 py-2">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="text-[10px] font-bold text-muted-foreground/50 shrink-0">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate">
+                      {scene.title ?? <span className="italic text-muted-foreground">Untitled</span>}
+                    </p>
+                    <p className="font-mono text-xs text-muted-foreground">
+                      {formatMs(scene.start_ms)} → {formatMs(scene.end_ms)}
+                      {scene.start_ms != null && scene.end_ms != null && (
+                        <span className="ml-2 font-sans">
+                          ({((scene.end_ms - scene.start_ms) / 1000).toFixed(1)}s)
+                        </span>
+                      )}
+                    </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge variant="secondary" className="text-[10px]">CANONICAL</Badge>
+                  {scene.start_ms != null && (
+                    <Button size="sm" variant="outline" onClick={() => jumpTo(scene.start_ms!)}>
+                      Jump
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
       )}
+
+      {/* Operator decision notice */}
+      <div className="rounded-lg border border-border bg-muted/20 px-4 py-3">
+        <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Operator Decision</p>
+        <p className="text-xs text-muted-foreground">
+          Inspection is evidence only. No canonical Scenes, realizations, ISRC assignments, rights records,
+          or projection bindings have been created or modified by this session.
+        </p>
+      </div>
     </div>
   );
 }
