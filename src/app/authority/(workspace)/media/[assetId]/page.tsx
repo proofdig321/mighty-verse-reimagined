@@ -11,6 +11,9 @@ import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { formatIsrcDisplay, isIsrcEligible, type IsrcStatus } from "@/lib/media/isrc";
 import { IsrcWorkflowPanel } from "./isrc-workflow-panel";
+import { MetadataStatusPanel } from "./metadata-status-panel";
+import { buildCanonicalMetadata } from "@/lib/media/metadata-build";
+import { checkMetadataConsistency } from "@/lib/media/metadata-embed";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
@@ -131,6 +134,14 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
 
   const data = await getData(assetId);
   if (!data) notFound();
+
+  // Load metadata status (non-fatal if unavailable)
+  const [canonicalMeta, metadataReport] = await Promise.all([
+    buildCanonicalMetadata(assetId).catch(() => null),
+    buildCanonicalMetadata(assetId)
+      .then(m => m ? checkMetadataConsistency(assetId, m) : null)
+      .catch(() => null),
+  ]);
 
   const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness, registrant } = data;
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
@@ -393,6 +404,13 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
           </div>
         )}
       </div>
+
+      {/* Media Metadata */}
+      <MetadataStatusPanel
+        assetId={assetId}
+        initialMeta={canonicalMeta}
+        initialReport={metadataReport}
+      />
 
       {/* Distribution */}
       <div className="space-y-3">

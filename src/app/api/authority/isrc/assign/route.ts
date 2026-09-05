@@ -166,6 +166,32 @@ export async function POST(request: Request) {
   // 12. Canonical operation log
   await logOperation(auth.authority_id, "assign-isrc", realization_id, "media-realization", "accepted");
 
+  // 13. Trigger sidecar sync for all assets linked to this realization
+  // Non-fatal — ISRC assignment succeeds regardless of sidecar outcome
+  try {
+    const { buildCanonicalMetadata } = await import("@/lib/media/metadata-build");
+    const { syncSidecar } = await import("@/lib/media/metadata-embed");
+    const { data: linkedAssets } = await svc
+      .from("media_asset")
+      .select("asset_id")
+      .eq("realization_id", realization_id);
+    // Also find assets via projection_media_binding.realization_id
+    const { data: boundAssets } = await svc
+      .from("projection_media_binding")
+      .select("asset_id")
+      .eq("realization_id", realization_id);
+    const assetIds = new Set<string>([
+      ...(linkedAssets ?? []).map(a => a.asset_id),
+      ...(boundAssets ?? []).map(b => b.asset_id),
+    ]);
+    for (const assetId of assetIds) {
+      const meta = await buildCanonicalMetadata(assetId);
+      if (meta) await syncSidecar(assetId, meta);
+    }
+  } catch {
+    // Sidecar sync failure does not affect ISRC assignment
+  }
+
   return NextResponse.json({
     realization_id,
     isrc,
