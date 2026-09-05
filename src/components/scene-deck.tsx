@@ -34,7 +34,7 @@ function shuffleItems(items: SceneDeckItem[]) {
 export default function SceneDeck({
   scenes,
   description = "Shuffle the deck to reveal hidden creative moments. Create your own timeline.",
-  label = "Children of the Mural",
+  label = "From the Mural",
   selectedId,
   onSelect,
   faceDownUntilSelected = true,
