@@ -85,5 +85,32 @@ export async function PATCH(request: Request) {
     .eq("master_id", master_id);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  // If ISRC was updated, trigger sidecar sync for all linked assets (non-fatal)
+  if (update.isrc !== undefined || update.isrc_status !== undefined) {
+    try {
+      const { buildCanonicalMetadata } = await import("@/lib/media/metadata-build");
+      const { syncSidecar } = await import("@/lib/media/metadata-embed");
+      const { data: linkedAssets } = await svc
+        .from("media_asset")
+        .select("asset_id")
+        .eq("realization_id", realization_id);
+      const { data: boundAssets } = await svc
+        .from("projection_media_binding")
+        .select("asset_id")
+        .eq("realization_id", realization_id);
+      const assetIds = new Set<string>([
+        ...(linkedAssets ?? []).map(a => a.asset_id),
+        ...(boundAssets ?? []).map(b => b.asset_id),
+      ]);
+      for (const assetId of assetIds) {
+        const meta = await buildCanonicalMetadata(assetId);
+        if (meta) await syncSidecar(assetId, meta);
+      }
+    } catch {
+      // Sidecar sync failure does not affect the update
+    }
+  }
+
   return NextResponse.json({ realization_id, updated: true });
 }
