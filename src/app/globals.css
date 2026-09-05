@@ -277,42 +277,49 @@
     margin-left: clamp(1rem, 10vw, 8rem);
   }
 
-  .scene-deck {
+  /* Stacked deck — cards overlap like a real card deck */
+  .scene-deck-stack {
     position: relative;
     display: flex;
-    align-items: stretch;
-    gap: 1.25rem;
-    min-height: 22rem;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 2rem 1rem 2rem 0;
-    perspective: 1000px;
-    overscroll-behavior-inline: contain;
-    scrollbar-width: none;
+    align-items: flex-end;
+    justify-content: center;
+    min-height: 24rem;
+    padding: 2rem 2rem 1rem;
+    perspective: 1200px;
   }
-  .scene-deck::-webkit-scrollbar { display: none; }
+  .scene-deck-stack > div {
+    margin-left: -5.5rem;
+  }
+  .scene-deck-stack > div:first-child {
+    margin-left: 0;
+  }
 
   .scene-deck-card {
     position: relative;
-    flex: 0 0 clamp(12rem, 22vw, 17rem);
-    height: 19rem;
+    width: clamp(11rem, 20vw, 15rem);
+    height: 20rem;
+    flex-shrink: 0;
     border: 1px solid color-mix(in oklch, var(--accent-mv) 65%, transparent);
     background: linear-gradient(135deg, color-mix(in oklch, var(--accent-mv) 30%, var(--card)), var(--card));
-    box-shadow: 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent), 0 18px 30px color-mix(in oklch, var(--background) 40%, transparent);
-    transform: rotate(var(--deck-rotation, 0deg)) translateZ(var(--deck-depth, 0px));
-    transition: transform 180ms ease, opacity 180ms ease, box-shadow 180ms ease;
+    box-shadow: 6px 8px 24px color-mix(in oklch, var(--background) 50%, transparent);
+    transform: rotate(var(--deck-rotation, 0deg));
+    transition: transform 220ms ease, box-shadow 220ms ease, z-index 0ms;
     overflow: hidden;
-    cursor: grab;
+    cursor: pointer;
     border-radius: var(--radius);
+    z-index: 1;
   }
   .scene-deck-card:hover,
   .scene-deck-card:focus-visible {
-    transform: rotate(0deg) translateY(-10px) translateZ(30px);
-    box-shadow: 16px 22px 0 color-mix(in oklch, var(--background) 50%, transparent), 0 24px 36px color-mix(in oklch, var(--accent-mv) 20%, transparent);
+    transform: rotate(0deg) translateY(-18px) scale(1.04);
+    box-shadow: 0 28px 48px color-mix(in oklch, var(--accent-mv) 25%, transparent);
+    z-index: 10;
   }
   .scene-deck-card-selected {
     border-color: var(--accent-mv-gold);
-    box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-mv-gold) 75%, transparent), 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent);
+    transform: rotate(0deg) translateY(-24px) scale(1.06) !important;
+    box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-mv-gold) 75%, transparent), 0 32px 56px color-mix(in oklch, var(--accent-mv-gold) 20%, transparent);
+    z-index: 20;
   }
   .scene-deck-card-dragging {
     opacity: 0.45;
@@ -345,14 +352,16 @@
     .spatial-world-offset {
       margin-left: 0;
     }
-    .scene-deck {
-      gap: 1rem;
+    .scene-deck-stack {
       min-height: 18rem;
-      padding: 1rem 0 1.5rem;
+      padding: 1.5rem 1rem 0.5rem;
+    }
+    .scene-deck-stack > div {
+      margin-left: -4rem;
     }
     .scene-deck-card {
-      flex-basis: 12rem;
-      height: 16rem;
+      width: 9rem;
+      height: 14rem;
     }
   }
 }
