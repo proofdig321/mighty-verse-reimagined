@@ -329,36 +329,13 @@
   .scene-deck-card-3 { --deck-rotation: 4deg;  --deck-depth: 18px; }
   .scene-deck-card-4 { --deck-rotation: -4deg; --deck-depth: 10px; }
 
-  .scene-deck-card::before,
-  .scene-deck-card::after {
+  .scene-deck-card::before {
     content: "";
     position: absolute;
-    inset: 0.65rem;
-    border: 1px solid color-mix(in oklch, var(--accent-mv) 60%, transparent);
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 40%, color-mix(in oklch, var(--accent-mv) 18%, transparent) 0%, transparent 70%);
     pointer-events: none;
-  }
-  .scene-deck-card::after {
-    inset: 1.1rem;
-    transform: rotate(45deg) scale(0.72);
-  }
-
-  .scene-deck-mark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: var(--accent-mv);
-    font-family: var(--font-display, inherit);
-    font-size: 2rem;
-    font-weight: 700;
-    letter-spacing: 0.2em;
-  }
-  .scene-deck-lines {
-    position: absolute;
-    inset: 20% 15%;
-    border-top: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent);
-    border-bottom: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent);
-    transform: skewY(-28deg);
+    z-index: 0;
   }
 
   @media (max-width: 640px) {

@@ -32,6 +32,87 @@ function shuffleItems(items: SceneDeckItem[]) {
   return next;
 }
 
+function CardBack() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 160 220"
+      xmlns="http://www.w3.org/2000/svg"
+      className="absolute inset-0 h-full w-full"
+      preserveAspectRatio="xMidYMid meet"
+    >
+      {/* Background */}
+      <rect width="160" height="220" fill="none" />
+
+      {/* Outer border */}
+      <rect x="6" y="6" width="148" height="208" rx="4" fill="none"
+        stroke="oklch(0.72 0.22 290 / 55%)" strokeWidth="1" />
+
+      {/* Inner border */}
+      <rect x="12" y="12" width="136" height="196" rx="3" fill="none"
+        stroke="oklch(0.72 0.22 290 / 35%)" strokeWidth="0.75" />
+
+      {/* Corner ornaments — top-left */}
+      <path d="M6 22 L6 6 L22 6" fill="none" stroke="oklch(0.78 0.15 75 / 80%)" strokeWidth="1.5" strokeLinecap="round" />
+      {/* top-right */}
+      <path d="M138 6 L154 6 L154 22" fill="none" stroke="oklch(0.78 0.15 75 / 80%)" strokeWidth="1.5" strokeLinecap="round" />
+      {/* bottom-left */}
+      <path d="M6 198 L6 214 L22 214" fill="none" stroke="oklch(0.78 0.15 75 / 80%)" strokeWidth="1.5" strokeLinecap="round" />
+      {/* bottom-right */}
+      <path d="M138 214 L154 214 L154 198" fill="none" stroke="oklch(0.78 0.15 75 / 80%)" strokeWidth="1.5" strokeLinecap="round" />
+
+      {/* Central mandala — outer ring */}
+      <circle cx="80" cy="110" r="44" fill="none"
+        stroke="oklch(0.72 0.22 290 / 30%)" strokeWidth="0.75" />
+      <circle cx="80" cy="110" r="36" fill="none"
+        stroke="oklch(0.72 0.22 290 / 40%)" strokeWidth="0.75" />
+
+      {/* 8-point star */}
+      <polygon
+        points="80,70 84,104 110,110 84,116 80,150 76,116 50,110 76,104"
+        fill="oklch(0.72 0.22 290 / 18%)"
+        stroke="oklch(0.78 0.15 75 / 70%)"
+        strokeWidth="0.75"
+      />
+
+      {/* Inner diamond */}
+      <polygon
+        points="80,90 94,110 80,130 66,110"
+        fill="oklch(0.72 0.22 290 / 22%)"
+        stroke="oklch(0.78 0.15 75 / 90%)"
+        strokeWidth="1"
+      />
+
+      {/* Centre dot */}
+      <circle cx="80" cy="110" r="4"
+        fill="oklch(0.78 0.15 75 / 85%)" />
+
+      {/* Diagonal cross lines */}
+      <line x1="80" y1="68" x2="80" y2="152" stroke="oklch(0.72 0.22 290 / 20%)" strokeWidth="0.5" />
+      <line x1="38" y1="110" x2="122" y2="110" stroke="oklch(0.72 0.22 290 / 20%)" strokeWidth="0.5" />
+      <line x1="50" y1="80" x2="110" y2="140" stroke="oklch(0.72 0.22 290 / 15%)" strokeWidth="0.5" />
+      <line x1="110" y1="80" x2="50" y2="140" stroke="oklch(0.72 0.22 290 / 15%)" strokeWidth="0.5" />
+
+      {/* MV monogram top */}
+      <text x="80" y="36" textAnchor="middle" dominantBaseline="middle"
+        fontFamily="inherit" fontSize="9" fontWeight="700" letterSpacing="3"
+        fill="oklch(0.78 0.15 75 / 70%)">MV</text>
+
+      {/* MV monogram bottom (inverted) */}
+      <text x="80" y="186" textAnchor="middle" dominantBaseline="middle"
+        fontFamily="inherit" fontSize="9" fontWeight="700" letterSpacing="3"
+        fill="oklch(0.78 0.15 75 / 70%)" transform="rotate(180 80 186)">MV</text>
+
+      {/* Top pip dots */}
+      <circle cx="26" cy="26" r="2" fill="oklch(0.72 0.22 290 / 50%)" />
+      <circle cx="134" cy="26" r="2" fill="oklch(0.72 0.22 290 / 50%)" />
+      {/* Bottom pip dots */}
+      <circle cx="26" cy="194" r="2" fill="oklch(0.72 0.22 290 / 50%)" />
+      <circle cx="134" cy="194" r="2" fill="oklch(0.72 0.22 290 / 50%)" />
+    </svg>
+  );
+}
+
 export default function SceneDeck({
   scenes,
   description = "Shuffle the deck to reveal hidden creative moments. Create your own timeline.",
@@ -150,10 +231,7 @@ export default function SceneDeck({
             className="absolute inset-0 h-full w-full border-0"
           />
         ) : (
-          <>
-            <span className="scene-deck-mark" aria-hidden="true">MV</span>
-            <span className="scene-deck-lines" aria-hidden="true" />
-          </>
+          <CardBack />
         )}
 
         {/* Scene number badge */}
