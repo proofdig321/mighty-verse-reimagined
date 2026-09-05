@@ -356,9 +356,16 @@ export default function SceneDeck({
           {items.map((scene, index) => gridCard(scene, index))}
         </div>
       ) : (
-        /* Deck view — stacked with overlap */
-        <div className="scene-deck-stack" ref={deckRef} aria-label={`${items.length} Scenes`}>
-          {items.map((scene, index) => deckCard(scene, index))}
+        /* Deck view — stacked on top of each other like a physical card deck */
+        <div
+          className="scene-deck-stack"
+          style={{ height: `calc(20rem + ${(items.length - 1) * 16}px)`, width: `calc(clamp(11rem, 20vw, 15rem) + ${(items.length - 1) * 16}px)` }}
+        >
+          {/* Render bottom card first so top card is on top in DOM */}
+          {[...items].reverse().map((scene, revIndex) => {
+            const index = items.length - 1 - revIndex;
+            return deckCard(scene, index);
+          })}
         </div>
       )}
 

@@ -277,21 +277,17 @@
     margin-left: clamp(1rem, 10vw, 8rem);
   }
 
-  /* Stacked deck — cards overlap like a real card deck */
+  /* Stacked deck — cards piled on top of each other, offset so edges are visible */
   .scene-deck-stack {
     position: relative;
-    display: flex;
-    align-items: flex-end;
-    justify-content: center;
     min-height: 24rem;
-    padding: 2rem 2rem 1rem;
-    perspective: 1200px;
+    /* enough width to show the stack offset */
+    width: clamp(14rem, 28vw, 20rem);
   }
   .scene-deck-stack > div {
-    margin-left: -5.5rem;
-  }
-  .scene-deck-stack > div:first-child {
-    margin-left: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
   }
 
   .scene-deck-card {
@@ -302,24 +298,23 @@
     border: 1px solid color-mix(in oklch, var(--accent-mv) 65%, transparent);
     background: linear-gradient(135deg, color-mix(in oklch, var(--accent-mv) 30%, var(--card)), var(--card));
     box-shadow: 6px 8px 24px color-mix(in oklch, var(--background) 50%, transparent);
-    transform: rotate(var(--deck-rotation, 0deg));
-    transition: transform 220ms ease, box-shadow 220ms ease, z-index 0ms;
+    transform: translate(var(--stack-x, 0px), var(--stack-y, 0px));
+    transition: transform 220ms ease, box-shadow 220ms ease;
     overflow: hidden;
     cursor: pointer;
     border-radius: var(--radius);
-    z-index: 1;
+    z-index: var(--stack-z, 1);
   }
   .scene-deck-card:hover,
   .scene-deck-card:focus-visible {
-    transform: rotate(0deg) translateY(-18px) scale(1.04);
+    transform: translate(var(--stack-x, 0px), calc(var(--stack-y, 0px) - 20px));
     box-shadow: 0 28px 48px color-mix(in oklch, var(--accent-mv) 25%, transparent);
-    z-index: 10;
   }
   .scene-deck-card-selected {
     border-color: var(--accent-mv-gold);
-    transform: rotate(0deg) translateY(-24px) scale(1.06) !important;
+    transform: translate(var(--stack-x, 0px), calc(var(--stack-y, 0px) - 28px)) !important;
     box-shadow: 0 0 0 2px color-mix(in oklch, var(--accent-mv-gold) 75%, transparent), 0 32px 56px color-mix(in oklch, var(--accent-mv-gold) 20%, transparent);
-    z-index: 20;
+    z-index: 20 !important;
   }
   .scene-deck-card-dragging {
     opacity: 0.45;
@@ -330,11 +325,11 @@
     border-color: var(--accent-mv);
     box-shadow: -6px 0 0 var(--accent-mv), 12px 14px 0 color-mix(in oklch, var(--background) 60%, transparent);
   }
-  .scene-deck-card-0 { --deck-rotation: -3deg; --deck-depth: 12px; }
-  .scene-deck-card-1 { --deck-rotation: 2deg;  --deck-depth: 26px; }
-  .scene-deck-card-2 { --deck-rotation: -1deg; --deck-depth: 6px;  }
-  .scene-deck-card-3 { --deck-rotation: 4deg;  --deck-depth: 18px; }
-  .scene-deck-card-4 { --deck-rotation: -4deg; --deck-depth: 10px; }
+  .scene-deck-card-0 { --stack-x: 0px;  --stack-y: 0px;  --stack-z: 4; }
+  .scene-deck-card-1 { --stack-x: 4px;  --stack-y: 4px;  --stack-z: 3; }
+  .scene-deck-card-2 { --stack-x: 8px;  --stack-y: 8px;  --stack-z: 2; }
+  .scene-deck-card-3 { --stack-x: 12px; --stack-y: 12px; --stack-z: 1; }
+  .scene-deck-card-4 { --stack-x: 16px; --stack-y: 16px; --stack-z: 0; }
 
   .scene-deck-card::before {
     content: "";
