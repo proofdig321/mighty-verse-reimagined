@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { Dices, LayoutGrid, Rows3 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Dices, LayoutGrid, Rows3 } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { Button } from "@/components/ui/button";
 
@@ -18,7 +18,6 @@ type Props = {
   description?: string;
   selectedId?: string | null;
   onSelect?: (id: string) => void;
-  /** When true, cards without media are face-down until selected. Default: true */
   faceDownUntilSelected?: boolean;
 };
 
@@ -45,6 +44,8 @@ export default function SceneDeck({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [gridView, setGridView] = useState(false);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
   const draggedInteraction = useRef(false);
   const deckRef = useRef<HTMLDivElement>(null);
 
@@ -54,16 +55,40 @@ export default function SceneDeck({
     setInternalSelectedId(selectedId ?? scenes[0]?.id ?? null);
   }, [scenes, selectedId]);
 
+  // Track scroll position to show/hide arrows
+  useEffect(() => {
+    const el = deckRef.current;
+    if (!el) return;
+    function update() {
+      if (!el) return;
+      setCanScrollLeft(el.scrollLeft > 8);
+      setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 8);
+    }
+    update();
+    el.addEventListener("scroll", update, { passive: true });
+    window.addEventListener("resize", update);
+    return () => {
+      el.removeEventListener("scroll", update);
+      window.removeEventListener("resize", update);
+    };
+  }, [items, gridView]);
+
   const activeId = selectedId ?? internalSelectedId;
 
   function selectScene(id: string) {
     setInternalSelectedId(id);
     onSelect?.(id);
-    // scroll selected card into view
     if (deckRef.current) {
       const card = deckRef.current.querySelector(`[data-scene-id="${id}"]`) as HTMLElement | null;
       card?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     }
+  }
+
+  function scrollDeck(direction: -1 | 1) {
+    const el = deckRef.current;
+    if (!el) return;
+    const cardWidth = (el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 240;
+    el.scrollBy({ left: direction * (cardWidth + 20), behavior: "smooth" });
   }
 
   function moveItem(targetId: string) {
@@ -81,21 +106,9 @@ export default function SceneDeck({
     setDraggedId(null);
   }
 
-  function moveByKeyboard(id: string, direction: -1 | 1) {
-    setItems((current) => {
-      const index = current.findIndex((item) => item.id === id);
-      const target = index + direction;
-      if (index < 0 || target < 0 || target >= current.length) return current;
-      const next = [...current];
-      [next[index], next[target]] = [next[target], next[index]];
-      return next;
-    });
-  }
-
   function sceneCard(scene: SceneDeckItem, index: number) {
     const isSelected = activeId === scene.id;
     const hasFaceContent = !!scene.playbackId;
-    // Face-down: no media AND (faceDownUntilSelected AND not selected)
     const isFaceDown = !hasFaceContent && faceDownUntilSelected && !isSelected;
 
     return (
@@ -126,7 +139,6 @@ export default function SceneDeck({
           dropTargetId === scene.id && draggedId !== scene.id ? "scene-deck-card-drop-target" : "",
         ].filter(Boolean).join(" ")}
       >
-        {/* Face content */}
         {hasFaceContent ? (
           <MediaVisual
             playbackId={scene.playbackId}
@@ -135,14 +147,14 @@ export default function SceneDeck({
           />
         ) : (
           <>
-            {/* Decorative inner frame — always visible */}
             <span className="scene-deck-mark" aria-hidden="true">MV</span>
             <span className="scene-deck-lines" aria-hidden="true" />
           </>
         )}
 
-        {/* Scene number badge — always visible */}
-        <span className="absolute left-3 top-3 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold"
+        {/* Scene number badge */}
+        <span
+          className="absolute left-3 top-3 z-10 inline-flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold"
           style={{
             background: isSelected ? "var(--accent-mv-gold)" : "color-mix(in oklch, var(--accent-mv) 30%, var(--background))",
             color: isSelected ? "#000" : "var(--accent-mv)",
@@ -152,47 +164,30 @@ export default function SceneDeck({
           {String(index + 1).padStart(2, "0")}
         </span>
 
-        {/* Title — only shown when selected OR has media (face-up) */}
+        {/* Title — face-up only */}
         {!isFaceDown && (
-          <span className="absolute inset-x-3 bottom-10 z-10 text-sm font-semibold text-white drop-shadow-lg leading-tight">
+          <span className="absolute inset-x-3 bottom-4 z-10 text-sm font-semibold text-white drop-shadow-lg leading-tight">
             {scene.title ?? "Undisclosed Scene"}
           </span>
         )}
 
-        {/* Face-down label — shown when face-down */}
+        {/* Face-down hint */}
         {isFaceDown && (
-          <span className="absolute inset-x-3 bottom-10 z-10 text-[10px] font-semibold uppercase tracking-[0.2em] text-center"
+          <span
+            className="absolute inset-x-3 bottom-4 z-10 text-[10px] font-semibold uppercase tracking-[0.2em] text-center"
             style={{ color: "color-mix(in oklch, var(--accent-mv) 55%, transparent)" }}
           >
             Tap to reveal
           </span>
         )}
-
-        {/* Reorder controls */}
-        <span className="absolute bottom-2 right-2 z-20 flex gap-1">
-          <button
-            type="button"
-            aria-label={`Move ${scene.title ?? "scene"} earlier`}
-            disabled={index === 0}
-            onClick={(e) => { e.stopPropagation(); moveByKeyboard(scene.id, -1); }}
-            className="rounded bg-black/60 px-1.5 py-1 text-[10px] text-white disabled:opacity-30 hover:bg-black/80"
-          >←</button>
-          <button
-            type="button"
-            aria-label={`Move ${scene.title ?? "scene"} later`}
-            disabled={index === items.length - 1}
-            onClick={(e) => { e.stopPropagation(); moveByKeyboard(scene.id, 1); }}
-            className="rounded bg-black/60 px-1.5 py-1 text-[10px] text-white disabled:opacity-30 hover:bg-black/80"
-          >→</button>
-        </span>
       </div>
     );
   }
 
   return (
-    <section className="space-y-0" aria-labelledby="scene-deck-heading">
+    <section aria-labelledby="scene-deck-heading">
 
-      {/* Header row — heading + description left, controls right */}
+      {/* Header row */}
       <div className="flex items-start justify-between gap-4 mb-5">
         <div>
           <p className="text-xs uppercase tracking-[0.22em] text-muted-foreground">Children of the Mural</p>
@@ -243,7 +238,7 @@ export default function SceneDeck({
                 className={[
                   "relative overflow-hidden rounded-lg border text-left transition-all",
                   isSelected
-                    ? "border-[var(--accent-mv-gold)] shadow-[0_0_0_2px_color-mix(in_oklch,var(--accent-mv-gold)_40%,transparent)]"
+                    ? "border-[var(--accent-mv-gold)]"
                     : "border-border hover:border-[var(--accent-mv)]",
                 ].join(" ")}
                 style={{
@@ -261,7 +256,8 @@ export default function SceneDeck({
                 <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-3">
                   <p className="text-xs font-semibold text-white truncate">{scene.title ?? `Scene ${index + 1}`}</p>
                 </div>
-                <span className="absolute left-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold"
+                <span
+                  className="absolute left-2 top-2 flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-bold"
                   style={{ background: isSelected ? "var(--accent-mv-gold)" : "rgba(0,0,0,0.6)", color: isSelected ? "#000" : "#fff" }}
                 >
                   {index + 1}
@@ -271,38 +267,75 @@ export default function SceneDeck({
           })}
         </div>
       ) : (
-        /* Deck view */
-        <div ref={deckRef} className="scene-deck" aria-label={`${items.length} Scenes`}>
-          {items.map((scene, index) => (
-            <div key={scene.id} className="shrink-0">
-              {scene.href ? (
-                <Link
-                  href={scene.href}
-                  className="block"
-                  onClick={(e) => {
-                    if (draggedInteraction.current || draggedId) {
-                      e.preventDefault();
-                      draggedInteraction.current = false;
-                    }
-                  }}
-                >
-                  {sceneCard(scene, index)}
-                </Link>
-              ) : (
-                sceneCard(scene, index)
-              )}
-            </div>
-          ))}
+        /* Deck view — slider with flanking arrows */
+        <div className="relative">
+          {/* Left arrow */}
+          <button
+            type="button"
+            aria-label="Scroll deck left"
+            onClick={() => scrollDeck(-1)}
+            className={[
+              "absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border transition-all",
+              canScrollLeft
+                ? "opacity-100 cursor-pointer hover:border-[var(--accent-mv)] hover:text-[var(--accent-mv)]"
+                : "opacity-0 pointer-events-none",
+            ].join(" ")}
+            style={{ background: "color-mix(in oklch, var(--background) 85%, transparent)", backdropFilter: "blur(4px)" }}
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          {/* Deck scroll container */}
+          <div
+            ref={deckRef}
+            className="scene-deck px-8"
+            aria-label={`${items.length} Scenes`}
+          >
+            {items.map((scene, index) => (
+              <div key={scene.id} className="shrink-0">
+                {scene.href ? (
+                  <Link
+                    href={scene.href}
+                    className="block"
+                    onClick={(e) => {
+                      if (draggedInteraction.current || draggedId) {
+                        e.preventDefault();
+                        draggedInteraction.current = false;
+                      }
+                    }}
+                  >
+                    {sceneCard(scene, index)}
+                  </Link>
+                ) : (
+                  sceneCard(scene, index)
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Right arrow */}
+          <button
+            type="button"
+            aria-label="Scroll deck right"
+            onClick={() => scrollDeck(1)}
+            className={[
+              "absolute right-0 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border transition-all",
+              canScrollRight
+                ? "opacity-100 cursor-pointer hover:border-[var(--accent-mv)] hover:text-[var(--accent-mv)]"
+                : "opacity-0 pointer-events-none",
+            ].join(" ")}
+            style={{ background: "color-mix(in oklch, var(--background) 85%, transparent)", backdropFilter: "blur(4px)" }}
+          >
+            <ChevronRight size={16} />
+          </button>
         </div>
       )}
 
-      {/* Deck timeline — positional scrubber */}
+      {/* Deck timeline scrubber */}
       {!gridView && items.length > 0 && (
-        <div className="pt-2 pb-1 space-y-2">
-          <div className="relative flex items-center gap-0 px-1">
-            {/* Track line */}
-            <div className="absolute inset-x-1 top-1/2 h-px -translate-y-1/2 bg-border" />
-            {/* Scene markers */}
+        <div className="mt-4 space-y-3">
+          <div className="relative px-4">
+            <div className="absolute inset-x-4 top-1/2 h-px -translate-y-1/2 bg-border" />
             <div className="relative flex w-full items-center justify-between">
               {items.map((scene, index) => {
                 const isActive = activeId === scene.id;
@@ -313,19 +346,24 @@ export default function SceneDeck({
                     aria-label={`Go to scene ${index + 1}${scene.title ? `: ${scene.title}` : ""}`}
                     title={scene.title ?? `Scene ${index + 1}`}
                     onClick={() => selectScene(scene.id)}
-                    className="relative flex flex-col items-center gap-1.5 group"
+                    className="relative flex flex-col items-center"
                   >
                     <span
                       className="block rounded-full transition-all duration-150"
                       style={{
                         width: isActive ? "14px" : "8px",
                         height: isActive ? "14px" : "8px",
-                        background: isActive ? "var(--accent-mv-gold)" : "color-mix(in oklch, var(--accent-mv) 50%, var(--border))",
-                        boxShadow: isActive ? "0 0 0 3px color-mix(in oklch, var(--accent-mv-gold) 30%, transparent)" : "none",
+                        background: isActive
+                          ? "var(--accent-mv-gold)"
+                          : "color-mix(in oklch, var(--accent-mv) 50%, var(--border))",
+                        boxShadow: isActive
+                          ? "0 0 0 3px color-mix(in oklch, var(--accent-mv-gold) 30%, transparent)"
+                          : "none",
                       }}
                     />
                     {isActive && (
-                      <span className="absolute top-5 text-[9px] font-semibold whitespace-nowrap"
+                      <span
+                        className="absolute top-5 text-[9px] font-semibold whitespace-nowrap"
                         style={{ color: "var(--accent-mv-gold)" }}
                       >
                         {scene.title ?? `Scene ${index + 1}`}
@@ -336,7 +374,7 @@ export default function SceneDeck({
               })}
             </div>
           </div>
-          <p className="text-xs text-muted-foreground pt-5">
+          <p className="text-xs text-muted-foreground pt-4">
             Drag cards to reorder your timeline.
           </p>
         </div>
