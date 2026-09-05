@@ -39,7 +39,7 @@ export default function SceneDeck({
 }: Props) {
   const [items, setItems] = useState(scenes);
   const [internalSelectedId, setInternalSelectedId] = useState<string | null>(
-    selectedId ?? scenes[0]?.id ?? null
+    faceDownUntilSelected ? null : (selectedId ?? scenes[0]?.id ?? null)
   );
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
@@ -52,8 +52,8 @@ export default function SceneDeck({
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setItems(scenes);
-    setInternalSelectedId(selectedId ?? scenes[0]?.id ?? null);
-  }, [scenes, selectedId]);
+    setInternalSelectedId(faceDownUntilSelected ? (selectedId ?? null) : (selectedId ?? scenes[0]?.id ?? null));
+  }, [scenes, selectedId, faceDownUntilSelected]);
 
   // Track scroll position to show/hide arrows
   useEffect(() => {
@@ -301,6 +301,14 @@ export default function SceneDeck({
                       if (draggedInteraction.current || draggedId) {
                         e.preventDefault();
                         draggedInteraction.current = false;
+                        return;
+                      }
+                      // If face-down, first tap reveals — don't navigate yet
+                      const isAlreadySelected = (selectedId ?? internalSelectedId) === scene.id;
+                      const hasFace = !!scene.playbackId;
+                      if (!hasFace && faceDownUntilSelected && !isAlreadySelected) {
+                        e.preventDefault();
+                        selectScene(scene.id);
                       }
                     }}
                   >

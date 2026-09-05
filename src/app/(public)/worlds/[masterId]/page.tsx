@@ -282,7 +282,7 @@ export default async function WorldPage({
         </div>
 
         {/* Two-column: player + scene sidebar */}
-        <div className="flex flex-col lg:flex-row lg:items-start">
+        <div className="flex flex-col lg:flex-row">
 
           {/* Left: player */}
           <div className="flex-1 min-w-0 bg-black">
@@ -302,14 +302,14 @@ export default async function WorldPage({
             />
           </div>
 
-          {/* Right: scene list sidebar — height locked to left column */}
-          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 lg:self-start lg:sticky lg:top-0">
-            <div className="flex flex-col" style={{ maxHeight: "100vh" }}>
+          {/* Right: scene list sidebar — height matches left column via flex stretch */}
+          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 h-full">
+            <div className="flex flex-col h-full">
               <div className="px-5 py-4 border-b border-border shrink-0">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
                 <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
               </div>
-              <div className="flex-1 overflow-y-auto scrollbar-hidden divide-y divide-border">
+              <div className="flex-1 overflow-y-auto scrollbar-hidden divide-y divide-border min-h-0">
                 {data.scenes.length > 0 ? (
                   data.scenes.map((s, i) => (
                     <Link

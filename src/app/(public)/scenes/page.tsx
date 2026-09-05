@@ -2,13 +2,12 @@ export const dynamic = "force-dynamic";
 
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
-import SceneStack from "@/components/scene-stack";
+import SceneDeckClient from "@/components/scene-deck-client";
 
 type SceneItem = {
   master_id: string;
   title: string | null;
   projection_id: string | null;
-  playback_id: string | null;
 };
 
 async function getData(): Promise<SceneItem[]> {
@@ -30,25 +29,10 @@ async function getData(): Promise<SceneItem[]> {
     svc.from("projection").select("master_id, projection_id").in("master_id", ids).eq("projection_type", "experiential"),
   ]);
 
-  const projectionIds = (projections ?? []).map((p) => p.projection_id);
-  const { data: bindings } = projectionIds.length
-    ? await svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", projectionIds).eq("binding_type", "primary").eq("access_level", "public")
-    : { data: [] };
-  const assetIds = (bindings ?? []).map((b) => b.asset_id);
-  const { data: assets } = assetIds.length
-    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
-    : { data: [] };
-
   return masters.map((m) => ({
     master_id: m.master_id,
     title: (presentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
     projection_id: (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id ?? null,
-    playback_id: (() => {
-      const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
-      const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
-      const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
-      return ref && !ref.startsWith("seed:placeholder:") ? ref : null;
-    })(),
   }));
 }
 
@@ -58,14 +42,19 @@ export default async function ScenesPage() {
   return (
     <div className="public-page">
       <PageTopNav activePath="/scenes" />
-      <SceneStack
-        scenes={scenes.map((s) => ({
-          id: s.master_id,
-          title: s.title,
-          href: s.projection_id ? `/moments/${s.projection_id}` : undefined,
-          playbackId: s.playback_id,
-        }))}
-      />
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        <SceneDeckClient
+          scenes={scenes.map((s) => ({
+            master_id: s.master_id,
+            title: s.title,
+            projection_id: s.projection_id,
+            // No playback_id — scenes don't have their own media yet.
+            // This ensures all cards render face-down until selected.
+            playback_id: null,
+          }))}
+          faceDownUntilSelected
+        />
+      </div>
     </div>
   );
 }
