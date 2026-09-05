@@ -356,70 +356,106 @@ export default function SceneDeck({
           {items.map((scene, index) => gridCard(scene, index))}
         </div>
       ) : (
-        /* Deck view — stacked on top of each other like a physical card deck */
-        <div
-          className="scene-deck-stack"
-          style={{ height: `calc(20rem + ${(items.length - 1) * 16}px)`, width: `calc(clamp(11rem, 20vw, 15rem) + ${(items.length - 1) * 16}px)` }}
-        >
-          {/* Render bottom card first so top card is on top in DOM */}
-          {[...items].reverse().map((scene, revIndex) => {
-            const index = items.length - 1 - revIndex;
-            return deckCard(scene, index);
-          })}
+        /* Deck view — horizontal spread, draggable, with timeline below */
+        <div className="space-y-2">
+          <div className="relative">
+            {/* Left arrow */}
+            <button
+              type="button"
+              aria-label="Scroll left"
+              onClick={() => {
+                const el = deckRef.current;
+                if (!el) return;
+                el.scrollBy({ left: -((el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 200) - 20, behavior: "smooth" });
+              }}
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border transition-opacity"
+              style={{ background: "color-mix(in oklch, var(--background) 85%, transparent)", backdropFilter: "blur(4px)" }}
+            >
+              ‹
+            </button>
+
+            {/* Scrollable deck */}
+            <div
+              ref={deckRef}
+              className="scene-deck-row px-10"
+              aria-label={`${items.length} Scenes`}
+            >
+              {[...items].reverse().map((scene, revIndex) => {
+                const index = items.length - 1 - revIndex;
+                return deckCard(scene, index);
+              })}
+            </div>
+
+            {/* Right arrow */}
+            <button
+              type="button"
+              aria-label="Scroll right"
+              onClick={() => {
+                const el = deckRef.current;
+                if (!el) return;
+                el.scrollBy({ left: ((el.firstElementChild as HTMLElement | null)?.offsetWidth ?? 200) + 20, behavior: "smooth" });
+              }}
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex h-9 w-9 items-center justify-center rounded-full border border-border transition-opacity"
+              style={{ background: "color-mix(in oklch, var(--background) 85%, transparent)", backdropFilter: "blur(4px)" }}
+            >
+              ›
+            </button>
+          </div>
+
+          {/* Timeline scrubber */}
+          {items.length > 0 && (
+            <div className="mt-6 space-y-3">
+              <div className="relative px-4">
+                <div className="absolute inset-x-4 top-1/2 h-px -translate-y-1/2 bg-border" />
+                <div className="relative flex w-full items-center justify-between">
+                  {items.map((scene, index) => {
+                    const isActive = activeId === scene.id;
+                    const isRevealed = revealedIds.has(scene.id);
+                    return (
+                      <button
+                        key={scene.id}
+                        type="button"
+                        aria-label={`Go to scene ${index + 1}${scene.title ? `: ${scene.title}` : ""}`}
+                        title={scene.title ?? `Scene ${index + 1}`}
+                        onClick={() => reveal(scene.id)}
+                        className="relative flex flex-col items-center"
+                      >
+                        <span
+                          className="block rounded-full transition-all duration-150"
+                          style={{
+                            width: isActive ? "14px" : "8px",
+                            height: isActive ? "14px" : "8px",
+                            background: isActive
+                              ? "var(--accent-mv-gold)"
+                              : isRevealed
+                              ? "color-mix(in oklch, var(--accent-mv) 80%, var(--border))"
+                              : "color-mix(in oklch, var(--accent-mv) 30%, var(--border))",
+                            boxShadow: isActive
+                              ? "0 0 0 3px color-mix(in oklch, var(--accent-mv-gold) 30%, transparent)"
+                              : "none",
+                          }}
+                        />
+                        {isActive && (
+                          <span
+                            className="absolute top-5 text-[9px] font-semibold whitespace-nowrap"
+                            style={{ color: "var(--accent-mv-gold)" }}
+                          >
+                            {scene.title ?? `Scene ${index + 1}`}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground pt-4">
+                Drag cards to reorder your timeline.
+              </p>
+            </div>
+          )}
         </div>
       )}
 
-      {/* Timeline scrubber — deck view only */}
-      {!gridView && items.length > 0 && (
-        <div className="mt-6 space-y-3">
-          <div className="relative px-4">
-            <div className="absolute inset-x-4 top-1/2 h-px -translate-y-1/2 bg-border" />
-            <div className="relative flex w-full items-center justify-between">
-              {items.map((scene, index) => {
-                const isActive = activeId === scene.id;
-                const isRevealed = revealedIds.has(scene.id);
-                return (
-                  <button
-                    key={scene.id}
-                    type="button"
-                    aria-label={`Go to scene ${index + 1}${scene.title ? `: ${scene.title}` : ""}`}
-                    title={scene.title ?? `Scene ${index + 1}`}
-                    onClick={() => reveal(scene.id)}
-                    className="relative flex flex-col items-center"
-                  >
-                    <span
-                      className="block rounded-full transition-all duration-150"
-                      style={{
-                        width: isActive ? "14px" : "8px",
-                        height: isActive ? "14px" : "8px",
-                        background: isActive
-                          ? "var(--accent-mv-gold)"
-                          : isRevealed
-                          ? "color-mix(in oklch, var(--accent-mv) 80%, var(--border))"
-                          : "color-mix(in oklch, var(--accent-mv) 30%, var(--border))",
-                        boxShadow: isActive
-                          ? "0 0 0 3px color-mix(in oklch, var(--accent-mv-gold) 30%, transparent)"
-                          : "none",
-                      }}
-                    />
-                    {isActive && (
-                      <span
-                        className="absolute top-5 text-[9px] font-semibold whitespace-nowrap"
-                        style={{ color: "var(--accent-mv-gold)" }}
-                      >
-                        {scene.title ?? `Scene ${index + 1}`}
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground pt-4">
-            Drag cards to reorder your timeline.
-          </p>
-        </div>
-      )}
     </section>
   );
 }
