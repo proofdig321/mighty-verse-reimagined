@@ -29,25 +29,36 @@ export async function POST(request: Request) {
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
   const { name, projection_id, master_id, intake_id } = await request.json();
-  if (!name || !projection_id || !master_id) {
-    return NextResponse.json({ error: "name, projection_id, master_id required" }, { status: 400 });
+  if (!name) {
+    return NextResponse.json({ error: "name required" }, { status: 400 });
   }
 
-  // Authority gate — same capability as attachMediaBinding
-  const auth = await validateAuthority(participantId, "authorise-projection", master_id);
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  // For intake-only uploads (no canonical projection yet), authority check is
+  // against the platform scope rather than a specific master.
+  // For projection-bound uploads, authority is checked against the master.
+  if (projection_id && master_id) {
+    const auth = await validateAuthority(participantId, "authorise-projection", master_id);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  } else {
+    // Intake-only: require platform authority
+    const auth = await validateAuthority(participantId, "create-canonical-state", null);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  }
 
   const svc = getServiceClient();
 
   // Mark stale sessions for this master/projection as failed before creating a new one.
-  const staleThreshold = new Date(Date.now() - STALE_SESSION_HOURS * 60 * 60 * 1000).toISOString();
-  await svc
-    .from("media_upload_session")
-    .update({ phase: "failed" })
-    .eq("master_id", master_id)
-    .eq("projection_id", projection_id)
-    .in("phase", ["created", "uploading", "processing"])
-    .lt("updated_at", staleThreshold);
+  // Only applies to projection-bound sessions.
+  if (projection_id && master_id) {
+    const staleThreshold = new Date(Date.now() - STALE_SESSION_HOURS * 60 * 60 * 1000).toISOString();
+    await svc
+      .from("media_upload_session")
+      .update({ phase: "failed" })
+      .eq("master_id", master_id)
+      .eq("projection_id", projection_id)
+      .in("phase", ["created", "uploading", "processing"])
+      .lt("updated_at", staleThreshold);
+  }
 
   // Create the session record first so we have session_id for passthrough.
   // provider_upload_id is set after the Mux upload is created.
@@ -56,8 +67,8 @@ export async function POST(request: Request) {
     .from("media_upload_session")
     .insert({
       intake_id: intake_id ?? null,
-      projection_id,
-      master_id,
+      projection_id: projection_id ?? null,
+      master_id: master_id ?? null,
       provider: DEFAULT_PROVIDER,
       provider_asset_id: "pending", // placeholder — updated by webhook
       provider_upload_url: null,

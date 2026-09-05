@@ -12,12 +12,19 @@ async function getParticipants() {
     .from("participant")
     .select("participant_id, identity_link(identity_ref, active)")
     .eq("status", "active");
-  return (data ?? []).map((p) => ({
-    participant_id: p.participant_id,
-    label: Array.isArray(p.identity_link)
-      ? (p.identity_link as { active: boolean; identity_ref: string }[]).find((l) => l.active)?.identity_ref ?? p.participant_id.slice(0, 8)
-      : p.participant_id.slice(0, 8),
-  }));
+  return (data ?? []).map((p) => {
+    const links = Array.isArray(p.identity_link)
+      ? (p.identity_link as { active: boolean; identity_ref: string }[])
+      : [];
+    // Prefer a non-seed, non-UUID identity_ref as the human-readable label
+    const activeRef = links.find((l) => l.active)?.identity_ref ?? null;
+    const label = activeRef && !activeRef.startsWith("seed:") && !/^[0-9a-f-]{36}$/i.test(activeRef)
+      ? activeRef
+      : activeRef?.startsWith("seed:")
+      ? activeRef.slice("seed:".length).replace(/-v\d+$/, "").replace(/-/g, " ")
+      : p.participant_id.slice(0, 8);
+    return { participant_id: p.participant_id, label };
+  });
 }
 
 export default async function MediaIntakePage() {

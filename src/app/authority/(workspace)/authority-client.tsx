@@ -247,7 +247,21 @@ export default function AuthorityClient() {
     return { master, state, projection, binding, presentation, projectionPresentation, status: getWorkStatus(master, state, projection, binding, presentation, projectionPresentation, realizations) };
   });
 
-  const titleFor = (r: WorkRecord) => r.presentation?.title ?? r.projectionPresentation?.title ?? "Untitled work";
+  const titleFor = (r: WorkRecord) => {
+    // Direct work_presentation title
+    if (r.presentation?.title) return r.presentation.title;
+    // Projection presentation title
+    if (r.projectionPresentation?.title) return r.projectionPresentation.title;
+    // For scenes/creative-moments: fall back to parent presentation title as context
+    if (r.master.parent_master_id) {
+      const parentPres = presentations.find(p => p.master_id === r.master.parent_master_id);
+      if (parentPres?.title) {
+        const typeLabel = WORK_TYPE_LABELS[r.master.canonical_type] ?? r.master.canonical_type;
+        return `${parentPres.title} — ${typeLabel} ${r.master.master_id.slice(0, 6)}`;
+      }
+    }
+    return "Untitled work";
+  };
   const homeRoot = workRecords.find(r => r.master.parent_master_id === null && r.master.canonical_type === "universe" && !!r.presentation?.title);
   const homeIds = new Set<string>(homeRoot ? [homeRoot.master.master_id] : workRecords.map(r => r.master.master_id));
   if (homeRoot) {

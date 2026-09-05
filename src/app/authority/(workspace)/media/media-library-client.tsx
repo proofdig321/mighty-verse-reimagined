@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { ChevronRight, Music, Video, Film, Image as ImageIcon, FileQuestion } from "lucide-react";
+import { ChevronRight, Music, Video, Film, Image as ImageIcon, FileQuestion, Upload } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import type { MediaLibraryItem } from "./page";
 
@@ -145,6 +146,197 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
   );
 }
 
+// ─── Intake upload panel ─────────────────────────────────────────────────────
+
+function IntakeUploadPanel({ intake, onDone, onCancel }: { intake: UnlinkedIntake; onDone: () => void; onCancel: () => void }) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [file, setFile] = useState<File | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
+  const [phase, setPhase] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  const ACCEPTED = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
+
+  function isAccepted(f: File) {
+    return f.type.startsWith("video/") || f.type.startsWith("audio/") ||
+      /\.(mp4|mov|avi|mkv|webm|mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(f.name);
+  }
+
+  async function startUpload() {
+    if (!file) return;
+    setBusy(true); setMsg(null); setProgress(null); setPhase(null);
+    try {
+      if (!isAccepted(file)) throw new Error("Select a video or audio file.");
+
+      // Create upload session — intake-only (no projection_id/master_id required)
+      const sessionRes = await fetch("/api/authority/media/upload-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: file.name, intake_id: intake.intake_id }),
+      });
+      const session = await sessionRes.json();
+      if (!sessionRes.ok || session.error || !session.upload_url || !session.session_id) {
+        throw new Error(session.error ?? "Upload session could not be created.");
+      }
+
+      // Upload file directly to Mux
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.upload.onprogress = (e) => {
+          if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100));
+        };
+        xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: HTTP ${xhr.status}`));
+        xhr.onerror = () => reject(new Error("Network error during upload."));
+        xhr.open("PUT", session.upload_url);
+        xhr.send(file);
+      });
+
+      setProgress(100);
+      setMsg("Uploaded. Waiting for media processing…");
+
+      // Poll until ingested or failed
+      let currentPhase = "uploading";
+      for (let attempt = 0; currentPhase !== "ingested" && currentPhase !== "ready" && attempt < 60; attempt++) {
+        await new Promise((r) => setTimeout(r, 5000));
+        const pollRes = await fetch(`/api/authority/media/upload-session/${session.session_id}`);
+        const pollData = await pollRes.json();
+        if (!pollRes.ok || pollData.error) throw new Error(pollData.error ?? "Polling failed.");
+        currentPhase = pollData.phase ?? "unknown";
+        setPhase(currentPhase);
+        if (currentPhase === "failed") throw new Error("Media processing failed.");
+        setMsg(`Processing… (${currentPhase})`);
+      }
+
+      if (currentPhase !== "ingested" && currentPhase !== "ready") {
+        throw new Error("Processing timed out. The media may still be processing — check the Media Library shortly.");
+      }
+
+      setMsg("Media processed and ready in the Media Library.");
+      setTimeout(onDone, 1500);
+    } catch (err) {
+      setMsg(`Error: ${err instanceof Error ? err.message : "Upload failed."}`);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-card/60 px-4 py-4 space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-foreground">{intake.title}</p>
+          <p className="text-xs text-muted-foreground">{intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}</p>
+        </div>
+        {!busy && (
+          <button type="button" onClick={onCancel} className="text-xs text-muted-foreground hover:text-foreground shrink-0">Cancel</button>
+        )}
+      </div>
+
+      <input ref={fileInputRef} type="file" accept={ACCEPTED} disabled={busy} className="sr-only"
+        onChange={(e) => { setFile(e.target.files?.[0] ?? null); setMsg(null); }} />
+
+      <button
+        type="button"
+        disabled={busy}
+        onClick={() => fileInputRef.current?.click()}
+        className={`w-full rounded-lg border-2 border-dashed px-4 py-4 text-center transition-colors
+          ${file ? "border-border bg-muted/20" : "border-border hover:border-foreground/30 hover:bg-muted/10 cursor-pointer"}
+          disabled:pointer-events-none disabled:opacity-50`}
+      >
+        {file ? (
+          <div className="space-y-0.5">
+            <p className="text-sm font-medium text-foreground">{file.name}</p>
+            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(1)} MB</p>
+          </div>
+        ) : (
+          <div className="space-y-1">
+            <p className="text-sm text-muted-foreground">Click to choose a file</p>
+            <p className="text-xs text-muted-foreground/60">MP4, MOV, MP3, WAV, FLAC, M4A and more</p>
+          </div>
+        )}
+      </button>
+
+      {busy && progress !== null && (
+        <div className="space-y-1">
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div className="h-full rounded-full transition-all" style={{ width: `${progress}%`, background: "var(--accent-mv)" }} />
+          </div>
+          <p className="text-xs text-muted-foreground">{progress < 100 ? `${progress}%` : phase ?? "Processing…"}</p>
+        </div>
+      )}
+
+      {msg && (
+        <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>
+      )}
+
+      <Button size="sm" disabled={busy || !file} onClick={startUpload}>
+        <Upload size={13} /> Upload media
+      </Button>
+    </div>
+  );
+}
+
+// ─── Awaiting upload section ──────────────────────────────────────────────────
+
+function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
+  const [activeIntakeId, setActiveIntakeId] = useState<string | null>(null);
+  const [done, setDone] = useState<Set<string>>(new Set());
+
+  const visible = intakes.filter((i) => !done.has(i.intake_id));
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Intake Records — Awaiting Upload
+        </p>
+        <span className="text-[10px] text-muted-foreground/60">{visible.length}</span>
+      </div>
+      <p className="text-xs text-muted-foreground">
+        These intake records exist but have not yet been linked to a media asset.
+        Select an intake to upload the file directly.
+      </p>
+
+      <div className="space-y-2">
+        {visible.map((intake) =>
+          activeIntakeId === intake.intake_id ? (
+            <IntakeUploadPanel
+              key={intake.intake_id}
+              intake={intake}
+              onDone={() => {
+                setDone((prev) => new Set([...prev, intake.intake_id]));
+                setActiveIntakeId(null);
+              }}
+              onCancel={() => setActiveIntakeId(null)}
+            />
+          ) : (
+            <div
+              key={intake.intake_id}
+              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground truncate">{intake.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setActiveIntakeId(intake.intake_id)}
+              >
+                <Upload size={13} /> Upload media
+              </Button>
+            </div>
+          )
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [readinessFilter, setReadinessFilter] = useState<string>("all");
@@ -225,41 +417,7 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
 
       {/* Unlinked intake records */}
       {unlinkedIntakes.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Intake Records — Awaiting Upload
-            </p>
-            <span className="text-[10px] text-muted-foreground/60">
-              {unlinkedIntakes.length}
-            </span>
-          </div>
-          <p className="text-xs text-muted-foreground">
-            These intake records exist but have not yet been linked to a media asset. Open the relevant work to upload.
-          </p>
-          <div className="rounded-lg border border-border overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="border-b border-border bg-muted/20">
-                <tr>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Title</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Type</th>
-                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Created</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {unlinkedIntakes.map((i) => (
-                  <tr key={i.intake_id} className="hover:bg-muted/20 transition-colors">
-                    <td className="px-4 py-3 font-medium text-foreground">{i.title}</td>
-                    <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">{i.work_type}</td>
-                    <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground">
-                      {new Date(i.created_at).toLocaleDateString()}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <AwaitingUploadSection intakes={unlinkedIntakes} />
       )}
     </div>
   );

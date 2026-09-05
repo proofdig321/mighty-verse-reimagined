@@ -127,12 +127,18 @@ export async function GET() {
     presentations: presentations ?? [],
     projectionPresentations: projectionPresentations ?? [],
     realizations: realizations ?? [],
-    participants: (participants ?? []).map((participant) => ({
-      participant_id: participant.participant_id,
-      label: Array.isArray(participant.identity_link)
-        ? participant.identity_link.find((link: { active: boolean; identity_ref: string }) => link.active)?.identity_ref ?? participant.participant_id.slice(0, 8)
-        : participant.participant_id.slice(0, 8),
-    })),
+    participants: (participants ?? []).map((participant) => {
+      const links = Array.isArray(participant.identity_link)
+        ? (participant.identity_link as { active: boolean; identity_ref: string }[])
+        : [];
+      const activeRef = links.find((l) => l.active)?.identity_ref ?? null;
+      const label = activeRef && !activeRef.startsWith("seed:") && !/^[0-9a-f-]{36}$/i.test(activeRef)
+        ? activeRef
+        : activeRef?.startsWith("seed:")
+        ? activeRef.slice("seed:".length).replace(/-v\d+$/, "").replace(/-/g, " ")
+        : participant.participant_id.slice(0, 8);
+      return { participant_id: participant.participant_id, label };
+    }),
     mediaIntakes: (mediaIntake ?? []).map((intake) => ({ ...intake, credits: (mediaIntakeCredits ?? []).filter((credit) => credit.intake_id === intake.intake_id) })),
     mediaIntakeCredits: mediaIntakeCredits ?? [],
     mediaAssets: (mediaAssets ?? []).map((asset) => {

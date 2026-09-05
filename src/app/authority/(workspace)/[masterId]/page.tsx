@@ -131,12 +131,18 @@ export default async function AuthorityWorkPage({
     capabilities: authorities[0].capabilities,
   };
 
-  const participantList = (participants ?? []).map((p) => ({
-    participant_id: p.participant_id,
-    label: Array.isArray(p.identity_link)
-      ? p.identity_link.find((l: { active: boolean; identity_ref: string }) => l.active)?.identity_ref ?? p.participant_id.slice(0, 8)
-      : p.participant_id.slice(0, 8),
-  }));
+  const participantList = (participants ?? []).map((p) => {
+    const links = Array.isArray(p.identity_link)
+      ? (p.identity_link as { active: boolean; identity_ref: string }[])
+      : [];
+    const activeRef = links.find((l) => l.active)?.identity_ref ?? null;
+    const label = activeRef && !activeRef.startsWith("seed:") && !/^[0-9a-f-]{36}$/i.test(activeRef)
+      ? activeRef
+      : activeRef?.startsWith("seed:")
+      ? activeRef.slice("seed:".length).replace(/-v\d+$/, "").replace(/-/g, " ")
+      : p.participant_id.slice(0, 8);
+    return { participant_id: p.participant_id, label };
+  });
 
   return (
     <AuthorityWorkClient
