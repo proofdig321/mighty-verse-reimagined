@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
 import GalleryFilterClient from "@/components/gallery-filter-client";
-import { Button } from "@/components/ui/button";
 
 type MediaItem = {
   asset_id: string;
@@ -46,27 +45,10 @@ async function getData(): Promise<MediaItem[]> {
 
 export default async function GalleryPage() {
   const items = await getData();
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/gallery" />
-      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
-        <div>
-          <h1
-            className="text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            Media Gallery
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Images, videos, audio and documents from across the universes.
-          </p>
-        </div>
-        <GalleryFilterClient items={items} />
-        <div className="pt-2">
-          <Button variant="outline">View Full Gallery</Button>
-        </div>
-      </div>
+      <GalleryFilterClient items={items} />
     </div>
   );
 }

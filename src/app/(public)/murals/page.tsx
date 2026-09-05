@@ -36,11 +36,11 @@ async function getData(): Promise<MuralItem[]> {
     svc.from("projection").select("master_id, projection_id").in("master_id", ids).eq("projection_type", "experiential"),
   ]);
 
-  const projectionIds = (projections ?? []).map((projection) => projection.projection_id);
+  const projectionIds = (projections ?? []).map((p) => p.projection_id);
   const { data: bindings } = projectionIds.length
     ? await svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", projectionIds).eq("binding_type", "primary").eq("access_level", "public")
     : { data: [] };
-  const assetIds = (bindings ?? []).map((binding) => binding.asset_id);
+  const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
     ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
     : { data: [] };
@@ -50,10 +50,10 @@ async function getData(): Promise<MuralItem[]> {
     title: (presentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
     artist: (attrEntries ?? []).find((e) => e.attribution_id === m.attribution_ref)?.role_type?.replace(/-/g, " ") ?? null,
     playback_id: (() => {
-      const projectionId = (projections ?? []).find((projection) => projection.master_id === m.master_id)?.projection_id;
-      const assetId = (bindings ?? []).find((binding) => binding.projection_id === projectionId)?.asset_id;
-      const storageRef = (assets ?? []).find((asset) => asset.asset_id === assetId)?.storage_ref;
-      return storageRef && !storageRef.startsWith("seed:placeholder:") ? storageRef : null;
+      const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
+      const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
+      const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
+      return ref && !ref.startsWith("seed:placeholder:") ? ref : null;
     })(),
   }));
 }
@@ -64,32 +64,69 @@ export default async function MuralsPage() {
   return (
     <div className="public-page">
       <PageTopNav activePath="/murals" />
-      <div className="public-hero">
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Visual expressions of Worlds</p>
-          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
-            Mural Gallery
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">Explore all animated murals.</p>
+
+      {/* Header band — heading left, controls right */}
+      <div className="border-b border-border bg-card/20">
+        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
+              Visual expressions of Worlds
+            </p>
+            <h1
+              className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
+              style={{ fontFamily: "var(--font-display, inherit)" }}
+            >
+              Mural Gallery
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">Explore all animated murals.</p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <select
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground"
+              defaultValue=""
+            >
+              <option value="">All Genres</option>
+            </select>
+            <select
+              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground"
+              defaultValue="recent"
+            >
+              <option value="recent">Most Recent</option>
+            </select>
+          </div>
         </div>
       </div>
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-12">
+
+      {/* Grid */}
+      <div className="mx-auto max-w-7xl px-6 py-10">
         {murals.length > 0 ? (
-          <div className="artifact-grid">
+          <div className="artifact-grid-wide">
             {murals.map((m) => (
               <Link key={m.master_id} href={`/worlds/${m.master_id}`} className="artifact-card group">
-                {m.playback_id ? <MediaVisual playbackId={m.playback_id} title={m.title ?? "Mural"} /> : <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="16/9" />}
+                {m.playback_id ? (
+                  <MediaVisual playbackId={m.playback_id} title={m.title ?? "Mural"} aspectRatio="16/9" />
+                ) : (
+                  <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="16/9" />
+                )}
                 <div className="artifact-copy">
-                  <p className="text-sm font-medium text-foreground truncate group-hover:opacity-70 transition-opacity" style={{ fontFamily: "var(--font-display, inherit)" }}>
+                  <p
+                    className="text-base font-semibold text-foreground truncate group-hover:opacity-80 transition-opacity"
+                    style={{ fontFamily: "var(--font-display, inherit)" }}
+                  >
                     {m.title ?? "Untitled"}
                   </p>
-                  {m.artist && <p className="text-xs text-muted-foreground truncate capitalize">{m.artist}</p>}
+                  {m.artist && (
+                    <p className="mt-1 text-xs text-muted-foreground truncate capitalize">{m.artist}</p>
+                  )}
+                  <p className="mt-1 text-xs text-muted-foreground">Mural Scene</p>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">No murals yet.</p>
+          <div className="rounded-xl border border-border bg-card/40 px-8 py-12 text-center">
+            <p className="text-sm text-muted-foreground">No murals yet.</p>
+          </div>
         )}
       </div>
     </div>

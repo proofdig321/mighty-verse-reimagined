@@ -43,21 +43,10 @@ async function getData(): Promise<ParticipantItem[]> {
 
 export default async function ParticipantsPublicPage() {
   const participants = await getData();
-
   return (
-    <div className="min-h-screen bg-background">
+    <div className="public-page">
       <PageTopNav activePath="/participants" />
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-10">
-          <h1 className="text-3xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
-            Creators & Participants
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">The people building the universes.</p>
-        </div>
-      </div>
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <ParticipantsFilterClient participants={participants} />
-      </div>
+      <ParticipantsFilterClient participants={participants} />
     </div>
   );
 }

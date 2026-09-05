@@ -27,19 +27,11 @@ const TYPE_MAP: Record<Tab, string | null> = {
   Documents: "document",
 };
 
-function RightsState({ rights_holder_ref, rights_basis }: { rights_holder_ref: string | null; rights_basis: string | null }) {
-  if (rights_holder_ref && rights_basis) {
-    return <span className="text-[10px] text-green-400">Rights on file</span>;
-  }
-  return <span className="text-[10px] text-muted-foreground/40 italic">void</span>;
-}
-
 function AssetPreview({ item }: { item: MediaItem }) {
   const isVideo = item.asset_type?.toLowerCase().includes("video");
   const isAudio = item.asset_type?.toLowerCase().includes("audio");
-  const isDoc   = item.asset_type?.toLowerCase().includes("document");
+  const isDoc = item.asset_type?.toLowerCase().includes("document");
 
-  // Video: MediaVisual resolves storage_ref (Livepeer asset ID) → poster via /api/livepeer/playback/
   if (isVideo) {
     return (
       <div className="relative">
@@ -57,10 +49,12 @@ function AssetPreview({ item }: { item: MediaItem }) {
     );
   }
 
-  // Audio: intentional audio placeholder
   if (isAudio) {
     return (
-      <div className="w-full bg-card border border-border rounded-md flex items-center justify-center" style={{ aspectRatio: "16/9" }}>
+      <div
+        className="w-full bg-card border border-border rounded-md flex items-center justify-center"
+        style={{ aspectRatio: "16/9" }}
+      >
         <div className="text-center space-y-1">
           <Music size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground" />
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Audio</p>
@@ -71,7 +65,10 @@ function AssetPreview({ item }: { item: MediaItem }) {
 
   if (isDoc) {
     return (
-      <div className="w-full bg-card border border-border rounded-md flex items-center justify-center" style={{ aspectRatio: "16/9" }}>
+      <div
+        className="w-full bg-card border border-border rounded-md flex items-center justify-center"
+        style={{ aspectRatio: "16/9" }}
+      >
         <div className="text-center space-y-1">
           <FileText size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground" />
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Document</p>
@@ -80,7 +77,6 @@ function AssetPreview({ item }: { item: MediaItem }) {
     );
   }
 
-  // Image or unknown: MediaVisual handles gracefully (shows title fallback if no poster)
   return (
     <MediaVisual
       playbackId={item.storage_ref ?? undefined}
@@ -99,44 +95,72 @@ export default function GalleryFilterClient({ items }: Props) {
     : items;
 
   return (
-    <div className="space-y-6">
-      {/* Filter tabs */}
-      <div className="flex items-center gap-1 border-b border-border overflow-x-auto">
-        {TABS.map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={[
-              "shrink-0 px-4 py-2.5 text-sm font-medium transition-colors border-b-2 -mb-px",
-              tab === t ? "text-foreground" : "border-transparent text-muted-foreground hover:text-foreground",
-            ].join(" ")}
-            style={tab === t ? { borderBottomColor: "var(--accent-mv)" } : undefined}
-          >
-            {t}
-          </button>
-        ))}
+    <div>
+      {/* Header band */}
+      <div className="border-b border-border bg-card/20">
+        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
+              The full catalogue
+            </p>
+            <h1
+              className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
+              style={{ fontFamily: "var(--font-display, inherit)" }}
+            >
+              Media Gallery
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Images, videos, audio and documents from across the universes.
+            </p>
+          </div>
+          {/* Filter tabs inline on the right */}
+          <div className="flex items-center gap-0.5 shrink-0 overflow-x-auto scrollbar-hidden">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={[
+                  "shrink-0 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                  tab === t
+                    ? "bg-accent text-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40",
+                ].join(" ")}
+              >
+                {t}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
-      {filtered.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No {tab === "All Media" ? "" : tab.toLowerCase() + " "}assets in the operational scope.</p>
-      ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-          {filtered.map((item) => (
-            <div key={item.asset_id} className="space-y-2">
-              <AssetPreview item={item} />
-              <div className="space-y-0.5 px-0.5">
-                <p className="text-xs text-foreground truncate">
-                  {item.title ?? item.work_title ?? <span className="italic text-muted-foreground">void</span>}
-                </p>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50">
-                  {item.asset_type ?? "unknown"}
-                </p>
-                <RightsState rights_holder_ref={item.rights_holder_ref} rights_basis={item.rights_basis} />
+      {/* Grid */}
+      <div className="mx-auto max-w-7xl px-6 py-10">
+        {filtered.length === 0 ? (
+          <div className="rounded-xl border border-border bg-card/40 px-8 py-12 text-center">
+            <p className="text-sm text-muted-foreground">
+              No {tab === "All Media" ? "" : tab.toLowerCase() + " "}assets yet.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+            {filtered.map((item) => (
+              <div key={item.asset_id} className="space-y-2">
+                <AssetPreview item={item} />
+                <div className="space-y-0.5 px-0.5">
+                  <p className="text-xs text-foreground truncate">
+                    {item.title ?? item.work_title ?? (
+                      <span className="italic text-muted-foreground">Untitled</span>
+                    )}
+                  </p>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50">
+                    {item.asset_type ?? "unknown"}
+                  </p>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      )}
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }

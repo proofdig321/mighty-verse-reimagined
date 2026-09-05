@@ -37,7 +37,7 @@ async function getData(): Promise<MomentItem[]> {
     masterIds.length ? svc.from("master").select("master_id, canonical_type, parent_master_id").in("master_id", masterIds) : Promise.resolve({ data: [] }),
   ]);
 
-  const parentIds = (masters ?? []).map((master) => master.parent_master_id).filter(Boolean);
+  const parentIds = (masters ?? []).map((m) => m.parent_master_id).filter(Boolean);
   const [{ data: parentMasters }, { data: parentPresentations }] = parentIds.length
     ? await Promise.all([
         svc.from("master").select("master_id, canonical_type").in("master_id", parentIds),
@@ -53,18 +53,14 @@ async function getData(): Promise<MomentItem[]> {
   const placeholderSet = new Set(
     (assets ?? []).filter((a) => a.storage_ref?.startsWith("seed:placeholder:")).map((a) => a.asset_id)
   );
-
   const playbackMap = new Map<string, string>();
-  for (const binding of bindings ?? []) {
-    const storageRef = (assets ?? []).find((asset) => asset.asset_id === binding.asset_id)?.storage_ref;
-    if (storageRef && !storageRef.startsWith("seed:placeholder:")) playbackMap.set(binding.projection_id, storageRef);
+  for (const b of bindings ?? []) {
+    const ref = (assets ?? []).find((a) => a.asset_id === b.asset_id)?.storage_ref;
+    if (ref && !ref.startsWith("seed:placeholder:")) playbackMap.set(b.projection_id, ref);
   }
-
   const hasMediaMap = new Map<string, boolean>();
   for (const b of bindings ?? []) {
-    if (!hasMediaMap.has(b.projection_id)) {
-      hasMediaMap.set(b.projection_id, !placeholderSet.has(b.asset_id));
-    }
+    if (!hasMediaMap.has(b.projection_id)) hasMediaMap.set(b.projection_id, !placeholderSet.has(b.asset_id));
   }
 
   return projections.map((p) => ({
@@ -79,11 +75,11 @@ async function getData(): Promise<MomentItem[]> {
     canonical_type: (masters ?? []).find((m) => m.master_id === p.master_id)?.canonical_type ?? null,
     context_title: (() => {
       const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;
-      return (parentPresentations ?? []).find((presentation) => presentation.master_id === parentId)?.title ?? null;
+      return (parentPresentations ?? []).find((pp) => pp.master_id === parentId)?.title ?? null;
     })(),
     context_type: (() => {
       const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;
-      return (parentMasters ?? []).find((parent) => parent.master_id === parentId)?.canonical_type ?? null;
+      return (parentMasters ?? []).find((pm) => pm.master_id === parentId)?.canonical_type ?? null;
     })(),
     context_href: (() => {
       const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;
@@ -94,24 +90,10 @@ async function getData(): Promise<MomentItem[]> {
 
 export default async function MomentsPage() {
   const moments = await getData();
-
   return (
     <div className="public-page">
       <PageTopNav activePath="/moments" />
-      <div className="public-hero">
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Creative artifacts</p>
-          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
-            All Moments
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Discover and collect creative moments from across all universes.
-          </p>
-        </div>
-      </div>
-      <div className="mx-auto max-w-7xl px-6 py-12">
-        <MomentsFilterClient moments={moments} />
-      </div>
+      <MomentsFilterClient moments={moments} />
     </div>
   );
 }
