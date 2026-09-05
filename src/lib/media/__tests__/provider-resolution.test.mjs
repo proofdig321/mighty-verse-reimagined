@@ -264,8 +264,41 @@ test("timestampsToCandidates: low changeScore produces low confidence", () => {
 
 // ─── detectBoundaryTimestamps ─────────────────────────────────────────────────
 
-function detectBoundaryTimestamps(deltas, threshold = 0.15) {
-  return deltas.filter(d => d.changeScore >= threshold).map(d => d.fromMs);
+// Mirrors the improved implementation in intelligence.ts
+function detectBoundaryTimestamps(deltas, options = {}) {
+  const {
+    threshold = 0.15,
+    minSceneDurationMs = 3000,
+    localMaxima = true,
+    localMaximaWindow = 1,
+  } = options;
+
+  let candidates = deltas.filter(d => d.changeScore >= threshold);
+
+  if (localMaxima && candidates.length > 1) {
+    candidates = candidates.filter((d, i) => {
+      const prev = candidates[i - localMaximaWindow];
+      const next = candidates[i + localMaximaWindow];
+      const higherThanPrev = !prev || d.changeScore >= prev.changeScore;
+      const higherThanNext = !next || d.changeScore >= next.changeScore;
+      return higherThanPrev && higherThanNext;
+    });
+  }
+
+  if (minSceneDurationMs > 0 && candidates.length > 1) {
+    const kept = [candidates[0]];
+    for (let i = 1; i < candidates.length; i++) {
+      const last = kept[kept.length - 1];
+      if (candidates[i].fromMs - last.fromMs >= minSceneDurationMs) {
+        kept.push(candidates[i]);
+      } else if (candidates[i].changeScore > last.changeScore) {
+        kept[kept.length - 1] = candidates[i];
+      }
+    }
+    candidates = kept;
+  }
+
+  return candidates.map(d => d.fromMs);
 }
 
 test("detectBoundaryTimestamps: returns timestamps above threshold", () => {
@@ -274,7 +307,8 @@ test("detectBoundaryTimestamps: returns timestamps above threshold", () => {
     { fromMs: 10000, toMs: 15000, changeScore: 0.30 },
     { fromMs: 15000, toMs: 20000, changeScore: 0.50 },
   ];
-  const result = detectBoundaryTimestamps(deltas, 0.15);
+  // With localMaxima=true and minSceneDurationMs=3000, both are peaks and far enough apart
+  const result = detectBoundaryTimestamps(deltas, { threshold: 0.15, localMaxima: false, minSceneDurationMs: 0 });
   assert.deepEqual(result, [10000, 15000]);
 });
 
@@ -283,7 +317,7 @@ test("detectBoundaryTimestamps: returns empty when all below threshold", () => {
     { fromMs: 5000, toMs: 10000, changeScore: 0.05 },
     { fromMs: 10000, toMs: 15000, changeScore: 0.10 },
   ];
-  const result = detectBoundaryTimestamps(deltas, 0.15);
+  const result = detectBoundaryTimestamps(deltas, { threshold: 0.15 });
   assert.equal(result.length, 0);
 });
 
@@ -292,8 +326,40 @@ test("detectBoundaryTimestamps: custom threshold respected", () => {
     { fromMs: 5000, toMs: 10000, changeScore: 0.20 },
     { fromMs: 10000, toMs: 15000, changeScore: 0.60 },
   ];
-  const result = detectBoundaryTimestamps(deltas, 0.50);
+  const result = detectBoundaryTimestamps(deltas, { threshold: 0.50, localMaxima: false, minSceneDurationMs: 0 });
   assert.deepEqual(result, [10000]);
+});
+
+test("detectBoundaryTimestamps: local maxima suppresses non-peak", () => {
+  // Three candidates: 0.20, 0.50, 0.30 — middle is the peak
+  const deltas = [
+    { fromMs: 5000, toMs: 10000, changeScore: 0.20 },
+    { fromMs: 10000, toMs: 15000, changeScore: 0.50 },
+    { fromMs: 15000, toMs: 20000, changeScore: 0.30 },
+  ];
+  const result = detectBoundaryTimestamps(deltas, { threshold: 0.15, localMaxima: true, minSceneDurationMs: 0 });
+  // Only the peak (10000) should survive
+  assert.deepEqual(result, [10000]);
+});
+
+test("detectBoundaryTimestamps: min duration suppresses close boundaries", () => {
+  // Two boundaries 1s apart — below 3s minimum
+  const deltas = [
+    { fromMs: 10000, toMs: 11000, changeScore: 0.30 },
+    { fromMs: 11000, toMs: 12000, changeScore: 0.40 },
+  ];
+  const result = detectBoundaryTimestamps(deltas, { threshold: 0.15, localMaxima: false, minSceneDurationMs: 3000 });
+  // Only the stronger one (11000) should survive
+  assert.deepEqual(result, [11000]);
+});
+
+test("detectBoundaryTimestamps: min duration keeps boundaries far enough apart", () => {
+  const deltas = [
+    { fromMs: 5000, toMs: 10000, changeScore: 0.30 },
+    { fromMs: 40000, toMs: 45000, changeScore: 0.40 },
+  ];
+  const result = detectBoundaryTimestamps(deltas, { threshold: 0.15, localMaxima: false, minSceneDurationMs: 3000 });
+  assert.deepEqual(result, [5000, 40000]);
 });
 
 console.log("Provider resolution and scene candidate tests: all passed");

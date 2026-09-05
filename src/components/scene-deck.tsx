@@ -11,6 +11,9 @@ export type SceneDeckItem = {
   title: string | null;
   href?: string;
   playbackId?: string | null;
+  provider?: string | null;
+  startMs?: number | null;
+  endMs?: number | null;
 };
 
 type Props = {
@@ -21,6 +24,7 @@ type Props = {
   onSelect?: (id: string) => void;
   faceDownUntilSelected?: boolean;
   hideHeader?: boolean;
+  onScenePlay?: (scene: SceneDeckItem) => void;
 };
 
 function shuffleItems(items: SceneDeckItem[]) {
@@ -91,6 +95,7 @@ export default function SceneDeck({
   onSelect,
   faceDownUntilSelected = true,
   hideHeader = false,
+  onScenePlay,
 }: Props) {
   const [items, setItems] = useState(scenes);
   // Set of IDs the user has explicitly revealed
@@ -198,6 +203,7 @@ export default function SceneDeck({
         {isRevealed && scene.playbackId ? (
           <MediaVisual
             playbackId={scene.playbackId}
+            provider={scene.provider}
             title={scene.title ?? "Scene"}
             className="absolute inset-0 h-full w-full border-0"
           />
@@ -272,6 +278,7 @@ export default function SceneDeck({
         {isRevealed && scene.playbackId ? (
           <MediaVisual
             playbackId={scene.playbackId}
+            provider={scene.provider}
             title={scene.title ?? "Scene"}
             className="absolute inset-0 h-full w-full border-0"
           />

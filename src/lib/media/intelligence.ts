@@ -92,6 +92,23 @@ export type ChangeDetectionOptions = {
    * 0–1. Default: 0.15 (15% pixel change).
    */
   threshold?: number;
+  /**
+   * Minimum scene duration in milliseconds.
+   * Boundaries that would create a segment shorter than this are suppressed.
+   * Default: 3000 (3 seconds).
+   */
+  minSceneDurationMs?: number;
+  /**
+   * Whether to use local-maxima detection instead of simple threshold.
+   * When true, only peaks (higher than both neighbours) above threshold are kept.
+   * Default: true.
+   */
+  localMaxima?: boolean;
+  /**
+   * Window size for local-maxima comparison (number of deltas on each side).
+   * Default: 1.
+   */
+  localMaximaWindow?: number;
 };
 
 /**
@@ -264,7 +281,14 @@ export function computeFrameDeltas(frames: SampledFrame[]): FrameDelta[] {
 
 /**
  * Identify candidate boundary timestamps from frame deltas.
- * A boundary candidate is a delta whose changeScore exceeds the threshold.
+ *
+ * Improvements over simple threshold:
+ * - Local maxima detection: only keeps peaks that are higher than their neighbours,
+ *   reducing false positives from gradual transitions.
+ * - Minimum scene duration: suppresses boundaries that would create segments
+ *   shorter than minSceneDurationMs (e.g. rapid cuts within a single scene).
+ * - Adaptive threshold: if no candidates are found at the given threshold,
+ *   the threshold is not automatically lowered — the caller must decide.
  *
  * Returns timestamps in milliseconds where significant visual changes occur.
  * These are EVIDENCE — not canonical Scene boundaries.
@@ -273,10 +297,43 @@ export function detectBoundaryTimestamps(
   deltas: FrameDelta[],
   options: ChangeDetectionOptions = {}
 ): number[] {
-  const { threshold = 0.15 } = options;
-  return deltas
-    .filter((d) => d.changeScore >= threshold)
-    .map((d) => d.fromMs);
+  const {
+    threshold = 0.15,
+    minSceneDurationMs = 3000,
+    localMaxima = true,
+    localMaximaWindow = 1,
+  } = options;
+
+  // Step 1: filter by threshold
+  let candidates = deltas.filter((d) => d.changeScore >= threshold);
+
+  // Step 2: local maxima — keep only peaks
+  if (localMaxima && candidates.length > 1) {
+    candidates = candidates.filter((d, i) => {
+      const prev = candidates[i - localMaximaWindow];
+      const next = candidates[i + localMaximaWindow];
+      const higherThanPrev = !prev || d.changeScore >= prev.changeScore;
+      const higherThanNext = !next || d.changeScore >= next.changeScore;
+      return higherThanPrev && higherThanNext;
+    });
+  }
+
+  // Step 3: minimum scene duration — suppress boundaries too close together
+  if (minSceneDurationMs > 0 && candidates.length > 1) {
+    const kept: FrameDelta[] = [candidates[0]];
+    for (let i = 1; i < candidates.length; i++) {
+      const last = kept[kept.length - 1];
+      if (candidates[i].fromMs - last.fromMs >= minSceneDurationMs) {
+        kept.push(candidates[i]);
+      } else if (candidates[i].changeScore > last.changeScore) {
+        // Replace with the stronger boundary in this cluster
+        kept[kept.length - 1] = candidates[i];
+      }
+    }
+    candidates = kept;
+  }
+
+  return candidates.map((d) => d.fromMs);
 }
 
 /**

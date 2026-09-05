@@ -193,47 +193,37 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
 
-    // Resolve playback URL — Mux assets use stream.mux.com, Livepeer assets use the proxy
-    const hlsUrl = playbackId.startsWith("http")
-      ? playbackId
-      : playbackId.match(/^[a-zA-Z0-9]{8,}[a-zA-Z0-9]{4,}$/)
-      ? `https://stream.mux.com/${playbackId}.m3u8`
-      : null;
+    // Resolve playback URL — use persisted provider field, never ID-shape heuristics
+    const provider = binding.media_asset?.provider;
 
-    if (!hlsUrl) {
-      // Livepeer fallback via proxy
+    function loadHls(hlsUrl: string) {
+      if (!video) return;
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = hlsUrl;
+      } else {
+        import("hls.js").then(({ default: Hls }) => {
+          if (!Hls.isSupported()) { setMessage("Error: This browser cannot play the media stream."); return; }
+          const hlsPlayer = new Hls();
+          hlsRef.current = hlsPlayer;
+          hlsPlayer.loadSource(hlsUrl);
+          hlsPlayer.attachMedia(video!);
+        });
+      }
+    }
+
+    if (provider === "mux") {
+      loadHls(`https://stream.mux.com/${playbackId}.m3u8`);
+    } else {
+      // Livepeer: resolve via proxy (historical assets)
       fetch(`/api/livepeer/playback/${playbackId}`)
         .then(response => response.ok ? response.json() : null)
         .then(info => {
           const hls = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl");
           if (!hls) throw new Error("No playable HLS source returned.");
           setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-          if (video.canPlayType("application/vnd.apple.mpegurl")) {
-            video.src = hls.url;
-          } else {
-            import("hls.js").then(({ default: Hls }) => {
-              if (!Hls.isSupported()) throw new Error("This browser cannot play the media stream.");
-              const hlsPlayer = new Hls();
-              hlsRef.current = hlsPlayer;
-              hlsPlayer.loadSource(hls.url);
-              hlsPlayer.attachMedia(video);
-            });
-          }
+          loadHls(hls.url);
         })
         .catch(error => setMessage(`Error: ${error instanceof Error ? error.message : "Unable to load preview"}`));
-      return;
-    }
-
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = hlsUrl;
-    } else {
-      import("hls.js").then(({ default: Hls }) => {
-        if (!Hls.isSupported()) { setMessage("Error: This browser cannot play the media stream."); return; }
-        const hlsPlayer = new Hls();
-        hlsRef.current = hlsPlayer;
-        hlsPlayer.loadSource(hlsUrl);
-        hlsPlayer.attachMedia(video);
-      });
     }
 
     return () => {

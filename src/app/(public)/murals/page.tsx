@@ -11,6 +11,7 @@ type MuralItem = {
   title: string | null;
   artist: string | null;
   playback_id: string | null;
+  provider: string | null;
 };
 
 async function getData(): Promise<MuralItem[]> {
@@ -42,7 +43,7 @@ async function getData(): Promise<MuralItem[]> {
     : { data: [] };
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
-    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
+    ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", assetIds)
     : { data: [] };
 
   return masters.map((m) => ({
@@ -54,6 +55,11 @@ async function getData(): Promise<MuralItem[]> {
       const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
       const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
       return ref && !ref.startsWith("seed:placeholder:") ? ref : null;
+    })(),
+    provider: (() => {
+      const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
+      const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
+      return (assets ?? []).find((a) => a.asset_id === assetId)?.provider ?? null;
     })(),
   }));
 }
@@ -104,7 +110,7 @@ export default async function MuralsPage() {
             {murals.map((m) => (
               <Link key={m.master_id} href={`/worlds/${m.master_id}`} className="artifact-card group">
                 {m.playback_id ? (
-                  <MediaVisual playbackId={m.playback_id} title={m.title ?? "Mural"} aspectRatio="16/9" />
+                  <MediaVisual playbackId={m.playback_id} provider={m.provider} title={m.title ?? "Mural"} aspectRatio="16/9" />
                 ) : (
                   <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="16/9" />
                 )}

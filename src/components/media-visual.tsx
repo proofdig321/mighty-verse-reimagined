@@ -4,26 +4,34 @@ import { useEffect, useState } from "react";
 
 type Props = {
   playbackId?: string | null;
+  /** Provider name: "mux" | "livepeer" | null. Defaults to "livepeer" for historical assets. */
+  provider?: string | null;
   title: string;
   className?: string;
   aspectRatio?: "1/1" | "16/9";
 };
 
-export default function MediaVisual({ playbackId, title, className = "", aspectRatio = "16/9" }: Props) {
+export default function MediaVisual({ playbackId, provider, title, className = "", aspectRatio = "16/9" }: Props) {
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!playbackId) return;
     let active = true;
-    fetch(`/api/livepeer/playback/${playbackId}`)
-      .then(response => response.ok ? response.json() : null)
-      .then(info => {
-        const hlsUrl = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl")?.url;
-        if (active && hlsUrl) setPosterUrl(hlsUrl.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-      })
-      .catch(() => null);
+    const resolvedProvider = provider ?? "livepeer";
+    if (resolvedProvider === "mux") {
+      // Mux thumbnail: use image.mux.com
+      if (active) setPosterUrl(`https://image.mux.com/${playbackId}/thumbnail.jpg?time=0`);
+    } else {
+      fetch(`/api/livepeer/playback/${playbackId}`)
+        .then(response => response.ok ? response.json() : null)
+        .then(info => {
+          const hlsUrl = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl")?.url;
+          if (active && hlsUrl) setPosterUrl(hlsUrl.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+        })
+        .catch(() => null);
+    }
     return () => { active = false; };
-  }, [playbackId]);
+  }, [playbackId, provider]);
 
   return (
     <div className={`relative overflow-hidden bg-card border border-border ${className}`} style={{ aspectRatio }}>

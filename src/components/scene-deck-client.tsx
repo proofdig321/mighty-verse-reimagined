@@ -7,6 +7,9 @@ type SceneItem = {
   title: string | null;
   projection_id: string | null;
   playback_id?: string | null;
+  provider?: string | null;
+  start_ms?: number | null;
+  end_ms?: number | null;
 };
 
 type Props = {
@@ -27,6 +30,9 @@ export default function SceneDeckClient({ scenes, faceDownUntilSelected, label, 
         title: scene.title,
         href: scene.projection_id ? `/moments/${scene.projection_id}` : undefined,
         playbackId: scene.playback_id,
+        provider: scene.provider,
+        startMs: scene.start_ms,
+        endMs: scene.end_ms,
       }))}
     />
   );
