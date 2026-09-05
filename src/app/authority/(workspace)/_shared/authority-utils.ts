@@ -1,6 +1,45 @@
 // Authority-wide utilities, constants, and business logic.
 // Single source of truth — import from here, never redefine locally.
 
+// ─── Shared AuthorityData type ───────────────────────────────────────────────
+// Single definition consumed by authority-client.tsx, authority-catalogue-client.tsx,
+// and any future dashboard components that need the full authority payload.
+
+export type AuthorityMediaAsset = {
+  asset_id: string;
+  asset_type: string;
+  storage_ref: string;
+  format: string | null;
+  duration_ms: number | null;
+  created_at: string;
+  title: string | null;
+  master_id: string | null;
+};
+
+export type AuthorityData = {
+  authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
+  masters: { master_id: string; canonical_type: string; parent_master_id: string | null; current_state_id: string | null; created_at: string }[];
+  states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
+  projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
+  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; realization_id: string | null; media_asset: { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null } | null }[];
+  presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
+  projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
+  realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
+  participants: { participant_id: string; label: string }[];
+  mediaAssets: AuthorityMediaAsset[];
+  mediaIntakes: { intake_id: string; asset_id: string | null; work_type: string; title: string; visibility: string; search_status: string; source_type: string; isrc_status: string; [key: string]: unknown }[];
+  mediaIntakeCredits: { intake_id: string; participant_id: string; role: string; display_order: number }[];
+};
+
+// ─── Timeline formatting ──────────────────────────────────────────────────────
+// Single canonical implementation — import from here, never redefine locally.
+
+export function formatTimelineMs(value: number | null): string {
+  if (value == null) return "--:--.---";
+  const totalSeconds = Math.floor(value / 1000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
+}
+
 // ─── Constants ────────────────────────────────────────────────────────────────
 
 export const WORK_TYPE_LABELS: Record<string, string> = {

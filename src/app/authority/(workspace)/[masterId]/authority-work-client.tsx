@@ -7,12 +7,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   api, responseData, shortId, operatorError,
   WORK_TYPE_LABELS, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS,
-  getWorkStatus, getJourneySteps, getNextAction,
+  getWorkStatus, getJourneySteps, getNextAction, formatTimelineMs,
 } from "../_shared/authority-utils";
 import {
   PresentationPanel, ProjectionPresentationPanel,
   RealizationPanel, CreateExperiencePanel,
-  TimelineEditor, formatTimelineMs,
+  TimelineEditor,
 } from "../_shared/authority-panels";
 
 // ─── Types ────────────────────────────────────────────────────────────────────

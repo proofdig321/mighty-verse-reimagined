@@ -9,22 +9,10 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import {
   api, shortId, WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS,
-  getWorkStatus, getJourneySteps, type WorkStatus, type JourneyStep,
+  getWorkStatus, getJourneySteps, type WorkStatus, type JourneyStep, type AuthorityData,
 } from "./_shared/authority-utils";
 
-type AuthorityData = {
-  authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
-  masters: { master_id: string; canonical_type: string; parent_master_id: string | null; current_state_id: string | null; created_at: string }[];
-  states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
-  projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
-  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; realization_id: string | null; media_asset: { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null } | null }[];
-  presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
-  projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
-  realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
-  participants: { participant_id: string; label: string }[];
-  mediaAssets: { asset_id: string; asset_type: string; storage_ref: string; format: string | null; duration_ms: number | null; created_at: string; title: string | null; master_id: string | null }[];
-  mediaIntakes?: { intake_id: string; asset_id: string | null; work_type: string; title: string }[];
-};
+// AuthorityData is imported from authority-utils — single canonical definition.
 
 type WorkRecord = {
   master: AuthorityData["masters"][number];
@@ -231,12 +219,12 @@ export default function AuthorityClient() {
             { step: "02", label: "Upload media", sub: "Send video to Livepeer", href: "/authority/media/intake" },
             { step: "03", label: "Rights review", sub: "Confirm provenance", href: "/authority/proof-of-rights" },
           ].map(item => (
-            <a key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
+            <Link key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
               <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">{item.step}</span>
               <p className="mt-2 text-sm font-medium text-foreground">{item.label}</p>
               <p className="mt-0.5 text-xs text-muted-foreground/70">{item.sub}</p>
               <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">Open workflow <ArrowRight size={12} /></span>
-            </a>
+            </Link>
           ))}
         </div>
       </section>
@@ -308,13 +296,13 @@ export default function AuthorityClient() {
           { label: "Scenes",           sub: "Canonical Scenes",               href: "/authority/scenes" },
           { label: "Creative Moments", sub: "Canonical Creative Moments",     href: "/authority/creative-moments" },
         ].map(({ label, sub, href }) => (
-          <a key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
+          <Link key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
             <div>
               <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
               <p className="mt-0.5 text-xs text-muted-foreground/60">{sub}</p>
             </div>
             <ArrowRight size={13} className="text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
-          </a>
+          </Link>
         ))}
       </div>
 
@@ -326,13 +314,13 @@ export default function AuthorityClient() {
           { label: "Participants",    sub: "People and roles",         href: "/authority/participants" },
           { label: "Proof of Rights", sub: "Rights and provenance",    href: "/authority/proof-of-rights" },
         ].map(({ label, sub, href }) => (
-          <a key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
+          <Link key={label} href={href} className="group bg-card px-5 py-4 flex items-center justify-between hover:bg-accent/30 transition-colors">
             <div>
               <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
               <p className="mt-0.5 text-xs text-muted-foreground/60">{sub}</p>
             </div>
             <ArrowRight size={13} className="text-muted-foreground/30 group-hover:text-muted-foreground transition-colors" />
-          </a>
+          </Link>
         ))}
       </div>
 

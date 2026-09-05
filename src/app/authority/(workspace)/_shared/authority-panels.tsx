@@ -4,15 +4,11 @@ import { useEffect, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { api, responseData, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS, type JourneyStep } from "./authority-utils";
+import { api, responseData, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS, formatTimelineMs, type JourneyStep } from "./authority-utils";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-export function formatTimelineMs(value: number | null) {
-  if (value == null) return "--:--.---";
-  const totalSeconds = Math.floor(value / 1000);
-  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
-}
+// formatTimelineMs is exported from authority-utils — imported above, not redefined here.
 
 // ─── StatusBadge ─────────────────────────────────────────────────────────────
 

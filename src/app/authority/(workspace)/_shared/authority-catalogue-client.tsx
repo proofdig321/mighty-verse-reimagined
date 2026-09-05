@@ -13,27 +13,15 @@ import {
   api, responseData, shortId, operatorError,
   WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS, PROJECTION_TYPES,
   getWorkStatus, getJourneySteps, getNextAction,
-  type WorkStatus, type JourneyStep,
+  formatTimelineMs,
+  type WorkStatus, type JourneyStep, type AuthorityData,
 } from "./authority-utils";
 import {
   StatusBadge, WorkJourney, PresentationPanel, ProjectionPresentationPanel,
   RealizationPanel, CreateExperiencePanel,
 } from "./authority-panels";
 
-type AuthorityData = {
-  authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
-  masters: { master_id: string; canonical_type: string; parent_master_id: string | null; current_state_id: string | null; created_at: string }[];
-  states: { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string }[];
-  projections: { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string }[];
-  bindings: { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; realization_id: string | null; media_asset: { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null } | null }[];
-  presentations: { master_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
-  projectionPresentations: { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null }[];
-  realizations: { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null }[];
-  participants: { participant_id: string; label: string }[];
-  mediaAssets: { asset_id: string; asset_type: string; storage_ref: string; format: string | null; duration_ms: number | null; created_at: string; title: string | null; master_id: string | null }[];
-  mediaIntakes: IntakeRecord[];
-  mediaIntakeCredits: { intake_id: string; participant_id: string; role: string; display_order: number }[];
-};
+// AuthorityData is imported from authority-utils — single canonical definition.
 
 const CANONICAL_TYPES = ["universe", "creative-moment", "mural", "scene", "interpretation", "other"] as const;
 
@@ -164,11 +152,7 @@ type TimelineEditorProps = {
   onCancel: () => void;
 };
 
-function formatTimelineMs(value: number | null) {
-  if (value == null) return "--:--.---";
-  const totalSeconds = Math.floor(value / 1000);
-  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
-}
+// formatTimelineMs is imported from authority-utils — single canonical implementation.
 
 function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -867,7 +851,7 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
         </CardContent></Card>
       )}
 
-      {mediaIntakes.length > 0 && <section className="space-y-3"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Saved media intake</p><div className="divide-y divide-border rounded-lg border border-border bg-card">{mediaIntakes.map(intake => <div key={intake.intake_id} className="flex items-center justify-between gap-3 px-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{intake.title}</p><p className="text-xs text-muted-foreground">{intake.work_type} · {intake.visibility} · {intake.search_status}</p></div><Button size="sm" variant="outline" onClick={() => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(intake); setShowIntake(true); }}>Edit metadata</Button></div>)}</div></section>}
+      {mediaIntakes.length > 0 && <section className="space-y-3"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Saved media intake</p><div className="divide-y divide-border rounded-lg border border-border bg-card">{mediaIntakes.map(intake => <div key={intake.intake_id} className="flex items-center justify-between gap-3 px-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{intake.title}</p><p className="text-xs text-muted-foreground">{intake.work_type} · {intake.visibility} · {intake.search_status}</p></div><Button size="sm" variant="outline" onClick={() => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(intake as IntakeRecord); setShowIntake(true); }}>Edit metadata</Button></div>)}</div></section>}
       {showIntake && <MediaIntakePanel intake={editingIntake} participants={participants} onDone={async () => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(undefined); setShowIntake(false); await load(); }} onCancel={() => { setEditingIntake(undefined); setShowIntake(false); }} />}
       {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
     </div>
