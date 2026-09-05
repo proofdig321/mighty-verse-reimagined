@@ -39,8 +39,8 @@ async function resolveMedia(svc: ReturnType<typeof getServiceClient>, projection
     .single();
   if (!binding) return null;
   const [{ data: asset }, { data: variant }] = await Promise.all([
-    svc.from("media_asset").select("storage_ref").eq("asset_id", binding.asset_id).single(),
-    svc.from("delivery_variant").select("delivery_format").eq("asset_id", binding.asset_id).single(),
+    svc.from("media_asset").select("storage_ref, provider, media_class").eq("asset_id", binding.asset_id).single(),
+    svc.from("delivery_variant").select("delivery_format, endpoint_ref").eq("asset_id", binding.asset_id).single(),
   ]);
   const isPlaceholder = asset?.storage_ref?.startsWith("seed:placeholder:") ?? true;
   return {
@@ -48,6 +48,9 @@ async function resolveMedia(svc: ReturnType<typeof getServiceClient>, projection
     access_level: binding.access_level,
     delivery_format: variant?.delivery_format ?? "hls",
     playback_id: isPlaceholder ? null : (asset?.storage_ref ?? null),
+    provider: asset?.provider ?? null,
+    media_class: asset?.media_class ?? null,
+    endpoint_ref: variant?.endpoint_ref ?? null,
     is_placeholder: isPlaceholder,
     start_ms: binding.start_ms ?? null,
     end_ms: binding.end_ms ?? null,

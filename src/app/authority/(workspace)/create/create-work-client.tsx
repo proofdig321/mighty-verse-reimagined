@@ -148,7 +148,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
           master_id: masterId,
           intake_id: null,
         });
-        if (session.error || !session.upload_url || !session.asset_id) {
+        if (session.error || !session.upload_url || !session.session_id) {
           throw new Error(session.error ?? "Upload session failed");
         }
 
@@ -166,25 +166,24 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
         setStatusLine("Processing video…");
         let phase = "uploading";
-        for (let i = 0; phase !== "ready" && i < 120; i++) {
-          await new Promise((r) => setTimeout(r, 3000));
-          const s = await fetch(`/api/authority/media/upload-session/${session.asset_id}`).then(responseData);
+        for (let i = 0; phase !== "ingested" && phase !== "ready" && i < 60; i++) {
+          await new Promise((r) => setTimeout(r, 5000));
+          const s = await fetch(`/api/authority/media/upload-session/${session.session_id}`).then(responseData);
           if (s.error) throw new Error(s.error);
           phase = s.phase ?? "unknown";
-          if (phase === "failed") throw new Error("Livepeer processing failed");
+          if (phase === "failed") throw new Error("Media processing failed");
           setStatusLine(`Processing video… (${phase})`);
         }
-        if (phase !== "ready") throw new Error("Video processing timed out");
+        if (phase !== "ingested" && phase !== "ready") throw new Error("Video processing timed out");
 
         setStatusLine("Attaching media…");
         const attach = await api("/api/authority/media", {
           projection_id: projectionId,
           master_id: masterId,
-          livepeer_asset_id: session.asset_id,
+          session_id: session.session_id,
           rights_holder_ref: rightsHolderRef,
           rights_basis: rightsBasis,
           intake_id: null,
-          session_id: session.session_id ?? null,
         });
         if (attach.error) throw new Error(attach.error);
       }

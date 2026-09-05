@@ -121,7 +121,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
         setBusy(true); setMsg(null);
         try {
           const session = await api("/api/authority/media/upload-session", { name: file.name, projection_id: projId, master_id: masterId, intake_id: intakeId ?? null });
-          if (session.error || !session.upload_url || !session.asset_id) throw new Error(session.error ?? "Upload session failed");
+          if (session.error || !session.upload_url || !session.session_id) throw new Error(session.error ?? "Upload session failed");
           await new Promise<void>((resolve, reject) => {
             const xhr = new XMLHttpRequest();
             xhr.upload.onprogress = e => { if (e.lengthComputable) setProgress(Math.round(e.loaded / e.total * 100)); };
@@ -130,20 +130,20 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
             xhr.open("PUT", session.upload_url);
             xhr.send(file);
           });
-          setMsg("Uploading… processing with Livepeer.");
+          setMsg("Uploading… processing with Mux.");
           let phase = "uploading";
-          for (let i = 0; phase !== "ready" && i < 120; i++) {
-            await new Promise(r => setTimeout(r, 3000));
-            const s = await fetch(`/api/authority/media/upload-session/${session.asset_id}`).then(responseData);
+          for (let i = 0; phase !== "ingested" && phase !== "ready" && i < 60; i++) {
+            await new Promise(r => setTimeout(r, 5000));
+            const s = await fetch(`/api/authority/media/upload-session/${session.session_id}`).then(responseData);
             if (s.error) throw new Error(s.error);
             phase = s.phase ?? "unknown";
-            if (phase === "failed") throw new Error("Livepeer processing failed");
+            if (phase === "failed") throw new Error("Media processing failed");
             setMsg(`Processing… (${phase})`);
           }
-          if (phase !== "ready") throw new Error("Processing timed out");
-          const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, livepeer_asset_id: session.asset_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis, intake_id: intakeId ?? null, session_id: session.session_id ?? null });
+          if (phase !== "ingested" && phase !== "ready") throw new Error("Processing timed out");
+          const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, session_id: session.session_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis, intake_id: intakeId ?? null });
           if (attach.error) throw new Error(attach.error);
-          setMsg("Video attached.");
+          setMsg("Media attached.");
           onDone();
         } catch (err) {
           setMsg(operatorError(err instanceof Error ? err.message : err, { workTitle, operation: "Attach video" }));

@@ -101,7 +101,7 @@ export async function GET(
   if (binding) {
     const { data: asset } = await svc
       .from("media_asset")
-      .select("storage_ref")
+      .select("storage_ref, provider, media_class")
       .eq("asset_id", binding.asset_id)
       .single();
     const { data: variant } = await svc
@@ -115,6 +115,9 @@ export async function GET(
       access_level: binding.access_level,
       delivery_format: variant?.delivery_format ?? "hls",
       playback_id: isPlaceholder ? null : (asset?.storage_ref ?? null),
+      provider: asset?.provider ?? null,
+      media_class: asset?.media_class ?? null,
+      endpoint_ref: variant?.endpoint_ref ?? null,
       is_placeholder: isPlaceholder,
       start_ms: binding.start_ms ?? null,
       end_ms: binding.end_ms ?? null,

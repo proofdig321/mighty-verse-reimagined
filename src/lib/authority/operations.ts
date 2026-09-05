@@ -344,12 +344,39 @@ export async function createMediaRealization(
   realizationType: "original-recording" | "animated-video" | "live-performance" | "broadcast-recording" | "music-video" | "visualisation" | "other",
   rightsHolderRef: string | null,
   rightsBasis: string | null,
-  productionNotes?: string | null
+  productionNotes?: string | null,
+  sourceRealizationId?: string | null
 ): Promise<OperationResult<{ realization_id: string }>> {
   const auth = await validateAuthority(participantId, "create-canonical-state", masterId);
   if ("error" in auth) return { error: auth.error };
 
   const supabase = getServiceClient();
+
+  // Validate source_realization_id if provided
+  if (sourceRealizationId) {
+    // Verify source realization exists
+    const { data: sourceReal } = await supabase
+      .from("media_realization")
+      .select("realization_id")
+      .eq("realization_id", sourceRealizationId)
+      .maybeSingle();
+    if (!sourceReal) {
+      return { error: `Source realization not found: ${sourceRealizationId}` };
+    }
+    // Cycle detection: walk the source chain to ensure no cycle would be created.
+    // A new realization R with source S would create a cycle if S is already
+    // reachable from R — but since R doesn't exist yet, we check that S's
+    // ancestry chain does not already contain a realization that would loop.
+    // Since R is new, the only cycle risk is if sourceRealizationId eventually
+    // points back to itself (which the DB CHECK prevents for direct self-reference).
+    // For multi-hop cycles (A→B→C→A), we walk the chain from sourceRealizationId
+    // up to a reasonable depth.
+    const cycleCheck = await detectRealizationCycle(supabase, sourceRealizationId, 20);
+    if (cycleCheck) {
+      return { error: `Source realization chain contains a cycle: ${cycleCheck}` };
+    }
+  }
+
   const { data, error } = await supabase
     .from("media_realization")
     .insert({
@@ -359,6 +386,7 @@ export async function createMediaRealization(
       rights_basis: rightsBasis,
       production_notes: productionNotes ?? null,
       created_by: participantId,
+      source_realization_id: sourceRealizationId ?? null,
     })
     .select("realization_id")
     .single();
@@ -370,6 +398,38 @@ export async function createMediaRealization(
   await logOperation(auth.authority_id, "create-media-realization", data.realization_id, "media-realization", "accepted");
 
   return { data: { realization_id: data.realization_id } };
+}
+
+/**
+ * Walk the source_realization_id chain from a given realization.
+ * Returns a description of the cycle if one is detected, null if clean.
+ * Limits traversal to maxDepth to prevent runaway queries.
+ */
+async function detectRealizationCycle(
+  supabase: ReturnType<typeof getServiceClient>,
+  startId: string,
+  maxDepth: number
+): Promise<string | null> {
+  const visited = new Set<string>();
+  let currentId: string | null = startId;
+  let depth = 0;
+
+  while (currentId && depth < maxDepth) {
+    if (visited.has(currentId)) {
+      return `cycle detected at realization_id=${currentId}`;
+    }
+    visited.add(currentId);
+    // Use explicit type annotation to avoid Supabase generic inference issue
+    const rows = await supabase
+      .from("media_realization")
+      .select("source_realization_id")
+      .eq("realization_id", currentId)
+      .limit(1);
+    const row = rows.data?.[0] as { source_realization_id: string | null } | undefined;
+    currentId = row?.source_realization_id ?? null;
+    depth++;
+  }
+  return null;
 }
 
 export async function grantAuthority(

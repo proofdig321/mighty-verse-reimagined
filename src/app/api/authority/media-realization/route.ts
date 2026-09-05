@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const participantId = await getParticipantId(supabase);
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
-  const { master_id, realization_type, rights_holder_ref, rights_basis, production_notes } = await request.json();
+  const { master_id, realization_type, rights_holder_ref, rights_basis, production_notes, source_realization_id } = await request.json();
   if (!master_id || !realization_type) {
     return NextResponse.json({ error: "master_id and realization_type required" }, { status: 400 });
   }
@@ -26,7 +26,8 @@ export async function POST(request: Request) {
     realization_type,
     rights_holder_ref ?? null,
     rights_basis ?? null,
-    production_notes ?? null
+    production_notes ?? null,
+    source_realization_id ?? null
   );
 
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: 403 });
