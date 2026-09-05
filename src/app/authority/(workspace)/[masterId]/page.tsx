@@ -52,7 +52,7 @@ export default async function AuthorityWorkPage({
 
   const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }, { data: participants }] = await Promise.all([
     projectionIds.length
-      ? svc.from("projection_media_binding").select("binding_id, projection_id, binding_type, access_level, asset_id, start_ms, end_ms, realization_id, media_asset(storage_ref, asset_type, rights_holder_ref, rights_basis)").in("projection_id", projectionIds)
+      ? svc.from("projection_media_binding").select("binding_id, projection_id, binding_type, access_level, asset_id, start_ms, end_ms, realization_id, media_asset(storage_ref, asset_type, rights_holder_ref, rights_basis, provider)").in("projection_id", projectionIds)
       : Promise.resolve({ data: [] }),
     svc.from("work_presentation").select("master_id, title, description, artwork_asset_id, artwork_asset(storage_ref)").eq("master_id", masterId).maybeSingle(),
     projectionIds.length

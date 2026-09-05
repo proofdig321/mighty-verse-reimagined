@@ -5,6 +5,10 @@ export type LibraryScene = {
   title: string | null;
   muralTitle: string | null;
   playbackId: string | null;
+  /** Provider name: "mux" | "livepeer" | null */
+  provider: string | null;
+  /** Full HLS endpoint URL (for Mux). Null for Livepeer. */
+  hlsUrl: string | null;
   startMs: number | null;
   endMs: number | null;
   thumbnailUrl: string | null;
@@ -19,6 +23,8 @@ export type AssemblyItem = {
   title: string | null;
   thumbnailUrl: string | null;
   playbackId: string | null;
+  provider: string | null;
+  hlsUrl: string | null;
   startMs: number | null;
   endMs: number | null;
   durationSec: number | null;
@@ -29,6 +35,10 @@ export type PlaybackSegment = {
   projectionId: string;
   title: string | null;
   playbackId: string;
+  /** Full HLS endpoint URL. For Mux: stream.mux.com URL. For Livepeer: resolved via proxy. */
+  hlsUrl?: string | null;
+  /** Provider name: "mux" | "livepeer". Defaults to "livepeer" for historical assets. */
+  provider?: string | null;
   startMs: number;
   endMs: number;
 };

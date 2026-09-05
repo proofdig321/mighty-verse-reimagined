@@ -223,7 +223,7 @@ type TimelineBinding = {
   projection_id: string;
   start_ms: number | null;
   end_ms: number | null;
-  media_asset: { storage_ref: string } | null;
+  media_asset: { storage_ref: string; provider?: string | null } | null;
 };
 
 type TimelineEditorProps = {
@@ -268,25 +268,39 @@ export function TimelineEditor({ binding, masterId, onDone, onCancel }: Timeline
     video.addEventListener("timeupdate", onTimeUpdate);
     video.addEventListener("loadedmetadata", onLoadedMetadata);
 
-    fetch(`/api/livepeer/playback/${playbackId}`)
-      .then(r => r.ok ? r.json() : null)
-      .then(info => {
-        const hls = info?.meta?.source?.find((s: { type: string; url: string }) => s.type === "html5/application/vnd.apple.mpegurl");
-        if (!hls) throw new Error("No HLS source.");
-        setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-        if (video.canPlayType("application/vnd.apple.mpegurl")) {
-          video.src = hls.url;
-        } else {
-          import("hls.js").then(({ default: Hls }) => {
-            if (!Hls.isSupported()) throw new Error("HLS not supported.");
-            const hlsPlayer = new Hls();
-            hlsRef.current = hlsPlayer;
-            hlsPlayer.loadSource(hls.url);
-            hlsPlayer.attachMedia(video);
-          });
-        }
-      })
-      .catch(err => setMessage(`Error: ${err instanceof Error ? err.message : "Unable to load preview"}`));
+    const provider = binding.media_asset?.provider;
+
+    function loadHls(hlsUrl: string) {
+      if (!video) return;
+      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = hlsUrl;
+      } else {
+        import("hls.js").then(({ default: Hls }) => {
+          if (!Hls.isSupported()) { setMessage("Error: HLS not supported in this browser."); return; }
+          const hlsPlayer = new Hls();
+          hlsRef.current = hlsPlayer;
+          hlsPlayer.loadSource(hlsUrl);
+          hlsPlayer.attachMedia(video!);
+        });
+      }
+    }
+
+    if (provider === "mux") {
+      // Mux: construct HLS URL directly from playback ID
+      const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
+      loadHls(hlsUrl);
+    } else {
+      // Livepeer: resolve via proxy (historical assets)
+      fetch(`/api/livepeer/playback/${playbackId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(info => {
+          const hls = info?.meta?.source?.find((s: { type: string; url: string }) => s.type === "html5/application/vnd.apple.mpegurl");
+          if (!hls) throw new Error("No HLS source.");
+          setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+          loadHls(hls.url);
+        })
+        .catch(err => setMessage(`Error: ${err instanceof Error ? err.message : "Unable to load preview"}`));
+    }
 
     return () => {
       video.pause();
@@ -332,7 +346,7 @@ export function TimelineEditor({ binding, masterId, onDone, onCancel }: Timeline
     const result = await responseData(res);
     setBusy(false);
     if (!res.ok || result.error) { setMessage(`Error: ${result.error ?? "Unable to select thumbnail"}`); return; }
-    setMessage("Livepeer thumbnail selected as representative artwork.");
+    setMessage("Thumbnail selected as representative artwork.");
   }
 
   return (

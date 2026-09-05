@@ -50,9 +50,12 @@ async function loadScenes(): Promise<LibraryScene[]> {
     ...(bindings ?? []).map(b => b.asset_id),
     ...(presentations ?? []).map(p => p.artwork_asset_id).filter(Boolean) as string[],
   ])];
-  const { data: assets } = assetIds.length
-    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
-    : { data: [] };
+  const [{ data: assets }, { data: variants }] = assetIds.length
+    ? await Promise.all([
+        svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", assetIds),
+        svc.from("delivery_variant").select("asset_id, endpoint_ref").in("asset_id", assetIds),
+      ])
+    : [{ data: [] }, { data: [] }];
 
   return masters.map(m => {
     const pres = (presentations ?? []).find(p => p.master_id === m.master_id);
@@ -62,11 +65,16 @@ async function loadScenes(): Promise<LibraryScene[]> {
       ? (muralPres ?? []).find(p => p.master_id === m.parent_master_id)?.title ?? null
       : null;
 
-    // Resolve playback_id from binding asset
-    const assetRef = binding
-      ? (assets ?? []).find(a => a.asset_id === binding.asset_id)?.storage_ref ?? null
+    // Resolve playback_id and provider from binding asset
+    const asset = binding
+      ? (assets ?? []).find(a => a.asset_id === binding.asset_id) ?? null
       : null;
+    const assetRef = asset?.storage_ref ?? null;
     const playbackId = assetRef && !assetRef.startsWith("seed:placeholder:") ? assetRef : null;
+    const provider = asset?.provider ?? null;
+    const hlsUrl = binding
+      ? (variants ?? []).find(v => v.asset_id === binding.asset_id)?.endpoint_ref ?? null
+      : null;
 
     // Resolve artwork
     const artworkRef = pres?.artwork_asset_id
@@ -89,6 +97,8 @@ async function loadScenes(): Promise<LibraryScene[]> {
       title: pres?.title ?? null,
       muralTitle,
       playbackId,
+      provider,
+      hlsUrl,
       startMs,
       endMs,
       thumbnailUrl,

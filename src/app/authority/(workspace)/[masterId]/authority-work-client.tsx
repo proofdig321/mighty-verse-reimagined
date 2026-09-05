@@ -20,7 +20,7 @@ import {
 type Master = { master_id: string; canonical_type: string; parent_master_id: string | null; current_state_id: string | null; created_at: string };
 type State = { canonical_state_id: string; master_id: string; version: number; authorisation_state: string; integrity_hash: string; created_at: string };
 type Projection = { projection_id: string; canonical_state_id: string; master_id: string; projection_type: string; collectible_designated: boolean; integrity_hash: string; created_at: string };
-type MediaAsset = { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null } | null;
+type MediaAsset = { storage_ref: string; asset_type: string; rights_holder_ref: string | null; rights_basis: string | null; provider?: string | null } | null;
 type Binding = { binding_id: string; projection_id: string; binding_type: string; access_level: string; asset_id: string; start_ms: number | null; end_ms: number | null; realization_id: string | null; media_asset: MediaAsset };
 type Presentation = { master_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null } | null;
 type ProjPresentation = { projection_id: string; title: string; description: string | null; artwork_asset_id: string | null; artwork_asset: { storage_ref: string } | null };
