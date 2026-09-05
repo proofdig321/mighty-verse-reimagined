@@ -20,20 +20,29 @@ export default async function UniversesPage() {
   return (
     <div className="public-page">
       <PageTopNav activePath="/universes" />
+
       <div className="public-hero">
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Discover the canon</p>
-          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
+        <div className="relative z-10 mx-auto max-w-7xl px-6 py-16 md:py-20">
+          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
+            Discover the canon
+          </p>
+          <h1
+            className="mt-3 text-4xl font-semibold text-foreground md:text-6xl"
+            style={{ fontFamily: "var(--font-display, inherit)" }}
+          >
             All Universes
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Explore all song universes. Each one holds its own stories, murals and moments.
+          <p className="mt-2 max-w-md text-base text-muted-foreground">
+            Each Universe holds its own stories, murals and moments.
           </p>
         </div>
       </div>
-      <div className="mx-auto max-w-7xl space-y-8 px-6 py-12">
+
+      <div className="mx-auto max-w-7xl px-6 py-12 space-y-6">
         <UniversesFilterClient universes={universes} />
-        <p className="text-xs text-muted-foreground">{universes.length} universe{universes.length !== 1 ? "s" : ""}</p>
+        <p className="text-xs text-muted-foreground">
+          {universes.length} universe{universes.length !== 1 ? "s" : ""}
+        </p>
       </div>
     </div>
   );

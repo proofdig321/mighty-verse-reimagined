@@ -194,18 +194,40 @@
   }
 
   .artifact-card > .artifact-copy {
-    padding: 0.75rem 0.85rem 0.9rem;
+    padding: 0.85rem 1rem 1rem;
   }
 
   .artifact-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
-    gap: 1rem;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+    gap: 1.25rem;
+  }
+
+  .artifact-grid-wide {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+    gap: 1.5rem;
   }
 
   .dashboard-content {
     width: min(100%, 90rem);
     margin-inline: auto;
+  }
+
+  .mv-section {
+    padding-inline: clamp(1rem, 4vw, 3rem);
+    padding-block: clamp(2rem, 5vw, 4rem);
+    max-width: 90rem;
+    margin-inline: auto;
+  }
+
+  .mv-hero-gradient {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 18%, var(--background)) 0%,
+      var(--background) 55%,
+      color-mix(in oklch, var(--primary) 8%, var(--background)) 100%
+    );
   }
 
   .scrollbar-hidden {

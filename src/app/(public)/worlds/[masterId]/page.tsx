@@ -244,17 +244,42 @@ export default async function WorldPage({
       <div className="min-h-screen bg-background">
         <PageTopNav activePath="/murals" />
 
+        {/* Breadcrumb */}
         {data.universe_master_id && (
-          <div className="mx-auto max-w-7xl px-6 pt-4 pb-2">
-            <Link
-              href={`/worlds/${data.universe_master_id}`}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <span>←</span>
-              <span>{data.universe_title ?? "Universe"}</span>
-            </Link>
+          <div className="border-b border-border/50 bg-card/20">
+            <div className="mx-auto max-w-7xl px-6 py-3">
+              <Link
+                href={`/worlds/${data.universe_master_id}`}
+                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span>←</span>
+                <span>{data.universe_title ?? "Universe"}</span>
+              </Link>
+            </div>
           </div>
         )}
+
+        {/* Mural identity header */}
+        <div className="mv-hero-gradient border-b border-border">
+          <div className="mx-auto max-w-7xl px-6 py-8">
+            <div className="space-y-1">
+              {data.universe_title && (
+                <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+                  {data.universe_title}
+                </p>
+              )}
+              <h1
+                className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl"
+                style={{ fontFamily: "var(--font-display, inherit)" }}
+              >
+                {title}
+              </h1>
+              {data.description && (
+                <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">{data.description}</p>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* Two-column: player + scene sidebar */}
         <div className="flex flex-col lg:flex-row lg:items-start">
@@ -278,33 +303,42 @@ export default async function WorldPage({
           </div>
 
           {/* Right: scene list sidebar */}
-          <div className="w-full lg:w-72 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card">
-            <div className="px-4 py-4 border-b border-border flex items-center justify-between">
-              <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Scenes</p>
-              <p className="text-xs text-muted-foreground">1 of {data.scenes.length || "—"}</p>
-            </div>
-            <div className="divide-y divide-border">
-              {data.scenes.length > 0 ? (
-                data.scenes.map((s, i) => (
-                  <Link
-                    key={s.master_id}
-                    href={s.projection_id ? `/moments/${s.projection_id}` : "#"}
-                    className="flex items-start gap-3 px-4 py-3 hover:bg-accent transition-colors group"
-                  >
-                    <span className="text-xs text-muted-foreground w-4 shrink-0 pt-0.5">{i + 1}</span>
-                    <p className="text-sm text-foreground group-hover:opacity-80 transition-opacity truncate">
-                      {s.title ?? `Scene ${i + 1}`}
-                    </p>
-                  </Link>
-                ))
-              ) : (
-                <p className="px-4 py-3 text-sm text-muted-foreground">No scenes yet.</p>
-              )}
-            </div>
-            <div className="px-4 py-4 border-t border-border">
-              <Link href={`/worlds/${data.universe_master_id}/scenes`}>
-                <Button variant="outline" className="w-full text-xs">View Scene Deck</Button>
-              </Link>
+          <div className="w-full lg:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50">
+            <div className="sticky top-0">
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
+                  <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
+                </div>
+              </div>
+              <div className="divide-y divide-border max-h-[60vh] overflow-y-auto scrollbar-hidden">
+                {data.scenes.length > 0 ? (
+                  data.scenes.map((s, i) => (
+                    <Link
+                      key={s.master_id}
+                      href={s.projection_id ? `/moments/${s.projection_id}` : "#"}
+                      className="flex items-start gap-3 px-5 py-3.5 hover:bg-accent/50 transition-colors group"
+                    >
+                      <span
+                        className="text-xs font-mono text-muted-foreground w-5 shrink-0 pt-0.5"
+                        style={{ color: "var(--accent-mv)" }}
+                      >
+                        {String(i + 1).padStart(2, "0")}
+                      </span>
+                      <p className="text-sm text-foreground group-hover:opacity-80 transition-opacity">
+                        {s.title ?? `Scene ${i + 1}`}
+                      </p>
+                    </Link>
+                  ))
+                ) : (
+                  <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
+                )}
+              </div>
+              <div className="px-5 py-4 border-t border-border">
+                <Link href={`/worlds/${data.universe_master_id}/scenes`}>
+                  <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
+                </Link>
+              </div>
             </div>
           </div>
 
@@ -314,86 +348,94 @@ export default async function WorldPage({
   }
 
   // ── UNIVERSE LAYOUT — Section 03 ──────────────────────────────────────────
-  const collectibleCount = 0;
 
   return (
     <div className="min-h-screen bg-background">
       <PageTopNav />
 
-      {/* Hero identity block */}
-      <div className="border-b border-border">
-        <div className="mx-auto max-w-7xl px-6 py-12 space-y-5">
-
-          {data.media?.playback_id && data.projection_id && data.canonical_state_id && (
-            <MediaHero
-              media={data.media}
-              projectionId={data.projection_id}
-              masterId={data.master_id}
-              canonicalStateId={data.canonical_state_id}
-              title={title}
-              typeLabel="Universe"
-              credit={data.description}
-              collectible={false}
-            />
-          )}
-
-          {!data.media?.playback_id && (
-            <div className="flex flex-wrap items-start gap-3">
-              <div className="space-y-1 flex-1 min-w-0">
-                <h1 className="text-4xl md:text-6xl font-semibold leading-none tracking-tight text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
+      {/* Hero — media player or identity block */}
+      {data.media?.playback_id && data.projection_id && data.canonical_state_id ? (
+        <div className="border-b border-border">
+          <MediaHero
+            media={data.media}
+            projectionId={data.projection_id}
+            masterId={data.master_id}
+            canonicalStateId={data.canonical_state_id}
+            title={title}
+            typeLabel="Universe"
+            credit={data.description}
+            collectible={false}
+          />
+        </div>
+      ) : (
+        <div className="mv-hero-gradient border-b border-border">
+          <div className="mx-auto max-w-7xl px-6 py-16 md:py-24">
+            <div className="flex flex-wrap items-start justify-between gap-6">
+              <div className="space-y-3 max-w-2xl">
+                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">Universe</p>
+                <h1
+                  className="text-5xl font-semibold leading-tight tracking-tight text-foreground md:text-7xl"
+                  style={{ fontFamily: "var(--font-display, inherit)" }}
+                >
                   {title}
                 </h1>
-                {artistLabel && <p className="text-base text-muted-foreground">by {artistLabel}</p>}
+                {artistLabel && (
+                  <p className="text-base text-muted-foreground">by {artistLabel}</p>
+                )}
+                {data.description && (
+                  <p className="max-w-lg text-sm text-muted-foreground leading-relaxed">{data.description}</p>
+                )}
               </div>
-              <Badge variant="outline" className="shrink-0 mt-1">Universe</Badge>
+              <Badge variant="outline" className="shrink-0 mt-1 text-sm px-3 py-1">Universe</Badge>
             </div>
-          )}
-
-          {/* Stats row */}
-          <div className="flex flex-wrap items-center gap-6 text-sm">
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-semibold text-foreground">{data.murals.length || "—"}</span>
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">Murals</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-semibold text-foreground">{data.moments.length || "—"}</span>
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">Moments</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-semibold text-foreground">{collectibleCount || "—"}</span>
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">Collectibles</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-2xl font-semibold text-foreground">—</span>
-              <span className="text-muted-foreground text-xs uppercase tracking-wider">Holders</span>
-            </div>
-            <span
-              className="text-xs px-2 py-0.5 rounded-full border font-medium"
-              style={{ color: "var(--accent-mv)", borderColor: "var(--accent-mv)" }}
-            >
-              Base Network
-            </span>
           </div>
+        </div>
+      )}
 
-          {/* CTAs */}
-          <div className="flex flex-wrap gap-3 pt-1">
-            <Link href={`/worlds/${masterId}/scenes`}>
-              <Button style={{ background: "var(--accent-mv)" }} className="text-white font-semibold">
-                Enter Scene Deck
-              </Button>
-            </Link>
-            {data.murals[0] && (
-              <Link href={`/worlds/${data.murals[0].master_id}`}>
-                <Button variant="outline">View Mural</Button>
+      {/* Stats + CTAs */}
+      <div className="border-b border-border bg-card/30">
+        <div className="mx-auto max-w-7xl px-6 py-5">
+          <div className="flex flex-wrap items-center justify-between gap-5">
+            <div className="flex flex-wrap items-center gap-6">
+              {[
+                { n: data.murals.length || "—", label: "Murals" },
+                { n: data.moments.length || "—", label: "Moments" },
+                { n: "—", label: "Collectibles" },
+                { n: "—", label: "Holders" },
+              ].map(({ n, label }) => (
+                <div key={label} className="flex items-baseline gap-1.5">
+                  <span className="text-2xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>{n}</span>
+                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
+                </div>
+              ))}
+              <span
+                className="text-xs px-2.5 py-1 rounded-full border font-medium"
+                style={{ color: "var(--accent-mv)", borderColor: "color-mix(in oklch, var(--accent-mv) 50%, transparent)" }}
+              >
+                Base Network
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-3">
+              <Link href={`/worlds/${masterId}/scenes`}>
+                <Button
+                  className="h-9 px-5 text-sm font-semibold text-white"
+                  style={{ background: "var(--accent-mv)" }}
+                >
+                  Enter Scene Deck
+                </Button>
               </Link>
-            )}
+              {data.murals[0] && (
+                <Link href={`/worlds/${data.murals[0].master_id}`}>
+                  <Button variant="outline" className="h-9 px-5 text-sm">View Mural</Button>
+                </Link>
+              )}
+            </div>
           </div>
-
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="mx-auto max-w-7xl px-6 py-8">
+      <div className="mx-auto max-w-7xl px-6 py-10">
         <WorldTabsClient
           masterId={masterId}
           description={data.description}

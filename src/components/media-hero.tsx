@@ -19,7 +19,6 @@ type Props = {
   collectible: boolean;
   timelineScenes?: SceneTiming[];
   deckScenes?: SceneDeckItem[];
-  // artwork slot — null until genuine artwork exists
   artworkUrl?: string | null;
 };
 
@@ -54,14 +53,7 @@ export default function MediaHero({
 
   return (
     <div className="w-full">
-      <div className="bg-background border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 py-6 space-y-2">
-          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">{typeLabel}</p>
-          <h1 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>{title}</h1>
-          {credit && <p className="max-w-2xl text-sm text-muted-foreground">{credit}</p>}
-        </div>
-      </div>
-      {/* Video — full bleed, no max-width constraint */}
+      {/* Video — full bleed */}
       <div className="w-full bg-black">
         <div className="mx-auto" style={{ maxWidth: "1280px" }}>
           <ProjectionMediaPlayer
@@ -76,23 +68,46 @@ export default function MediaHero({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-7xl px-4 py-4">
-        <MediaTimeline
-          currentTime={currentTime}
-          duration={duration}
-          scenes={timelineScenes}
-          onSeek={setSeekToSeconds}
-          onSelectScene={(scene) => selectScene(scene.id)}
-        />
+      {/* Timeline + metadata */}
+      <div className="border-b border-border bg-card/30">
+        <div className="mx-auto w-full max-w-7xl px-4 py-4 space-y-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{typeLabel}</p>
+              <h2
+                className="mt-0.5 text-xl font-semibold leading-tight tracking-tight text-foreground md:text-2xl truncate"
+                style={{ fontFamily: "var(--font-display, inherit)" }}
+              >
+                {title}
+              </h2>
+              {credit && (
+                <p className="mt-1 max-w-xl text-xs text-muted-foreground line-clamp-2">{credit}</p>
+              )}
+            </div>
+            {collectible && (
+              <span
+                className="shrink-0 text-xs font-bold px-2.5 py-1 rounded uppercase tracking-wider"
+                style={{ background: "var(--accent-mv-gold)", color: "#000" }}
+              >
+                Collectible
+              </span>
+            )}
+          </div>
+          <MediaTimeline
+            currentTime={currentTime}
+            duration={duration}
+            scenes={timelineScenes}
+            onSeek={setSeekToSeconds}
+            onSelectScene={(scene) => selectScene(scene.id)}
+          />
+        </div>
       </div>
 
       {deckScenes.length > 0 && (
-        <div className="mx-auto w-full max-w-7xl px-4 pb-10">
+        <div className="mx-auto w-full max-w-7xl px-4 py-10">
           <SceneDeck scenes={deckScenes} selectedId={selectedSceneId} onSelect={selectScene} />
         </div>
       )}
-
-      {collectible && <div className="mx-auto max-w-7xl px-4 pb-6 text-xs font-medium uppercase tracking-widest text-accent-mv">Collectible experience</div>}
     </div>
   );
 }
