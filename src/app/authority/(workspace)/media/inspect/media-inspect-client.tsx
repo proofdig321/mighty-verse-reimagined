@@ -105,6 +105,9 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setCandidates([]);
     setInspectMsg(null);
     setLoadError(null);
+    // Brief guard: suppress spurious onError events fired during source transition
+    loadingRef.current = true;
+    setTimeout(() => { loadingRef.current = false; }, 500);
 
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       // Native HLS (Safari)
@@ -143,6 +146,7 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   }, []);
 
   // Auto-load when assetIdentity is provided — runs after mount
+  const loadingRef = useRef(false);
   const loadedAssetRef = useRef<string | null>(null);
   useEffect(() => {
     if (!assetIdentity || loadedAssetRef.current === assetIdentity.asset_id) return;
@@ -347,7 +351,18 @@ const runInspection = useCallback(async () => {
                 setSourceStatus(null);
               }
             }}
-            onError={() => setLoadError("Browser could not load the media source.")}
+            onError={(e) => {
+              const v = e.currentTarget;
+              // Suppress: empty src, page-URL src (no source set), NETWORK_EMPTY, or mid-load transition
+              if (
+                !v.src ||
+                v.src === window.location.href ||
+                v.networkState === HTMLMediaElement.NETWORK_EMPTY ||
+                loadingRef.current
+              ) return;
+              setLoadError("Browser could not load the media source.");
+              setSourceStatus(null);
+            }}
           />
 
           {metadata && (
