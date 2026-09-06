@@ -96,6 +96,19 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
       setLoadError("Video element not available — please refresh.");
       return;
     }
+
+    const nativeHls = video.canPlayType("application/vnd.apple.mpegurl") !== "";
+
+    // Capability check: bail early for browsers that support neither native HLS nor MSE
+    if (!nativeHls) {
+      const { default: HlsProbe } = await import("hls.js");
+      if (!HlsProbe.isSupported()) {
+        setLoadError("This browser does not support HLS playback. Use Chrome, Firefox, Safari, or Edge.");
+        setSourceStatus(null);
+        return;
+      }
+    }
+
     // Tear down any previous HLS instance
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (objectUrl) { URL.revokeObjectURL(objectUrl); setObjectUrl(null); }
@@ -110,7 +123,7 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     loadingRef.current = true;
     setTimeout(() => { loadingRef.current = false; }, 500);
 
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+    if (nativeHls) {
       // Native HLS (Safari)
       setSourceStatus("Initialising native HLS…");
       video.src = url;
@@ -120,11 +133,6 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
       setSourceStatus("Initialising hls.js…");
       try {
         const { default: Hls } = await import("hls.js");
-        if (!Hls.isSupported()) {
-          setLoadError("HLS is not supported in this browser.");
-          setSourceStatus(null);
-          return;
-        }
         const hls = new Hls({ enableWorker: false });
         hlsRef.current = hls;
         hls.on(Hls.Events.MEDIA_ATTACHED, () => setSourceStatus("Media attached — loading manifest…"));
