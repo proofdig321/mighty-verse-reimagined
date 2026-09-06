@@ -71,6 +71,8 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
 
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
+  const [pendingHlsUrl, setPendingHlsUrl] = useState<string | null>(null);
+  const [videoMounted, setVideoMounted] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
   const [metadata, setMetadata] = useState<BrowserMediaMetadata | null>(null);
@@ -99,12 +101,21 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
       .then((data) => {
         if (data.error) throw new Error(data.error);
         if (!data.hls_url) throw new Error("No playback URL resolved for this asset");
-        loadMuxUrl(data.hls_url);
+        // Store URL — actual load happens once video element is mounted
+        setPendingHlsUrl(data.hls_url);
       })
       .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load asset"))
       .finally(() => setAutoLoading(false));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assetIdentity?.asset_id]);
+
+  // Load pending HLS URL once the video element is mounted
+  useEffect(() => {
+    if (!pendingHlsUrl || !videoMounted) return;
+    setPendingHlsUrl(null);
+    loadMuxUrl(pendingHlsUrl);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingHlsUrl, videoMounted]);
 
   // Load a local file into the video element
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -153,6 +164,11 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   const runInspection = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
+    // Guard: video must have loaded metadata and have a non-zero duration
+    if (!video.duration || !Number.isFinite(video.duration) || video.duration <= 0) {
+      setInspectMsg("Error: Video has not loaded yet. Wait for the player to show the duration, then try again.");
+      return;
+    }
     setInspecting(true);
     setInspectMsg("Sampling frames…");
     setFrames([]);
@@ -238,6 +254,12 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
             {assetIdentity.audio_presence != null && <span>Audio: {assetIdentity.audio_presence ? "Yes" : "No"}</span>}
           </div>
           {autoLoading && <p className="text-xs text-muted-foreground">Resolving playback source…</p>}
+          {!autoLoading && hlsUrl && (
+            <p className="text-xs text-emerald-400/80">Source: {assetIdentity.provider} — ready to inspect</p>
+          )}
+          {!autoLoading && pendingHlsUrl && (
+            <p className="text-xs text-muted-foreground">Source resolved — loading into player…</p>
+          )}
           {loadError && <p className="text-xs text-destructive">{loadError}</p>}
         </div>
       )}
@@ -289,7 +311,10 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
 
           {/* Video element */}
           <video
-            ref={videoRef}
+            ref={(el) => {
+              (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
+              if (el && !videoMounted) setVideoMounted(true);
+            }}
             controls
             className="w-full aspect-video bg-black rounded"
             onLoadedMetadata={() => {
@@ -362,6 +387,9 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
           >
             {inspecting ? "Inspecting…" : "Run Inspection"}
           </Button>
+          {!inspecting && (objectUrl || hlsUrl) && !metadata && (
+            <p className="text-xs text-muted-foreground/60">Waiting for video to load… Play or seek the video above, then run inspection.</p>
+          )}
           {inspectMsg && (
             <p className={`text-sm ${inspectMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>
               {inspectMsg}
