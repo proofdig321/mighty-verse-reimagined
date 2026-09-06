@@ -71,8 +71,7 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
 
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
-  const [pendingHlsUrl, setPendingHlsUrl] = useState<string | null>(null);
-  const [videoMounted, setVideoMounted] = useState(false);
+  const [sourceStatus, setSourceStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
   const [metadata, setMetadata] = useState<BrowserMediaMetadata | null>(null);
@@ -89,33 +88,82 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   const [adjustStart, setAdjustStart] = useState(0);
   const [adjustEnd, setAdjustEnd] = useState(0);
 
-  // Auto-load the asset when assetIdentity is provided via URL param
+  // Stable HLS loader — useCallback so effects can safely depend on it
+  const loadHlsSource = useCallback(async (url: string) => {
+    const video = videoRef.current;
+    if (!video) {
+      setLoadError("Video element not available — please refresh.");
+      return;
+    }
+    // Tear down any previous HLS instance
+    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
+    if (objectUrl) { URL.revokeObjectURL(objectUrl); setObjectUrl(null); }
+    setHlsUrl(url);
+    setMetadata(null);
+    setFrames([]);
+    setDeltas([]);
+    setCandidates([]);
+    setInspectMsg(null);
+    setLoadError(null);
+
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      // Native HLS (Safari)
+      setSourceStatus("Initialising native HLS…");
+      video.src = url;
+      video.load();
+    } else {
+      // hls.js path (Chrome, Firefox, Edge)
+      setSourceStatus("Initialising hls.js…");
+      try {
+        const { default: Hls } = await import("hls.js");
+        if (!Hls.isSupported()) {
+          setLoadError("HLS is not supported in this browser.");
+          setSourceStatus(null);
+          return;
+        }
+        const hls = new Hls({ enableWorker: false });
+        hlsRef.current = hls;
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => setSourceStatus("Media attached — loading manifest…"));
+        hls.on(Hls.Events.MANIFEST_PARSED, () => setSourceStatus("Manifest parsed — waiting for metadata…"));
+        hls.on(Hls.Events.ERROR, (_evt, data) => {
+          if (data.fatal) {
+            setLoadError(`HLS fatal error: ${data.type} / ${data.details}`);
+            setSourceStatus(null);
+          }
+        });
+        hls.loadSource(url);
+        hls.attachMedia(video);
+      } catch (err) {
+        setLoadError(`HLS init failed: ${err instanceof Error ? err.message : String(err)}`);
+        setSourceStatus(null);
+      }
+    }
+  // objectUrl intentionally excluded — only url matters for HLS load
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-load when assetIdentity is provided — runs after mount
   const loadedAssetRef = useRef<string | null>(null);
   useEffect(() => {
     if (!assetIdentity || loadedAssetRef.current === assetIdentity.asset_id) return;
     loadedAssetRef.current = assetIdentity.asset_id;
     setAutoLoading(true);
     setLoadError(null);
+    setSourceStatus("Resolving playback source…");
     fetch(`/api/authority/media/asset-playback?assetId=${assetIdentity.asset_id}`)
       .then((r) => r.json())
       .then((data) => {
         if (data.error) throw new Error(data.error);
         if (!data.hls_url) throw new Error("No playback URL resolved for this asset");
-        // Store URL — actual load happens once video element is mounted
-        setPendingHlsUrl(data.hls_url);
+        setSourceStatus("Playback URL resolved — loading player…");
+        return loadHlsSource(data.hls_url);
       })
-      .catch((err) => setLoadError(err instanceof Error ? err.message : "Failed to load asset"))
+      .catch((err) => {
+        setLoadError(err instanceof Error ? err.message : "Failed to load asset");
+        setSourceStatus(null);
+      })
       .finally(() => setAutoLoading(false));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [assetIdentity?.asset_id]);
-
-  // Load pending HLS URL once the video element is mounted
-  useEffect(() => {
-    if (!pendingHlsUrl || !videoMounted) return;
-    setPendingHlsUrl(null);
-    loadMuxUrl(pendingHlsUrl);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pendingHlsUrl, videoMounted]);
+  }, [assetIdentity?.asset_id, loadHlsSource]);
 
   // Load a local file into the video element
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -130,38 +178,16 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setDeltas([]);
     setCandidates([]);
     setInspectMsg(null);
+    setSourceStatus(null);
+    setLoadError(null);
     const video = videoRef.current;
     if (!video) return;
     if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     video.src = url;
+    video.load();
   }
 
-  // Load a Mux HLS URL into the video element
-  async function loadMuxUrl(url: string) {
-    const video = videoRef.current;
-    if (!video) return;
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
-    if (objectUrl) { URL.revokeObjectURL(objectUrl); setObjectUrl(null); }
-    setHlsUrl(url);
-    setMetadata(null);
-    setFrames([]);
-    setDeltas([]);
-    setCandidates([]);
-    setInspectMsg(null);
-    if (video.canPlayType("application/vnd.apple.mpegurl")) {
-      video.src = url;
-    } else {
-      const { default: Hls } = await import("hls.js");
-      if (Hls.isSupported()) {
-        const hls = new Hls();
-        hls.loadSource(url);
-        hls.attachMedia(video);
-        hlsRef.current = hls;
-      }
-    }
-  }
-
-  const runInspection = useCallback(async () => {
+const runInspection = useCallback(async () => {
     const video = videoRef.current;
     if (!video) return;
     // Guard: video must have loaded metadata and have a non-zero duration
@@ -254,11 +280,11 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
             {assetIdentity.audio_presence != null && <span>Audio: {assetIdentity.audio_presence ? "Yes" : "No"}</span>}
           </div>
           {autoLoading && <p className="text-xs text-muted-foreground">Resolving playback source…</p>}
-          {!autoLoading && hlsUrl && (
-            <p className="text-xs text-emerald-400/80">Source: {assetIdentity.provider} — ready to inspect</p>
+          {!autoLoading && sourceStatus && (
+            <p className="text-xs text-muted-foreground">{sourceStatus}</p>
           )}
-          {!autoLoading && pendingHlsUrl && (
-            <p className="text-xs text-muted-foreground">Source resolved — loading into player…</p>
+          {!autoLoading && !sourceStatus && hlsUrl && (
+            <p className="text-xs text-emerald-400/80">Source: {assetIdentity.provider} — ready to inspect</p>
           )}
           {loadError && <p className="text-xs text-destructive">{loadError}</p>}
         </div>
@@ -297,13 +323,13 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
                   onKeyDown={(e) => {
                     if (e.key === "Enter") {
                       const val = (e.target as HTMLInputElement).value.trim();
-                      if (val) loadMuxUrl(val);
+                      if (val) loadHlsSource(val);
                     }
                   }}
                 />
                 <Button size="sm" variant="outline" onClick={(e) => {
                   const input = (e.currentTarget.previousElementSibling as HTMLInputElement);
-                  if (input?.value.trim()) loadMuxUrl(input.value.trim());
+                  if (input?.value.trim()) loadHlsSource(input.value.trim());
                 }}>Load</Button>
               </div>
             </div>
@@ -311,16 +337,17 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
 
           {/* Video element */}
           <video
-            ref={(el) => {
-              (videoRef as React.MutableRefObject<HTMLVideoElement | null>).current = el;
-              if (el && !videoMounted) setVideoMounted(true);
-            }}
+            ref={videoRef}
             controls
             className="w-full aspect-video bg-black rounded"
             onLoadedMetadata={() => {
               const video = videoRef.current;
-              if (video) setMetadata(extractBrowserMetadata(video));
+              if (video) {
+                setMetadata(extractBrowserMetadata(video));
+                setSourceStatus(null);
+              }
             }}
+            onError={() => setLoadError("Browser could not load the media source.")}
           />
 
           {metadata && (
@@ -388,7 +415,9 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
             {inspecting ? "Inspecting…" : "Run Inspection"}
           </Button>
           {!inspecting && (objectUrl || hlsUrl) && !metadata && (
-            <p className="text-xs text-muted-foreground/60">Waiting for video to load… Play or seek the video above, then run inspection.</p>
+            <p className="text-xs text-muted-foreground/60">
+              {sourceStatus ?? "Waiting for video to load… The player must show a duration before inspection can run."}
+            </p>
           )}
           {inspectMsg && (
             <p className={`text-sm ${inspectMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>

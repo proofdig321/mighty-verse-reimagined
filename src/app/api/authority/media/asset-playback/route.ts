@@ -47,7 +47,6 @@ export async function GET(request: Request) {
     .from("delivery_variant")
     .select("endpoint_ref")
     .eq("asset_id", assetId)
-    .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
 
