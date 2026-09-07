@@ -74,6 +74,18 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   const [sourceStatus, setSourceStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
+
+  // Operator diagnostics — full playback event log
+  type DiagEvent = { t: number; msg: string; error?: boolean };
+  const [diagUrl, setDiagUrl] = useState<string | null>(null);
+  const [diagPath, setDiagPath] = useState<"native" | "hlsjs" | null>(null);
+  const [diagHlsSupported, setDiagHlsSupported] = useState<boolean | null>(null);
+  const [diagEvents, setDiagEvents] = useState<DiagEvent[]>([]);
+  const diagStart = useRef<number>(0);
+  function diagLog(msg: string, error = false) {
+    const t = Date.now() - diagStart.current;
+    setDiagEvents((prev) => [...prev, { t, msg, error }]);
+  }
   const [metadata, setMetadata] = useState<BrowserMediaMetadata | null>(null);
   const [frames, setFrames] = useState<SampledFrame[]>([]);
   const [deltas, setDeltas] = useState<FrameDelta[]>([]);
@@ -96,6 +108,13 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
       return;
     }
 
+    // Reset diagnostics
+    diagStart.current = Date.now();
+    setDiagUrl(url);
+    setDiagPath(null);
+    setDiagHlsSupported(null);
+    setDiagEvents([]);
+
     const nativeHls = video.canPlayType("application/vnd.apple.mpegurl") !== "";
 
     // For hls.js path: set sentinel on hlsRef BEFORE any await so onError
@@ -113,43 +132,75 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setCandidates([]);
     setInspectMsg(null);
     setLoadError(null);
+
     if (nativeHls) {
+      setDiagPath("native");
       setSourceStatus("Initialising native HLS…");
+      diagLog(`canPlayType → non-empty (native HLS path)`);
+      diagLog(`video.src = ${url}`);
       video.src = url;
-      video.load();
-      // Attach error listener after src is set so transient MEDIA_ERR_SRC_NOT_SUPPORTED
-      // during native HLS initialisation does not surface as a fatal error.
-      // Only report if the error persists (networkState is NETWORK_NO_SOURCE).
+      // Do NOT call video.load() — setting src is sufficient for native HLS.
+      // load() resets the element mid-flight and fires spurious error events.
       video.addEventListener("error", () => {
-        if (video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
-          setLoadError("Browser could not load the media source.");
-          setSourceStatus(null);
-        }
+        const code = video.error?.code ?? "?";
+        const msg = video.error?.message ?? "unknown";
+        diagLog(`video error: code=${code} msg=${msg}`, true);
+        setLoadError(`Native HLS error: code ${code} — ${msg}`);
+        setSourceStatus(null);
       }, { once: true });
     } else {
+      setDiagPath("hlsjs");
       setSourceStatus("Initialising hls.js…");
+      diagLog(`canPlayType → empty string (hls.js path)`);
       try {
         const { default: Hls } = await import("hls.js");
-        if (!Hls.isSupported()) {
+        const supported = Hls.isSupported();
+        setDiagHlsSupported(supported);
+        diagLog(`Hls.isSupported() = ${supported}`);
+        if (!supported) {
           setLoadError("This browser does not support HLS playback. Use Chrome, Firefox, Safari, or Edge.");
           setSourceStatus(null);
           hlsRef.current = null;
           return;
         }
+        diagLog(`new Hls({ enableWorker: false })`);
         const hls = new Hls({ enableWorker: false });
         hlsRef.current = hls;
-        hls.on(Hls.Events.MEDIA_ATTACHED, () => setSourceStatus("Media attached — loading manifest…"));
-        hls.on(Hls.Events.MANIFEST_PARSED, () => setSourceStatus("Manifest parsed — waiting for metadata…"));
+        hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+          diagLog("MEDIA_ATTACHED");
+          setSourceStatus("Media attached — loading manifest…");
+        });
+        hls.on(Hls.Events.MANIFEST_LOADING, (_e, d) => diagLog(`MANIFEST_LOADING: ${d.url}`));
+        hls.on(Hls.Events.MANIFEST_LOADED, (_e, d) => diagLog(`MANIFEST_LOADED: ${d.levels?.length ?? 0} levels`));
+        hls.on(Hls.Events.MANIFEST_PARSED, (_e, d) => {
+          diagLog(`MANIFEST_PARSED: ${d.levels?.length ?? 0} levels`);
+          setSourceStatus("Manifest parsed — waiting for metadata…");
+        });
+        hls.on(Hls.Events.LEVEL_LOADED, (_e, d) => diagLog(`LEVEL_LOADED: level ${d.level}`));
+        hls.on(Hls.Events.FRAG_LOADING, (_e, d) => diagLog(`FRAG_LOADING: sn=${d.frag.sn}`));
+        hls.on(Hls.Events.FRAG_LOADED, (_e, d) => diagLog(`FRAG_LOADED: sn=${d.frag.sn}`));
         hls.on(Hls.Events.ERROR, (_evt, data) => {
+          const status = (data.response as { code?: number } | undefined)?.code;
+          const resource = data.url ?? (data.frag?.url);
+          diagLog(
+            `ERROR: fatal=${data.fatal} type=${data.type} details=${data.details}` +
+            (status != null ? ` status=${status}` : "") +
+            (resource ? ` url=${resource}` : ""),
+            data.fatal,
+          );
           if (data.fatal) {
             setLoadError(`HLS fatal error: ${data.type} / ${data.details}`);
             setSourceStatus(null);
           }
         });
+        diagLog(`hls.loadSource(url)`);
         hls.loadSource(url);
+        diagLog(`hls.attachMedia(video)`);
         hls.attachMedia(video);
       } catch (err) {
-        setLoadError(`HLS init failed: ${err instanceof Error ? err.message : String(err)}`);
+        const msg = err instanceof Error ? err.message : String(err);
+        diagLog(`hls.js init exception: ${msg}`, true);
+        setLoadError(`HLS init failed: ${msg}`);
         setSourceStatus(null);
         hlsRef.current = null;
       }
@@ -359,10 +410,19 @@ const runInspection = useCallback(async () => {
             onLoadedMetadata={() => {
               const video = videoRef.current;
               if (video) {
+                diagLog(`loadedmetadata: duration=${video.duration.toFixed(3)}s ${video.videoWidth}x${video.videoHeight}`);
                 setMetadata(extractBrowserMetadata(video));
                 setSourceStatus(null);
               }
             }}
+            onDurationChange={() => {
+              const video = videoRef.current;
+              if (video) diagLog(`durationchange: ${video.duration}`);
+            }}
+            onCanPlay={() => diagLog("canplay")}
+            onStalled={() => diagLog("stalled", true)}
+            onWaiting={() => diagLog("waiting")}
+            onEmptied={() => diagLog("emptied")}
           />
 
           {metadata && (
@@ -380,6 +440,56 @@ const runInspection = useCallback(async () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Operator playback diagnostics — shown whenever an HLS source has been attempted */}
+      {diagUrl && (
+        <Card className="border-border/60">
+          <CardContent className="pt-4 space-y-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Playback Diagnostics</p>
+            <div className="grid gap-1 text-xs font-mono">
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-28 shrink-0">URL</span>
+                <span className="text-foreground break-all">{diagUrl}</span>
+              </div>
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-28 shrink-0">Player path</span>
+                <span className="text-foreground">{diagPath ?? "—"}</span>
+              </div>
+              {diagPath === "hlsjs" && (
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground w-28 shrink-0">Hls.isSupported</span>
+                  <span className={diagHlsSupported === false ? "text-destructive" : "text-foreground"}>
+                    {diagHlsSupported == null ? "—" : String(diagHlsSupported)}
+                  </span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <span className="text-muted-foreground w-28 shrink-0">Metadata</span>
+                <span className="text-foreground">
+                  {metadata
+                    ? `duration=${(metadata.durationMs ?? 0) / 1000}s ${metadata.videoWidth}x${metadata.videoHeight}`
+                    : "—"}
+                </span>
+              </div>
+              {loadError && (
+                <div className="flex gap-2">
+                  <span className="text-muted-foreground w-28 shrink-0">Error</span>
+                  <span className="text-destructive">{loadError}</span>
+                </div>
+              )}
+            </div>
+            {diagEvents.length > 0 && (
+              <div className="space-y-0.5 max-h-48 overflow-y-auto rounded border border-border bg-muted/20 p-2">
+                {diagEvents.map((e, i) => (
+                  <p key={i} className={`text-[10px] font-mono ${e.error ? "text-destructive" : "text-muted-foreground"}`}>
+                    <span className="text-muted-foreground/50 mr-1">{e.t}ms</span>{e.msg}
+                  </p>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Inspection controls */}
       <Card>
