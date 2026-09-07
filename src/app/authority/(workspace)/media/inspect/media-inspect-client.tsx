@@ -115,13 +115,10 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setDiagHlsSupported(null);
     setDiagEvents([]);
 
-    const nativeHls = video.canPlayType("application/vnd.apple.mpegurl") !== "";
-
-    // For hls.js path: set sentinel on hlsRef BEFORE any await so onError
-    // can suppress MEDIA_ERR_SRC_NOT_SUPPORTED during the async import gap.
-    if (!nativeHls) {
-      hlsRef.current = { destroy: () => {} };
-    }
+    // Set hls.js sentinel BEFORE any await so the video element's error
+    // event (fired during hls.js MediaSource attachment) is not mistaken
+    // for a fatal load failure.
+    hlsRef.current = { destroy: () => {} };
 
     // Tear down any previous HLS instance
     if (objectUrl) { URL.revokeObjectURL(objectUrl); setObjectUrl(null); }
@@ -133,34 +130,37 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setInspectMsg(null);
     setLoadError(null);
 
-    if (nativeHls) {
-      setDiagPath("native");
-      setSourceStatus("Initialising native HLS…");
-      diagLog(`canPlayType → non-empty (native HLS path)`);
-      diagLog(`video.src = ${url}`);
-      video.src = url;
-      // Do NOT call video.load() — setting src is sufficient for native HLS.
-      // load() resets the element mid-flight and fires spurious error events.
-      video.addEventListener("error", () => {
-        const code = video.error?.code ?? "?";
-        const msg = video.error?.message ?? "unknown";
-        diagLog(`video error: code=${code} msg=${msg}`, true);
-        setLoadError(`Native HLS error: code ${code} — ${msg}`);
-        setSourceStatus(null);
-      }, { once: true });
-    } else {
+    {
       setDiagPath("hlsjs");
       setSourceStatus("Initialising hls.js…");
-      diagLog(`canPlayType → empty string (hls.js path)`);
+      diagLog(`loading hls.js (always preferred over native HLS)`);
       try {
         const { default: Hls } = await import("hls.js");
         const supported = Hls.isSupported();
         setDiagHlsSupported(supported);
         diagLog(`Hls.isSupported() = ${supported}`);
         if (!supported) {
-          setLoadError("This browser does not support HLS playback. Use Chrome, Firefox, Safari, or Edge.");
-          setSourceStatus(null);
+          // MediaSource not available — fall back to native HLS (Safari)
+          setDiagPath("native");
+          diagLog(`hls.js not supported — falling back to native HLS`);
           hlsRef.current = null;
+          const canNative = video.canPlayType("application/vnd.apple.mpegurl") !== "";
+          diagLog(`canPlayType → ${canNative ? "non-empty" : "empty"} (native HLS ${canNative ? "available" : "unavailable"})`);
+          if (!canNative) {
+            setLoadError("This browser does not support HLS playback.");
+            setSourceStatus(null);
+            return;
+          }
+          setSourceStatus("Initialising native HLS…");
+          diagLog(`video.src = ${url}`);
+          video.src = url;
+          video.addEventListener("error", () => {
+            const code = video.error?.code ?? "?";
+            const msg = video.error?.message ?? "unknown";
+            diagLog(`video error: code=${code} msg=${msg}`, true);
+            setLoadError(`Native HLS error: code ${code} — ${msg}`);
+            setSourceStatus(null);
+          }, { once: true });
           return;
         }
         diagLog(`new Hls({ enableWorker: false })`);
