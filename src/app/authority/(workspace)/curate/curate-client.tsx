@@ -69,8 +69,15 @@ type Props = {
 
 // ─── Mux thumbnail URL ────────────────────────────────────────────────────────
 
-function muxThumb(playbackId: string, timeMs: number, width = 160): string {
-  return `https://image.mux.com/${playbackId}/thumbnail.jpg?time=${(timeMs / 1000).toFixed(3)}&width=${width}`;
+function hlsUrl(provider: string | null, storageRef: string): string | null {
+  if (provider === "mux") return `https://stream.mux.com/${storageRef}.m3u8`;
+  if (provider === "livepeer") return `https://livepeercdn.studio/hls/${storageRef}/index.m3u8`;
+  return null;
+}
+
+function providerThumbUrl(provider: string | null, storageRef: string, timeMs: number, width = 160): string | null {
+  if (provider === "mux") return `https://image.mux.com/${storageRef}/thumbnail.jpg?time=${(timeMs / 1000).toFixed(3)}&width=${width}`;
+  return null;
 }
 
 
@@ -153,10 +160,11 @@ export default function CurateClient({
     }
   }, []);
 
-  // Auto-load when mural has a Mux asset
+  // Auto-load when mural has a bound asset with a known HLS URL
   useEffect(() => {
-    if (mural?.provider === "mux" && mural.storage_ref) {
-      loadHls(`https://stream.mux.com/${mural.storage_ref}.m3u8`);
+    if (mural?.storage_ref) {
+      const url = hlsUrl(mural.provider, mural.storage_ref);
+      if (url) loadHls(url);
     }
   }, [mural?.provider, mural?.storage_ref, loadHls]);
 
@@ -358,14 +366,15 @@ export default function CurateClient({
       {selectedUniverseId && (
         <div className="space-y-6">
 
-          {/* Mural asset binding notice */}
-          {mural && mural.provider !== "mux" && (
-            <div className="rounded-lg border border-amber-500/40 bg-amber-500/5 px-4 py-3 space-y-2">
-              <p className="text-xs font-semibold text-amber-400 uppercase tracking-widest">Mural media</p>
-              <p className="text-sm text-foreground">
-                This Mural is bound to a <strong>{mural.provider ?? "unknown"}</strong> asset.
-                To use the Mux asset for curation, bind it to the Mural projection.
-              </p>
+          {/* Mural asset binding */}
+          {mural && (
+            <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Mural media</p>
+                <span className="text-xs text-muted-foreground">
+                  {mural.provider ?? "no provider"} · {mural.storage_ref?.slice(0, 12) ?? "—"}
+                </span>
+              </div>
               {!bindingAsset ? (
                 <Button size="sm" variant="outline" onClick={() => setBindingAsset(true)}>
                   Bind different asset
@@ -399,7 +408,7 @@ export default function CurateClient({
             <CardContent className="pt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {mural?.provider === "mux" ? "Mux HLS — Live Stream" : "Media Player"}
+                  {mural?.provider === "mux" ? "Mux HLS" : mural?.provider === "livepeer" ? "Livepeer HLS" : "Media Player"}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                   <span>{fmtMs(currentMs)}</span>
@@ -662,8 +671,8 @@ export default function CurateClient({
                   if (nearestDiff > 15000) nearest = null;
 
                   // Mux thumbnail if available
-                  const thumbUrl = mural?.provider === "mux" && mural.storage_ref
-                    ? muxThumb(mural.storage_ref, startMs)
+                  const candidateThumb = mural?.storage_ref
+                    ? providerThumbUrl(mural.provider, mural.storage_ref, startMs)
                     : candidate.representativeFrame ?? null;
 
                   return (
@@ -730,11 +739,11 @@ export default function CurateClient({
                             )}
                           </div>
 
-                          {thumbUrl && (
+                          {candidateThumb && (
                             <button type="button" onClick={() => { setSelectedCandidateId(candidate.candidateId); seekTo(startMs); }} className="shrink-0">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
                               <img
-                                src={thumbUrl}
+                                src={candidateThumb}
                                 alt={`Candidate ${i + 1}`}
                                 className="h-14 w-24 object-cover rounded border border-border hover:border-foreground/40 transition-colors"
                               />
