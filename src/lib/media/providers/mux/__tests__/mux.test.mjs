@@ -4,7 +4,7 @@
  */
 
 import assert from "node:assert/strict";
-import { mapMuxAsset, MuxAdapter } from "../adapter.js";
+import { mapMuxAsset, MuxAdapter } from "../adapter.ts";
 
 let passed = 0;
 let failed = 0;

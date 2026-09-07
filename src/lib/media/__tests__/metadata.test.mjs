@@ -42,9 +42,9 @@ async function test(name, fn) {
 
 // ─── Import modules ───────────────────────────────────────────────────────────
 
-const { detectMediaClass, extractFileMetadata, detectIsrcConflict, detectMediaClassFromBytes } = await import("../metadata-extract.js");
-const { hashCanonicalMetadata } = await import("../metadata-build.js");
-const { embedMp3Metadata, embedImageMetadata } = await import("../metadata-embed.js");
+const { detectMediaClass, extractFileMetadata, detectIsrcConflict, detectMediaClassFromBytes } = await import("../metadata-extract.ts");
+const { hashCanonicalMetadata } = await import("../metadata-build.ts");
+const { embedMp3Metadata, embedImageMetadata } = await import("../metadata-embed.ts");
 const NodeID3 = (await import("node-id3")).default;
 const mm = await import("music-metadata");
 const sharp = (await import("sharp")).default;
