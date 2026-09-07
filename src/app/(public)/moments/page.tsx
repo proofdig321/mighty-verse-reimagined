@@ -11,6 +11,7 @@ type MomentItem = {
   collectible_designated: boolean;
   has_media: boolean;
   playback_id: string | null;
+  provider: string | null;
   canonical_type: string | null;
   context_title: string | null;
   context_type: string | null;
@@ -47,16 +48,21 @@ async function getData(): Promise<MomentItem[]> {
 
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
-    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
+    ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", assetIds)
     : { data: [] };
 
   const placeholderSet = new Set(
     (assets ?? []).filter((a) => a.storage_ref?.startsWith("seed:placeholder:")).map((a) => a.asset_id)
   );
   const playbackMap = new Map<string, string>();
+  const providerMap = new Map<string, string>();
   for (const b of bindings ?? []) {
-    const ref = (assets ?? []).find((a) => a.asset_id === b.asset_id)?.storage_ref;
-    if (ref && !ref.startsWith("seed:placeholder:")) playbackMap.set(b.projection_id, ref);
+    const asset = (assets ?? []).find((a) => a.asset_id === b.asset_id);
+    const ref = asset?.storage_ref;
+    if (ref && !ref.startsWith("seed:placeholder:")) {
+      playbackMap.set(b.projection_id, ref);
+      if (asset?.provider) providerMap.set(b.projection_id, asset.provider);
+    }
   }
   const hasMediaMap = new Map<string, boolean>();
   for (const b of bindings ?? []) {
@@ -72,6 +78,7 @@ async function getData(): Promise<MomentItem[]> {
     collectible_designated: p.collectible_designated,
     has_media: hasMediaMap.get(p.projection_id) ?? false,
     playback_id: playbackMap.get(p.projection_id) ?? null,
+    provider: providerMap.get(p.projection_id) ?? null,
     canonical_type: (masters ?? []).find((m) => m.master_id === p.master_id)?.canonical_type ?? null,
     context_title: (() => {
       const parentId = (masters ?? []).find((m) => m.master_id === p.master_id)?.parent_master_id;

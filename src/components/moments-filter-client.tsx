@@ -13,6 +13,7 @@ type MomentItem = {
   collectible_designated: boolean;
   has_media: boolean;
   playback_id: string | null;
+  provider: string | null;
   canonical_type: string | null;
   context_title: string | null;
   context_type: string | null;
@@ -106,7 +107,7 @@ export default function MomentsFilterClient({ moments }: Props) {
               <Link key={m.projection_id} href={`/moments/${m.projection_id}`} className="artifact-card group">
                 <div className="relative">
                   {m.playback_id ? (
-                    <MediaVisual playbackId={m.playback_id} title={m.title ?? "Creative Moment"} aspectRatio="1/1" />
+                    <MediaVisual playbackId={m.playback_id} provider={m.provider} title={m.title ?? "Creative Moment"} aspectRatio="1/1" />
                   ) : (
                     <ArtworkFrame artworkUrl={null} alt={m.title ?? ""} aspectRatio="2/3" />
                   )}
