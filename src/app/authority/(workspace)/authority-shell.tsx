@@ -5,15 +5,16 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Clapperboard, Film, Globe, LayoutDashboard, Layers,
-  Menu, Plus, ShieldCheck, Sparkles, Upload, Users, X,
+  Menu, Plus, ShieldCheck, Sparkles, Upload, Users, X, Wand2,
 } from "lucide-react";
 
 const NAV_GROUPS = [
   {
     label: "Workspace",
     links: [
-      { label: "Dashboard", href: "/authority", icon: LayoutDashboard },
+      { label: "Dashboard",  href: "/authority",        icon: LayoutDashboard },
       { label: "Create Work", href: "/authority/create", icon: Plus },
+      { label: "Curate",     href: "/authority/curate", icon: Wand2 },
     ],
   },
   {

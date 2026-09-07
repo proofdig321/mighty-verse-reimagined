@@ -28,6 +28,8 @@ export async function POST(request: Request) {
     projection_id,
     master_id,
     session_id,
+    // Direct asset binding — for already-ingested assets (e.g. Mux)
+    asset_id,
     // Legacy Livepeer field — kept for backward compatibility
     livepeer_asset_id,
     rights_holder_ref,
@@ -44,6 +46,42 @@ export async function POST(request: Request) {
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
 
   const svc = getServiceClient();
+
+  // ── Direct asset_id path: bind an already-ingested asset (e.g. Mux) ──────
+  if (asset_id && !session_id && !livepeer_asset_id) {
+    const { data: existingAsset } = await svc
+      .from("media_asset")
+      .select("asset_id")
+      .eq("asset_id", asset_id)
+      .maybeSingle();
+    if (!existingAsset) {
+      return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+    }
+    // Remove any existing primary binding for this projection first
+    await svc
+      .from("projection_media_binding")
+      .delete()
+      .eq("projection_id", projection_id)
+      .eq("binding_type", "primary");
+
+    const { data: binding, error: bErr } = await svc
+      .from("projection_media_binding")
+      .insert({
+        projection_id,
+        asset_id,
+        binding_type: "primary",
+        access_level: "public",
+        created_by: participantId,
+        realization_id: realization_id ?? null,
+      })
+      .select("binding_id")
+      .single();
+    if (bErr || !binding) {
+      return NextResponse.json({ error: bErr?.message ?? "Failed to create binding" }, { status: 500 });
+    }
+    await logOperation(auth.authority_id, "attach-media-binding", binding.binding_id, "media-binding", "accepted");
+    return NextResponse.json({ binding_id: binding.binding_id, asset_id }, { status: 201 });
+  }
 
   // ── Mux path: asset was created by webhook; find it via session ──────────
   if (session_id && !livepeer_asset_id) {
@@ -158,5 +196,5 @@ export async function POST(request: Request) {
     return NextResponse.json(result.data, { status: 201 });
   }
 
-  return NextResponse.json({ error: "session_id or livepeer_asset_id required" }, { status: 400 });
+  return NextResponse.json({ error: "session_id, asset_id, or livepeer_asset_id required" }, { status: 400 });
 }
