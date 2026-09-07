@@ -56,18 +56,17 @@ export default function TimelinePlayer({ segments, onClose }: Props) {
       // Destroy old HLS instance
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
 
-      if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      const { default: Hls } = await import("hls.js");
+      if (Hls.isSupported()) {
+        const hls = new Hls({ enableWorker: false });
+        hls.loadSource(hlsSrc);
+        hls.attachMedia(video);
+        hlsRef.current = hls;
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        // Native HLS fallback — Safari only
         video.src = hlsSrc;
       } else {
-        const { default: Hls } = await import("hls.js");
-        if (Hls.isSupported()) {
-          const hls = new Hls();
-          hls.loadSource(hlsSrc);
-          hls.attachMedia(video);
-          hlsRef.current = hls;
-        } else {
-          setState("error"); return;
-        }
+        setState("error"); return;
       }
       video.setAttribute("data-playback-id", s.playbackId);
     }

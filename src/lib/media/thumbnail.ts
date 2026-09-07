@@ -58,22 +58,30 @@ export function livepeerThumbnailUrl(playbackId: string, startMs: number): strin
 
 /**
  * Resolve the best thumbnail URL for a scene/moment.
- * Priority: custom artwork_asset_id storage_ref > Livepeer keyframe > null
+ * Priority: custom artwork_asset_id storage_ref > Mux thumbnail > Livepeer keyframe > null
+ *
+ * Provider is required to correctly route Mux vs Livepeer thumbnail resolution.
  */
 export function resolveThumbnail(opts: {
   playbackId: string | null;
   startMs: number | null;
   artworkStorageRef?: string | null;
+  provider?: string | null;
 }): string | null {
   if (opts.artworkStorageRef && !opts.artworkStorageRef.startsWith("seed:placeholder:")) {
-    // Custom artwork — if it's a Livepeer playback ID treat as thumbnail, else return as-is
     return opts.artworkStorageRef;
   }
-  if (opts.playbackId && opts.startMs != null) {
+  if (!opts.playbackId) return null;
+
+  // Mux: use image.mux.com with time parameter
+  if (opts.provider === "mux") {
+    const timeSec = opts.startMs != null ? Math.floor(opts.startMs / 1000) : 0;
+    return `https://image.mux.com/${opts.playbackId}/thumbnail.jpg?time=${timeSec}`;
+  }
+
+  // Livepeer: use VTT keyframe index
+  if (opts.startMs != null) {
     return livepeerThumbnailUrl(opts.playbackId, opts.startMs);
   }
-  if (opts.playbackId) {
-    return livepeerThumbnailUrl(opts.playbackId, 0);
-  }
-  return null;
+  return livepeerThumbnailUrl(opts.playbackId, 0);
 }

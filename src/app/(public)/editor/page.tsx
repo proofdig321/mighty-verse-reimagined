@@ -89,6 +89,7 @@ async function loadScenes(): Promise<LibraryScene[]> {
       playbackId,
       startMs,
       artworkStorageRef: artworkRef,
+      provider,
     });
 
     return {
