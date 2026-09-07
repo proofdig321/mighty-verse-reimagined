@@ -71,7 +71,6 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
 
   const [objectUrl, setObjectUrl] = useState<string | null>(null);
   const [hlsUrl, setHlsUrl] = useState<string | null>(null);
-  const [resolvedUrl, setResolvedUrl] = useState<string | null>(null);
   const [sourceStatus, setSourceStatus] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [autoLoading, setAutoLoading] = useState(false);
@@ -169,7 +168,6 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
         if (data.error) throw new Error(data.error);
         if (!data.hls_url) throw new Error("No playback URL resolved for this asset");
         setSourceStatus("Playback URL resolved — loading player…");
-        setResolvedUrl(data.hls_url);
         return loadHlsSource(data.hls_url);
       })
       .catch((err) => {
@@ -300,9 +298,6 @@ const runInspection = useCallback(async () => {
           {!autoLoading && !sourceStatus && hlsUrl && (
             <p className="text-xs text-emerald-400/80">Source: {assetIdentity.provider} — ready to inspect</p>
           )}
-          {!autoLoading && resolvedUrl && (
-            <p className="text-[10px] font-mono text-muted-foreground/50 break-all">{resolvedUrl}</p>
-          )}
           {loadError && <p className="text-xs text-destructive">{loadError}</p>}
         </div>
       )}
@@ -372,10 +367,12 @@ const runInspection = useCallback(async () => {
                 v.networkState === HTMLMediaElement.NETWORK_EMPTY ||
                 loadingRef.current
               ) return;
+              // MEDIA_ERR_SRC_NOT_SUPPORTED on an HLS URL = hls.js is managing the source;
+              // hls.js sets a blob: src on the video element which the browser reports as
+              // unsupported until hls.js attaches. Suppress it — hls.js ERROR event handles real failures.
+              if (v.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && hlsUrl) return;
               const code = v.error?.code;
               const msg = v.error?.message ?? "unknown";
-              // MEDIA_ERR_SRC_NOT_SUPPORTED (4) on hls.js path = hls.js handles it; ignore
-              if (code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && hlsRef.current) return;
               setLoadError(`Browser could not load the media source (error ${code}: ${msg}).`);
               setSourceStatus(null);
             }}
