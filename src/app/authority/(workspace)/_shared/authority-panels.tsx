@@ -309,7 +309,7 @@ export function TimelineEditor({ binding, masterId, onDone, onCancel }: Timeline
       hlsRef.current?.destroy();
       hlsRef.current = null;
     };
-  }, [binding.media_asset?.storage_ref]);
+  }, [binding.media_asset?.storage_ref, binding.media_asset?.provider]);
 
   async function saveRange() {
     if (!Number.isInteger(startMs) || !Number.isInteger(endMs) || endMs <= startMs) {

@@ -41,7 +41,6 @@ function selectPlaybackId(
 /**
  * Map a raw Mux asset API response to the normalized ProviderAsset shape.
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapMuxAsset(asset: any): ProviderAsset {
   const tracks = asset.tracks ?? null;
   const mediaClass = deriveMediaClass(tracks);
@@ -129,7 +128,6 @@ export function verifyMuxWebhook(
   rawBody: string,
   signature: string,
   secret: string
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): any {
   const mux = getMuxClient();
   return mux.webhooks.unwrap(rawBody, { "mux-signature": signature }, secret);

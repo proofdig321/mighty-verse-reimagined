@@ -12,26 +12,25 @@ type Props = {
 };
 
 export default function MediaVisual({ playbackId, provider, title, className = "", aspectRatio = "16/9" }: Props) {
-  const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  const resolvedProvider = provider ?? "livepeer";
+  const muxPosterUrl = resolvedProvider === "mux" && playbackId
+    ? `https://image.mux.com/${playbackId}/thumbnail.jpg?time=0`
+    : null;
+  const [livepeerPosterUrl, setLivepeerPosterUrl] = useState<string | null>(null);
+  const posterUrl = muxPosterUrl ?? livepeerPosterUrl;
 
   useEffect(() => {
-    if (!playbackId) return;
+    if (!playbackId || resolvedProvider === "mux") return;
     let active = true;
-    const resolvedProvider = provider ?? "livepeer";
-    if (resolvedProvider === "mux") {
-      // Mux thumbnail: use image.mux.com
-      if (active) setPosterUrl(`https://image.mux.com/${playbackId}/thumbnail.jpg?time=0`);
-    } else {
-      fetch(`/api/livepeer/playback/${playbackId}`)
-        .then(response => response.ok ? response.json() : null)
-        .then(info => {
-          const hlsUrl = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl")?.url;
-          if (active && hlsUrl) setPosterUrl(hlsUrl.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-        })
-        .catch(() => null);
-    }
+    fetch(`/api/livepeer/playback/${playbackId}`)
+      .then(response => response.ok ? response.json() : null)
+      .then(info => {
+        const hlsUrl = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl")?.url;
+        if (active && hlsUrl) setLivepeerPosterUrl(hlsUrl.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+      })
+      .catch(() => null);
     return () => { active = false; };
-  }, [playbackId, provider]);
+  }, [playbackId, resolvedProvider]);
 
   return (
     <div className={`relative overflow-hidden bg-card border border-border ${className}`} style={{ aspectRatio }}>

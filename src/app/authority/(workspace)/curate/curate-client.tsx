@@ -864,7 +864,7 @@ export default function CurateClient({
           <div className="rounded-lg border border-border bg-muted/20 px-4 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">Operator Decision</p>
             <p className="text-xs text-muted-foreground">
-              Evidence candidates are not canonical. Scenes are only created when you explicitly confirm via "Accept as Scene".
+              Evidence candidates are not canonical. Scenes are only created when you explicitly confirm via &quot;Accept as Scene&quot;.
               No canonical state is modified by inspection or candidate review alone.
             </p>
           </div>

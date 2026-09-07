@@ -112,7 +112,6 @@ export default function TimelinePlayer({ segments, onClose }: Props) {
   // Load first segment on mount
   useEffect(() => {
     segIdxRef.current = 0;
-    setSegIdx(0);
     loadSegment(0);
     return () => {
       if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }

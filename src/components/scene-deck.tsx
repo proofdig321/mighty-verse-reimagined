@@ -98,6 +98,9 @@ export default function SceneDeck({
   onScenePlay,
 }: Props) {
   const [items, setItems] = useState(scenes);
+  const [prevScenes, setPrevScenes] = useState(scenes);
+  const [prevSelectedId, setPrevSelectedId] = useState(selectedId);
+  const [prevFaceDown, setPrevFaceDown] = useState(faceDownUntilSelected);
   // Set of IDs the user has explicitly revealed
   const [revealedIds, setRevealedIds] = useState<Set<string>>(() =>
     faceDownUntilSelected ? new Set() : new Set(scenes.map((s) => s.id))
@@ -111,15 +114,19 @@ export default function SceneDeck({
   const draggedInteraction = useRef(false);
   const deckRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    setItems(scenes);
+  // Sync derived state when props change (setState during render — React-recommended pattern)
+  if (prevScenes !== scenes || prevSelectedId !== selectedId || prevFaceDown !== faceDownUntilSelected) {
+    setPrevScenes(scenes);
+    setPrevSelectedId(selectedId);
+    setPrevFaceDown(faceDownUntilSelected);
+    if (prevScenes !== scenes) setItems(scenes);
     if (!faceDownUntilSelected) {
       setRevealedIds(new Set(scenes.map((s) => s.id)));
       setActiveId(selectedId ?? scenes[0]?.id ?? null);
     } else {
       setActiveId(selectedId ?? null);
     }
-  }, [scenes, selectedId, faceDownUntilSelected]);
+  }
 
   function reveal(id: string) {
     setRevealedIds((prev) => new Set([...prev, id]));

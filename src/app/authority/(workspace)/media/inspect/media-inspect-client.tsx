@@ -230,7 +230,7 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
         setSourceStatus(null);
       })
       .finally(() => setAutoLoading(false));
-  }, [assetIdentity?.asset_id, loadHlsSource]);
+  }, [assetIdentity, loadHlsSource]);
 
   // Load a local file into the video element
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
