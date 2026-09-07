@@ -9,6 +9,7 @@ import { Plus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
+import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import MediaLibraryClient from "./media-library-client";
 
 export type MediaLibraryItem = {
@@ -182,13 +183,7 @@ async function getData() {
     if (isThumbnail) {
       thumbnail_url = a.storage_ref.startsWith("thumbnail:") ? null : a.storage_ref;
     } else if (!isPlaceholder && a.asset_type !== "thumbnail" && a.asset_type !== "metadata") {
-      if (a.provider === "mux") {
-        // Mux image API: storage_ref is the playback ID
-        thumbnail_url = `https://image.mux.com/${a.storage_ref}/thumbnail.jpg?time=5&width=320`;
-      } else if (a.provider === "livepeer" || !a.provider) {
-        // Livepeer keyframe thumbnail pattern
-        thumbnail_url = `https://vod-cdn.lp-playback.studio/${a.storage_ref}/thumbnails/keyframes_0.png`;
-      }
+      thumbnail_url = providerThumbnailUrl(a.provider, a.storage_ref, { timeSec: 5, width: 320 });
     }
 
     return {

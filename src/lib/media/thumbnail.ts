@@ -33,6 +33,32 @@ const VTT_INTERVALS: Record<string, number[]> = {
 };
 
 const LIVEPEER_CDN_BASE = "https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyor6526t4tcmtmqa/catalyst-vod-com/hls";
+const MUX_IMAGE_BASE = "https://image.mux.com";
+
+/**
+ * Returns a Mux thumbnail URL for a given playback ID.
+ * time defaults to 0, width is optional.
+ */
+export function muxThumbnailUrl(playbackId: string, timeSec = 0, width?: number): string {
+  const params = new URLSearchParams({ time: String(timeSec) });
+  if (width) params.set("width", String(width));
+  return `${MUX_IMAGE_BASE}/${playbackId}/thumbnail.jpg?${params}`;
+}
+
+/**
+ * Returns a provider-aware thumbnail URL from a storage_ref.
+ * Mux: image.mux.com/{storageRef}/thumbnail.jpg
+ * Livepeer: VTT keyframe CDN URL
+ * Unknown/null provider: falls back to Livepeer pattern.
+ */
+export function providerThumbnailUrl(
+  provider: string | null | undefined,
+  storageRef: string,
+  opts: { timeSec?: number; width?: number } = {}
+): string {
+  if (provider === "mux") return muxThumbnailUrl(storageRef, opts.timeSec ?? 0, opts.width);
+  return `${LIVEPEER_CDN_BASE}/${storageRef}/thumbnails/keyframes_0.png`;
+}
 
 /**
  * Returns the keyframe PNG URL for a given playback ID and start time in ms.

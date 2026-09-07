@@ -9,6 +9,7 @@ export type AuthorityMediaAsset = {
   asset_id: string;
   asset_type: string;
   storage_ref: string;
+  provider: string | null;
   format: string | null;
   duration_ms: number | null;
   created_at: string;

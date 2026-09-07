@@ -9,6 +9,7 @@ type MediaItem = {
   asset_type: string | null;
   title: string | null;
   storage_ref: string | null;
+  provider: string | null;
   rights_holder_ref: string | null;
   rights_basis: string | null;
   work_title: string | null;
@@ -28,7 +29,7 @@ async function getData(): Promise<MediaItem[]> {
 
   const { data: assets } = await svc
     .from("media_asset")
-    .select("asset_id, asset_type, storage_ref")
+    .select("asset_id, asset_type, storage_ref, provider")
     .in("asset_id", assetIds)
     .not("storage_ref", "like", "seed:placeholder:%");
 
@@ -37,6 +38,7 @@ async function getData(): Promise<MediaItem[]> {
     asset_type: a.asset_type ?? null,
     title: null,
     storage_ref: a.storage_ref ?? null,
+    provider: a.provider ?? null,
     rights_holder_ref: null,
     rights_basis: null,
     work_title: null,

@@ -9,6 +9,7 @@ type MediaItem = {
   asset_type: string | null;
   title: string | null;
   storage_ref: string | null;
+  provider: string | null;
   rights_holder_ref: string | null;
   rights_basis: string | null;
   work_title: string | null;
@@ -37,6 +38,7 @@ function AssetPreview({ item }: { item: MediaItem }) {
       <div className="relative">
         <MediaVisual
           playbackId={item.storage_ref ?? undefined}
+          provider={item.provider}
           title={item.title ?? item.work_title ?? ""}
           aspectRatio="16/9"
         />
@@ -80,6 +82,7 @@ function AssetPreview({ item }: { item: MediaItem }) {
   return (
     <MediaVisual
       playbackId={item.storage_ref ?? undefined}
+      provider={item.provider}
       title={item.title ?? item.work_title ?? ""}
       aspectRatio="16/9"
     />

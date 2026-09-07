@@ -103,7 +103,7 @@ export async function GET() {
           .in("master_id", masterIds)
       : Promise.resolve({ data: [] }),
     svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("status", "active"),
-    svc.from("media_asset").select("asset_id, asset_type, storage_ref, format, duration_ms, created_at"),
+    svc.from("media_asset").select("asset_id, asset_type, storage_ref, provider, format, duration_ms, created_at"),
     svc.from("media_intake").select("*").order("created_at", { ascending: false }),
   ]);
 

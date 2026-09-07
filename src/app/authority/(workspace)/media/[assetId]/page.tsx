@@ -15,6 +15,7 @@ import { IsrcWorkflowPanel } from "./isrc-workflow-panel";
 import { MetadataStatusPanel } from "./metadata-status-panel";
 import { buildCanonicalMetadata } from "@/lib/media/metadata-build";
 import { checkMetadataConsistency } from "@/lib/media/metadata-embed";
+import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
@@ -149,13 +150,8 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const isThumbnail = asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail");
   const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
 
-  // Provider-aware thumbnail for the asset detail header
   const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail"
-    ? asset.provider === "mux"
-      ? `https://image.mux.com/${asset.storage_ref}/thumbnail.jpg?time=5&width=320`
-      : asset.provider === "livepeer"
-        ? `https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyor6526t4tcmtmqa/catalyst-vod-com/hls/${asset.storage_ref}/thumbnails/keyframes_0.png`
-        : null
+    ? providerThumbnailUrl(asset.provider, asset.storage_ref, { timeSec: 5, width: 320 })
     : null;
 
   return (
