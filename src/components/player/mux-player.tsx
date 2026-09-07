@@ -76,18 +76,10 @@ export function MuxPlayer({
 
     async function loadHls() {
       if (!media) return;
-      // Native HLS support (Safari, iOS)
-      if (media.canPlayType("application/vnd.apple.mpegurl")) {
-        media.src = hlsUrl;
-        media.addEventListener("loadedmetadata", () => attachRange(), { once: true });
-        media.addEventListener("canplay", () => setState("ready"), { once: true });
-        media.addEventListener("error", () => setState("error"), { once: true });
-        return;
-      }
-      // HLS.js for browsers without native HLS
       const { default: Hls } = await import("hls.js");
+      // hls.js is supported (all modern browsers except Safari) — always prefer it
       if (Hls.isSupported()) {
-        const hls = new Hls();
+        const hls = new Hls({ enableWorker: false });
         hls.loadSource(hlsUrl);
         hls.attachMedia(media as HTMLVideoElement);
         hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -97,6 +89,12 @@ export function MuxPlayer({
         hls.on(Hls.Events.ERROR, (_e, data) => {
           if (data.fatal) setState("error");
         });
+      } else if (media.canPlayType("application/vnd.apple.mpegurl")) {
+        // Native HLS fallback — Safari / iOS only
+        media.src = hlsUrl;
+        media.addEventListener("loadedmetadata", () => attachRange(), { once: true });
+        media.addEventListener("canplay", () => setState("ready"), { once: true });
+        media.addEventListener("error", () => setState("error"), { once: true });
       } else {
         setState("error");
       }

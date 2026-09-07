@@ -300,7 +300,7 @@ export default async function WorldPage({
               credit={data.description}
               collectible={false}
               timelineScenes={data.scenes
-                .filter((scene) => scene.playback_id === data.media?.playback_id && scene.start_ms != null && scene.end_ms != null)
+                .filter((scene) => scene.start_ms != null && scene.end_ms != null)
                 .map((scene) => ({ id: scene.master_id, title: scene.title, startMs: scene.start_ms!, endMs: scene.end_ms! }))}
               deckScenes={[]}
             />
