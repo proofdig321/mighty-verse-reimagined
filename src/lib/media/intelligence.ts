@@ -33,6 +33,8 @@ export type SampledFrame = {
   timeMs: number;
   /** Base64-encoded JPEG data URL of the representative frame. */
   dataUrl: string;
+  /** Raw luminance values (one per pixel) captured at extraction time. */
+  luminance: Float32Array;
   /** Width of the extracted frame in pixels. */
   width: number;
   /** Height of the extracted frame in pixels. */
@@ -163,10 +165,22 @@ function extractFrame(
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("Canvas 2D context unavailable");
   ctx.drawImage(video, 0, 0, width, height);
+  // Capture luminance synchronously while the canvas has the video frame drawn.
+  // This avoids the async Image loading problem in computeFrameDelta.
+  const imageData = ctx.getImageData(0, 0, width, height).data;
+  const pixelCount = width * height;
+  const luminance = new Float32Array(pixelCount);
+  for (let i = 0; i < pixelCount; i++) {
+    const r = imageData[i * 4];
+    const g = imageData[i * 4 + 1];
+    const b = imageData[i * 4 + 2];
+    luminance[i] = 0.299 * r + 0.587 * g + 0.114 * b;
+  }
   return {
     timeSec,
     timeMs: Math.round(timeSec * 1000),
     dataUrl: canvas.toDataURL("image/jpeg", quality),
+    luminance,
     width,
     height,
   };
@@ -231,35 +245,12 @@ export function computeFrameDelta(frameA: SampledFrame, frameB: SampledFrame): n
   if (frameA.width !== frameB.width || frameA.height !== frameB.height) {
     throw new Error("Frame dimensions must match for delta computation");
   }
-
-  // Decode both frames into pixel data via canvas
-  const canvas = document.createElement("canvas");
-  canvas.width = frameA.width;
-  canvas.height = frameA.height;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return 0;
-
-  function getPixelData(dataUrl: string): Uint8ClampedArray {
-    const img = new Image();
-    img.src = dataUrl;
-    ctx!.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return ctx!.getImageData(0, 0, canvas.width, canvas.height).data;
-  }
-
-  const pixelsA = getPixelData(frameA.dataUrl);
-  const pixelsB = getPixelData(frameB.dataUrl);
-
+  const pixelCount = frameA.luminance.length;
+  if (pixelCount === 0) return 0;
   let totalDiff = 0;
-  const pixelCount = pixelsA.length / 4;
-
-  for (let i = 0; i < pixelsA.length; i += 4) {
-    // Luminance approximation: 0.299R + 0.587G + 0.114B
-    const lumA = 0.299 * pixelsA[i] + 0.587 * pixelsA[i + 1] + 0.114 * pixelsA[i + 2];
-    const lumB = 0.299 * pixelsB[i] + 0.587 * pixelsB[i + 1] + 0.114 * pixelsB[i + 2];
-    totalDiff += Math.abs(lumA - lumB);
+  for (let i = 0; i < pixelCount; i++) {
+    totalDiff += Math.abs(frameA.luminance[i] - frameB.luminance[i]);
   }
-
-  // Normalise: max possible diff per pixel is 255
   return totalDiff / (pixelCount * 255);
 }
 

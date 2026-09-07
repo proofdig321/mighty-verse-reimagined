@@ -129,6 +129,9 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
       video.load();
     } else {
       // hls.js path (Chrome, Firefox, Edge)
+      // Set a sentinel on hlsRef immediately so onError can suppress MEDIA_ERR_SRC_NOT_SUPPORTED
+      // before hls.js attaches (the browser fires error 4 on the empty video element).
+      hlsRef.current = { destroy: () => {} };
       setSourceStatus("Initialising hls.js…");
       try {
         const { default: Hls } = await import("hls.js");
@@ -367,10 +370,9 @@ const runInspection = useCallback(async () => {
                 v.networkState === HTMLMediaElement.NETWORK_EMPTY ||
                 loadingRef.current
               ) return;
-              // MEDIA_ERR_SRC_NOT_SUPPORTED on an HLS URL = hls.js is managing the source;
-              // hls.js sets a blob: src on the video element which the browser reports as
-              // unsupported until hls.js attaches. Suppress it — hls.js ERROR event handles real failures.
-              if (v.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && hlsUrl) return;
+              // MEDIA_ERR_SRC_NOT_SUPPORTED while hls.js is managing the source = expected;
+              // hls.js sets a blob: src before attaching, browser reports error 4. Suppress it.
+              if (v.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && hlsRef.current) return;
               const code = v.error?.code;
               const msg = v.error?.message ?? "unknown";
               setLoadError(`Browser could not load the media source (error ${code}: ${msg}).`);
