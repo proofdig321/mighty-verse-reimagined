@@ -12,6 +12,7 @@ type UniverseItem = {
   attribution_roles: string[];
   projection_count: number;
   playback_id: string | null;
+  provider: string | null;
 };
 
 type Props = { universes: UniverseItem[] };
@@ -68,7 +69,7 @@ export default function UniversesFilterClient({ universes }: Props) {
             {filtered.map((u) => (
               <Link key={u.master_id} href={`/worlds/${u.master_id}`} className="artifact-card group">
                 {u.playback_id ? (
-                  <MediaVisual playbackId={u.playback_id} title={u.title ?? "Universe"} aspectRatio="16/9" />
+                  <MediaVisual playbackId={u.playback_id} provider={u.provider} title={u.title ?? "Universe"} aspectRatio="16/9" />
                 ) : (
                   <ArtworkFrame artworkUrl={null} alt={u.title ?? ""} aspectRatio="16/9" />
                 )}

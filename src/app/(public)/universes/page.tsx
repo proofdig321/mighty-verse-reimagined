@@ -15,6 +15,7 @@ export default async function UniversesPage() {
       attribution_roles: w.attribution_roles,
       projection_count: w.projections.length,
       playback_id: w.visual_playback_id,
+      provider: w.visual_provider,
     }));
 
   return (

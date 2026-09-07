@@ -11,6 +11,7 @@ export type DiscoveryUniverse = {
   attribution_roles: string[];
   projections: DiscoveryProjection[];
   visual_playback_id: string | null;
+  visual_provider: string | null;
 };
 
 export type DiscoveryProjection = {
@@ -22,9 +23,16 @@ export type DiscoveryProjection = {
   visual_playback_id: string | null;
 };
 
-function mediaStorageRef(binding: { media_asset?: { storage_ref: string | null }[] | { storage_ref: string | null } | null }) {
-  const asset = Array.isArray(binding.media_asset) ? binding.media_asset[0] : binding.media_asset;
-  return asset?.storage_ref ?? null;
+function mediaAsset(binding: { media_asset?: { storage_ref: string | null; provider: string | null }[] | { storage_ref: string | null; provider: string | null } | null }) {
+  return Array.isArray(binding.media_asset) ? binding.media_asset[0] : binding.media_asset;
+}
+
+function mediaStorageRef(binding: Parameters<typeof mediaAsset>[0]) {
+  return mediaAsset(binding)?.storage_ref ?? null;
+}
+
+function mediaProvider(binding: Parameters<typeof mediaAsset>[0]) {
+  return mediaAsset(binding)?.provider ?? null;
 }
 
 export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
@@ -78,7 +86,7 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
     projectionIds.length
         ? svc
           .from("projection_media_binding")
-          .select("projection_id, asset_id, media_asset(storage_ref)")
+          .select("projection_id, asset_id, media_asset(storage_ref, provider)")
           .in("projection_id", projectionIds)
           .eq("access_level", "public")
       : Promise.resolve({ data: [] }),
@@ -112,7 +120,9 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
         .map((e) => e.role_type);
 
       const masterHasMedia = mProjs.some((p) => projHasMedia.get(p.projection_id));
-      const visualPlaybackId = (bindings ?? []).map(binding => ({ binding, storageRef: mediaStorageRef(binding) })).find(({ binding, storageRef }) => binding.projection_id === mProjs[0]?.projection_id && !!storageRef && !storageRef.startsWith("seed:placeholder:"))?.storageRef ?? null;
+      const visualBinding = (bindings ?? []).map(binding => ({ binding, storageRef: mediaStorageRef(binding) })).find(({ binding, storageRef }) => binding.projection_id === mProjs[0]?.projection_id && !!storageRef && !storageRef.startsWith("seed:placeholder:"));
+      const visualPlaybackId = visualBinding?.storageRef ?? null;
+      const visualProvider = visualBinding ? mediaProvider(visualBinding.binding) : null;
       const presentation = (presentationRows ?? []).find((p) => p.master_id === m.master_id);
 
       return {
@@ -133,6 +143,7 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
           visual_playback_id: (bindings ?? []).map(binding => ({ binding, storageRef: mediaStorageRef(binding) })).find(({ binding, storageRef }) => binding.projection_id === p.projection_id && !!storageRef && !storageRef.startsWith("seed:placeholder:"))?.storageRef ?? null,
         })),
         visual_playback_id: visualPlaybackId,
+        visual_provider: visualProvider,
       };
     })
     .filter((w): w is DiscoveryUniverse => w !== null);

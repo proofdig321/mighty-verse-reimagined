@@ -114,6 +114,7 @@ export default async function HomePage() {
                 {w.visual_playback_id ? (
                   <MediaVisual
                     playbackId={w.visual_playback_id}
+                    provider={w.visual_provider}
                     title={w.title ?? "Universe"}
                     aspectRatio="16/9"
                   />
