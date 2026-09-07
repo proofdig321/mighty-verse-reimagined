@@ -158,10 +158,11 @@ async function loadData(universeId: string | null) {
   }
 
   // Available assets for binding (original + streaming-variant, non-placeholder)
+  // Note: 'video' is not a valid asset_type enum value — only 'original' and 'streaming-variant'
   const { data: rawAssets } = await svc
     .from("media_asset")
     .select("asset_id, provider, storage_ref, duration_ms, width, height, intake_id")
-    .in("asset_type", ["original", "streaming-variant", "video"])
+    .in("asset_type", ["original", "streaming-variant"])
     .not("storage_ref", "like", "seed:placeholder:%")
     .order("created_at", { ascending: false });
 

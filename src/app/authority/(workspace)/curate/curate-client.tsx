@@ -389,7 +389,7 @@ export default function CurateClient({
                     <option value="">Select asset…</option>
                     {availableAssets.map((a) => (
                       <option key={a.asset_id} value={a.asset_id}>
-                        {a.title ?? a.asset_id.slice(0, 8)} — {a.provider} {a.duration_ms ? `(${fmtSec(a.duration_ms)})` : ""}
+                        {a.title ?? `${a.provider ?? "unknown"} · ${a.storage_ref.slice(0, 16)}`} · {a.duration_ms ? fmtSec(a.duration_ms) : "—"}
                       </option>
                     ))}
                   </select>
