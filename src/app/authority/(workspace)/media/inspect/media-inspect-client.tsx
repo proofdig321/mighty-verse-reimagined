@@ -115,12 +115,17 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setLoadError(null);
     if (nativeHls) {
       setSourceStatus("Initialising native HLS…");
-      video.addEventListener("error", () => {
-        setLoadError("Browser could not load the media source.");
-        setSourceStatus(null);
-      }, { once: true });
       video.src = url;
       video.load();
+      // Attach error listener after src is set so transient MEDIA_ERR_SRC_NOT_SUPPORTED
+      // during native HLS initialisation does not surface as a fatal error.
+      // Only report if the error persists (networkState is NETWORK_NO_SOURCE).
+      video.addEventListener("error", () => {
+        if (video.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+          setLoadError("Browser could not load the media source.");
+          setSourceStatus(null);
+        }
+      }, { once: true });
     } else {
       setSourceStatus("Initialising hls.js…");
       try {
