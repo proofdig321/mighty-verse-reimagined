@@ -11,6 +11,7 @@ type SceneItem = {
   title: string | null;
   projection_id: string | null;
   playback_id: string | null;
+  provider: string | null;
 };
 
 async function getData(masterId: string): Promise<{ universeTitle: string | null; scenes: SceneItem[] }> {
@@ -75,15 +76,17 @@ async function getData(masterId: string): Promise<{ universeTitle: string | null
     : { data: [] };
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
-    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", assetIds)
+    ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", assetIds)
     : { data: [] };
 
-  // Build a map: mural_master_id → playback_id
-  const muralPlaybackMap = new Map<string, string>();
+  // Build a map: mural_master_id → { playback_id, provider }
+  const muralPlaybackMap = new Map<string, { playback_id: string; provider: string | null }>();
   for (const mp of muralProjs ?? []) {
     const assetId = (bindings ?? []).find((b) => b.projection_id === mp.projection_id)?.asset_id;
-    const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
-    if (ref && !ref.startsWith("seed:placeholder:")) muralPlaybackMap.set(mp.master_id, ref);
+    const asset = (assets ?? []).find((a) => a.asset_id === assetId);
+    if (asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")) {
+      muralPlaybackMap.set(mp.master_id, { playback_id: asset.storage_ref, provider: asset.provider ?? null });
+    }
   }
 
   // Build a map: scene_master_id → parent_mural_id (already in sceneChildren)
@@ -102,11 +105,19 @@ async function getData(masterId: string): Promise<{ universeTitle: string | null
         // Try scene's own binding
         const projId = (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id;
         const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
-        const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
-        if (ref && !ref.startsWith("seed:placeholder:")) return ref;
+        const asset = (assets ?? []).find((a) => a.asset_id === assetId);
+        if (asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")) return asset.storage_ref;
         // Fall back to parent mural's binding
         const muralId = sceneMuralMap.get(id);
-        return muralId ? (muralPlaybackMap.get(muralId) ?? null) : null;
+        return muralId ? (muralPlaybackMap.get(muralId)?.playback_id ?? null) : null;
+      })(),
+      provider: (() => {
+        const projId = (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id;
+        const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
+        const asset = (assets ?? []).find((a) => a.asset_id === assetId);
+        if (asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")) return asset.provider ?? null;
+        const muralId = sceneMuralMap.get(id);
+        return muralId ? (muralPlaybackMap.get(muralId)?.provider ?? null) : null;
       })(),
     })),
   };

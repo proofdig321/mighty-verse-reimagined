@@ -30,6 +30,9 @@ export async function POST(request: Request) {
     session_id,
     // Direct asset binding — for already-ingested assets (e.g. Mux)
     asset_id,
+    // Optional timing override — if omitted, existing binding timings are preserved
+    start_ms,
+    end_ms,
     // Legacy Livepeer field — kept for backward compatibility
     livepeer_asset_id,
     rights_holder_ref,
@@ -57,7 +60,34 @@ export async function POST(request: Request) {
     if (!existingAsset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
-    // Remove any existing primary binding for this projection first
+
+    // Validate caller-supplied timings if provided
+    const hasStart = start_ms !== undefined && start_ms !== null;
+    const hasEnd = end_ms !== undefined && end_ms !== null;
+    if ((hasStart || hasEnd) && !(hasStart && hasEnd)) {
+      return NextResponse.json({ error: "Both start_ms and end_ms must be provided together" }, { status: 400 });
+    }
+    if (hasStart && hasEnd && end_ms <= start_ms) {
+      return NextResponse.json({ error: "end_ms must be greater than start_ms" }, { status: 400 });
+    }
+
+    // Read existing binding to preserve timings and realization_id
+    const { data: existingBinding } = await svc
+      .from("projection_media_binding")
+      .select("start_ms, end_ms, realization_id, access_level")
+      .eq("projection_id", projection_id)
+      .eq("binding_type", "primary")
+      .maybeSingle();
+
+    const preservedStartMs = hasStart ? start_ms : (existingBinding?.start_ms ?? null);
+    const preservedEndMs = hasEnd ? end_ms : (existingBinding?.end_ms ?? null);
+    const preservedRealizationId = realization_id ?? existingBinding?.realization_id ?? null;
+    const preservedAccessLevel = existingBinding?.access_level ?? "public";
+
+    // Delete existing primary binding then insert replacement
+    // NOTE: these two operations are not atomic. If the insert fails, the projection
+    // will temporarily have no primary binding. A future migration to upsert-by-unique
+    // constraint on (projection_id, binding_type='primary') would eliminate this window.
     await svc
       .from("projection_media_binding")
       .delete()
@@ -70,9 +100,11 @@ export async function POST(request: Request) {
         projection_id,
         asset_id,
         binding_type: "primary",
-        access_level: "public",
+        access_level: preservedAccessLevel,
         created_by: participantId,
-        realization_id: realization_id ?? null,
+        realization_id: preservedRealizationId,
+        start_ms: preservedStartMs,
+        end_ms: preservedEndMs,
       })
       .select("binding_id")
       .single();

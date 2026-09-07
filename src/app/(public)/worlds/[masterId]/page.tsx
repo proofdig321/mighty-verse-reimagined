@@ -11,7 +11,7 @@ import PageTopNav from "@/components/page-top-nav";
 
 type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
 type MomentRow = { master_id: string; title: string | null; projection_id: string | null };
-type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; start_ms: number | null; end_ms: number | null };
+type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; provider: string | null; start_ms: number | null; end_ms: number | null };
 
 type PageData = {
   canonical_type: string;
@@ -169,7 +169,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     : { data: [] };
   const sceneAssetIds = (sceneBindings ?? []).map((binding) => binding.asset_id);
   const { data: sceneAssets } = sceneAssetIds.length
-    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", sceneAssetIds)
+    ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", sceneAssetIds)
     : { data: [] };
 
   const scenes: SceneRow[] = (sceneChildren ?? []).map((s) => ({
@@ -180,6 +180,11 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === s.master_id)?.projection_id;
       const binding = (sceneBindings ?? []).find((item) => item.projection_id === projectionId);
       return (sceneAssets ?? []).find((asset) => asset.asset_id === binding?.asset_id)?.storage_ref ?? null;
+    })(),
+    provider: (() => {
+      const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === s.master_id)?.projection_id;
+      const binding = (sceneBindings ?? []).find((item) => item.projection_id === projectionId);
+      return (sceneAssets ?? []).find((asset) => asset.asset_id === binding?.asset_id)?.provider ?? null;
     })(),
     start_ms: (() => {
       const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === s.master_id)?.projection_id;

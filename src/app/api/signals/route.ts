@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
+import { getServiceClient } from "@/lib/authority/validate";
 import { recordConsumptionSignal } from "@/lib/media/signals";
 
 export async function POST(request: Request) {
@@ -16,8 +17,11 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const participantId = await getParticipantId(supabase);
 
-    // Verify projection exists before recording signal
-    const { data: projection, error: projError } = await supabase
+    // Verify projection exists using service client — projection table has RLS that
+    // blocks anon reads, so the user-facing client would return 404 for every anonymous
+    // play signal even though the projection is valid.
+    const svc = getServiceClient();
+    const { data: projection, error: projError } = await svc
       .from("projection")
       .select("projection_id")
       .eq("projection_id", projectionId)

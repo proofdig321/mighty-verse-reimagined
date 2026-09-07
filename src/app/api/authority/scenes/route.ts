@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { registerMaster, createCanonicalState, createProjection } from "@/lib/authority/operations";
-import { validateAuthority, getServiceClient } from "@/lib/authority/validate";
+import { validateAuthority, logOperation, getServiceClient } from "@/lib/authority/validate";
 
 // POST /api/authority/scenes
 // Body: { mural_master_id, title, start_ms, end_ms, asset_id }
@@ -47,6 +47,31 @@ export async function POST(request: Request) {
     .maybeSingle();
   if (!asset) return NextResponse.json({ error: "Media asset not found" }, { status: 404 });
 
+  // Duplicate guard: reject if a scene with the same title already exists under this mural
+  // This prevents accidental double-submission. Title is not canonical identity, but
+  // duplicate titles under the same mural are unambiguously erroneous.
+  const { data: existingScenes } = await svc
+    .from("master")
+    .select("master_id")
+    .eq("parent_master_id", mural_master_id)
+    .eq("canonical_type", "scene");
+  if (existingScenes?.length) {
+    const existingIds = existingScenes.map((s) => s.master_id);
+    const { data: existingPres } = await svc
+      .from("work_presentation")
+      .select("master_id, title")
+      .in("master_id", existingIds);
+    const duplicate = (existingPres ?? []).find(
+      (p) => p.title?.trim().toLowerCase() === title.trim().toLowerCase()
+    );
+    if (duplicate) {
+      return NextResponse.json(
+        { error: `A scene named "${title.trim()}" already exists under this mural`, master_id: duplicate.master_id },
+        { status: 409 }
+      );
+    }
+  }
+
   // 1. Register master (scene, parent = mural)
   const masterResult = await registerMaster(
     participantId,
@@ -81,6 +106,7 @@ export async function POST(request: Request) {
       access_level: "public",
       start_ms,
       end_ms,
+      created_by: participantId,
       realization_id: null,
     })
     .select("binding_id")
@@ -89,6 +115,8 @@ export async function POST(request: Request) {
   if (bErr || !binding) {
     return NextResponse.json({ error: bErr?.message ?? "Failed to create binding" }, { status: 500 });
   }
+
+  await logOperation(auth.authority_id, "attach-media-binding", binding.binding_id, "media-binding", "accepted");
 
   return NextResponse.json({
     master_id,
