@@ -98,18 +98,13 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
 
     const nativeHls = video.canPlayType("application/vnd.apple.mpegurl") !== "";
 
-    // Capability check: bail early for browsers that support neither native HLS nor MSE
+    // For hls.js path: set sentinel on hlsRef BEFORE any await so onError
+    // can suppress MEDIA_ERR_SRC_NOT_SUPPORTED during the async import gap.
     if (!nativeHls) {
-      const { default: HlsProbe } = await import("hls.js");
-      if (!HlsProbe.isSupported()) {
-        setLoadError("This browser does not support HLS playback. Use Chrome, Firefox, Safari, or Edge.");
-        setSourceStatus(null);
-        return;
-      }
+      hlsRef.current = { destroy: () => {} };
     }
 
     // Tear down any previous HLS instance
-    if (hlsRef.current) { hlsRef.current.destroy(); hlsRef.current = null; }
     if (objectUrl) { URL.revokeObjectURL(objectUrl); setObjectUrl(null); }
     setHlsUrl(url);
     setMetadata(null);
@@ -118,23 +113,24 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setCandidates([]);
     setInspectMsg(null);
     setLoadError(null);
-    // Brief guard: suppress spurious onError events fired during source transition
-    loadingRef.current = true;
-    setTimeout(() => { loadingRef.current = false; }, 500);
-
     if (nativeHls) {
-      // Native HLS (Safari)
       setSourceStatus("Initialising native HLS…");
+      video.addEventListener("error", () => {
+        setLoadError("Browser could not load the media source.");
+        setSourceStatus(null);
+      }, { once: true });
       video.src = url;
       video.load();
     } else {
-      // hls.js path (Chrome, Firefox, Edge)
-      // Set a sentinel on hlsRef immediately so onError can suppress MEDIA_ERR_SRC_NOT_SUPPORTED
-      // before hls.js attaches (the browser fires error 4 on the empty video element).
-      hlsRef.current = { destroy: () => {} };
       setSourceStatus("Initialising hls.js…");
       try {
         const { default: Hls } = await import("hls.js");
+        if (!Hls.isSupported()) {
+          setLoadError("This browser does not support HLS playback. Use Chrome, Firefox, Safari, or Edge.");
+          setSourceStatus(null);
+          hlsRef.current = null;
+          return;
+        }
         const hls = new Hls({ enableWorker: false });
         hlsRef.current = hls;
         hls.on(Hls.Events.MEDIA_ATTACHED, () => setSourceStatus("Media attached — loading manifest…"));
@@ -150,6 +146,7 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
       } catch (err) {
         setLoadError(`HLS init failed: ${err instanceof Error ? err.message : String(err)}`);
         setSourceStatus(null);
+        hlsRef.current = null;
       }
     }
   // objectUrl intentionally excluded — only url matters for HLS load
@@ -157,7 +154,6 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   }, []);
 
   // Auto-load when assetIdentity is provided — runs after mount
-  const loadingRef = useRef(false);
   const loadedAssetRef = useRef<string | null>(null);
   useEffect(() => {
     if (!assetIdentity || loadedAssetRef.current === assetIdentity.asset_id) return;
@@ -361,22 +357,6 @@ const runInspection = useCallback(async () => {
                 setMetadata(extractBrowserMetadata(video));
                 setSourceStatus(null);
               }
-            }}
-            onError={(e) => {
-              const v = e.currentTarget;
-              if (
-                !v.src ||
-                v.src === window.location.href ||
-                v.networkState === HTMLMediaElement.NETWORK_EMPTY ||
-                loadingRef.current
-              ) return;
-              // MEDIA_ERR_SRC_NOT_SUPPORTED while hls.js is managing the source = expected;
-              // hls.js sets a blob: src before attaching, browser reports error 4. Suppress it.
-              if (v.error?.code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED && hlsRef.current) return;
-              const code = v.error?.code;
-              const msg = v.error?.message ?? "unknown";
-              setLoadError(`Browser could not load the media source (error ${code}: ${msg}).`);
-              setSourceStatus(null);
             }}
           />
 
