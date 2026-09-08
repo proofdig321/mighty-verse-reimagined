@@ -358,3 +358,18 @@ Curate Studio now performs explicit association of playable unbound media to an 
 Sentinel persist remains deferred: `POST /api/authority/media/inspect` requires a `master_id`, which unbound media does not have.
 
 **Do not automatically begin** a Mural editor, Scene editor, Creative Moment editor, public curation, publication, rights, timeline redesign, AI, 2.5D, or commerce. Evaluate the next missing capability in the journey.
+
+---
+
+## Checkpoint evaluation (Stage 2.7)
+
+`CANONICAL` (2026-09-08)
+
+Starting checkpoint: `3caaf65440f5c1c1b1588b137fd35eb3e286b60e`
+
+Stage 2.6 made a real dead-end visible: a Universe without a Mural cannot receive playable media because association requires an existing Mural projection. Candidate B (Sentinel persist for unbound media) does not close that dead-end and would invent authority semantics (`inspect` currently requires `master_id`). Candidate A reuses the existing Create Work operations without the media step.
+
+A curator can now register a Mural for an existing Universe via `POST /api/authority/murals`. This is container registration, not a Mural editor and not media ingestion. Super Hero Ego is idempotent. `media_realization` stays empty. Sentinel remains evidence, not creative authority.
+
+**Do not automatically begin** a Mural editor, Scene editor, Creative Moment editor, public curation, publication, rights, timeline redesign, AI, 2.5D, or commerce.
+

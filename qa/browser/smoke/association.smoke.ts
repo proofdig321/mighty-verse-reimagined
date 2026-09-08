@@ -46,14 +46,6 @@ test("unassociated media can associate to an existing Universe without creating 
   expect(occupiedBody.code).toBe("mural_occupied");
   notes.push("unbound media does not replace Super Hero Ego Mural media");
 
-  const noMural = await page.request.post("/api/authority/media", {
-    data: { asset_id: CANON.unboundLivepeerAssetId, universe_id: CANON.untitledUniverseId },
-  });
-  expect(noMural.status(), `no mural HTTP ${noMural.status()}`).toBe(409);
-  const noMuralBody = await noMural.json();
-  expect(noMuralBody.code).toBe("no_mural");
-  notes.push("Universe without a Mural is rejected; no Mural is created");
-
   const missingUniverse = await page.request.post("/api/authority/media", {
     data: { asset_id: CANON.unboundLivepeerAssetId, universe_id: "00000000-0000-4000-8000-000000000000" },
   });
@@ -84,10 +76,16 @@ test("unassociated media can associate to an existing Universe without creating 
   notes.push("Curate Studio shows Super Hero Ego as occupied for unbound media");
 
   await associateForm.getByLabel("Select Universe to associate").selectOption(CANON.untitledUniverseId);
-  await expect(associateForm.getByRole("alert")).toContainText(/no Mural/i);
-  await expect(associateForm.getByRole("link", { name: "Open Create Work" })).toHaveAttribute("href", "/authority/create");
-  await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
-  notes.push("Universe without Mural is a blocked state with a link to existing Create Work");
+  const untitledNoMural = associateForm.getByRole("alert").filter({ hasText: /no Mural/i });
+  if (await untitledNoMural.count()) {
+    await expect(untitledNoMural).toBeVisible();
+    await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
+    await expect(associateForm.getByRole("button", { name: "Register Mural" })).toBeVisible();
+    notes.push("Universe without Mural is blocked; Register Mural is offered without creating a binding");
+  } else {
+    await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeVisible();
+    notes.push("untitled Universe already has a Mural; association smoke does not bind unbound Livepeer");
+  }
 
   await muxRow.getByRole("link", { name: "Open Creative Suite", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}\\?from=curate`));

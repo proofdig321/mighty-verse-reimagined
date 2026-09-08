@@ -33,3 +33,11 @@ export type {
   AssociationEligibility,
   UniverseAssociationTarget,
 } from "./association";
+export {
+  decideMuralRegistration,
+  resolveMuralTitle,
+} from "./mural-registration";
+export type {
+  MuralRegistrationDecision,
+  MuralRegistrationResultKind,
+} from "./mural-registration";

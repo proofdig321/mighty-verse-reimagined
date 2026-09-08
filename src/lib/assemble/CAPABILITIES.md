@@ -32,6 +32,7 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Mural identity / expression | suite Mural section; listing `/authority/murals` | mural master + presentation | none in suite | later | listing yes | no | shell only | No Mural editor in 2.4 |
 | Curate Studio gateway | `/authority/curate` + `studio.ts` / `load-studio.ts` / `curate-studio-gateway.tsx` | incoming media + association | none | yes (hrefs injected) | route auth | no | yes | Doorway: intake → Sentinel → Creative Suite |
 | Associate media with existing Universe | `association.ts` + `associate-with-universe.tsx` + `POST /api/authority/media` `{ asset_id, universe_id }` | bind to existing Mural projection | `projection_media_binding` only | yes (decision/eligibility) | yes | playback consumes | yes | Stage 2.6. No Universe/Mural create. No `media_realization`. Occupied Mural is rejected. |
+| Register Mural for existing Universe | `mural-registration.ts` + `register-mural.tsx` + `POST /api/authority/murals` `{ universe_id, title? }` | compose existing `registerMaster` + `createCanonicalState` + `createProjection` | mural master + state + experiential projection | yes (decision) | yes | later playback | yes | Stage 2.7. No media attach. No second Mural when one exists. Not a Mural editor. Create Work remains the broader optional path. |
 | `/authority/curate` Sentinel inspect | `curate-client.tsx` | mural-bound HLS, frames, candidates | bind / accept scene (existing) | inspect UI Authority-hosted | yes | no | inspect kept | Evidence only; not Creative Suite |
 | Media inspect | `/authority/media/inspect` | asset identity + frames | none canonical | later | yes | no | existing | Asset-level inspect; not a Universe |
 | Media intake | `/authority/media/intake` | `media_intake` | create intake | later | yes | no | existing | MEDIA ≠ UNIVERSE |
@@ -48,7 +49,8 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 2.6
+## Product questions after Stage 2.7
 
-- **Sentinel UI persist.** `POST /api/authority/media/inspect` exists; Curate Studio inspection remains ephemeral. Not wired in 2.6 because persist currently requires a `master_id`, and unbound media has none. Provenance quality; deferred.
+- **Sentinel UI persist.** `POST /api/authority/media/inspect` exists; Curate Studio inspection remains ephemeral. Not wired because persist currently requires a `master_id`, and unbound media has none. Provenance quality; deferred. Sentinel must not become creative authority.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
+- **Mural editor / Scene editor / Creative Moment editor.** Registration establishes the container only. Editing remains later.

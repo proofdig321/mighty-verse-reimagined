@@ -155,6 +155,6 @@ assert(mismatchedTarget.ok === false && mismatchedTarget.code === "wrong_work", 
 
 assert(associationStatusLabel({ universe_id: null, universe_title: null, mural_id: null, mural_title: null, scene_titles: [], bound_as: null }) === "Not associated", "unbound label");
 assert(associationStatusLabel({ universe_id: UNIVERSE, universe_title: "Super Hero Ego", mural_id: MURAL, mural_title: "Super Hero Ego", scene_titles: [], bound_as: "mural" }) === "Super Hero Ego", "associated label uses Universe title");
-assert(CREATE_WORK_HREF === "/authority/create", "blocked state links to existing Create Work, not a new workflow");
+assert(CREATE_WORK_HREF === "/authority/create", "Create Work remains the existing broader creation path");
 
 console.log("Assemble association tests: all passed");

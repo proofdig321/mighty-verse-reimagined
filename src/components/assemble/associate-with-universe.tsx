@@ -12,6 +12,7 @@ import {
 } from "@/lib/assemble/association";
 import { creativeSuiteHref, type CurateStudioMedia } from "@/lib/assemble/studio";
 import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
+import { RegisterMural } from "./register-mural";
 
 export function AssociateWithUniverse({
   media,
@@ -140,23 +141,25 @@ export function AssociateWithUniverse({
           {selected.target.compatible
             ? `This associates the media with ${selected.title ?? "this Universe"} by binding it to the existing Mural ${selected.target.mural_title ?? "for that work"}. It does not create a Universe.`
             : selected.target.blocked_reason === "no_mural"
-              ? "This Universe has no Mural yet. Association does not create one."
-              : "This Universe's Mural has no presentation to receive media yet."}
+              ? "This Universe has no Mural yet. Association does not create one. Register the Mural first."
+              : "This Universe's Mural has no presentation to receive media yet. Register the Mural presentation first."}
         </p>
       )}
 
       {decision.ok === false && universeId && (
-        <p role="alert" className="text-xs text-destructive">
-          {decision.message}
-          {decision.code === "no_mural" && (
-            <>
-              {" "}
-              <Link href={CREATE_WORK_HREF} className="underline">
-                Open Create Work
-              </Link>
-            </>
+        <div className="space-y-2">
+          <p role="alert" className="text-xs text-destructive">
+            {decision.message}
+          </p>
+          {(decision.code === "no_mural" || decision.code === "no_projection") && (
+            <RegisterMural
+              universeId={selected?.master_id ?? universeId}
+              universeTitle={selected?.title ?? null}
+              layout="inline"
+              fromCurate
+            />
           )}
-        </p>
+        </div>
       )}
 
       {error && (

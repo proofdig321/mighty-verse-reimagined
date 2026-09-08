@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatTimelineMs } from "@/lib/media/timing";
@@ -8,6 +9,7 @@ export type UniverseAssemblyProps = {
   data: UniverseAssembly;
   openHref: (masterId: string) => string;
   openLabel?: string;
+  muralEmptyAction?: ReactNode;
 };
 
 function untitled(kind: string) {
@@ -22,6 +24,7 @@ export default function UniverseAssemblyView({
   data,
   openHref,
   openLabel = "Open",
+  muralEmptyAction,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
 
@@ -68,12 +71,15 @@ export default function UniverseAssemblyView({
           <h2 id="universe-mural" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
             Mural
           </h2>
-          {deferredNote("Complete audiovisual expression of this Universe. Mural curation is a later increment.")}
+          {deferredNote("Complete audiovisual expression of this Universe. Registering a Mural establishes the container. Mural editing is a later increment.")}
         </div>
         {data.murals.length === 0 ? (
-          <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
-            No mural assembled for this Universe yet.
-          </p>
+          <div className="rounded-lg border border-border bg-card/30 px-5 py-6 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              No mural assembled for this Universe yet.
+            </p>
+            {muralEmptyAction}
+          </div>
         ) : (
           <div className="space-y-4">
             {data.murals.map((mural) => (

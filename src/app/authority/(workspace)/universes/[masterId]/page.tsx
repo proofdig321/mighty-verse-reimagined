@@ -10,6 +10,7 @@ import { CURATE_STUDIO_HREF, creativeSuiteHref, creativeSuiteIdentityHref } from
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import UniverseAssemblyView from "@/components/assemble/universe-assembly";
+import { RegisterMural } from "@/components/assemble/register-mural";
 import { buttonVariants } from "@/components/ui/button";
 
 export default async function UniverseCurationPage({
@@ -88,6 +89,13 @@ export default async function UniverseCurationPage({
         data={data}
         openHref={(id) => `/authority/${id}`}
         openLabel="Open record"
+        muralEmptyAction={
+          <RegisterMural
+            universeId={data.master_id}
+            universeTitle={data.title}
+            fromCurate={fromCurate}
+          />
+        }
       />
     </div>
   );

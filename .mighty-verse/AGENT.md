@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 2.6 media → existing Universe association)
+STATUS: current as of 2026-09-08 (Stage 2.7 existing-Universe Mural registration)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -148,7 +148,8 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 ## 6. IMPLEMENTED FEATURES (verified)
 
 ### Canonical Operations (hardened 2026-09-09)
-- `/api/authority/media` — timing-preserving rebind (preserves start_ms/end_ms)
+- `/api/authority/media` — timing-preserving rebind (preserves start_ms/end_ms); Stage 2.6 Universe association `{ asset_id, universe_id }`
+- `/api/authority/murals` — Stage 2.7 Mural registration for an existing Universe (composes registerMaster + canonical state + experiential projection; no media)
 - `/api/authority/scenes` — created_by set, logOperation called, duplicate guard
 - `/api/authority/media/timeline` — PATCH updates start_ms/end_ms on binding
 - `/api/signals` — consumption signal recording (uses service client for projection lookup)
@@ -160,9 +161,9 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/worlds/[masterId]/scenes` — Scene Deck with provider=mux for all four scenes
 - `/moments/[projectionId]` — Moment playback via MuxPlayer with canonical timing
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
-- `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, bridge into Creative Suite
+- `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, register a Mural for a Universe that has none, bridge into Creative Suite
 - `/authority/universes` — Authority Universe listing (auth-gated)
-- `/authority/universes/[masterId]` — Creative Suite: Identity, Mural, Scenes, Creative Moments
+- `/authority/universes/[masterId]` — Creative Suite: Identity, Mural (register container if missing), Scenes, Creative Moments
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
 - `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
 
@@ -227,13 +228,14 @@ applied migration.
 - Frame evidence: ephemeral browser-side only until Sentinel Phase 2.
 - Sentinel has no persistent identity (no `inspection_session` in canonical ontology).
 - Scene rebind UI: API is safe; no UI surface yet.
-- Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
+- Livepeer second Universe `f11c3aba`: used in Stage 2.7 as the real Universe-without-Mural registration target. Do not treat it as disposable. Do not bind unbound Livepeer onto Super Hero Ego.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 - Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`. Stage 1.4 Chrome-verified Powerhouse, Dark Knight, and Hand-to-Hand through Universe → Mural sidebar navigation on the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (Scene seek, Play, painted frame, end reset-to-start, no Livepeer). Stage 1.5 Chrome-verified Scene Moment → `/creative-moments/{id}` identity pages (Proverb, Mothipa, Reason). Those pages are not a Mux playback surface. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
 - Authority Universe curation: Stage 2.1–2.4 establish Creative Suite. Stage 2.5 reconciles `/authority/curate` as the Curate Studio gateway (incoming media + Sentinel) into Creative Suite. `/authority/curate` is not the Universe editor. MEDIA ≠ UNIVERSE.
 - Product constitution locked 2026-09-08 in `.mighty-verse/06-product-vision.md`. Future increments are selected by the journey question, not by “next missing editor.”
 - Stage 2.6: Curate Studio can explicitly associate playable unbound media with an **existing** Universe via `POST /api/authority/media` `{ asset_id, universe_id }`. Server resolves the Universe’s Mural projection. Does not create Universes/Murals. Does not replace an occupied Mural. Does not populate `media_realization`.
+- Stage 2.7: A Universe without a Mural can register one via `POST /api/authority/murals` `{ universe_id }`, composing the existing Create Work operations **without media**. Super Hero Ego remains idempotent. Association still does not create a Mural. Sentinel persist remains deferred.
 - Sentinel UI inspection remains ephemeral in the browser; `POST /api/authority/media/inspect` persistence exists but is not wired from Curate Studio (persist currently requires a `master_id`; unbound media has none). Deferred.
 
 ---

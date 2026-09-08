@@ -15,6 +15,7 @@ import { associationStatusLabel } from "@/lib/assemble/association";
 import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
+import { RegisterMural } from "./register-mural";
 
 function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
@@ -161,6 +162,21 @@ export default function CurateStudioGateway({
                 <p className="text-xs text-muted-foreground">
                   {selectedMedia.length} associated media record{selectedMedia.length === 1 ? "" : "s"} in this Universe.
                 </p>
+              )}
+              {(selected.target.blocked_reason === "no_mural" ||
+                selected.target.blocked_reason === "no_projection") && (
+                <div className="space-y-2 rounded-md border border-border bg-background px-4 py-3">
+                  <p className="text-sm text-foreground">
+                    {selected.target.blocked_reason === "no_mural"
+                      ? "This Universe has no Mural yet. Register the Mural to establish the audiovisual container. This does not attach media."
+                      : "This Universe's Mural has no presentation yet. Register the Mural presentation. This does not attach media."}
+                  </p>
+                  <RegisterMural
+                    universeId={selected.master_id}
+                    universeTitle={selected.title}
+                    fromCurate
+                  />
+                </div>
               )}
               <div className="flex flex-wrap gap-2">
                 <Link href={creativeSuiteHref(selected.master_id, "curate")} className={buttonVariants({ size: "sm" })}>

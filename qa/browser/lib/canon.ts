@@ -141,6 +141,7 @@ export const ROUTES = {
   authority: "/authority",
   authorityUniverses: "/authority/universes",
   authorityUniverseWorkspace: `/authority/universes/${CANON.universeId}`,
+  authorityUntitledUniverseWorkspace: `/authority/universes/${CANON.untitledUniverseId}`,
   authorityUniverseIdentity: `/authority/universes/${CANON.universeId}/identity`,
   editor: "/editor",
   signIn: "/auth/sign-in",

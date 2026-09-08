@@ -1190,3 +1190,15 @@ Stage 2.6 media → existing Universe association
         ↓
 next: evaluate the journey; do not assume a Mural/Scene/CM editor
 ```
+
+### Stage 2.7 — Existing-Universe Mural registration (2026-09-08)
+
+Checkpoint starts from `3caaf65440f5c1c1b1588b137fd35eb3e286b60e`.
+
+A Universe without a Mural can register its audiovisual container by composing the existing `registerMaster` → `createCanonicalState` → `createProjection` path. No media is attached. Super Hero Ego registration is idempotent. Association still requires that Mural; it still does not create one. Sentinel persist remains deferred because inspect requires `master_id`. This is not a Mural editor.
+
+```
+Stage 2.7 existing-Universe Mural registration
+        ↓
+next: evaluate the journey; do not assume a Mural/Scene/CM editor
+```
