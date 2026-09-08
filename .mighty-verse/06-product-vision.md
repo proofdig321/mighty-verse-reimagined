@@ -387,3 +387,17 @@ Asset Record and Inspect now continue into the same Curate Studio with `?asset=`
 
 **Do not automatically begin** a Mural editor, Scene editor, Creative Moment editor, public curation, publication, rights, timeline redesign, AI, 2.5D, or commerce. Create Work completion still lands on the publishing record; changing that destination was not required for this handoff.
 
+---
+
+## Checkpoint evaluation (Stage 2.9)
+
+`CANONICAL` (2026-09-08)
+
+Starting checkpoint: `8960a426000e045eee63215025394d4b7e6fc2f6`
+
+After Stage 2.8 restored Gallery → Inspect → Curate context, Creative Suite still presented Super Hero Ego as records and tables. The missing capability was Studio objecthood: face-up Scenes, contributor Creative Moments, and visible canonical relationships — not a second Experience deck and not a Scene editor.
+
+Creative Suite now reads as a composition surface on the existing `/authority/universes/{id}` route. Universe identity leads with the world. Mural is stage presence without a second player. Scenes are numbered, named, face-up objects. Proverb / Mothipa / Reason are Creative Moment objects. Proverb remains shared with Powerhouse and Hand-to-Hand. No migration. No ontology change. Experience facedown/shuffle/reorder stays in Experience.
+
+**Do not automatically begin** a Scene editor, Creative Moment editor, Mural editor, timeline redesign, public curation, publication, rights, AI, 2.5D, or commerce.
+

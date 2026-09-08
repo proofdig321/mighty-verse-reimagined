@@ -54,14 +54,22 @@ export default async function UniverseCurationPage({
       />
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1 min-w-0">
+        <div className="space-y-2 min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
             Creative Suite
           </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
+          <h1
+            className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
+            style={{ fontFamily: "var(--font-display, inherit)" }}
+          >
+            {title}
+          </h1>
+          {data.description ? (
+            <p className="text-base text-foreground/80 max-w-3xl">{data.description}</p>
+          ) : null}
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Curate this Universe as a complete creative work — identity, Mural, Scenes, and Creative Moments.
-            Identity can be edited now. The other layers are hosted here for later increments.
+            Inside this Universe: its Mural, Scenes, and Creative Moments as a composition surface.
+            Identity can be edited now. Scene and Creative Moment editing remain later increments.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">

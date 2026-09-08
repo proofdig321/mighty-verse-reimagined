@@ -10,6 +10,9 @@ const SWORD_MASTER = "65490a92-8faf-42ea-a391-0e6473360f5c";
 const PROVERB = "3b0de6b4-2ca0-43c0-8561-7dc1c0697435";
 const MOTHIPA = "32422bb4-d03c-465d-8348-942e49ae0051";
 const REASON = "2745a50a-5417-4613-b23b-ef4857ab112e";
+const MURAL_PROJECTION = "2e68a8d6-6b15-4d16-a0d9-2ea290815f21";
+const MUX_ASSET = "795c057e-2967-4e93-8f5e-06297c674cb0";
+const MUX_PLAYBACK = "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -42,16 +45,19 @@ const assembly = buildUniverseAssembly({
     { projection_id: "9c045ea3-ab09-4a6f-b89c-02dce076b8da", master_id: HAND_TO_HAND },
     { projection_id: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd", master_id: SWORD_MASTER },
   ],
+  muralProjections: [{ projection_id: MURAL_PROJECTION, master_id: MURAL }],
   momentProjections: [
     { projection_id: "718372da-4941-41d6-bb64-3a0b0812b047", master_id: MOTHIPA },
     { projection_id: "89ba1c24-01c1-4bbd-8ed1-d48021600b71", master_id: REASON },
   ],
   bindings: [
-    { projection_id: "3039ca84-7e11-4eb6-8895-d16d13a899c3", start_ms: 36000, end_ms: 79000 },
-    { projection_id: "bb802400-b385-4025-9bb8-63df53abd9be", start_ms: 80000, end_ms: 124000 },
-    { projection_id: "9c045ea3-ab09-4a6f-b89c-02dce076b8da", start_ms: 149000, end_ms: 192000 },
-    { projection_id: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd", start_ms: 193000, end_ms: 254000 },
+    { projection_id: "3039ca84-7e11-4eb6-8895-d16d13a899c3", start_ms: 36000, end_ms: 79000, asset_id: MUX_ASSET },
+    { projection_id: "bb802400-b385-4025-9bb8-63df53abd9be", start_ms: 80000, end_ms: 124000, asset_id: MUX_ASSET },
+    { projection_id: "9c045ea3-ab09-4a6f-b89c-02dce076b8da", start_ms: 149000, end_ms: 192000, asset_id: MUX_ASSET },
+    { projection_id: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd", start_ms: 193000, end_ms: 254000, asset_id: MUX_ASSET },
+    { projection_id: MURAL_PROJECTION, start_ms: 0, end_ms: 254800, asset_id: MUX_ASSET },
   ],
+  assets: [{ asset_id: MUX_ASSET, provider: "mux", storage_ref: MUX_PLAYBACK }],
   relations: [
     { scene_master_id: POWERHOUSE, moment_master_id: PROVERB },
     { scene_master_id: DARK_KNIGHT, moment_master_id: MOTHIPA },
@@ -62,11 +68,14 @@ const assembly = buildUniverseAssembly({
 
 assert(assembly.title === "Super Hero Ego", "universe title");
 assert(assembly.murals.length === 1 && assembly.murals[0].master_id === MURAL, "one mural");
+assert(assembly.murals[0].has_media === true, "mural has bound media");
+assert(assembly.murals[0].storage_ref === MUX_PLAYBACK, "mural still uses Mux storage_ref");
 assert(assembly.murals[0].scenes.length === 4, "four scenes");
 assert(assembly.creative_moments.length === 3, "three creative moments");
 
 const scenes = Object.fromEntries(assembly.murals[0].scenes.map((scene) => [scene.master_id, scene]));
 assert(scenes[POWERHOUSE].creative_moment_id === PROVERB, "Powerhouse → Proverb");
+assert(scenes[POWERHOUSE].storage_ref === MUX_PLAYBACK, "Powerhouse still maps Mux asset");
 assert(scenes[HAND_TO_HAND].creative_moment_id === PROVERB, "Hand-to-Hand shares Proverb");
 assert(scenes[DARK_KNIGHT].creative_moment_title === "Mothipa", "Dark Knight → Mothipa");
 assert(scenes[SWORD_MASTER].creative_moment_title === "Reason", "Sword Master → Reason");
@@ -74,6 +83,7 @@ assert(scenes[SWORD_MASTER].creative_moment_title === "Reason", "Sword Master �
 const proverb = assembly.creative_moments.find((moment) => moment.master_id === PROVERB);
 assert(proverb && proverb.has_experience === false, "Proverb is identity-only");
 assert(proverb.scene_titles.length === 2, "Proverb related to two Scenes");
+assert(proverb.scene_ids.includes(POWERHOUSE) && proverb.scene_ids.includes(HAND_TO_HAND), "Proverb scene_ids preserve sharing");
 
 const mothipa = assembly.creative_moments.find((moment) => moment.master_id === MOTHIPA);
 assert(mothipa && mothipa.has_experience === true, "Mothipa has an experiential projection");

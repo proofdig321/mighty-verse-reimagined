@@ -3,6 +3,7 @@ import { applyAuthoritySession } from "../lib/authority-auth";
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
 import { reportEvidence } from "../lib/observe";
+import { expectCreativeSuiteComposition } from "../lib/suite-composition";
 
 test("unauthenticated Universe listing redirects to sign-in", async ({ page, observe }, testInfo) => {
   const response = await page.goto(ROUTES.authorityUniverses, { waitUntil: "domcontentloaded" });
@@ -61,24 +62,11 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await expect(page.getByRole("link", { name: "View public experience" })).toHaveAttribute("href", ROUTES.universeLive);
   await expect(page.getByRole("link", { name: "Canonical record" })).toHaveAttribute("href", `/authority/${CANON.universeId}`);
 
-  await expect(page.getByRole("heading", { name: /^Mural$/i })).toBeVisible();
-  await expect(page.getByText(CANON.muralId)).toBeVisible();
-
-  const scenesSection = page.locator("section[aria-labelledby='universe-scenes']");
-  const momentsSection = page.locator("section[aria-labelledby='universe-moments']");
-
-  await suiteNav.getByRole("link", { name: "Scenes", exact: true }).click();
-  await expect(scenesSection).toBeVisible();
-
+  await expectCreativeSuiteComposition(page);
   for (const scene of Object.values(SCENE_MOMENTS)) {
-    await expect(scenesSection.getByRole("cell", { name: scene.sceneTitle, exact: true })).toBeVisible();
     notes.push(`suite Scene ${scene.sceneTitle} → ${scene.creativeMomentTitle}`);
   }
-
-  await suiteNav.getByRole("link", { name: "Creative Moments", exact: true }).click();
-  await expect(page.getByRole("heading", { name: /Creative Moments/i })).toBeVisible();
   for (const cm of Object.values(CREATIVE_MOMENTS)) {
-    await expect(momentsSection.getByRole("cell", { name: cm.title, exact: true })).toBeVisible();
     notes.push(`workspace Creative Moment ${cm.title} ${cm.masterId}`);
   }
 

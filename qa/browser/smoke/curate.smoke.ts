@@ -1,8 +1,9 @@
-import { CANON, ROUTES, SCENE_MOMENTS, CREATIVE_MOMENTS } from "../lib/canon";
+import { CANON, ROUTES } from "../lib/canon";
 import { applyAuthoritySession } from "../lib/authority-auth";
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
 import { captureScreenshot, reportEvidence } from "../lib/observe";
+import { expectCreativeSuiteComposition } from "../lib/suite-composition";
 
 test("curate route loads the authority surface or the real auth gate", async ({ page, observe }, testInfo) => {
   const response = await page.goto(ROUTES.curate, { waitUntil: "domcontentloaded" });
@@ -79,24 +80,7 @@ test("Authority dashboard opens Curate Studio then Super Hero Ego Creative Suite
 
   await page.getByRole("link", { name: "Open Creative Suite", exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}\\?from=curate`));
-  await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
-  await expect(page.getByText("Creative Suite").first()).toBeVisible();
-  const suiteNav = page.getByRole("navigation", { name: "Creative Suite" });
-  await expect(suiteNav.getByRole("link", { name: "Identity", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "Mural", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "Creative Moments", exact: true })).toBeVisible();
-
-  const scenesSection = page.locator("section[aria-labelledby='universe-scenes']");
-  const momentsSection = page.locator("section[aria-labelledby='universe-moments']");
-  await suiteNav.getByRole("link", { name: "Scenes", exact: true }).click();
-  for (const scene of Object.values(SCENE_MOMENTS)) {
-    await expect(scenesSection.getByRole("cell", { name: scene.sceneTitle, exact: true })).toBeVisible();
-  }
-  await suiteNav.getByRole("link", { name: "Creative Moments", exact: true }).click();
-  for (const cm of Object.values(CREATIVE_MOMENTS)) {
-    await expect(momentsSection.getByRole("cell", { name: cm.title, exact: true })).toBeVisible();
-  }
+  await expectCreativeSuiteComposition(page);
   notes.push("Creative Suite Identity / Mural / Scenes / Creative Moments remain intact from Curate");
 
   await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Curate", exact: true }).click();

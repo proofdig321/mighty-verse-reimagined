@@ -357,4 +357,384 @@
       height: 14rem;
     }
   }
+
+  /* Creative Suite composition surface — Studio, not Experience deck */
+  .suite-composition {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .suite-stack {
+    display: grid;
+    gap: clamp(2.5rem, 5vw, 4rem);
+  }
+
+  .suite-section {
+    min-width: 0;
+  }
+
+  .suite-kicker,
+  .suite-section-title {
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+
+  .suite-kicker {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+
+  .suite-section-title {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--muted-foreground);
+  }
+
+  .suite-section-head {
+    margin-bottom: 1rem;
+    max-width: 46rem;
+  }
+
+  .suite-section-note,
+  .suite-empty,
+  .suite-mural-empty {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+
+  .suite-empty,
+  .suite-mural-empty {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--card) 30%, transparent);
+    padding: 1.25rem 1.25rem;
+  }
+
+  .suite-mural-empty {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  .suite-identity {
+    border-left: 2px solid var(--accent-mv-gold);
+    padding: 0.25rem 0 0.25rem 1.25rem;
+  }
+
+  .suite-identity-title {
+    margin-top: 0.35rem;
+    font-family: var(--font-display, inherit);
+    font-size: clamp(1.5rem, 2.4vw, 2rem);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+
+  .suite-identity-description {
+    margin-top: 0.5rem;
+    max-width: 42rem;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: color-mix(in oklch, var(--foreground) 82%, transparent);
+  }
+
+  .suite-identifiers {
+    margin-top: 1rem;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+
+  .suite-identifiers summary {
+    cursor: pointer;
+    width: fit-content;
+    color: var(--muted-foreground);
+  }
+
+  .suite-identifiers summary:hover,
+  .suite-identifiers summary:focus-visible {
+    color: var(--foreground);
+  }
+
+  .suite-identifiers summary:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  .suite-identifiers dl {
+    margin-top: 0.75rem;
+    display: grid;
+    gap: 0.5rem;
+  }
+
+  .suite-identifiers dt {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+  }
+
+  .suite-mural-presence {
+    overflow: hidden;
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 35%, var(--border));
+    border-radius: var(--radius);
+    background: var(--card);
+  }
+
+  .suite-mural-stage {
+    position: relative;
+    min-height: 12rem;
+    aspect-ratio: 21 / 9;
+    max-height: 22rem;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--accent-mv) 22%, var(--background)),
+      var(--background) 55%,
+      color-mix(in oklch, var(--accent-mv-gold) 12%, var(--background))
+    );
+  }
+
+  .suite-mural-stage .suite-still,
+  .suite-mural-stage .suite-still-placeholder {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .suite-mural-stage-copy {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 1.25rem 1.25rem 1rem;
+    background: linear-gradient(to top, color-mix(in oklch, var(--background) 88%, transparent), transparent);
+  }
+
+  .suite-mural-title {
+    font-family: var(--font-display, inherit);
+    font-size: clamp(1.35rem, 2vw, 1.85rem);
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .suite-mural-role {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: color-mix(in oklch, var(--foreground) 78%, transparent);
+  }
+
+  .suite-mural-meta {
+    display: grid;
+    gap: 0.65rem;
+    padding: 1rem 1.25rem 1.25rem;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+  }
+
+  .suite-scene-grid,
+  .suite-moment-grid {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 1.25rem;
+  }
+
+  .suite-scene-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  }
+
+  .suite-moment-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  }
+
+  .suite-still,
+  .suite-still-placeholder {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .suite-still-placeholder {
+    background:
+      radial-gradient(ellipse at 50% 35%, color-mix(in oklch, var(--accent-mv) 22%, transparent), transparent 70%),
+      linear-gradient(160deg, color-mix(in oklch, var(--accent-mv) 18%, var(--card)), var(--card));
+  }
+
+  .suite-scene-object,
+  .suite-moment-object {
+    min-width: 0;
+    height: 100%;
+    transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+  }
+
+  .suite-scene-object {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 40%, var(--border));
+    border-radius: var(--radius);
+    background: var(--card);
+    scroll-margin-top: 6rem;
+  }
+
+  .suite-scene-still {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--background);
+  }
+
+  .suite-scene-ordinal {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.55rem;
+    font-family: var(--font-display, inherit);
+    font-size: 1.75rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: white;
+    text-shadow: 0 1px 8px color-mix(in oklch, var(--background) 80%, transparent);
+  }
+
+  .suite-scene-body,
+  .suite-moment-object {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding: 0.9rem 1rem 1rem;
+  }
+
+  .suite-scene-title,
+  .suite-moment-title {
+    font-family: var(--font-display, inherit);
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--foreground);
+  }
+
+  .suite-scene-full-title,
+  .suite-scene-timing,
+  .suite-moment-presence {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+
+  .suite-scene-full-title {
+    line-height: 1.35;
+  }
+
+  .suite-scene-timing {
+    font-family: var(--font-mono, ui-monospace, monospace);
+  }
+
+  .suite-moment-object {
+    border-left: 3px solid var(--accent-mv-gold);
+    border-top: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    border-radius: 0 var(--radius) var(--radius) 0;
+    background: color-mix(in oklch, var(--card) 88%, var(--accent-mv) 6%);
+    scroll-margin-top: 6rem;
+  }
+
+  .suite-moment-kicker {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-mv-gold);
+  }
+
+  .suite-moment-scenes ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .suite-relation-kicker {
+    display: block;
+    margin-bottom: 0.2rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .suite-relation-link,
+  .suite-open-link {
+    color: color-mix(in oklch, var(--accent-mv-gold) 70%, var(--foreground));
+    text-decoration: none;
+    font-size: 0.8125rem;
+  }
+
+  .suite-open-link {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+
+  .suite-relation-link:hover,
+  .suite-open-link:hover {
+    color: var(--foreground);
+  }
+
+  .suite-relation-link:focus-visible,
+  .suite-open-link:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
+  }
+
+  .suite-object-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1rem;
+    margin-top: 0.35rem;
+  }
+
+  .suite-scene-object:hover,
+  .suite-scene-object:focus-within,
+  .suite-moment-object:hover,
+  .suite-moment-object:focus-within,
+  .suite-scene-object[data-related],
+  .suite-moment-object[data-related] {
+    border-color: color-mix(in oklch, var(--accent-mv-gold) 75%, var(--border));
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--accent-mv-gold) 55%, transparent),
+      0 18px 32px color-mix(in oklch, var(--background) 55%, transparent);
+    transform: translateY(-3px);
+    z-index: 1;
+  }
+
+  .suite-moment-object:hover,
+  .suite-moment-object:focus-within,
+  .suite-moment-object[data-related] {
+    border-left-color: var(--accent-mv-gold);
+  }
+
+  @media (max-width: 640px) {
+    .suite-mural-stage {
+      aspect-ratio: 16 / 9;
+      max-height: none;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .suite-scene-object,
+    .suite-moment-object {
+      transition: none;
+      transform: none;
+    }
+
+    .suite-scene-object:hover,
+    .suite-scene-object:focus-within,
+    .suite-moment-object:hover,
+    .suite-moment-object:focus-within,
+    .suite-scene-object[data-related],
+    .suite-moment-object[data-related] {
+      transform: none;
+    }
+  }
 }

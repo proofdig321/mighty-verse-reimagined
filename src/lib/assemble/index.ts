@@ -6,6 +6,12 @@ export { loadUniverseAssembly } from "./load-universe";
 export { validateUniverseIdentity, mergeWorkPresentationIdentity } from "./identity";
 export { CREATIVE_SUITE_SECTIONS, creativeSuiteNavItems, suiteScenes } from "./suite";
 export {
+  sceneOrdinal,
+  sceneShortTitle,
+  sceneStillUrl,
+  sharedCreativeMomentIds,
+} from "./composition";
+export {
   CURATE_LIFECYCLE,
   CURATE_STUDIO_HREF,
   associateAssetWithCanonicalWork,

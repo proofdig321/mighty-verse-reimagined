@@ -22,7 +22,12 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 |---|---|---|---|---|---|---|---|---|
 | Universe assembly read-model | `src/lib/assemble/load-universe.ts` | `UniverseAssembly` | none (read) | yes | route auth | no | yes | Shared hierarchy |
 | Creative Suite sections/nav | `src/lib/assemble/suite.ts` + `creative-suite-nav.tsx` | Identity / Mural / Scenes / Creative Moments | none | yes | hrefs injected | no | yes | Hosts future editors without being an editor |
-| Universe assembly presentation | `src/components/assemble/universe-assembly.tsx` | same read-model | none | yes | `openHref` | no | yes | Scenes are suite-level; CMs Universe-parented |
+| Universe assembly presentation | `src/components/assemble/universe-assembly.tsx` + Scene/CM/Mural objects | same read-model | none | yes | `openHref` | no | yes | Composition surface: objects not catalogue tables |
+| Creative Suite composition helpers | `src/lib/assemble/composition.ts` | ordinals, short titles, shared CM ids, still params | none | yes | no | no | yes | Studio language; not Experience deck |
+| Scene object | `scene-object.tsx` | SuiteScene | none | yes | open record | no | yes | Face-up, numbered, known. Not facedown. |
+| Creative Moment object | `creative-moment-object.tsx` | UniverseAssemblyMoment | none | yes | open record | no | yes | Contributor-centred; Proverb sharing is live data |
+| Mural presence | `mural-presence.tsx` | UniverseAssemblyMural | none | yes | open record + public mural link | stills only | yes | Stage presence; not a second player |
+| Relationship focus | `composition-surface.tsx` | hover/focus related ids | none | yes | no | no | yes | Makes shared Proverb visible without a graph |
 | Hierarchy breadcrumbs | `src/components/assemble/breadcrumb.tsx` | labels + hrefs | none | yes | chrome | no | yes | Ontology chrome |
 | Universe identity model/form | `identity.ts` + `universe-identity-form.tsx` | title + description | via injected save | yes | no | no | yes | Stage 2.3 |
 | Universe identity mutation | `POST /api/authority/presentation` | `{ master_id, title, description? }` | upsert `work_presentation` | later | yes | no | no | Authority gate; identity-only preserves artwork |
@@ -49,9 +54,10 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 2.8
+## Product questions after Stage 2.9
 
-- Gallery / Inspect now continue into Curate Studio with selected media identity. Create Work remains independent and still completes on the publishing record.
+- Creative Suite now presents Super Hero Ego as a composition surface (face-up Scenes, contributor Creative Moments, visible sharing). It is not a Scene editor, Creative Moment editor, or Mural editor.
+- Gallery / Inspect still continue into Curate Studio with selected media identity. Create Work remains independent and still completes on the publishing record.
 - **Sentinel UI persist.** `POST /api/authority/media/inspect` exists; Curate Studio inspection remains ephemeral. Not wired because persist currently requires a `master_id`, and unbound media has none. Provenance quality; deferred. Sentinel must not become creative authority.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
 - **Mural editor / Scene editor / Creative Moment editor.** Registration establishes the container only. Editing remains later.

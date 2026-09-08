@@ -6,6 +6,22 @@ import type {
   UniverseAssemblyScene,
 } from "./types";
 
+function assetFor(
+  rows: UniverseAssemblyRows,
+  projectionId: string | null | undefined,
+): { provider: string | null; storage_ref: string | null } {
+  if (!projectionId) return { provider: null, storage_ref: null };
+  const binding = rows.bindings.find((row) => row.projection_id === projectionId);
+  const asset = binding?.asset_id
+    ? (rows.assets ?? []).find((row) => row.asset_id === binding.asset_id)
+    : undefined;
+  const storage = asset?.storage_ref ?? null;
+  if (!storage || storage.startsWith("seed:placeholder:")) {
+    return { provider: null, storage_ref: null };
+  }
+  return { provider: asset?.provider ?? null, storage_ref: storage };
+}
+
 /**
  * Compose a Universe assembly from already-loaded canonical rows.
  * Shared Powerhouse/Hand-to-Hand → Proverb relations are preserved as live data.
@@ -28,6 +44,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
     const binding = projection
       ? rows.bindings.find((row) => row.projection_id === projection.projection_id)
       : null;
+    const media = assetFor(rows, projection?.projection_id);
     const creativeMomentId = primaryMomentByScene.get(scene.master_id) ?? null;
     const entry: UniverseAssemblyScene = {
       master_id: scene.master_id,
@@ -38,26 +55,43 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       projection_id: projection?.projection_id ?? null,
       creative_moment_id: creativeMomentId,
       creative_moment_title: creativeMomentId ? titleFor(creativeMomentId) : null,
+      provider: media.provider,
+      storage_ref: media.storage_ref,
     };
     const list = scenesByMural.get(muralId) ?? [];
     list.push(entry);
     scenesByMural.set(muralId, list);
   }
 
-  const murals: UniverseAssemblyMural[] = rows.muralMasters.map((mural) => ({
-    master_id: mural.master_id,
-    title: titleFor(mural.master_id),
-    scenes: scenesByMural.get(mural.master_id) ?? [],
-  }));
+  const murals: UniverseAssemblyMural[] = rows.muralMasters.map((mural) => {
+    const scenes = scenesByMural.get(mural.master_id) ?? [];
+    const muralProjection = (rows.muralProjections ?? []).find((row) => row.master_id === mural.master_id);
+    const muralMedia = assetFor(rows, muralProjection?.projection_id);
+    const sceneMedia = scenes.find((scene) => scene.storage_ref) ?? null;
+    const provider = muralMedia.provider ?? sceneMedia?.provider ?? null;
+    const storage_ref = muralMedia.storage_ref ?? sceneMedia?.storage_ref ?? null;
+    return {
+      master_id: mural.master_id,
+      title: titleFor(mural.master_id),
+      scenes,
+      has_media: Boolean(storage_ref),
+      provider,
+      storage_ref,
+    };
+  });
 
-  const creative_moments: UniverseAssemblyMoment[] = rows.momentMasters.map((moment) => ({
-    master_id: moment.master_id,
-    title: titleFor(moment.master_id),
-    has_experience: rows.momentProjections.some((row) => row.master_id === moment.master_id),
-    scene_titles: rows.sceneMasters
-      .filter((scene) => primaryMomentByScene.get(scene.master_id) === moment.master_id)
-      .map((scene) => titleFor(scene.master_id) ?? "Untitled scene"),
-  }));
+  const creative_moments: UniverseAssemblyMoment[] = rows.momentMasters.map((moment) => {
+    const relatedScenes = rows.sceneMasters.filter(
+      (scene) => primaryMomentByScene.get(scene.master_id) === moment.master_id,
+    );
+    return {
+      master_id: moment.master_id,
+      title: titleFor(moment.master_id),
+      has_experience: rows.momentProjections.some((row) => row.master_id === moment.master_id),
+      scene_ids: relatedScenes.map((scene) => scene.master_id),
+      scene_titles: relatedScenes.map((scene) => titleFor(scene.master_id) ?? "Untitled scene"),
+    };
+  });
 
   return {
     master_id: rows.master.master_id,

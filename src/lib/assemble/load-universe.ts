@@ -47,13 +47,16 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
   const sceneIds = (sceneMasters ?? []).map((scene) => scene.master_id);
   const presentationIds = [...muralIds, ...momentIds, ...sceneIds];
 
-  const [{ data: presentations }, { data: sceneProjections }, { data: momentProjections }, { data: relations }] =
+  const [{ data: presentations }, { data: sceneProjections }, { data: muralProjections }, { data: momentProjections }, { data: relations }] =
     await Promise.all([
       presentationIds.length
         ? svc.from("work_presentation").select("master_id, title").in("master_id", presentationIds)
         : Promise.resolve({ data: [] }),
       sceneIds.length
         ? svc.from("projection").select("projection_id, master_id").in("master_id", sceneIds)
+        : Promise.resolve({ data: [] }),
+      muralIds.length
+        ? svc.from("projection").select("projection_id, master_id").in("master_id", muralIds).eq("projection_type", "experiential")
         : Promise.resolve({ data: [] }),
       momentIds.length
         ? svc.from("projection").select("projection_id, master_id").in("master_id", momentIds)
@@ -68,13 +71,23 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
         : Promise.resolve({ data: [] }),
     ]);
 
-  const sceneProjIds = (sceneProjections ?? []).map((projection) => projection.projection_id);
-  const { data: bindings } = sceneProjIds.length
+  const projIds = [
+    ...new Set([
+      ...(sceneProjections ?? []).map((projection) => projection.projection_id),
+      ...(muralProjections ?? []).map((projection) => projection.projection_id),
+    ]),
+  ];
+  const { data: bindings } = projIds.length
     ? await svc
         .from("projection_media_binding")
-        .select("projection_id, start_ms, end_ms")
-        .in("projection_id", sceneProjIds)
+        .select("projection_id, start_ms, end_ms, asset_id")
+        .in("projection_id", projIds)
         .eq("binding_type", "primary")
+    : { data: [] };
+
+  const assetIds = [...new Set((bindings ?? []).map((binding) => binding.asset_id).filter(Boolean) as string[])];
+  const { data: assets } = assetIds.length
+    ? await svc.from("media_asset").select("asset_id, provider, storage_ref").in("asset_id", assetIds)
     : { data: [] };
 
   return buildUniverseAssembly({
@@ -85,8 +98,10 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
     sceneMasters: sceneMasters ?? [],
     presentations: presentations ?? [],
     sceneProjections: sceneProjections ?? [],
+    muralProjections: muralProjections ?? [],
     momentProjections: momentProjections ?? [],
     bindings: bindings ?? [],
+    assets: assets ?? [],
     relations: relations ?? [],
   });
 }

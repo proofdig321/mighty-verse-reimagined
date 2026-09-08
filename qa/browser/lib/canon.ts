@@ -152,4 +152,5 @@ export const ROUTES = {
   authorityCurateUnboundAsset: `/authority/curate?asset=${CANON.unboundLivepeerAssetId}`,
   editor: "/editor",
   signIn: "/auth/sign-in",
+  authorityCreate: "/authority/create",
 } as const;

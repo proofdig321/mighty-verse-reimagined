@@ -1214,5 +1214,19 @@ Gallery and Inspect now continue into the existing Curate Studio with the select
 ```
 Stage 2.8 Gallery / Inspect → Curate media context
         ↓
+Stage 2.9 Creative Suite composition surface
+        ↓
+next: evaluate the journey; do not assume a Mural/Scene/CM editor
+```
+
+### Stage 2.9 — Creative Suite composition surface (2026-09-08)
+
+Checkpoint starts from `8960a426000e045eee63215025394d4b7e6fc2f6`.
+
+Creative Suite on `/authority/universes/{id}` now presents an established Universe as a Studio composition surface: world identity, Mural as stage presence, face-up Scene objects, contributor Creative Moment objects, and visible Scene ↔ Creative Moment relationships. Super Hero Ego is the verification reference. Proverb remains one Creative Moment related to Powerhouse and Hand-to-Hand. Experience facedown/shuffle/gameplay is not imported. No new route, ontology, or migration. No Scene/CM/Mural editor.
+
+```
+Stage 2.9 Creative Suite composition surface
+        ↓
 next: evaluate the journey; do not assume a Mural/Scene/CM editor
 ```

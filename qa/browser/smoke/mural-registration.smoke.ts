@@ -3,6 +3,7 @@ import { applyAuthoritySession } from "../lib/authority-auth";
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
 import { reportEvidence } from "../lib/observe";
+import { revealCanonicalIdentifiers } from "../lib/suite-composition";
 
 test("a Universe without a Mural can register one without attaching media", async ({ page, observe, context }, testInfo) => {
   test.setTimeout(90_000);
@@ -85,6 +86,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
   await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   const sheMural = page.locator("section[aria-labelledby='universe-mural']");
+  await revealCanonicalIdentifiers(sheMural);
   await expect(sheMural.getByText(CANON.muralId)).toBeVisible();
   await expect(sheMural.getByRole("button", { name: "Register Mural" })).toHaveCount(0);
   notes.push("Super Hero Ego Creative Suite still shows the canonical Mural and does not offer a second registration");
@@ -93,6 +95,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
   await expect(page.getByText("Creative Suite").first()).toBeVisible();
   const untitledMural = page.locator("section[aria-labelledby='universe-mural']");
   await expect(untitledMural.getByText(/No mural assembled/i)).toHaveCount(0);
+  await revealCanonicalIdentifiers(untitledMural);
   await expect(untitledMural.getByText(untitledBody.mural_id)).toBeVisible();
   notes.push("Creative Suite shows the registered Mural for the previously mural-less Universe");
 
