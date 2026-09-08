@@ -21,7 +21,7 @@ Current environment: **Cursor** against this GitHub repository (`origin`).
 Canonical default branch: **`main`** (`origin/main`). Chrome is the primary browser QA client.
 
 ```bash
-npm run dev        # local Next.js server (required for browser QA)
+npm run dev        # local Next.js server at http://localhost:3000 (required for browser QA)
 npx tsc --noEmit   # type check
 npm run lint       # lint
 npm test           # unit + Sentinel tests (no browser)

@@ -11,6 +11,9 @@ test("Super Hero Ego Universe renders mural, scenes, and records Mux playback ev
   page,
   observe,
 }, testInfo) => {
+  const obsolete = await page.goto(ROUTES.universeObsolete, { waitUntil: "domcontentloaded" });
+  expect(obsolete?.status(), "obsolete /universes/{id} must 404").toBe(404);
+
   const response = await page.goto(ROUTES.universeLive, { waitUntil: "domcontentloaded" });
   expect(response?.ok(), `universe live HTTP ${response?.status()}`).toBeTruthy();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
@@ -30,9 +33,9 @@ test("Super Hero Ego Universe renders mural, scenes, and records Mux playback ev
       page.getByRole("button", { name: new RegExp(`Go to scene ${index + 1}: ${title}`) }),
     ).toBeVisible();
   }
-  await page.getByRole("button", { name: `Go to scene 1: ${CANON.sceneTitles[0]}` }).click();
+  await page.getByRole("button", { name: `Go to scene 1: ${CANON.sceneTitles[0]}`, exact: true }).click();
   await expect(
-    page.getByRole("button", { name: `Scene 1: ${CANON.sceneTitles[0]}` }),
+    page.getByRole("button", { name: `Scene 1: ${CANON.sceneTitles[0]}`, exact: true }),
   ).toBeVisible();
   await captureScreenshot(page, testInfo, "super-hero-ego-scene-deck");
 
@@ -69,6 +72,7 @@ test("Super Hero Ego Universe renders mural, scenes, and records Mux playback ev
   });
 
   const notes = [
+    `obsolete ${ROUTES.universeObsolete} returned 404`,
     `canonical Universe route is ${ROUTES.universeLive}`,
     "Universe page loaded with real title",
     "Mural CTA rendered",

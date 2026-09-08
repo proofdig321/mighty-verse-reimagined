@@ -25,6 +25,8 @@ export const CANON = {
 export const ROUTES = {
   home: "/",
   universes: "/universes",
+  /** Obsolete path — expected 404. Canonical public Universe pages are `/worlds/[id]`. */
+  universeObsolete: `/universes/${CANON.universeId}`,
   /** Canonical public Universe page. There is no `/universes/[id]` route. */
   universeLive: `/worlds/${CANON.universeId}`,
   universeScenes: `/worlds/${CANON.universeId}/scenes`,

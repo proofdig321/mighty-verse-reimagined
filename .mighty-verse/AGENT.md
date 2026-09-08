@@ -214,7 +214,7 @@ applied migration.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 - Experience Editor: Scene Library Add control can be invoked without the assembly updating (nested `h-screen` layout). Recorded in Stage 1 smoke; do not treat as a QA-layer defect.
-- Mural Mux player: page delivers `stream.mux.com` HLS URL and mounts the player, but Chrome stays on "Loading media" and never requests `stream.mux.com`. Cause correlated with Origin-bearing `/_next/static` script requests returning HTTP 403 body `Unauthorized` in this Cursor/dev-server environment (hls.js loader 200; real hls.js module never fetched). Not a Livepeer misroute. HLS URL itself is reachable (HTTP 200) from the environment without Origin.
+- Mural Mux player (previous `127.0.0.1` Chrome origin): page delivers `stream.mux.com` HLS URL and mounts the player, but Chrome stayed on "Loading media" and did not request `stream.mux.com`. Next.js 16 blocked `/_next/static` (including `hls.js`) from Origin `http://127.0.0.1:3000` with HTTP 403 `Unauthorized`. Browser QA now defaults to `http://localhost:3000`; `next.config.ts` also sets `allowedDevOrigins: ['127.0.0.1']`. Re-verify playback after that alignment. Not a Livepeer misroute. HLS URL itself is reachable (HTTP 200).
 
 ---
 

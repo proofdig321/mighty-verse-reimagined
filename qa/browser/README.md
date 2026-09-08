@@ -40,7 +40,13 @@ Never describe a TypeScript pass as browser verification.
 npm run dev
 ```
 
-Default origin: `http://127.0.0.1:3000` (Next.js also binds `localhost:3000`).
+Default origin: `http://localhost:3000`.
+
+Next.js 16 treats `127.0.0.1` and `localhost` as different origins during `next dev`.
+Chrome requests that send `Origin: http://127.0.0.1:3000` receive HTTP 403
+`Unauthorized` on `/_next/static` chunks, including `hls.js`. `next.config.ts`
+sets `allowedDevOrigins: ['127.0.0.1']` so that host still works in this
+environment after a dev-server restart.
 
 2. Run the smoke suite (uses the installed Google Chrome channel):
 
@@ -51,7 +57,7 @@ npm run test:qa:browser
 Optional:
 
 ```bash
-PLAYWRIGHT_BASE_URL=http://127.0.0.1:3000 npm run test:qa:browser
+PLAYWRIGHT_BASE_URL=http://localhost:3000 npm run test:qa:browser
 npx playwright test --config qa/browser/playwright.config.ts --headed
 ```
 
@@ -104,10 +110,15 @@ Do not build those suites in Stage 1.
 
 ## Dev-server noise vs product defects
 
-Chrome script requests that include an `Origin` header against `/_next/static/*` can receive HTTP 403 with body `Unauthorized` in this Cursor environment. Classic scripts without `Origin` return 200.
+Next.js 16 can return HTTP 403 `Unauthorized` for `/_next/static` when Chrome’s
+`Origin` is `http://127.0.0.1:3000` while the dev server considers `localhost`
+the allowed host. The server log names this as `allowedDevOrigins`.
 
-This is recorded as `originBlockedStatic` in smoke evidence. It is **not** treated as an application `/api` failure.
+That is **browser QA / Next.js `next dev` host mismatch**, not an `/api` defect
+and not Mux-vs-Livepeer misrouting. HMR websocket handshake failures are expected
+Next.js dev-server noise.
 
-HMR websocket handshake failures are expected Next.js dev-server noise.
-
-Mural HLS not requesting `stream.mux.com` is correlated with the Origin/403 static-chunk behaviour. Do not silently drop that FINDING.
+Mural HLS: if `stream.mux.com` is never requested, first confirm the smoke suite
+is running against `http://localhost:3000` (or that `allowedDevOrigins` includes
+`127.0.0.1` and the dev server was restarted). Do not silently drop a remaining
+FINDING if HLS still does not start after that alignment.
