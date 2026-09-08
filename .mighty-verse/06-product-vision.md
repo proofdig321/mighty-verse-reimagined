@@ -190,6 +190,64 @@ A future public creator may curate their own Universe. That does not grant canon
 
 Mighty Verse is not a CRUD app. Prefer implementations that make canonical creative relationships understandable.
 
+When choosing between a quick local feature and a reusable capability that preserves the correct ontology, prefer the latter. Do not build speculative abstractions merely because they sound elegant.
+
+---
+
+## Curator's mental model
+
+`SOURCE` (2026-09-08)
+
+The curator should eventually think:
+
+- I have a creative Universe.
+- Here is its audiovisual Mural.
+- These are its Scenes.
+- These contributors created these Moments.
+- These moments appear in these Scenes.
+- This media realizes this part of the work.
+- This projection presents it this way.
+- This is how the audience experiences it.
+
+The UI should communicate those relationships, not a table → edit → save loop.
+
+Every curation capability should eventually answer how it improves what someone can experience (Scene timing → Scene Deck, Creative Moment → Moment Card, media realization → playback, projection → Experience representation). The Experience consequence does not have to be implemented in the same increment, but the relationship must be understood.
+
+---
+
+## Provenance is first-class
+
+`CANONICAL` (2026-09-08)
+
+Mighty Verse must remain able to answer:
+
+- Where did this come from?
+- Who created it?
+- What canonical work does it belong to?
+- What Scene does it belong to?
+- What media realizes it?
+- What projection presents it?
+- Who has authority over it?
+- What was proposed automatically versus canonically accepted?
+
+Cards, projections, ownership, collection, playback, and public interaction must not confer canonical Authority.
+
+---
+
+## Modularisation is permanent
+
+`CANONICAL` (2026-09-08)
+
+Every genuine reusable capability is separated from its expression-specific authorization.
+
+**Shared:** Universe assembly, Creative Suite, identity editing, Mural presentation, Scene model, Creative Moment model, media inspection model, curation context, projection concepts.
+
+**Authority-specific:** privileged mutations, governance, publication, authority authentication, protected operations.
+
+**Experience-specific:** playback, public navigation, Moment Cards, Scene Deck, public timeline, immersive presentation.
+
+Do not duplicate shared capabilities merely because the first implementation is inside Authority.
+
 ---
 
 ## How to select future work
