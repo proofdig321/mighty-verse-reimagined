@@ -20,6 +20,7 @@ type Props = {
   timelineScenes?: SceneTiming[];
   deckScenes?: SceneDeckItem[];
   artworkUrl?: string | null;
+  showIdentity?: boolean;
 };
 
 export default function MediaHero({
@@ -33,6 +34,7 @@ export default function MediaHero({
   collectible,
   timelineScenes = [],
   deckScenes = [],
+  showIdentity = true,
 }: Props) {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -51,6 +53,8 @@ export default function MediaHero({
     if (activeSceneId) setSelectedSceneId(activeSceneId);
   }
 
+  const showCaption = showIdentity || timelineScenes.length > 0;
+
   return (
     <div className="w-full">
       {/* Video — full bleed */}
@@ -68,9 +72,10 @@ export default function MediaHero({
         </div>
       </div>
 
-      {/* Timeline + metadata */}
+      {showCaption ? (
       <div className="border-b border-border bg-card/30">
         <div className="mx-auto w-full max-w-7xl px-4 py-4 space-y-3">
+          {showIdentity ? (
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{typeLabel}</p>
@@ -93,6 +98,8 @@ export default function MediaHero({
               </span>
             )}
           </div>
+          ) : null}
+          {timelineScenes.length > 0 ? (
           <MediaTimeline
             currentTime={currentTime}
             duration={duration}
@@ -100,8 +107,10 @@ export default function MediaHero({
             onSeek={setSeekToSeconds}
             onSelectScene={(scene) => selectScene(scene.id)}
           />
+          ) : null}
         </div>
       </div>
+      ) : null}
 
       {deckScenes.length > 0 && (
         <div className="mx-auto w-full max-w-7xl px-4 py-10">

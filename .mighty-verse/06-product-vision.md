@@ -389,15 +389,15 @@ Asset Record and Inspect now continue into the same Curate Studio with `?asset=`
 
 ---
 
-## Checkpoint evaluation (Stage 2.9)
+## Checkpoint evaluation (Stage 3.0)
 
 `CANONICAL` (2026-09-08)
 
-Starting checkpoint: `8960a426000e045eee63215025394d4b7e6fc2f6`
+Starting checkpoint: `e1b4967b6f075692b25e7abfcd69ea19e3828f81`
 
-After Stage 2.8 restored Gallery → Inspect → Curate context, Creative Suite still presented Super Hero Ego as records and tables. The missing capability was Studio objecthood: face-up Scenes, contributor Creative Moments, and visible canonical relationships — not a second Experience deck and not a Scene editor.
+Stage 2.9 made Creative Suite a composition surface. The remaining product gap was continuity: the curator could assemble Super Hero Ego, but Experience was a side door, and the public Universe page did not present the composed world.
 
-Creative Suite now reads as a composition surface on the existing `/authority/universes/{id}` route. Universe identity leads with the world. Mural is stage presence without a second player. Scenes are numbered, named, face-up objects. Proverb / Mothipa / Reason are Creative Moment objects. Proverb remains shared with Powerhouse and Hand-to-Hand. No migration. No ontology change. Experience facedown/shuffle/reorder stays in Experience.
+Stage 3.0 improves both sides of CREATIVE SUITE → EXPERIENCE. Studio now presents Enter Experience as the natural continuation (navigation, not mutation). The public Universe landing presents the world: identity, Mural as audiovisual expression, Scene encounters leading to the existing Scene Deck, and contributor presence without fabricating Moment Cards for identity-only Creative Moments. Empty commerce/dashboard residue is removed from primary Experience. Realization, Publish, rights/ISRC, and `/authority/{id}` governance are unchanged.
 
-**Do not automatically begin** a Scene editor, Creative Moment editor, Mural editor, timeline redesign, public curation, publication, rights, AI, 2.5D, or commerce.
+**Do not automatically begin** a Scene editor, Creative Moment editor, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, 2.5D, AI, or commerce.
 

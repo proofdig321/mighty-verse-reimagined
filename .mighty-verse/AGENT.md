@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 2.9 Creative Suite composition surface)
+STATUS: current as of 2026-09-08 (Stage 3.0 Assemble → Experience continuity)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -157,13 +157,13 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 ### Public Frontend
 - `/` — home with Mux preview thumbnails
 - `/universes` — provider-correct media
-- `/worlds/[masterId]` — Universe and Mural pages with provider propagation
-- `/worlds/[masterId]/scenes` — Scene Deck with provider=mux for all four scenes
+- `/worlds/[masterId]` — Universe landing is the public world encounter (identity, Mural as stage, Scene introductions, contributor presence). Mural pages keep the existing player + scene sidebar.
+- `/worlds/[masterId]/scenes` — Scene Deck with provider=mux for all four scenes (facedown, reveal, shuffle preserved)
 - `/moments/[projectionId]` — Moment playback via MuxPlayer with canonical timing
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
 - `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, register a Mural for a Universe that has none, bridge into Creative Suite
 - `/authority/universes` — Authority Universe listing (auth-gated)
-- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Mural stage presence, face-up Scenes, contributor Creative Moments, visible Scene ↔ Creative Moment relationships. Not a second Experience player.
+- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Assemble → Experience continuation, Mural stage presence, face-up Scenes, contributor Creative Moments, visible Scene ↔ Creative Moment relationships. Not a second Experience player. Enter Experience navigates to `/worlds/{id}`.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
 - `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
 
@@ -238,6 +238,7 @@ applied migration.
 - Stage 2.7: A Universe without a Mural can register one via `POST /api/authority/murals` `{ universe_id }`, composing the existing Create Work operations **without media**. Super Hero Ego remains idempotent. Association still does not create a Mural. Sentinel persist remains deferred.
 - Stage 2.8: Gallery Asset Record and Inspect continue into the **same** Curate Studio with `?asset={assetId}`. Unbound media stays selected for Associate with Universe. Bound Super Hero Ego Mux media continues to Creative Suite and is not re-associated. No MediaContext entity, no migration. Create Work remains the independent new-work wizard at `/authority/create`.
 - Stage 2.9: Creative Suite is a Studio composition surface on `/authority/universes/{id}`. Scenes are face-up cinematic objects; Creative Moments are contributor objects; Proverb remains a single shared Creative Moment related to Powerhouse and Hand-to-Hand. Experience facedown/shuffle/reorder is not imported. No Scene/CM/Mural editor. No migration.
+- Stage 3.0: Assemble → Experience continuity. Creative Suite surfaces Enter Experience as navigation into `/worlds/{universeId}`. The public Universe landing presents the composed world (identity, Mural as audiovisual stage, Scene encounters leading to the existing Scene Deck, contributor presence). Proverb remains identity-only. Dashboard residue (empty Collectibles/Holders/Base Network/Participants/Activity, Scenes tab showing the Mural) is removed from primary Experience. No publish/realize ontology. No migration. No canonical mutation. Scene Deck facedown/shuffle and Mural/Moment playback stay intact.
 - Sentinel UI inspection remains ephemeral in the browser; `POST /api/authority/media/inspect` persistence exists but is not wired from Curate Studio (persist currently requires a `master_id`; unbound media has none). Deferred.
 
 ---

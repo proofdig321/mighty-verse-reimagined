@@ -46,7 +46,8 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Scene ↔ Creative Moment | `scene_moment` in read-model; `POST/DELETE /api/authority/scene-moment` | primary join | Authority API | later | yes | no | read-model yes | Sharing Proverb is live data, not a defect |
 | Creative Moment identity | suite CM section; parent = Universe | master + presentation; `has_experience` | none in suite | later | yes | no | shell only | Not Mural-owned |
 | Moment Card / `/moments` / players | `src/components/` | projections | none | no | no | **yes** | no | Do not reuse as assemble UI |
-| Public `/worlds`, Scene Deck | `(public)/` | discovery + playback | none | no | no | **yes** | no | EXPERIENCE |
+| Public `/worlds` Universe landing | `(public)/worlds/[masterId]` + `src/components/experience/universe-world.tsx` | Universe + Mural + mural-child Scenes + scene_moment + Creative Moments | none | yes | no | **yes** | yes | Stage 3.0 world encounter. Not a second Scene Deck. Not Suite objects. |
+| Public `/worlds` Scene Deck / Mural player | `(public)/` Scene Deck + MediaHero | projections + bindings | none | no | no | **yes** | no | EXPERIENCE playback. Facedown/shuffle stay here. |
 | Media / Mux / bindings / realization / intake | `/authority/media*` | media_asset, bindings, realization | Authority media APIs | later | yes | playback consumes | no | Not this stage |
 | Canonical record / publishing | `/authority/[masterId]` | six-stage journey | many | no | yes | no | no | Publishing, not suite |
 
@@ -54,10 +55,11 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 2.9
+## Product questions after Stage 3.0
 
-- Creative Suite now presents Super Hero Ego as a composition surface (face-up Scenes, contributor Creative Moments, visible sharing). It is not a Scene editor, Creative Moment editor, or Mural editor.
+- Creative Suite now continues into the public Experience. The Universe landing presents Super Hero Ego as a world. This is not a Scene editor, Creative Moment editor, Mural editor, or publish/realize workflow.
 - Gallery / Inspect still continue into Curate Studio with selected media identity. Create Work remains independent and still completes on the publishing record.
+- **Governance vs Experience.** `/authority/{id}` still carries a rights/realization checklist while authorised public Experience already plays. Solving that through a publish ontology is outside this stage.
 - **Sentinel UI persist.** `POST /api/authority/media/inspect` exists; Curate Studio inspection remains ephemeral. Not wired because persist currently requires a `master_id`, and unbound media has none. Provenance quality; deferred. Sentinel must not become creative authority.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
 - **Mural editor / Scene editor / Creative Moment editor.** Registration establishes the container only. Editing remains later.

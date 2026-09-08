@@ -1,5 +1,5 @@
 import { expect, type Locator, type Page } from "@playwright/test";
-import { CANON, CREATIVE_MOMENTS, SCENE_MOMENTS } from "./canon";
+import { CANON, CREATIVE_MOMENTS, ROUTES, SCENE_MOMENTS } from "./canon";
 
 export async function revealCanonicalIdentifiers(scope: Locator) {
   const details = scope.locator("details").filter({ hasText: "Canonical identifiers" }).first();
@@ -15,6 +15,14 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(page.getByText(CANON.universeDescription).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /shuffle/i })).toHaveCount(0);
   await expect(page.locator("video")).toHaveCount(0);
+
+  const continuation = page.locator("section[aria-labelledby='universe-experience-continuation']");
+  await expect(continuation.getByText("Assemble", { exact: true })).toBeVisible();
+  await expect(continuation.getByText("Experience", { exact: true }).first()).toBeVisible();
+  await expect(continuation.getByRole("link", { name: /Enter Experience/i })).toHaveAttribute(
+    "href",
+    ROUTES.universeLive,
+  );
 
   const mural = page.locator("section[aria-labelledby='universe-mural']");
   await expect(mural.getByText(/audiovisual expression/i)).toBeVisible();

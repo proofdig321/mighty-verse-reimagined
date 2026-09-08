@@ -3,15 +3,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import MediaHero from "@/components/media-hero";
-import WorldTabsClient from "@/components/world-tabs-client";
+import { UniverseWorldExperience } from "@/components/experience/universe-world";
 import PageTopNav from "@/components/page-top-nav";
+import { sceneStillUrl } from "@/lib/experience/universe-world";
 
 type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
 type MomentRow = { master_id: string; title: string | null; projection_id: string | null };
 type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; provider: string | null; start_ms: number | null; end_ms: number | null };
+type SceneMomentRow = { scene_master_id: string; moment_master_id: string };
 
 type PageData = {
   canonical_type: string;
@@ -25,6 +26,7 @@ type PageData = {
   murals: MuralRow[];
   moments: MomentRow[];
   scenes: SceneRow[];
+  scene_moments: SceneMomentRow[];
   universe_master_id: string | null;
   universe_title: string | null;
 };
@@ -54,6 +56,99 @@ async function resolveMedia(svc: ReturnType<typeof getServiceClient>, projection
     is_placeholder: isPlaceholder,
     start_ms: binding.start_ms ?? null,
     end_ms: binding.end_ms ?? null,
+  };
+}
+
+async function loadUniverseSceneEncounters(
+  svc: ReturnType<typeof getServiceClient>,
+  muralIds: string[],
+): Promise<{ scenes: SceneRow[]; sceneMoments: SceneMomentRow[] }> {
+  if (!muralIds.length) return { scenes: [], sceneMoments: [] };
+
+  const { data: sceneChildren } = await svc
+    .from("master")
+    .select("master_id, parent_master_id, sort_order")
+    .in("parent_master_id", muralIds)
+    .eq("canonical_type", "scene")
+    .not("current_state_id", "is", null)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("created_at", { ascending: true });
+
+  const sceneIds = (sceneChildren ?? []).map((scene) => scene.master_id);
+  if (!sceneIds.length) return { scenes: [], sceneMoments: [] };
+
+  const [{ data: scenePres }, { data: sceneProjs }, { data: muralProjs }, { data: relations }] = await Promise.all([
+    svc.from("work_presentation").select("master_id, title").in("master_id", sceneIds),
+    svc.from("projection").select("master_id, projection_id").in("master_id", sceneIds).eq("projection_type", "experiential"),
+    svc.from("projection").select("master_id, projection_id").in("master_id", muralIds).eq("projection_type", "experiential"),
+    svc
+      .from("scene_moment")
+      .select("scene_master_id, moment_master_id")
+      .in("scene_master_id", sceneIds)
+      .eq("relationship_type", "primary")
+      .order("sort_order", { ascending: true, nullsFirst: false }),
+  ]);
+
+  const allProjectionIds = [
+    ...(sceneProjs ?? []).map((projection) => projection.projection_id),
+    ...(muralProjs ?? []).map((projection) => projection.projection_id),
+  ];
+  const { data: bindings } = allProjectionIds.length
+    ? await svc
+        .from("projection_media_binding")
+        .select("projection_id, asset_id, start_ms, end_ms")
+        .in("projection_id", allProjectionIds)
+        .eq("binding_type", "primary")
+        .eq("access_level", "public")
+    : { data: [] };
+  const assetIds = (bindings ?? []).map((binding) => binding.asset_id);
+  const { data: assets } = assetIds.length
+    ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", assetIds)
+    : { data: [] };
+
+  const muralPlaybackMap = new Map<string, { playback_id: string; provider: string | null }>();
+  for (const muralProjection of muralProjs ?? []) {
+    const assetId = (bindings ?? []).find((binding) => binding.projection_id === muralProjection.projection_id)?.asset_id;
+    const asset = (assets ?? []).find((item) => item.asset_id === assetId);
+    if (asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")) {
+      muralPlaybackMap.set(muralProjection.master_id, {
+        playback_id: asset.storage_ref,
+        provider: asset.provider ?? null,
+      });
+    }
+  }
+
+  const sceneMuralMap = new Map<string, string>();
+  for (const scene of sceneChildren ?? []) {
+    if (scene.parent_master_id) sceneMuralMap.set(scene.master_id, scene.parent_master_id);
+  }
+
+  const scenes: SceneRow[] = (sceneChildren ?? []).map((scene) => {
+    const projectionId = (sceneProjs ?? []).find((projection) => projection.master_id === scene.master_id)?.projection_id ?? null;
+    const binding = (bindings ?? []).find((item) => item.projection_id === projectionId);
+    const asset = (assets ?? []).find((item) => item.asset_id === binding?.asset_id);
+    const hasSceneMedia = Boolean(asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:"));
+    const muralPlayback = sceneMuralMap.get(scene.master_id)
+      ? muralPlaybackMap.get(sceneMuralMap.get(scene.master_id) as string)
+      : undefined;
+
+    return {
+      master_id: scene.master_id,
+      title: (scenePres ?? []).find((presentation) => presentation.master_id === scene.master_id)?.title ?? null,
+      projection_id: projectionId,
+      playback_id: hasSceneMedia ? asset!.storage_ref : (muralPlayback?.playback_id ?? null),
+      provider: hasSceneMedia ? (asset?.provider ?? null) : (muralPlayback?.provider ?? null),
+      start_ms: binding?.start_ms ?? null,
+      end_ms: binding?.end_ms ?? null,
+    };
+  });
+
+  return {
+    scenes,
+    sceneMoments: (relations ?? []).map((relation) => ({
+      scene_master_id: relation.scene_master_id,
+      moment_master_id: relation.moment_master_id,
+    })),
   };
 }
 
@@ -129,6 +224,8 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       projection_id: (cmProjs ?? []).find((projection) => projection.master_id === m.master_id)?.projection_id ?? null,
     }));
 
+    const { scenes, sceneMoments } = await loadUniverseSceneEncounters(svc, muralIds);
+
     return {
       canonical_type: "universe",
       master_id: masterId,
@@ -140,7 +237,8 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       canonical_state_id: cs.canonical_state_id,
       murals,
       moments,
-      scenes: [],
+      scenes,
+      scene_moments: sceneMoments,
       universe_master_id: null,
       universe_title: null,
     };
@@ -216,6 +314,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     murals: [],
     moments: [],
     scenes,
+    scene_moments: [],
     universe_master_id,
     universe_title,
   };
@@ -352,13 +451,23 @@ export default async function WorldPage({
     );
   }
 
-  // ── UNIVERSE LAYOUT — Section 03 ──────────────────────────────────────────
+  // ── UNIVERSE LAYOUT ────────────────────────────────────────────────────────
+  const muralStill = data.media?.playback_id
+    ? sceneStillUrl({
+        provider: data.media.provider,
+        storage_ref: data.media.playback_id,
+        start_ms: 5000,
+      })
+    : sceneStillUrl({
+        provider: data.scenes[0]?.provider,
+        storage_ref: data.scenes[0]?.playback_id,
+        start_ms: data.scenes[0]?.start_ms ?? 5000,
+      });
 
   return (
     <div className="min-h-screen bg-background">
       <PageTopNav />
 
-      {/* Hero — media player or identity block */}
       {data.media?.playback_id && data.projection_id && data.canonical_state_id ? (
         <div className="border-b border-border">
           <MediaHero
@@ -370,85 +479,22 @@ export default async function WorldPage({
             typeLabel="Universe"
             credit={data.description}
             collectible={false}
+            showIdentity={false}
           />
         </div>
-      ) : (
-        <div className="mv-hero-gradient border-b border-border">
-          <div className="mx-auto max-w-7xl px-6 py-16 md:py-24">
-            <div className="flex flex-wrap items-start justify-between gap-6">
-              <div className="space-y-3 max-w-2xl">
-                <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">Universe</p>
-                <h1
-                  className="text-5xl font-semibold leading-tight tracking-tight text-foreground md:text-7xl"
-                  style={{ fontFamily: "var(--font-display, inherit)" }}
-                >
-                  {title}
-                </h1>
-                {data.description && (
-                  <p className="mt-2 max-w-lg text-sm text-muted-foreground leading-relaxed">
-                    {data.description.length > 160 ? data.description.slice(0, 160).trimEnd() + "\u2026" : data.description}
-                  </p>
-                )}
-              </div>
-              <Badge variant="outline" className="shrink-0 mt-1 text-sm px-3 py-1">Universe</Badge>
-            </div>
-          </div>
-        </div>
-      )}
+      ) : null}
 
-      {/* Stats + CTAs */}
-      <div className="border-b border-border bg-card/30">
-        <div className="mx-auto max-w-7xl px-6 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-5">
-            <div className="flex flex-wrap items-center gap-6">
-              {[
-                { n: data.murals.length || "—", label: "Murals" },
-                { n: data.moments.length || "—", label: "Moments" },
-                { n: "—", label: "Collectibles" },
-                { n: "—", label: "Holders" },
-              ].map(({ n, label }) => (
-                <div key={label} className="flex items-baseline gap-1.5">
-                  <span className="text-2xl font-semibold text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>{n}</span>
-                  <span className="text-xs uppercase tracking-wider text-muted-foreground">{label}</span>
-                </div>
-              ))}
-              <span
-                className="text-xs px-2.5 py-1 rounded-full border font-medium"
-                style={{ color: "var(--accent-mv)", borderColor: "color-mix(in oklch, var(--accent-mv) 50%, transparent)" }}
-              >
-                Base Network
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              <Link href={`/worlds/${masterId}/scenes`}>
-                <Button
-                  className="h-9 px-5 text-sm font-semibold text-white"
-                  style={{ background: "var(--accent-mv)" }}
-                >
-                  Enter Scene Deck
-                </Button>
-              </Link>
-              {data.murals[0] && (
-                <Link href={`/worlds/${data.murals[0].master_id}`}>
-                  <Button variant="outline" className="h-9 px-5 text-sm">View Mural</Button>
-                </Link>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Tabs */}
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <WorldTabsClient
-          masterId={masterId}
-          description={data.description}
-          murals={data.murals}
-          moments={data.moments}
-          attributionRoles={data.attribution_roles}
-        />
-      </div>
-
+      <UniverseWorldExperience
+        universeId={masterId}
+        title={title}
+        description={data.description}
+        attributionRoles={data.attribution_roles}
+        murals={data.murals}
+        scenes={data.scenes}
+        moments={data.moments}
+        sceneMoments={data.scene_moments}
+        muralStill={muralStill}
+      />
     </div>
   );
 }

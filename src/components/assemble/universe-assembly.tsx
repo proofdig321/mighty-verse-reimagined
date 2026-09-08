@@ -4,6 +4,7 @@ import { suiteScenes } from "@/lib/assemble/suite";
 import type { UniverseAssembly } from "@/lib/assemble";
 import { CompositionSurface } from "./composition-surface";
 import { CreativeMomentObject } from "./creative-moment-object";
+import { ExperienceContinuation } from "./experience-continuation";
 import { CanonicalIdentifiers, MuralEmpty, MuralPresence } from "./mural-presence";
 import { SceneObject } from "./scene-object";
 
@@ -12,6 +13,7 @@ export type UniverseAssemblyProps = {
   openHref: (masterId: string) => string;
   openLabel?: string;
   muralEmptyAction?: ReactNode;
+  experienceHref?: string;
 };
 
 function untitled(kind: string) {
@@ -23,6 +25,7 @@ export default function UniverseAssemblyView({
   openHref,
   openLabel = "Open",
   muralEmptyAction,
+  experienceHref,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -48,6 +51,10 @@ export default function UniverseAssemblyView({
             />
           </div>
         </section>
+
+        {experienceHref ? (
+          <ExperienceContinuation href={experienceHref} universeTitle={data.title ?? "this Universe"} />
+        ) : null}
 
         <section className="suite-section" aria-labelledby="universe-mural">
           <div className="suite-section-head">

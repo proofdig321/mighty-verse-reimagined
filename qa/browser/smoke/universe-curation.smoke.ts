@@ -59,7 +59,7 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
     "href",
     ROUTES.authorityUniverses,
   );
-  await expect(page.getByRole("link", { name: "View public experience" })).toHaveAttribute("href", ROUTES.universeLive);
+  await expect(page.getByRole("link", { name: "Enter Experience" }).first()).toHaveAttribute("href", ROUTES.universeLive);
   await expect(page.getByRole("link", { name: "Canonical record" })).toHaveAttribute("href", `/authority/${CANON.universeId}`);
 
   await expectCreativeSuiteComposition(page);

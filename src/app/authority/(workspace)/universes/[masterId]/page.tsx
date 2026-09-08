@@ -69,15 +69,15 @@ export default async function UniverseCurationPage({
           ) : null}
           <p className="text-sm text-muted-foreground max-w-3xl">
             Inside this Universe: its Mural, Scenes, and Creative Moments as a composition surface.
-            Identity can be edited now. Scene and Creative Moment editing remain later increments.
+            When the world is composed, enter its Experience. Identity can be edited now. Scene and Creative Moment editing remain later increments.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <Link href={creativeSuiteIdentityHref(data.master_id, fromCurate ? "curate" : null)} className={buttonVariants({ size: "sm" })}>
-            Edit identity
+          <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ size: "sm" })}>
+            Enter Experience
           </Link>
-          <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            View public experience
+          <Link href={creativeSuiteIdentityHref(data.master_id, fromCurate ? "curate" : null)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            Edit identity
           </Link>
           <Link href={`/authority/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             Canonical record
@@ -97,6 +97,7 @@ export default async function UniverseCurationPage({
         data={data}
         openHref={(id) => `/authority/${id}`}
         openLabel="Open record"
+        experienceHref={`/worlds/${data.master_id}`}
         muralEmptyAction={
           <RegisterMural
             universeId={data.master_id}

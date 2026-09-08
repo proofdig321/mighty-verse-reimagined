@@ -1228,5 +1228,21 @@ Creative Suite on `/authority/universes/{id}` now presents an established Univer
 ```
 Stage 2.9 Creative Suite composition surface
         ↓
-next: evaluate the journey; do not assume a Mural/Scene/CM editor
+Stage 3.0 Assemble → Experience continuity
+        ↓
+next: evaluate the journey; do not assume a Mural/Scene/CM editor or a publish ontology
+```
+
+### Stage 3.0 — Assemble → Experience continuity (2026-09-08)
+
+Checkpoint starts from `e1b4967b6f075692b25e7abfcd69ea19e3828f81`.
+
+After Creative Suite could compose Super Hero Ego as a world, the curator still reached Experience through a buried side door, and the public Universe page still read as a dashboard (empty collectibles/network chrome, Scenes tab showing the Mural, empty Participants/Activity). Stage 3.0 makes Assemble → Experience a visible continuation without inventing Realization or Publish.
+
+Creative Suite now leads with Enter Experience (navigation to `/worlds/{universeId}`). The public Universe landing presents Universe identity, Mural as audiovisual stage, Scene encounters that continue into the existing Scene Deck, and contributor presence (Proverb identity-only; Mothipa and Reason keep Moment projections). Facedown/shuffle Scene Deck, Mural playback, and Moment playback are unchanged. No ontology, migration, canonical mutation, rebinding, or `media_realization` population.
+
+```
+Stage 3.0 Assemble → Experience continuity
+        ↓
+next: evaluate the journey; do not assume a Mural/Scene/CM editor or a publish ontology
 ```

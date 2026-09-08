@@ -6,6 +6,7 @@ import {
   originBlockedStaticRequests,
   reportEvidence,
 } from "../lib/observe";
+import { expectUniverseExperience } from "../lib/universe-experience";
 
 test("Super Hero Ego Universe renders mural, scenes, and records Mux playback evidence", async ({
   page,
@@ -19,15 +20,20 @@ test("Super Hero Ego Universe renders mural, scenes, and records Mux playback ev
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
 
   await expect(page.getByText(CANON.universeTitle).first()).toBeVisible();
+  await expectUniverseExperience(page);
   await expect(page.getByRole("link", { name: /Enter Scene Deck/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /View Mural/i })).toBeVisible();
 
-  await page.getByRole("button", { name: /^Scenes$/ }).click();
-  await expect(page.getByText(CANON.muralTitle).first()).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
+  const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  expect(overflowX, `narrow viewport horizontal overflow ${overflowX}px`).toBeLessThan(24);
+  await page.setViewportSize({ width: 1280, height: 800 });
 
   await page.getByRole("link", { name: /Enter Scene Deck/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeScenes}$`));
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: /shuffle/i })).toBeVisible();
   for (const [index, title] of CANON.sceneTitles.entries()) {
     await expect(
       page.getByRole("button", { name: new RegExp(`Go to scene ${index + 1}: ${title}`) }),
@@ -75,6 +81,7 @@ test("Super Hero Ego Universe renders mural, scenes, and records Mux playback ev
     `obsolete ${ROUTES.universeObsolete} returned 404`,
     `canonical Universe route is ${ROUTES.universeLive}`,
     "Universe page loaded with real title",
+    "Universe landing presents world identity, Mural stage, Scene encounters, and contributor presence",
     "Mural CTA rendered",
     `Scene Deck rendered ${CANON.sceneTitles.length} real Scenes`,
     pageHasMuxHlsUrl
