@@ -46,6 +46,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
       "href",
       `#universe-moment-${scene.creativeMomentId}`,
     );
+    await expect(object.getByRole("button", { name: "Edit identity" })).toBeVisible();
     await expect(object.getByRole("button", { name: "Add presence" })).toBeVisible();
     await expect(object.getByRole("button", { name: new RegExp(`Remove ${scene.creativeMomentTitle} from ${scene.shortName}`) })).toBeVisible();
     await expect(object.getByRole("link", { name: /Open record/i })).toHaveAttribute(

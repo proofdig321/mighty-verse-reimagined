@@ -3,7 +3,7 @@ import type { UniverseAssembly, UniverseAssemblyScene } from "./types";
 /**
  * Creative Suite sections hosted by the Universe assembly surface.
  * Editors for Mural identity / Scene timing remain later increments.
- * Scene ↔ Creative Moment presence is authored on this surface.
+ * Scene identity and Scene ↔ Creative Moment presence are authored on this surface.
  * Creative Moments are Universe-parented, not Mural-owned.
  */
 export const CREATIVE_SUITE_SECTIONS = [

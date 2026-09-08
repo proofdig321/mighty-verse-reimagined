@@ -69,8 +69,8 @@ export default async function UniverseCurationPage({
           ) : null}
           <p className="text-sm text-muted-foreground max-w-3xl">
             Inside this Universe: its Mural, Scenes, and Creative Moments as a composition surface.
-            Identity can be edited now. Scene ↔ Creative Moment presence can be authored here.
-            Scene identity, timing, and order remain later increments.
+            Universe identity, Scene identity, and Scene ↔ Creative Moment presence can be authored here.
+            Scene timing and order remain later increments.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
@@ -100,6 +100,7 @@ export default async function UniverseCurationPage({
         openLabel="Open record"
         experienceHref={`/worlds/${data.master_id}`}
         canAuthorPresence
+        canAuthorIdentity
         muralEmptyAction={
           <RegisterMural
             universeId={data.master_id}

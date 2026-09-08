@@ -16,6 +16,7 @@ export type UniverseAssemblyProps = {
   muralEmptyAction?: ReactNode;
   experienceHref?: string;
   canAuthorPresence?: boolean;
+  canAuthorIdentity?: boolean;
 };
 
 function untitled(kind: string) {
@@ -29,6 +30,7 @@ export default function UniverseAssemblyView({
   muralEmptyAction,
   experienceHref,
   canAuthorPresence = false,
+  canAuthorIdentity = false,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -99,7 +101,7 @@ export default function UniverseAssemblyView({
               Scenes
             </h2>
             <p className="suite-section-note">
-              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Presence can be authored here. Scene identity, timing, and order remain later increments.
+              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Presence and Scene identity can be authored here. Timing and order remain later increments.
             </p>
           </div>
           {scenes.length === 0 ? (
@@ -115,6 +117,7 @@ export default function UniverseAssemblyView({
                     candidates={availablePresenceOptions(momentOptions, sceneCreativeMomentIds(scene))}
                     universeId={data.master_id}
                     canAuthorPresence={canAuthorPresence}
+                    canAuthorIdentity={canAuthorIdentity}
                     openHref={openHref(scene.master_id)}
                     openLabel={openLabel}
                   />

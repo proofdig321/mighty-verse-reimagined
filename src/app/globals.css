@@ -614,6 +614,7 @@
   }
 
   .suite-scene-full-title,
+  .suite-scene-description,
   .suite-scene-timing,
   .suite-moment-presence {
     font-size: 0.75rem;
@@ -622,6 +623,14 @@
 
   .suite-scene-full-title {
     line-height: 1.35;
+  }
+
+  .suite-scene-description {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.4;
   }
 
   .suite-scene-timing {
@@ -718,6 +727,7 @@
     min-width: 0;
   }
 
+  .suite-identity-actions,
   .suite-presence-actions,
   .suite-presence-choices {
     display: flex;
@@ -729,7 +739,8 @@
   }
 
   .suite-presence-panel,
-  .suite-presence-confirm {
+  .suite-presence-confirm,
+  .suite-identity-panel {
     display: grid;
     gap: 0.45rem;
     min-width: 0;

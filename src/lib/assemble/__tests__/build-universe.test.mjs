@@ -31,7 +31,7 @@ const assembly = buildUniverseAssembly({
   ],
   presentations: [
     { master_id: MURAL, title: "Super Hero Ego" },
-    { master_id: POWERHOUSE, title: "Golden Shovel — Powerhouse" },
+    { master_id: POWERHOUSE, title: "Golden Shovel — Powerhouse", description: "Golden Shovel's warrior manifestation within the Super Hero Ego Mural." },
     { master_id: DARK_KNIGHT, title: "Mothipa — Dark Knight" },
     { master_id: HAND_TO_HAND, title: "ProVerb — Hand-to-Hand" },
     { master_id: SWORD_MASTER, title: "Reason — Sword Master" },
@@ -75,6 +75,7 @@ assert(assembly.creative_moments.length === 3, "three creative moments");
 
 const scenes = Object.fromEntries(assembly.murals[0].scenes.map((scene) => [scene.master_id, scene]));
 assert(scenes[POWERHOUSE].creative_moment_id === PROVERB, "Powerhouse → Proverb");
+assert(scenes[POWERHOUSE].description?.includes("warrior manifestation"), "Powerhouse identity description is assembled");
 assert(scenes[POWERHOUSE].creative_moments.length === 1, "Powerhouse currently has one related Creative Moment");
 assert(scenes[POWERHOUSE].storage_ref === MUX_PLAYBACK, "Powerhouse still maps Mux asset");
 assert(scenes[HAND_TO_HAND].creative_moment_id === PROVERB, "Hand-to-Hand shares Proverb");
