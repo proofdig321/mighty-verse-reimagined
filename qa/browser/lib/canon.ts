@@ -5,6 +5,76 @@
  * They are not test fixtures and must not be invented or mutated by QA.
  */
 
+export type SceneMomentCanon = {
+  key: "powerhouse" | "darkKnight" | "handToHand" | "swordMaster";
+  shortName: string;
+  sceneTitle: string;
+  sceneMasterId: string;
+  projectionId: string;
+  startMs: number;
+  endMs: number;
+  bindingId: string;
+  creativeMomentId: string;
+  creativeMomentTitle: string;
+};
+
+export const SCENE_MOMENTS = {
+  powerhouse: {
+    key: "powerhouse",
+    shortName: "Powerhouse",
+    sceneTitle: "Golden Shovel — Powerhouse",
+    sceneMasterId: "4790c7cf-bb19-4a01-a243-e5c3eb680555",
+    projectionId: "3039ca84-7e11-4eb6-8895-d16d13a899c3",
+    startMs: 36000,
+    endMs: 79000,
+    bindingId: "6ca3869d-ca39-4422-bfd1-8b1353d64ea5",
+    creativeMomentId: "3b0de6b4-2ca0-43c0-8561-7dc1c0697435",
+    creativeMomentTitle: "Proverb",
+  },
+  darkKnight: {
+    key: "darkKnight",
+    shortName: "Dark Knight",
+    sceneTitle: "Mothipa — Dark Knight",
+    sceneMasterId: "bebb65d2-21ed-4bc9-9fa0-a4857df30a43",
+    projectionId: "bb802400-b385-4025-9bb8-63df53abd9be",
+    startMs: 80000,
+    endMs: 124000,
+    bindingId: "9b8fbc44-5d1b-438f-9e4f-13ffe51d95fb",
+    creativeMomentId: "32422bb4-d03c-465d-8348-942e49ae0051",
+    creativeMomentTitle: "Mothipa",
+  },
+  handToHand: {
+    key: "handToHand",
+    shortName: "Hand-to-Hand",
+    sceneTitle: "ProVerb — Hand-to-Hand",
+    sceneMasterId: "df15ec76-6bd8-4956-bbaa-755f72b2b8f8",
+    projectionId: "9c045ea3-ab09-4a6f-b89c-02dce076b8da",
+    startMs: 149000,
+    endMs: 192000,
+    bindingId: "1765324d-8f8a-42f2-93c3-a2a3fec1356e",
+    creativeMomentId: "3b0de6b4-2ca0-43c0-8561-7dc1c0697435",
+    creativeMomentTitle: "Proverb",
+  },
+  swordMaster: {
+    key: "swordMaster",
+    shortName: "Sword Master",
+    sceneTitle: "Reason — Sword Master",
+    sceneMasterId: "65490a92-8faf-42ea-a391-0e6473360f5c",
+    projectionId: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd",
+    startMs: 193000,
+    endMs: 254000,
+    bindingId: "44130ab6-2dd9-49f0-b2aa-756b91550ece",
+    creativeMomentId: "2745a50a-5417-4613-b23b-ef4857ab112e",
+    creativeMomentTitle: "Reason",
+  },
+} as const satisfies Record<string, SceneMomentCanon>;
+
+export const SIBLING_SCENE_MOMENTS = [
+  SCENE_MOMENTS.powerhouse,
+  SCENE_MOMENTS.darkKnight,
+  SCENE_MOMENTS.handToHand,
+] as const;
+
 export const CANON = {
   universeId: "05ccc0c6-75f9-4864-b0c1-af5e36bf45cc",
   universeTitle: "Super Hero Ego",
@@ -14,17 +84,17 @@ export const CANON = {
   muxPlaybackId: "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4",
   muxThumbnailHost: "image.mux.com",
   muxStreamHost: "stream.mux.com",
-  swordMasterProjectionId: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd",
-  swordMasterSceneTitle: "Reason — Sword Master",
-  swordMasterStartMs: 193000,
-  swordMasterEndMs: 254000,
-  creativeMomentId: "2745a50a-5417-4613-b23b-ef4857ab112e",
-  creativeMomentTitle: "Reason",
+  swordMasterProjectionId: SCENE_MOMENTS.swordMaster.projectionId,
+  swordMasterSceneTitle: SCENE_MOMENTS.swordMaster.sceneTitle,
+  swordMasterStartMs: SCENE_MOMENTS.swordMaster.startMs,
+  swordMasterEndMs: SCENE_MOMENTS.swordMaster.endMs,
+  creativeMomentId: SCENE_MOMENTS.swordMaster.creativeMomentId,
+  creativeMomentTitle: SCENE_MOMENTS.swordMaster.creativeMomentTitle,
   sceneTitles: [
-    "Golden Shovel — Powerhouse",
-    "Mothipa — Dark Knight",
-    "ProVerb — Hand-to-Hand",
-    "Reason — Sword Master",
+    SCENE_MOMENTS.powerhouse.sceneTitle,
+    SCENE_MOMENTS.darkKnight.sceneTitle,
+    SCENE_MOMENTS.handToHand.sceneTitle,
+    SCENE_MOMENTS.swordMaster.sceneTitle,
   ],
 } as const;
 
