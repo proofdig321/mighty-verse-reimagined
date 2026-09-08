@@ -4,6 +4,10 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
+import { loadCurateStudioMedia } from "@/lib/assemble/load-studio";
+import { CURATE_LIFECYCLE, CURATE_STUDIO_HREF } from "@/lib/assemble/studio";
+import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
+import CurateStudioGateway from "@/components/assemble/curate-studio-gateway";
 import CurateClient from "./curate-client";
 
 export type CurateUniverse = {
@@ -41,31 +45,13 @@ export type CurateAsset = {
   title: string | null;
 };
 
-async function loadData(universeId: string | null) {
+async function loadInspectionContext(universeId: string | null, universeIds: string[]) {
   const svc = getServiceClient();
 
-  // Load all universes for selector
-  const { data: universeMasters } = await svc
-    .from("master")
-    .select("master_id, canonical_type")
-    .eq("canonical_type", "universe")
-    .order("created_at", { ascending: true });
-
-  const universeIds = (universeMasters ?? []).map((m) => m.master_id);
-  const { data: universePres } = universeIds.length
-    ? await svc.from("work_presentation").select("master_id, title").in("master_id", universeIds)
-    : { data: [] };
-
-  const universes: CurateUniverse[] = (universeMasters ?? []).map((m) => ({
-    master_id: m.master_id,
-    title: (universePres ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
-  }));
-
   if (!universeId || !universeIds.includes(universeId)) {
-    return { universes, selectedUniverseId: null, mural: null, scenes: [], availableAssets: [] };
+    return { mural: null as CurateMural | null, scenes: [] as CurateScene[], availableAssets: [] as CurateAsset[] };
   }
 
-  // Load mural for this universe
   const { data: muralMasters } = await svc
     .from("master")
     .select("master_id")
@@ -113,7 +99,6 @@ async function loadData(universeId: string | null) {
     };
   }
 
-  // Load scenes for this universe's mural
   let scenes: CurateScene[] = [];
   if (muralMasterId) {
     const { data: sceneMasters } = await svc
@@ -157,8 +142,6 @@ async function loadData(universeId: string | null) {
     }
   }
 
-  // Available assets for binding (original + streaming-variant, non-placeholder)
-  // Note: 'video' is not a valid asset_type enum value — only 'original' and 'streaming-variant'
   const { data: rawAssets } = await svc
     .from("media_asset")
     .select("asset_id, provider, storage_ref, duration_ms, width, height, intake_id")
@@ -181,7 +164,7 @@ async function loadData(universeId: string | null) {
     title: (intakes ?? []).find((i) => i.intake_id === a.intake_id)?.title ?? null,
   }));
 
-  return { universes, selectedUniverseId: universeId, mural, scenes, availableAssets };
+  return { mural, scenes, availableAssets };
 }
 
 export default async function CuratePage({
@@ -195,7 +178,69 @@ export default async function CuratePage({
   if (!await getParticipantId(supabase)) redirect("/auth/sign-in");
 
   const { universe } = await searchParams;
-  const data = await loadData(universe ?? null);
+  const { media, universes } = await loadCurateStudioMedia();
+  const selectedUniverseId = universe && universes.some((item) => item.master_id === universe)
+    ? universe
+    : null;
+  const selected = universes.find((item) => item.master_id === selectedUniverseId) ?? null;
+  const inspection = await loadInspectionContext(
+    selectedUniverseId,
+    universes.map((item) => item.master_id),
+  );
 
-  return <CurateClient {...data} />;
+  const breadcrumb = selected
+    ? [
+        { label: "Authority", href: "/authority" },
+        { label: "Curate", href: CURATE_STUDIO_HREF },
+        { label: selected.title ?? "Untitled universe" },
+      ]
+    : [
+        { label: "Authority", href: "/authority" },
+        { label: "Curate" },
+      ];
+
+  return (
+    <div className="space-y-10">
+      <HierarchyBreadcrumb items={breadcrumb} />
+
+      <div className="space-y-2">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          Curate Studio
+        </p>
+        <h1 className="text-3xl font-semibold tracking-tight">Curate</h1>
+        <p className="text-sm text-muted-foreground max-w-3xl">
+          Inspect incoming media, then assemble the canonical work in Creative Suite.
+          Uploading media does not create a Universe. Sentinel verifies technical usability.
+          Creative meaning, publication, and Experience remain separate steps.
+        </p>
+        <p className="text-xs text-muted-foreground">
+          {CURATE_LIFECYCLE.join(" → ")}
+        </p>
+      </div>
+
+      <CurateStudioGateway
+        media={media}
+        universes={universes}
+        selectedUniverseId={selectedUniverseId}
+      />
+
+      {selectedUniverseId && (
+        <section className="space-y-4" aria-labelledby="curate-sentinel">
+          <div className="space-y-1">
+            <h2 id="curate-sentinel" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+              Inspect / Sentinel
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-3xl">
+              Evidence only. Sentinel does not decide Universe, Mural, Scene, contributor, or publication.
+            </p>
+          </div>
+          <CurateClient
+            mural={inspection.mural}
+            scenes={inspection.scenes}
+            availableAssets={inspection.availableAssets}
+          />
+        </section>
+      )}
+    </div>
+  );
 }

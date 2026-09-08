@@ -302,9 +302,30 @@ export default function AuthorityClient() {
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Authority Console</h1>
         <p className="text-sm text-muted-foreground">
-          Operational overview of the Mighty Verse production and publishing state.
+          Operational overview. Curate is the doorway into assembling a canonical work.
         </p>
       </div>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Curate</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">
+            Inspect incoming media. Sentinel verifies it. Creative Suite assembles Identity, Mural, Scenes, and Creative Moments. Media does not become a Universe.
+          </p>
+        </div>
+        <Link
+          href="/authority/curate"
+          className="group flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4 transition-colors hover:bg-accent/30"
+        >
+          <div>
+            <p className="text-sm font-medium text-foreground">Curate Studio</p>
+            <p className="mt-0.5 text-xs text-muted-foreground/70">Intake → Sentinel → Creative Suite → Publish → Experience</p>
+          </div>
+          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
+            Open Curate <ArrowRight size={12} />
+          </span>
+        </Link>
+      </section>
 
       {/* ── State summary ────────────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-px sm:grid-cols-4 rounded-lg overflow-hidden border border-border bg-border">

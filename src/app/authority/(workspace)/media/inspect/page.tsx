@@ -4,6 +4,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
+import { CURATE_STUDIO_HREF } from "@/lib/assemble/studio";
+import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import MediaInspectClient from "./media-inspect-client";
 
 type CanonicalScene = {
@@ -113,6 +115,13 @@ export default async function MediaInspectPage({
 
   return (
     <div className="space-y-6">
+      <HierarchyBreadcrumb
+        items={[
+          { label: "Authority", href: "/authority" },
+          { label: "Curate", href: CURATE_STUDIO_HREF },
+          { label: "Inspect" },
+        ]}
+      />
       <div className="space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media Intelligence</p>
         <h1 className="text-3xl font-semibold tracking-tight">Media Inspection</h1>

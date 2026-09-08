@@ -5,13 +5,16 @@ Expressions: Authority now; public-user curation later.
 Not EXPERIENCE: do not put playback, Mux, Scene Deck, or public timeline here.
 
 ```
-CURATE
-  └── CREATIVE SUITE
-        ├── Universe identity
-        ├── Mural (audiovisual expression)
-        ├── Scenes (visual/spatial units on the Mural)
-        └── Creative Moments (Universe-parented, not Mural-owned)
+CURATE STUDIO  (/authority/curate)
+  ├── Incoming media (intake / Sentinel)
+  └── Creative Suite  (/authority/universes/{id})
+        ├── Identity
+        ├── Mural
+        ├── Scenes
+        └── Creative Moments
 ```
+
+MEDIA ≠ UNIVERSE. Sentinel inspects; the curator assembles; Authority authorizes; Experience presents.
 
 Creative Moments are related to Scenes via `scene_moment`. They are not owned by the Mural.
 
@@ -27,7 +30,11 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Universe create | `POST /api/authority/masters` | `registerMaster` | create master | later | yes | no | no | Later increment |
 | Canonical presentation panel | `PresentationPanel` | title, description, MD, artwork | same presentation API | no | yes | no | no | Publishing record, not suite identity |
 | Mural identity / expression | suite Mural section; listing `/authority/murals` | mural master + presentation | none in suite | later | listing yes | no | shell only | No Mural editor in 2.4 |
-| `/authority/curate` | media inspection | assets, frames, candidates | bind / accept scene | no | yes | no | no | Sentinel workspace, not Creative Suite |
+| Curate Studio gateway | `/authority/curate` + `studio.ts` / `load-studio.ts` / `curate-studio-gateway.tsx` | incoming media + association | none | yes (hrefs injected) | route auth | no | yes | Doorway: intake → Sentinel → Creative Suite |
+| `/authority/curate` Sentinel inspect | `curate-client.tsx` | mural-bound HLS, frames, candidates | bind / accept scene (existing) | inspect UI Authority-hosted | yes | no | inspect kept | Evidence only; not Creative Suite |
+| Media inspect | `/authority/media/inspect` | asset identity + frames | none canonical | later | yes | no | existing | Asset-level inspect; not a Universe |
+| Media intake | `/authority/media/intake` | `media_intake` | create intake | later | yes | no | existing | MEDIA ≠ UNIVERSE |
+| Media readiness | `src/lib/media/readiness.ts` | intake / processing / playable / ready | none | yes | no | no | yes | Existing states; no invented workflow table |
 | Scene identity / timing / order | suite Scenes section; `POST /api/authority/scenes`; sort-order; timeline PATCH | scene master, binding `start_ms`/`end_ms`, `sort_order` | Authority APIs exist | later | yes | no | shell only | No Scene editor in 2.4 |
 | Scene ↔ Creative Moment | `scene_moment` in read-model; `POST/DELETE /api/authority/scene-moment` | primary join | Authority API | later | yes | no | read-model yes | Sharing Proverb is live data, not a defect |
 | Creative Moment identity | suite CM section; parent = Universe | master + presentation; `has_experience` | none in suite | later | yes | no | shell only | Not Mural-owned |
@@ -38,4 +45,4 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 
 Future public curator: same suite primitives and identity form; different auth, no Authority privileges, no canonical publishing, no rights/moderation.
 
-Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment` already express the ontology. **NO MIGRATION REQUIRED.**
+Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**

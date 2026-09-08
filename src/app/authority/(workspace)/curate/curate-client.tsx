@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,7 +20,6 @@ import {
   type SceneCandidate,
 } from "@/lib/media/scene-candidates";
 import type {
-  CurateUniverse,
   CurateMural,
   CurateScene,
   CurateAsset,
@@ -60,8 +58,6 @@ async function api(path: string, body: unknown) {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type Props = {
-  universes: CurateUniverse[];
-  selectedUniverseId: string | null;
   mural: CurateMural | null;
   scenes: CurateScene[];
   availableAssets: CurateAsset[];
@@ -84,14 +80,10 @@ function providerThumbUrl(provider: string | null, storageRef: string, timeMs: n
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CurateClient({
-  universes,
-  selectedUniverseId,
   mural,
   scenes: initialScenes,
   availableAssets,
 }: Props) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
 
   // ── Video player ────────────────────────────────────────────────────────────
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -301,74 +293,27 @@ export default function CurateClient({
   }
 
 
-  // ── Render ──────────────────────────────────────────────────────────────────
-  const universe = universes.find((u) => u.master_id === selectedUniverseId);
-
   return (
-    <div className="space-y-8">
-
-      {/* Header */}
-      <div className="space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Curation Workspace</p>
-        <h1 className="text-3xl font-semibold tracking-tight">
-          {universe?.title ?? "Select a Universe"}
-        </h1>
-        {mural && (
-          <p className="text-sm text-muted-foreground">
-            Mural: {mural.title ?? "Untitled"} ·{" "}
-            {mural.provider === "mux" ? "Mux HLS" : mural.provider ?? "No media"} ·{" "}
-            {mural.duration_ms ? fmtSec(mural.duration_ms) : "—"}
-          </p>
-        )}
-      </div>
-
-      {/* Universe selector */}
-      <div className="flex flex-wrap items-center gap-3">
-        <select
-          value={selectedUniverseId ?? ""}
-          onChange={(e) => {
-            const params = new URLSearchParams(searchParams.toString());
-            if (e.target.value) params.set("universe", e.target.value);
-            else params.delete("universe");
-            router.push(`/authority/curate?${params.toString()}`);
-          }}
-          className="border-input bg-background text-foreground rounded-md border px-3 py-2 text-sm"
-        >
-          <option value="">Select Universe…</option>
-          {universes.map((u) => (
-            <option key={u.master_id} value={u.master_id}>
-              {u.title ?? u.master_id.slice(0, 8)}
-            </option>
-          ))}
-        </select>
-        {selectedUniverseId && (
-          <a
-            href={`/authority/${selectedUniverseId}`}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Open Universe →
-          </a>
-        )}
-        {mural && (
-          <a
-            href={`/authority/${mural.master_id}`}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            Open Mural →
-          </a>
-        )}
-      </div>
-
-      {!selectedUniverseId && (
-        <p className="text-sm text-muted-foreground">Select a Universe above to begin curation.</p>
+    <div className="space-y-6">
+      {mural && (
+        <p className="text-sm text-muted-foreground">
+          Mural: {mural.title ?? "Untitled"} ·{" "}
+          {mural.provider === "mux" ? "Mux HLS" : mural.provider ?? "No media"} ·{" "}
+          {mural.duration_ms ? fmtSec(mural.duration_ms) : "—"}
+        </p>
       )}
 
-      {selectedUniverseId && (
-        <div className="space-y-6">
+      {!mural && (
+        <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
+          This Universe has no Mural yet. Media inspection needs mural-bound media. Creative Suite is still the assembly environment.
+        </p>
+      )}
+
+      {mural && (
+        <>
 
           {/* Mural asset binding */}
-          {mural && (
-            <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 space-y-2">
+          <div className="rounded-lg border border-border bg-muted/20 px-4 py-3 space-y-2">
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Mural media</p>
                 <span className="text-xs text-muted-foreground">
@@ -401,7 +346,6 @@ export default function CurateClient({
               )}
               {bindMsg && <p className={`text-xs ${bindMsg.startsWith("Error") ? "text-destructive" : "text-emerald-400"}`}>{bindMsg}</p>}
             </div>
-          )}
 
           {/* Video player */}
           <Card>
@@ -869,7 +813,7 @@ export default function CurateClient({
             </p>
           </div>
 
-        </div>
+        </>
       )}
     </div>
   );

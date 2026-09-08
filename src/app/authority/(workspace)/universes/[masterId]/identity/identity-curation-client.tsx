@@ -4,18 +4,24 @@ import { useRouter } from "next/navigation";
 import UniverseIdentityForm from "@/components/assemble/universe-identity-form";
 import { api } from "../../../_shared/authority-utils";
 import type { UniverseIdentity } from "@/lib/assemble/identity";
+import { creativeSuiteHref } from "@/lib/assemble/studio";
 
 export default function IdentityCurationClient({
   masterId,
   title,
   description,
+  fromCurate = false,
 }: {
   masterId: string;
   title: string;
   description: string;
+  fromCurate?: boolean;
 }) {
   const router = useRouter();
-  const workspaceHref = `/authority/universes/${masterId}`;
+  const workspaceHref = creativeSuiteHref(masterId, fromCurate ? "curate" : null);
+  const savedHref = fromCurate
+    ? `${workspaceHref}&identity=saved`
+    : `${workspaceHref}?identity=saved`;
 
   async function handleSave(identity: UniverseIdentity) {
     const res = await api("/api/authority/presentation", {
@@ -24,7 +30,7 @@ export default function IdentityCurationClient({
       description: identity.description,
     });
     if (res.error) return { error: res.error };
-    router.push(`${workspaceHref}?identity=saved`);
+    router.push(savedHref);
     router.refresh();
   }
 

@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.4 ASSEMBLE Creative Suite
+STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.5 ASSEMBLE Curate Studio
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -75,7 +75,7 @@ The config reuses an existing dev server when one is already listening.
 | Super Hero Ego Sword Master Moment | `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` | Same shared player as Mural; Scene title; Mux HLS; seek near 193s; Play; currentTime advances inside 193–254s; painted frame; no Livepeer |
 | Super Hero Ego sibling Moments | Powerhouse / Dark Knight / Hand-to-Hand | Universe → View Mural → sidebar `/moments/{projectionId}`; same shared player; Scene windows 36–79s / 80–124s / 149–192s; Play; end reset-to-start; no Livepeer |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
-| `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
+| `/authority/curate` | `/authority/curate` | Auth gate or Curate Studio gateway; incoming media; Sentinel; Open Creative Suite |
 | Super Hero Ego Creative Suite | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → suite; Identity / Mural / Scenes / Creative Moments boundaries |
 | Super Hero Ego Universe identity | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/identity` | Auth gate; title/description form; validation; idempotent save; return to suite |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |

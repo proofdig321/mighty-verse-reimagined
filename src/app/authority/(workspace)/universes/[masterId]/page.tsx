@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseAssembly } from "@/lib/assemble";
 import { creativeSuiteNavItems } from "@/lib/assemble/suite";
+import { CURATE_STUDIO_HREF, creativeSuiteHref, creativeSuiteIdentityHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import UniverseAssemblyView from "@/components/assemble/universe-assembly";
@@ -16,7 +17,7 @@ export default async function UniverseCurationPage({
   searchParams,
 }: {
   params: Promise<{ masterId: string }>;
-  searchParams: Promise<{ identity?: string }>;
+  searchParams: Promise<{ identity?: string; from?: string }>;
 }) {
   const { masterId } = await params;
   const query = await searchParams;
@@ -30,16 +31,25 @@ export default async function UniverseCurationPage({
   if (!data) notFound();
 
   const title = data.title ?? "Untitled universe";
-  const suiteHref = `/authority/universes/${data.master_id}`;
+  const fromCurate = query.from === "curate";
+  const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
 
   return (
     <div className="space-y-10">
       <HierarchyBreadcrumb
-        items={[
-          { label: "Authority", href: "/authority" },
-          { label: "Universes", href: "/authority/universes" },
-          { label: title },
-        ]}
+        items={
+          fromCurate
+            ? [
+                { label: "Authority", href: "/authority" },
+                { label: "Curate", href: CURATE_STUDIO_HREF },
+                { label: title },
+              ]
+            : [
+                { label: "Authority", href: "/authority" },
+                { label: "Universes", href: "/authority/universes" },
+                { label: title },
+              ]
+        }
       />
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -54,7 +64,7 @@ export default async function UniverseCurationPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <Link href={`${suiteHref}/identity`} className={buttonVariants({ size: "sm" })}>
+          <Link href={creativeSuiteIdentityHref(data.master_id, fromCurate ? "curate" : null)} className={buttonVariants({ size: "sm" })}>
             Edit identity
           </Link>
           <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>

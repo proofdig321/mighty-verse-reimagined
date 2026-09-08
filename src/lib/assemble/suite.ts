@@ -35,6 +35,11 @@ export function suiteScenes(assembly: UniverseAssembly): SuiteScene[] {
   );
 }
 
+function suiteIdentityHref(suiteHref: string): string {
+  const [path, query] = suiteHref.split("?");
+  return query ? `${path}/identity?${query}` : `${path}/identity`;
+}
+
 /** Authority and future public suites inject their own base path. */
 export function creativeSuiteNavItems(
   suiteHref: string,
@@ -45,7 +50,7 @@ export function creativeSuiteNavItems(
     label: section.label,
     href:
       section.id === "identity" && current === "identity"
-        ? `${suiteHref}/identity`
+        ? suiteIdentityHref(suiteHref)
         : `${suiteHref}#${section.fragment}`,
   }));
 }

@@ -5,16 +5,20 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseAssembly } from "@/lib/assemble";
 import { creativeSuiteNavItems } from "@/lib/assemble/suite";
+import { CURATE_STUDIO_HREF, creativeSuiteHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import IdentityCurationClient from "./identity-curation-client";
 
 export default async function UniverseIdentityPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ masterId: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { masterId } = await params;
+  const query = await searchParams;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -25,17 +29,27 @@ export default async function UniverseIdentityPage({
   if (!data) notFound();
 
   const title = data.title ?? "Untitled universe";
-  const suiteHref = `/authority/universes/${data.master_id}`;
+  const fromCurate = query.from === "curate";
+  const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
 
   return (
     <div className="space-y-10">
       <HierarchyBreadcrumb
-        items={[
-          { label: "Authority", href: "/authority" },
-          { label: "Universes", href: "/authority/universes" },
-          { label: title, href: suiteHref },
-          { label: "Identity" },
-        ]}
+        items={
+          fromCurate
+            ? [
+                { label: "Authority", href: "/authority" },
+                { label: "Curate", href: CURATE_STUDIO_HREF },
+                { label: title, href: suiteHref },
+                { label: "Identity" },
+              ]
+            : [
+                { label: "Authority", href: "/authority" },
+                { label: "Universes", href: "/authority/universes" },
+                { label: title, href: suiteHref },
+                { label: "Identity" },
+              ]
+        }
       />
 
       <div className="space-y-1 min-w-0">
@@ -55,6 +69,7 @@ export default async function UniverseIdentityPage({
         masterId={data.master_id}
         title={data.title ?? ""}
         description={data.description ?? ""}
+        fromCurate={fromCurate}
       />
     </div>
   );
