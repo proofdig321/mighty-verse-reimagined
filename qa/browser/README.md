@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke only
+STATUS: Stage 1 smoke + Stage 1.1 Mural Play assertion
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -70,7 +70,7 @@ The config reuses an existing dev server when one is already listening.
 | `/` | `/` | Home loads, primary content, real Universe, Mux thumbnail traffic |
 | `/universes` | `/universes` | Universe list, real Super Hero Ego row |
 | Super Hero Ego Universe | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Canonical Universe page, mural CTA, Scene Deck, Mux HLS evidence |
-| Super Hero Ego Mural | `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` | Player mount, HLS URL in page, stream.mux.com request (or recorded FINDING) |
+| Super Hero Ego Mural | `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` | Player mount, HLS URL, stream.mux.com, Play click, readyState, currentTime advance, painted frame |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
@@ -86,6 +86,7 @@ qa/browser/
   lib/observe.ts         console / network / screenshot / evidence labels
   lib/health.ts          unexpected console, failed app requests, Mux-vs-Livepeer
   lib/fixtures.ts        Playwright fixture — do not put this in production components
+  lib/playback.ts        HTMLVideoElement Play / readyState / painted-frame helpers
   smoke/*.smoke.ts       Stage 1 runtime smoke (Playwright testMatch)
 ```
 
@@ -122,3 +123,12 @@ Mural HLS: Chrome Origin `http://localhost:3000` loads `hls.js` and requests
 `stream.mux.com`. Origin `http://127.0.0.1:3000` without `allowedDevOrigins`
 returns HTTP 403 on those chunks and the player stays on "Loading media".
 Do not silently drop a FINDING if HLS still does not start after origin alignment.
+
+Stage 1.1 (`smoke/mural-playback.smoke.ts`) clicks Play on the labelled
+`<video>` and asserts real Mux playback: `readyState >= 2`, `currentTime`
+advances, and a non-empty decoded frame via `canvas.drawImage`. Native
+`<video controls>` has no page-DOM Play button; the test uses a labelled
+click, Space, then `HTMLVideoElement.play()` if still paused.
+
+Mux `edgemv.mux.com` / `stream.mux.com` `net::ERR_ABORTED` segment requests
+are HLS unused-range aborts. They are recorded, not treated as `/api` failures.

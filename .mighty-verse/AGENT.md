@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 1 browser QA foundation)
+STATUS: current as of 2026-09-08 (Stage 1.1 Mux playback assertion)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -213,7 +213,7 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
-- Mural Mux player: with Chrome Origin `http://localhost:3000`, the page delivers the Mux HLS URL, `hls.js` loads, `stream.mux.com` is requested, and the "Loading media" overlay clears. Duration renders (4:14). The paused video can still show a dark first frame at `0:00` until the user presses play. The earlier stuck-loading state was Next.js 16 blocking `/_next/static` (including `hls.js`) from Origin `http://127.0.0.1:3000` (HTTP 403 `Unauthorized`). Not a Livepeer misroute. Direct HLS URL HTTP 200.
+- Mural Mux player: Stage 1.1 browser smoke (`qa/browser/smoke/mural-playback.smoke.ts`) asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` — HLS URL, labelled `<video>`, `stream.mux.com`, `readyState >= 2`, advancing `currentTime`, and a non-empty decoded frame. Paused-at-0:00 dark first frame is initialization only; it is not a substitute for the Play assertion.
 
 ---
 
@@ -314,8 +314,10 @@ npm run test:qa:browser
 ```
 
 Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe at
-`/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`, `/moments`, `/authority/curate`, `/editor`.
-Smoke files match `qa/browser/smoke/*.smoke.ts`.
+`/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`, Super Hero Ego Mural Play at
+`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`, `/moments`, `/authority/curate`, `/editor`.
+Smoke files match `qa/browser/smoke/*.smoke.ts`. Stage 1.1 proves actual Mux
+playback after Play, not only player initialization.
 
 Canonical public Universe/Mural pages are `/worlds/{masterId}`. `/universes/{masterId}` is not a route.
 
