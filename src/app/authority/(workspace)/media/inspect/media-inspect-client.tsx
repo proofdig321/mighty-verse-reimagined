@@ -446,7 +446,7 @@ const runInspection = useCallback(async () => {
         </div>
       )}
 
-      {assetIdentity && inspections.length > 0 && (
+      {inspections.length > 0 && (
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2" aria-labelledby="saved-inspections-heading">
           <p id="saved-inspections-heading" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
             Saved inspections

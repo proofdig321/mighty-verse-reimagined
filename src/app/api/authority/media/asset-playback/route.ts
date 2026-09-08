@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
+import { isInspectableAssetType } from "@/lib/media/inspect-persist";
 import { getProvider } from "@/lib/media/providers";
 import type { MediaClass } from "@/lib/media/providers/interface";
 
@@ -36,9 +37,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Asset has no provider — cannot resolve playback" }, { status: 422 });
   }
 
-  // Only original/video/audio assets are inspectable
-  const inspectableTypes = ["original", "video", "audio"];
-  if (!inspectableTypes.includes(asset.asset_type)) {
+  if (!isInspectableAssetType(asset.asset_type)) {
     return NextResponse.json({ error: `Unsupported asset type for inspection: ${asset.asset_type}` }, { status: 422 });
   }
 

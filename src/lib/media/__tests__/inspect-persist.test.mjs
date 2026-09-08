@@ -1,4 +1,4 @@
-import { decideInspectionPersist } from "../inspect-persist";
+import { decideInspectionPersist, isInspectableAssetType } from "../inspect-persist";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -80,5 +80,9 @@ const notObject = decideInspectionPersist({
   candidateTimestampsMs: [],
 });
 assert(!notObject.ok && notObject.code === "missing_evidence", "metadata must be an object");
+
+assert(isInspectableAssetType("streaming-variant"), "unbound Livepeer streaming-variant is inspectable");
+assert(isInspectableAssetType("original"), "original media is inspectable");
+assert(!isInspectableAssetType("thumbnail"), "thumbnails are not inspectable");
 
 console.log("Inspect persist contract tests: all passed");

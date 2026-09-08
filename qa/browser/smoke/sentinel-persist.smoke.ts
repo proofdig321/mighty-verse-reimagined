@@ -117,6 +117,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
 
   await applyAuthoritySession(context, baseURL);
   await page.goto(ROUTES.authorityUnboundInspect, { waitUntil: "domcontentloaded" });
+  await expect(page.getByText("Inspecting Asset")).toBeVisible();
   const before = await snapshotCanon(svc);
   const { count: sessionsBefore } = await svc
     .from("inspection_session")
@@ -211,6 +212,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
     expect(secondStill?.session_id).toBe(first.body.session_id);
 
     await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByText("Inspecting Asset")).toBeVisible();
     await expect(page.getByText("Saved inspections")).toBeVisible();
     await expect(page.getByText("2 observations").first()).toBeVisible();
     await expect(page.getByText("4 observations").first()).toBeVisible();

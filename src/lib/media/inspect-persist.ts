@@ -10,6 +10,19 @@
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+export const INSPECTABLE_ASSET_TYPES = [
+  "original",
+  "video",
+  "audio",
+  "streaming-variant",
+] as const;
+
+export type InspectableAssetType = (typeof INSPECTABLE_ASSET_TYPES)[number];
+
+export function isInspectableAssetType(value: string | null | undefined): value is InspectableAssetType {
+  return typeof value === "string" && (INSPECTABLE_ASSET_TYPES as readonly string[]).includes(value);
+}
+
 export function isInspectionId(value: string | null | undefined): value is string {
   return typeof value === "string" && UUID_RE.test(value.trim());
 }

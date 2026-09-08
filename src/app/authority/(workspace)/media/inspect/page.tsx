@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import { curateStudioHref } from "@/lib/assemble/studio";
+import { isInspectableAssetType } from "@/lib/media/inspect-persist";
 import { listInspectionSessions } from "@/lib/media/sentinel";
 import { buttonVariants } from "@/components/ui/button";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
@@ -79,9 +80,7 @@ async function getAssetIdentity(assetId: string): Promise<AssetIdentity | null> 
 
   if (!asset) return null;
   if (!asset.provider) return null;
-  // Accept original, video, and audio asset types
-  const inspectable = ["original", "video", "audio"];
-  if (!inspectable.includes(asset.asset_type)) return null;
+  if (!isInspectableAssetType(asset.asset_type)) return null;
 
   const { data: intake } = asset.intake_id
     ? await svc.from("media_intake").select("title, work_type").eq("intake_id", asset.intake_id).maybeSingle()
