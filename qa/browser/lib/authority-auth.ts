@@ -73,15 +73,17 @@ export async function applyAuthoritySession(context: BrowserContext, origin: str
   const projectRef = new URL(supabaseUrl).hostname.split(".")[0];
   const storageKey = `sb-${projectRef}-auth-token`;
   const encoded = `base64-${Buffer.from(JSON.stringify(sessionData.session), "utf8").toString("base64url")}`;
+  const cookieOrigin = new URL(origin);
+  const domain = cookieOrigin.hostname;
 
   await context.addCookies(
     createChunks(storageKey, encoded).map((cookie) => ({
       name: cookie.name,
       value: cookie.value,
-      url: origin,
+      domain,
       path: "/",
       httpOnly: false,
-      secure: origin.startsWith("https://"),
+      secure: cookieOrigin.protocol === "https:",
       sameSite: "Lax" as const,
     })),
   );

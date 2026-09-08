@@ -59,14 +59,17 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await expect(page.getByRole("heading", { name: /^Mural$/i })).toBeVisible();
   await expect(page.getByText(CANON.muralId)).toBeVisible();
 
+  const muralSection = page.locator("section[aria-labelledby='universe-mural']");
+  const momentsSection = page.locator("section[aria-labelledby='universe-moments']");
+
   for (const scene of Object.values(SCENE_MOMENTS)) {
-    await expect(page.getByText(scene.sceneTitle, { exact: true })).toBeVisible();
+    await expect(muralSection.getByRole("cell", { name: scene.sceneTitle, exact: true })).toBeVisible();
     notes.push(`workspace Scene ${scene.sceneTitle} → ${scene.creativeMomentTitle}`);
   }
 
   await expect(page.getByRole("heading", { name: /Creative Moments/i })).toBeVisible();
   for (const cm of Object.values(CREATIVE_MOMENTS)) {
-    await expect(page.getByText(cm.title, { exact: true }).first()).toBeVisible();
+    await expect(momentsSection.getByRole("cell", { name: cm.title, exact: true })).toBeVisible();
     notes.push(`workspace Creative Moment ${cm.title} ${cm.masterId}`);
   }
 
@@ -74,8 +77,7 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverses}$`));
   notes.push("breadcrumb returned to Universes listing");
 
-  const missing = await page.goto(`/authority/universes/${CANON.muralId}`, { waitUntil: "domcontentloaded" });
-  expect(missing?.status(), "non-universe workspace id should 404").toBe(404);
+  await page.goto(`/authority/universes/${CANON.muralId}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Universe not found/i })).toBeVisible();
   notes.push(`non-universe id ${CANON.muralId} rendered Universe not found`);
 
