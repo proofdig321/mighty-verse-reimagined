@@ -133,6 +133,9 @@ export const ROUTES = {
   moments: "/moments",
   momentSwordMaster: `/moments/${CANON.swordMasterProjectionId}`,
   curate: "/authority/curate",
+  authority: "/authority",
+  authorityUniverses: "/authority/universes",
+  authorityUniverseWorkspace: `/authority/universes/${CANON.universeId}`,
   editor: "/editor",
   signIn: "/auth/sign-in",
 } as const;

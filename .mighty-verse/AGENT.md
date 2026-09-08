@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 1.5 Super Hero Ego Creative Moment navigation verified)
+STATUS: current as of 2026-09-08 (Stage 2.1 Authority Universe curation workspace)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -148,6 +148,8 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/worlds/[masterId]/scenes` — Scene Deck with provider=mux for all four scenes
 - `/moments/[projectionId]` — Moment playback via MuxPlayer with canonical timing
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
+- `/authority/universes` — Authority Universe listing (auth-gated)
+- `/authority/universes/[masterId]` — Universe curation workspace: identity, Mural, Scenes, Creative Moments
 
 ### Sentinel Evidence Layer (Phase 1, 2026-09-10)
 - `inspection_session` table — one row per inspection run against a media_asset
@@ -214,6 +216,7 @@ applied migration.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 - Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`. Stage 1.4 Chrome-verified Powerhouse, Dark Knight, and Hand-to-Hand through Universe → Mural sidebar navigation on the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (Scene seek, Play, painted frame, end reset-to-start, no Livepeer). Stage 1.5 Chrome-verified Scene Moment → `/creative-moments/{id}` identity pages (Proverb, Mothipa, Reason). Those pages are not a Mux playback surface. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
+- Authority Universe curation: Stage 2.1 establishes `/authority/universes/{masterId}` as the Universe assembly shell. Mural / Scene / Creative Moment *editing* workspaces are later increments. `/authority/curate` remains the media-inspection workspace, not the Universe shell.
 
 ---
 
@@ -327,6 +330,8 @@ playback after Play locally. Stage 1.2 proves the same Play path on the
 deployed Vercel production origin (GitHub repository `homepageUrl`). Stage 1.3
 proves Sword Master Moment Play. Stage 1.4 proves the three sibling Scene
 Moments through Universe → Mural navigation on the same production command.
+Stage 2.1 proves Authority → Universes → Super Hero Ego curation workspace
+locally (auth-gated).
 Production Chrome verification is opt-in:
 
 ```bash

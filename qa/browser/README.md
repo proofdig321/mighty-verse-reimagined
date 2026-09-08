@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.4 Play + Stage 1.5 Creative Moment navigation
+STATUS: Stage 1 smoke + Stage 1.1–1.4 Play + Stage 1.5 Creative Moment navigation + Stage 2.1 Universe curation workspace
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -76,6 +76,7 @@ The config reuses an existing dev server when one is already listening.
 | Super Hero Ego sibling Moments | Powerhouse / Dark Knight / Hand-to-Hand | Universe → View Mural → sidebar `/moments/{projectionId}`; same shared player; Scene windows 36–79s / 80–124s / 149–192s; Play; end reset-to-start; no Livepeer |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
+| Super Hero Ego Universe workspace | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → workspace; live Mural / Scenes / Creative Moments |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
 
 Canonical IDs live in `lib/canon.ts` and must match `.mighty-verse/AGENT.md`.
@@ -180,6 +181,13 @@ loads Proverb, Mothipa, and Reason identity pages. The Universe Moments tab
 lists those three Creative Moments; Proverb opens `/creative-moments/{id}`,
 while Mothipa and Reason open their CM experiential `/moments/{projectionId}`.
 This is not a playback surface.
+
+Stage 2.1 Chrome: Authority → Universes → Super Hero Ego opens
+`/authority/universes/{universeId}` with live Mural, four Scenes, and three
+Creative Moments. Unauthenticated visits redirect to `/auth/sign-in`. The
+authenticated path uses the environment Supabase service role to create a
+session for the existing Authority test account. It does not start `next dev`
+for production and is not part of `test:qa:browser:production`.
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.
