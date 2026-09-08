@@ -127,8 +127,9 @@ Do not silently drop a FINDING if HLS still does not start after origin alignmen
 Stage 1.1 (`smoke/mural-playback.smoke.ts`) clicks Play on the labelled
 `<video>` and asserts real Mux playback: `readyState >= 2`, `currentTime`
 advances, and a non-empty decoded frame via `canvas.drawImage`. Native
-`<video controls>` has no page-DOM Play button; the test uses a labelled
-click, Space, then `HTMLVideoElement.play()` if still paused.
+`<video controls>` has no page-DOM Play button; the test clicks the labelled
+video then calls `HTMLVideoElement.play()` once (Space is a toggle and can
+pause an in-flight play).
 
 Mux `edgemv.mux.com` / `stream.mux.com` `net::ERR_ABORTED` segment requests
 are HLS unused-range aborts. They are recorded, not treated as `/api` failures.

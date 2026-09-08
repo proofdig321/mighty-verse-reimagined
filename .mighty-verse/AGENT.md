@@ -213,7 +213,7 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
-- Mural Mux player: Stage 1.1 browser smoke (`qa/browser/smoke/mural-playback.smoke.ts`) asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` — HLS URL, labelled `<video>`, `stream.mux.com`, `readyState >= 2`, advancing `currentTime`, and a non-empty decoded frame. Paused-at-0:00 dark first frame is initialization only; it is not a substitute for the Play assertion.
+- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`. Chrome showed Play resetting because `MuxPlayer` depended on a new `source` object each parent render and re-attached HLS. Effect now keys on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
 
 ---
 

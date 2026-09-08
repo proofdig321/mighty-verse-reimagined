@@ -41,33 +41,22 @@ export async function readVideoSnapshot(player: Locator): Promise<VideoPlaybackS
 
 /**
  * Native `<video controls>` does not expose a page-DOM Play button.
- * Click the labelled media element (user gesture), then Space, then the
- * media element's play() API if still paused — the same control the UA Play
- * button uses.
+ * Click the labelled media element for a user gesture, then call the media
+ * element's play() API. HLS may abort an in-flight play() with
+ * "interrupted by a new load request" while the stream is still attaching;
+ * callers should poll this until `playInvoked` is true.
  */
-export async function startNativeVideoPlayback(player: Locator): Promise<{
+export async function tryStartNativeVideoPlayback(player: Locator): Promise<{
   playControl: string;
   playInvoked: boolean;
+  playError: string | null;
+  paused: boolean;
 }> {
-  await player.focus();
-  await player.click({ force: true });
-
-  let snapshot = await readVideoSnapshot(player);
-  if (!snapshot.paused) {
-    return { playControl: "video click (labelled Mighty Verse media player)", playInvoked: true };
-  }
-
-  await player.press("Space");
-  snapshot = await readVideoSnapshot(player);
-  if (!snapshot.paused) {
-    return { playControl: "Space on focused video element", playInvoked: true };
-  }
-
   const playResult = await player.evaluate(async (el) => {
     const video = el as HTMLVideoElement;
     try {
       await video.play();
-      return { ok: true, paused: video.paused, error: null as string | null };
+      return { ok: !video.paused, paused: video.paused, error: null as string | null };
     } catch (error) {
       return {
         ok: false,
@@ -78,8 +67,11 @@ export async function startNativeVideoPlayback(player: Locator): Promise<{
   });
 
   return {
-    playControl: `HTMLVideoElement.play() after labelled click (${playResult.error ?? "no throw"})`,
-    playInvoked: playResult.ok && !playResult.paused,
+    playControl:
+      "labelled <video> click (Mighty Verse media player) then HTMLVideoElement.play()",
+    playInvoked: playResult.ok,
+    playError: playResult.error,
+    paused: playResult.paused,
   };
 }
 

@@ -5,7 +5,7 @@ import {
   isMuxHlsAbort,
   readVideoSnapshot,
   samplePaintedFrame,
-  startNativeVideoPlayback,
+  tryStartNativeVideoPlayback,
 } from "../lib/playback";
 import {
   captureScreenshot,
@@ -24,7 +24,7 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
   const pageHasMuxHlsUrl = html.includes(`https://stream.mux.com/${CANON.muxPlaybackId}.m3u8`);
   expect(pageHasMuxHlsUrl, "mural page must deliver the Mux HLS URL").toBeTruthy();
 
-  const player = page.getByLabel("Mighty Verse media player");
+  const player = page.locator('video[aria-label="Mighty Verse media player"]');
   await expect(player).toBeVisible();
   await expect(player).toHaveJSProperty("tagName", "VIDEO");
   await expect(page.getByText("This media is unavailable right now.")).toHaveCount(0);
@@ -43,8 +43,32 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     )
     .toBeTruthy();
 
+  await expect
+    .poll(async () => (await readVideoSnapshot(player)).duration, { timeout: 15000 })
+    .toBeGreaterThan(1);
+  await expect
+    .poll(async () => (await readVideoSnapshot(player)).readyState, { timeout: 15000 })
+    .toBeGreaterThanOrEqual(2);
+  await expect
+    .poll(async () => (await readVideoSnapshot(player)).videoWidth, { timeout: 15000 })
+    .toBeGreaterThan(0);
+
   const beforePlay = await readVideoSnapshot(player);
-  const playAttempt = await startNativeVideoPlayback(player);
+  await player.click();
+
+  const playErrors: string[] = [];
+  let playAttempt = await tryStartNativeVideoPlayback(player);
+  await expect
+    .poll(
+      async () => {
+        playAttempt = await tryStartNativeVideoPlayback(player);
+        if (playAttempt.playError) playErrors.push(playAttempt.playError);
+        const snapshot = await readVideoSnapshot(player);
+        return playAttempt.playInvoked && !snapshot.paused;
+      },
+      { timeout: 15000 },
+    )
+    .toBeTruthy();
 
   await expect
     .poll(async () => (await readVideoSnapshot(player)).readyState, { timeout: 15000 })
@@ -81,6 +105,9 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     "Mux player is a labelled <video> (Mighty Verse media player), not Livepeer",
     `Play control: ${playAttempt.playControl}`,
     `Play invoked: ${playAttempt.playInvoked}`,
+    playErrors.length
+      ? `transient play() errors before start: ${[...new Set(playErrors)].join(" | ")}`
+      : "play() did not throw",
     `before Play currentTime=${beforePlay.currentTime.toFixed(3)} readyState=${beforePlay.readyState} paused=${beforePlay.paused}`,
     `after Play currentTime=${afterPlay.currentTime.toFixed(3)} readyState=${afterPlay.readyState} paused=${afterPlay.paused} duration=${afterPlay.duration.toFixed(3)}`,
     `currentTime advanced: ${afterPlay.currentTime > beforePlay.currentTime + 0.2}`,
@@ -108,6 +135,7 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
         {
           pageHasMuxHlsUrl,
           playAttempt,
+          playErrors: [...new Set(playErrors)],
           beforePlay,
           afterPlay,
           frame,

@@ -24,6 +24,10 @@ interface MuxPlayerProps {
  *
  * HLS URL is constructed by the Mux adapter — not hard-coded here.
  * For Mux: endpoint is https://stream.mux.com/{playbackId}.m3u8
+ *
+ * The HLS effect depends on source.endpoint / source.playbackId, not the
+ * source object identity. ProjectionMediaPlayer currently allocates a new
+ * source object each render; depending on `source` reloads HLS on Play.
  */
 export function MuxPlayer({
   source,
@@ -40,6 +44,8 @@ export function MuxPlayer({
   const onTimeUpdateRef = useRef(onTimeUpdate);
   const onDurationChangeRef = useRef(onDurationChange);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const hlsUrl = source.endpoint;
+  const playbackId = source.playbackId;
 
   useEffect(() => {
     onTimeUpdateRef.current = onTimeUpdate;
@@ -57,7 +63,9 @@ export function MuxPlayer({
 
     const startSec = startMs != null ? startMs / 1000 : null;
     const endSec = endMs != null ? endMs / 1000 : null;
-    const hlsUrl = source.endpoint;
+    let hls: { destroy: () => void } | undefined;
+    let cancelled = false;
+    let detachRange: (() => void) | undefined;
 
     function attachRange() {
       if (!media) return;
@@ -70,23 +78,26 @@ export function MuxPlayer({
           }
         };
         media.addEventListener("timeupdate", onTime);
-        return () => media.removeEventListener("timeupdate", onTime);
+        detachRange = () => media.removeEventListener("timeupdate", onTime);
       }
     }
 
     async function loadHls() {
       if (!media) return;
       const { default: Hls } = await import("hls.js");
+      if (cancelled || !media) return;
       // hls.js is supported (all modern browsers except Safari) — always prefer it
       if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: false });
-        hls.loadSource(hlsUrl);
-        hls.attachMedia(media as HTMLVideoElement);
-        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        const instance = new Hls({ enableWorker: false });
+        hls = instance;
+        instance.loadSource(hlsUrl);
+        instance.attachMedia(media as HTMLVideoElement);
+        instance.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (cancelled) return;
           attachRange();
           setState("ready");
         });
-        hls.on(Hls.Events.ERROR, (_e, data) => {
+        instance.on(Hls.Events.ERROR, (_e, data) => {
           if (data.fatal) setState("error");
         });
       } else if (media.canPlayType("application/vnd.apple.mpegurl")) {
@@ -100,7 +111,9 @@ export function MuxPlayer({
       }
     }
 
-    loadHls().catch(() => setState("error"));
+    loadHls().catch(() => {
+      if (!cancelled) setState("error");
+    });
 
     const onPlay = () =>
       fetch("/api/signals", {
@@ -111,7 +124,7 @@ export function MuxPlayer({
           masterId,
           canonicalStateId,
           signalType: "play",
-          sessionRef: source.playbackId,
+          sessionRef: playbackId,
         }),
       }).catch(() => null);
 
@@ -123,11 +136,14 @@ export function MuxPlayer({
     media.addEventListener("durationchange", handleDurationChange);
 
     return () => {
+      cancelled = true;
+      detachRange?.();
+      hls?.destroy();
       media.removeEventListener("play", onPlay);
       media.removeEventListener("timeupdate", handleTimeUpdate);
       media.removeEventListener("durationchange", handleDurationChange);
     };
-  }, [source, projectionId, masterId, canonicalStateId, startMs, endMs]);
+  }, [hlsUrl, playbackId, projectionId, masterId, canonicalStateId, startMs, endMs]);
 
   const overlay = (
     <>
