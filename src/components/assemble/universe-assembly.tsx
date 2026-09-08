@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { sharedCreativeMomentIds } from "@/lib/assemble/composition";
+import { sceneCreativeMomentIds, sceneShortTitle, sharedCreativeMomentIds } from "@/lib/assemble/composition";
+import { availablePresenceOptions } from "@/lib/assemble/presence";
 import { suiteScenes } from "@/lib/assemble/suite";
 import type { UniverseAssembly } from "@/lib/assemble";
 import { CompositionSurface } from "./composition-surface";
@@ -14,6 +15,7 @@ export type UniverseAssemblyProps = {
   openLabel?: string;
   muralEmptyAction?: ReactNode;
   experienceHref?: string;
+  canAuthorPresence?: boolean;
 };
 
 function untitled(kind: string) {
@@ -26,9 +28,19 @@ export default function UniverseAssemblyView({
   openLabel = "Open",
   muralEmptyAction,
   experienceHref,
+  canAuthorPresence = false,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
+  const sharedIds = [...sharedMoments];
+  const momentOptions = data.creative_moments.map((moment) => ({
+    master_id: moment.master_id,
+    title: moment.title,
+  }));
+  const sceneOptions = scenes.map((scene) => ({
+    master_id: scene.master_id,
+    title: sceneShortTitle(scene.title) ?? scene.title,
+  }));
 
   return (
     <CompositionSurface>
@@ -87,7 +99,7 @@ export default function UniverseAssemblyView({
               Scenes
             </h2>
             <p className="suite-section-note">
-              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Scene curation is a later increment.
+              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Presence can be authored here. Scene identity, timing, and order remain later increments.
             </p>
           </div>
           {scenes.length === 0 ? (
@@ -99,7 +111,10 @@ export default function UniverseAssemblyView({
                   <SceneObject
                     scene={scene}
                     index={index}
-                    sharedMoment={Boolean(scene.creative_moment_id && sharedMoments.has(scene.creative_moment_id))}
+                    sharedIds={sharedIds}
+                    candidates={availablePresenceOptions(momentOptions, sceneCreativeMomentIds(scene))}
+                    universeId={data.master_id}
+                    canAuthorPresence={canAuthorPresence}
                     openHref={openHref(scene.master_id)}
                     openLabel={openLabel}
                   />
@@ -126,6 +141,9 @@ export default function UniverseAssemblyView({
                 <li key={moment.master_id}>
                   <CreativeMomentObject
                     moment={moment}
+                    candidates={availablePresenceOptions(sceneOptions, moment.scene_ids)}
+                    universeId={data.master_id}
+                    canAuthorPresence={canAuthorPresence}
                     openHref={openHref(moment.master_id)}
                     openLabel={openLabel}
                   />

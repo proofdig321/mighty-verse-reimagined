@@ -389,15 +389,15 @@ Asset Record and Inspect now continue into the same Curate Studio with `?asset=`
 
 ---
 
-## Checkpoint evaluation (Stage 3.0)
+## Checkpoint evaluation (Stage 3.2)
 
 `CANONICAL` (2026-09-08)
 
-Starting checkpoint: `e1b4967b6f075692b25e7abfcd69ea19e3828f81`
+Starting checkpoint: `9d4d68da85a1f53fb9a2dda617ffedfa5f4e346a`
 
-Stage 2.9 made Creative Suite a composition surface. The remaining product gap was continuity: the curator could assemble Super Hero Ego, but Experience was a side door, and the public Universe page did not present the composed world.
+Stage 3.0 connected Creative Suite to Experience. Stage 3.1 found the next creative job: the curator can see who is present in which Scene but cannot author that relationship from Studio.
 
-Stage 3.0 improves both sides of CREATIVE SUITE → EXPERIENCE. Studio now presents Enter Experience as the natural continuation (navigation, not mutation). The public Universe landing presents the world: identity, Mural as audiovisual expression, Scene encounters leading to the existing Scene Deck, and contributor presence without fabricating Moment Cards for identity-only Creative Moments. Empty commerce/dashboard residue is removed from primary Experience. Realization, Publish, rights/ISRC, and `/authority/{id}` governance are unchanged.
+Stage 3.2 gives Creative Suite Add presence / Remove presence for existing Scenes and Creative Moments through `scene_moment`. Universe-scoped. No new ontology, no migration, no playback fabrication, no Scene Deck redesign. Proverb remains identity-only and shared across Powerhouse and Hand-to-Hand.
 
 **Do not automatically begin** a Scene editor, Creative Moment editor, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, 2.5D, AI, or commerce.
 

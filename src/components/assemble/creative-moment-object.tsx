@@ -1,21 +1,29 @@
 import Link from "next/link";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { UniverseAssemblyMoment } from "@/lib/assemble";
+import type { PresenceOption } from "@/lib/assemble/presence";
+import { MomentPresence } from "./presence-authoring";
 
 export function CreativeMomentObject({
   moment,
+  candidates,
+  universeId,
+  canAuthorPresence,
   openHref,
   openLabel,
 }: {
   moment: UniverseAssemblyMoment;
+  candidates: PresenceOption[];
+  universeId: string;
+  canAuthorPresence: boolean;
   openHref: string;
   openLabel: string;
 }) {
   const title = moment.title?.trim() || "Untitled Creative Moment";
   const shared = moment.scene_ids.length > 1;
   const headingId = `universe-moment-heading-${moment.master_id}`;
-  const relatedScenes = moment.scene_ids.map((id, index) => ({
-    id,
+  const related: PresenceOption[] = moment.scene_ids.map((id, index) => ({
+    master_id: id,
     title: sceneShortTitle(moment.scene_titles[index]) ?? moment.scene_titles[index] ?? "Untitled scene",
   }));
 
@@ -35,24 +43,14 @@ export function CreativeMomentObject({
         {moment.has_experience ? "Experience representation present" : "Identity only"}
         {shared ? " · Shared across Scenes" : ""}
       </p>
-      {relatedScenes.length > 0 ? (
-        <div className="suite-moment-scenes">
-          <p className="suite-relation-kicker">
-            Related Scene{relatedScenes.length === 1 ? "" : "s"}
-          </p>
-          <ul>
-            {relatedScenes.map((scene) => (
-              <li key={scene.id}>
-                <Link href={`#universe-scene-${scene.id}`} className="suite-relation-link">
-                  {scene.title}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ) : (
-        <p className="italic text-muted-foreground/70 text-sm">No Scene relation</p>
-      )}
+      <MomentPresence
+        universeId={universeId}
+        momentId={moment.master_id}
+        momentLabel={title}
+        related={related}
+        candidates={candidates}
+        canAuthor={canAuthorPresence}
+      />
       <p className="suite-object-actions">
         <Link href={openHref} className="suite-open-link">
           {openLabel}

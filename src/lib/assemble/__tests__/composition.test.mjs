@@ -23,6 +23,13 @@ const shared = sharedCreativeMomentIds([
 ]);
 assert(shared.has("proverb") && shared.size === 1, "only shared Creative Moments are flagged");
 
+const sharedFromLists = sharedCreativeMomentIds([
+  { creative_moments: [{ master_id: "proverb" }, { master_id: "reason" }] },
+  { creative_moments: [{ master_id: "mothipa" }] },
+  { creative_moments: [{ master_id: "proverb" }] },
+]);
+assert(sharedFromLists.has("proverb") && !sharedFromLists.has("reason"), "multiple presence on one Scene still flags only shared Moments");
+
 assert(
   sceneStillUrl({ provider: "mux", storage_ref: "seed:placeholder:x", start_ms: 36000 }) === null,
   "placeholder storage is not a still",

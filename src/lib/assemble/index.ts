@@ -9,6 +9,7 @@ export {
   sceneOrdinal,
   sceneShortTitle,
   sceneStillUrl,
+  sceneCreativeMomentIds,
   sharedCreativeMomentIds,
 } from "./composition";
 export {
@@ -53,3 +54,13 @@ export type {
   MuralRegistrationDecision,
   MuralRegistrationResultKind,
 } from "./mural-registration";
+export {
+  decideAddPresence,
+  decideRemovePresence,
+  availablePresenceOptions,
+} from "./presence";
+export type {
+  PresenceDecision,
+  PresenceMaster,
+  PresenceOption,
+} from "./presence";

@@ -5,6 +5,11 @@
  * permissions and actions. Do not add playback or EXPERIENCE fields here.
  */
 
+export type UniverseAssemblySceneMoment = {
+  master_id: string;
+  title: string | null;
+};
+
 export type UniverseAssemblyScene = {
   master_id: string;
   title: string | null;
@@ -12,6 +17,7 @@ export type UniverseAssemblyScene = {
   start_ms: number | null;
   end_ms: number | null;
   projection_id: string | null;
+  creative_moments: UniverseAssemblySceneMoment[];
   creative_moment_id: string | null;
   creative_moment_title: string | null;
   provider: string | null;

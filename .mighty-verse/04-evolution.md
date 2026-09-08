@@ -1244,5 +1244,17 @@ Creative Suite now leads with Enter Experience (navigation to `/worlds/{universe
 ```
 Stage 3.0 Assemble → Experience continuity
         ↓
+Stage 3.2 Scene ↔ Creative Moment presence
+        ↓
 next: evaluate the journey; do not assume a Mural/Scene/CM editor or a publish ontology
 ```
+
+### Stage 3.2 — Scene ↔ Creative Moment presence (2026-09-08)
+
+Checkpoint starts from `9d4d68da85a1f53fb9a2dda617ffedfa5f4e346a`.
+
+Stage 3.1 established that the next genuine creative job was authoring who is present in which Scene. Creative Suite already showed Scene ↔ Creative Moment relationships and Experience already consumed them, but the curator could not change `scene_moment` from Studio.
+
+Stage 3.2 adds Add presence / Remove presence on the existing composition surface, reusing `POST/DELETE /api/authority/scene-moment` with Universe-scope checks. Existing objects only. Relating does not create projections, media, Scenes, or Creative Moments. Proverb remains identity-only and shared. No migration, no new relationship table, no Scene Deck redesign.
+
+The original Mighty Verse wireframe informed *where* this belongs: Universe-context Create/Authority, with Scenes and Creative Moments co-present, not on the public Scene Deck and not as NFT/dashboard chrome. Stage 2.9 object language is the visual baseline.

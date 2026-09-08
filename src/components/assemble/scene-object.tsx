@@ -1,20 +1,28 @@
 import Link from "next/link";
-import { sceneOrdinal, sceneShortTitle, sceneStillUrl } from "@/lib/assemble/composition";
+import { sceneOrdinal, sceneShortTitle, sceneStillUrl, sceneCreativeMomentIds } from "@/lib/assemble/composition";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import { formatTimelineMs } from "@/lib/media/timing";
+import type { PresenceOption } from "@/lib/assemble/presence";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { CreativeStill } from "./creative-still";
+import { ScenePresence } from "./presence-authoring";
 
 export function SceneObject({
   scene,
   index,
-  sharedMoment,
+  sharedIds,
+  candidates,
+  universeId,
+  canAuthorPresence,
   openHref,
   openLabel,
 }: {
   scene: SuiteScene;
   index: number;
-  sharedMoment: boolean;
+  sharedIds: string[];
+  candidates: PresenceOption[];
+  universeId: string;
+  canAuthorPresence: boolean;
   openHref: string;
   openLabel: string;
 }) {
@@ -31,13 +39,18 @@ export function SceneObject({
       ? `${formatTimelineMs(scene.start_ms)} → ${formatTimelineMs(scene.end_ms)}`
       : null;
   const headingId = `universe-scene-heading-${scene.master_id}`;
+  const related = (scene.creative_moments?.length
+    ? scene.creative_moments
+    : scene.creative_moment_id
+      ? [{ master_id: scene.creative_moment_id, title: scene.creative_moment_title }]
+      : []) satisfies PresenceOption[];
 
   return (
     <article
       id={`universe-scene-${scene.master_id}`}
       className="suite-scene-object"
       data-scene-id={scene.master_id}
-      data-related-moments={scene.creative_moment_id ?? undefined}
+      data-related-moments={sceneCreativeMomentIds(scene).join(" ") || undefined}
       aria-labelledby={headingId}
     >
       <div className="suite-scene-still">
@@ -55,21 +68,15 @@ export function SceneObject({
         <p className="suite-scene-timing">
           {timing ?? <span className="italic text-muted-foreground/70">Timing not set</span>}
         </p>
-        {scene.creative_moment_id && scene.creative_moment_title ? (
-          <p className="suite-scene-moment">
-            <span className="suite-relation-kicker">
-              Related Creative Moment{sharedMoment ? " · shared" : ""}
-            </span>
-            <Link
-              href={`#universe-moment-${scene.creative_moment_id}`}
-              className="suite-relation-link"
-            >
-              {scene.creative_moment_title}
-            </Link>
-          </p>
-        ) : (
-          <p className="suite-scene-moment italic text-muted-foreground/70">No Creative Moment related</p>
-        )}
+        <ScenePresence
+          universeId={universeId}
+          sceneId={scene.master_id}
+          sceneLabel={shortTitle}
+          related={related}
+          candidates={candidates}
+          sharedIds={sharedIds}
+          canAuthor={canAuthorPresence}
+        />
         <p className="suite-object-actions">
           <Link href={openHref} className="suite-open-link">
             {openLabel}

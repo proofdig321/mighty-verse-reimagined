@@ -29,11 +29,11 @@ function assetFor(
 export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssembly {
   const titleFor = (id: string) => rows.presentations.find((row) => row.master_id === id)?.title ?? null;
 
-  const primaryMomentByScene = new Map<string, string>();
+  const momentsByScene = new Map<string, string[]>();
   for (const relation of rows.relations) {
-    if (!primaryMomentByScene.has(relation.scene_master_id)) {
-      primaryMomentByScene.set(relation.scene_master_id, relation.moment_master_id);
-    }
+    const related = momentsByScene.get(relation.scene_master_id) ?? [];
+    if (!related.includes(relation.moment_master_id)) related.push(relation.moment_master_id);
+    momentsByScene.set(relation.scene_master_id, related);
   }
 
   const scenesByMural = new Map<string, UniverseAssemblyScene[]>();
@@ -45,7 +45,12 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       ? rows.bindings.find((row) => row.projection_id === projection.projection_id)
       : null;
     const media = assetFor(rows, projection?.projection_id);
-    const creativeMomentId = primaryMomentByScene.get(scene.master_id) ?? null;
+    const relatedMomentIds = momentsByScene.get(scene.master_id) ?? [];
+    const creativeMoments = relatedMomentIds.map((id) => ({
+      master_id: id,
+      title: titleFor(id),
+    }));
+    const creativeMomentId = relatedMomentIds[0] ?? null;
     const entry: UniverseAssemblyScene = {
       master_id: scene.master_id,
       title: titleFor(scene.master_id),
@@ -53,6 +58,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       start_ms: binding?.start_ms ?? null,
       end_ms: binding?.end_ms ?? null,
       projection_id: projection?.projection_id ?? null,
+      creative_moments: creativeMoments,
       creative_moment_id: creativeMomentId,
       creative_moment_title: creativeMomentId ? titleFor(creativeMomentId) : null,
       provider: media.provider,
@@ -81,8 +87,8 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
   });
 
   const creative_moments: UniverseAssemblyMoment[] = rows.momentMasters.map((moment) => {
-    const relatedScenes = rows.sceneMasters.filter(
-      (scene) => primaryMomentByScene.get(scene.master_id) === moment.master_id,
+    const relatedScenes = rows.sceneMasters.filter((scene) =>
+      (momentsByScene.get(scene.master_id) ?? []).includes(moment.master_id),
     );
     return {
       master_id: moment.master_id,

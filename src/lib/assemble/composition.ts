@@ -21,13 +21,27 @@ export function sceneShortTitle(title: string | null | undefined): string | null
   return shortName || title.trim();
 }
 
+export function sceneCreativeMomentIds(scene: {
+  creative_moments?: { master_id: string }[];
+  creative_moment_id?: string | null;
+}): string[] {
+  if (scene.creative_moments?.length) {
+    return scene.creative_moments.map((moment) => moment.master_id);
+  }
+  return scene.creative_moment_id ? [scene.creative_moment_id] : [];
+}
+
 export function sharedCreativeMomentIds(
-  scenes: { creative_moment_id: string | null }[],
+  scenes: {
+    creative_moments?: { master_id: string }[];
+    creative_moment_id?: string | null;
+  }[],
 ): Set<string> {
   const counts = new Map<string, number>();
   for (const scene of scenes) {
-    if (!scene.creative_moment_id) continue;
-    counts.set(scene.creative_moment_id, (counts.get(scene.creative_moment_id) ?? 0) + 1);
+    for (const id of sceneCreativeMomentIds(scene)) {
+      counts.set(id, (counts.get(id) ?? 0) + 1);
+    }
   }
   return new Set([...counts.entries()].filter(([, count]) => count > 1).map(([id]) => id));
 }

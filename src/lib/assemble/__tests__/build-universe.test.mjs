@@ -75,6 +75,7 @@ assert(assembly.creative_moments.length === 3, "three creative moments");
 
 const scenes = Object.fromEntries(assembly.murals[0].scenes.map((scene) => [scene.master_id, scene]));
 assert(scenes[POWERHOUSE].creative_moment_id === PROVERB, "Powerhouse → Proverb");
+assert(scenes[POWERHOUSE].creative_moments.length === 1, "Powerhouse currently has one related Creative Moment");
 assert(scenes[POWERHOUSE].storage_ref === MUX_PLAYBACK, "Powerhouse still maps Mux asset");
 assert(scenes[HAND_TO_HAND].creative_moment_id === PROVERB, "Hand-to-Hand shares Proverb");
 assert(scenes[DARK_KNIGHT].creative_moment_title === "Mothipa", "Dark Knight → Mothipa");
