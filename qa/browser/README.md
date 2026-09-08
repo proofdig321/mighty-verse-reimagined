@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.3 Play + Stage 1.4 sibling Scene Moment Play
+STATUS: Stage 1 smoke + Stage 1.1–1.4 Play + Stage 1.5 Creative Moment navigation
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -154,8 +154,8 @@ npm run test:qa:browser:production
 
 That command runs `smoke/mural-playback.smoke.ts`,
 `smoke/moment-playback.smoke.ts` (Sword Master plus Powerhouse, Dark Knight,
-Hand-to-Hand), and `smoke/scene-moment-navigation.smoke.ts`. It does not start
-`next dev`.
+Hand-to-Hand), `smoke/scene-moment-navigation.smoke.ts`, and
+`smoke/creative-moment-navigation.smoke.ts`. It does not start `next dev`.
 The GitHub field is `homepageUrl` (not `homepage`).
 
 Stage 1.2 Chrome result on production Super Hero Ego Mural
@@ -174,6 +174,12 @@ Stage 1.4 Chrome on production: Universe → View Mural exposes all four Scene
 Moment hrefs. Sibling Play: Powerhouse 36.000→36.494, Dark Knight 80.000→80.406,
 Hand-to-Hand window 149–192s; each seeks to Scene start, paints a frame, and
 resets to start at the Scene end. Sword Master and Mural remain green.
+
+Stage 1.5 Chrome: Universe → View Mural → Scene Moment → `/creative-moments/{id}`
+loads Proverb, Mothipa, and Reason identity pages. The Universe Moments tab
+lists those three Creative Moments; Proverb opens `/creative-moments/{id}`,
+while Mothipa and Reason open their CM experiential `/moments/{projectionId}`.
+This is not a playback surface.
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.
