@@ -64,13 +64,14 @@ export default async function AuthorityWorkPage({
 
   // B5: parent context
   let parentTitle: string | null = null;
+  let parentCanonicalType: string | null = null;
   if (master.parent_master_id) {
-    const { data: parentPres } = await svc
-      .from("work_presentation")
-      .select("title")
-      .eq("master_id", master.parent_master_id)
-      .maybeSingle();
+    const [{ data: parentPres }, { data: parentMaster }] = await Promise.all([
+      svc.from("work_presentation").select("title").eq("master_id", master.parent_master_id).maybeSingle(),
+      svc.from("master").select("canonical_type").eq("master_id", master.parent_master_id).maybeSingle(),
+    ]);
     parentTitle = parentPres?.title ?? null;
+    parentCanonicalType = parentMaster?.canonical_type ?? null;
   }
 
   // B5: children (murals for universe, scenes for mural)
@@ -157,6 +158,7 @@ export default async function AuthorityWorkPage({
       participants={participantList}
       parentTitle={parentTitle}
       parentMasterId={master.parent_master_id}
+      parentCanonicalType={parentCanonicalType}
       childItems={childItems}
       rightsHolderLabel={rightsHolderLabel}
       intakeId={intakeId}

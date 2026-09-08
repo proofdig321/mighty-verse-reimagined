@@ -82,7 +82,7 @@ export default async function MuralsPage() {
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
                     {m.universeTitle ? (
-                      <a href={`/authority/${m.parent_master_id}`} className="hover:text-foreground transition-colors">
+                      <a href={`/authority/universes/${m.parent_master_id}`} className="hover:text-foreground transition-colors">
                         {m.universeTitle}
                       </a>
                     ) : (

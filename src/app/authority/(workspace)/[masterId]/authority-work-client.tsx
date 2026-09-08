@@ -40,6 +40,7 @@ type Props = {
   participants: Participant[];
   parentTitle: string | null;
   parentMasterId: string | null;
+  parentCanonicalType: string | null;
   childItems: ChildItem[];
   rightsHolderLabel: string | null;
   intakeId: string | null;
@@ -158,7 +159,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
 export default function AuthorityWorkClient({
   master, states, projections, bindings, presentation,
   projectionPresentations, realizations, participants,
-  parentTitle, parentMasterId, childItems, rightsHolderLabel, intakeId,
+  parentTitle, parentMasterId, parentCanonicalType, childItems, rightsHolderLabel, intakeId,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -196,6 +197,13 @@ export default function AuthorityWorkClient({
     scene: "Scenes",
     "creative-moment": "Creative Moments",
   };
+  const parentHref =
+    parentMasterId && parentCanonicalType === "universe"
+      ? `/authority/universes/${parentMasterId}`
+      : parentMasterId
+        ? `/authority/${parentMasterId}`
+        : null;
+  const workspaceHref = master.canonical_type === "universe" ? `/authority/universes/${master.master_id}` : null;
 
   async function act(label: string, path: string, body: unknown) {
     setBusy(true); setMsg(null);
@@ -215,7 +223,7 @@ export default function AuthorityWorkClient({
     <div className="space-y-10">
 
       {/* B5: Contextual breadcrumb */}
-      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
         <Link href="/authority" className="hover:text-foreground transition-colors">Authority</Link>
         {listHref[master.canonical_type] && (
           <>
@@ -223,21 +231,26 @@ export default function AuthorityWorkClient({
             <Link href={listHref[master.canonical_type]} className="hover:text-foreground transition-colors">{listLabel[master.canonical_type]}</Link>
           </>
         )}
-        {parentMasterId && parentTitle && (
+        {parentHref && parentTitle && (
           <>
             <span className="opacity-30">/</span>
-            <Link href={`/authority/${parentMasterId}`} className="hover:text-foreground transition-colors">{parentTitle}</Link>
+            <Link href={parentHref} className="hover:text-foreground transition-colors">{parentTitle}</Link>
           </>
         )}
         <span className="opacity-30">/</span>
         <span className="text-foreground">{title}</span>
-      </div>
+      </nav>
 
       {/* Work identity */}
       <div className="space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{typeLabel}</p>
         <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground">{status.ready ? "Ready to publish" : status.needs}</p>
+        {workspaceHref && (
+          <Link href={workspaceHref} className="inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors">
+            Open curation workspace →
+          </Link>
+        )}
       </div>
 
       {/* Six-stage tracker — Media cell respects creative-moment */}

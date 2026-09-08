@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
+import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -45,7 +46,7 @@ export default async function UniversesPage() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Canonical</p>
         <h1 className="text-3xl font-semibold tracking-tight">Universes</h1>
         <p className="text-sm text-muted-foreground">
-          Top-level canonical containers. Each Universe establishes a distinct creative world.
+          Top-level canonical containers. Open a Universe to enter its curation workspace.
           {universes.length > 0 && <span className="ml-2 text-muted-foreground/60">{universes.length} universe{universes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>
@@ -67,7 +68,9 @@ export default async function UniversesPage() {
               {universes.map((u) => (
                 <tr key={u.master_id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3">
-                    <p className="font-medium text-foreground">{u.title ?? <span className="italic text-muted-foreground">Untitled universe</span>}</p>
+                    <Link href={`/authority/universes/${u.master_id}`} className="font-medium text-foreground hover:underline">
+                      {u.title ?? <span className="italic text-muted-foreground">Untitled universe</span>}
+                    </Link>
                     {u.description && <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{u.description}</p>}
                   </td>
                   <td className="px-4 py-3 hidden sm:table-cell">
@@ -77,9 +80,9 @@ export default async function UniversesPage() {
                     <Badge variant="outline">{u.momentCount}</Badge>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <a href={`/authority/${u.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      Open <ChevronRight size={13} />
-                    </a>
+                    <Link href={`/authority/universes/${u.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                      Open workspace <ChevronRight size={13} />
+                    </Link>
                   </td>
                 </tr>
               ))}

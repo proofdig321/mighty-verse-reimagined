@@ -110,7 +110,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-3 py-5 overflow-y-auto space-y-5">
+        <nav aria-label="Authority" className="flex-1 px-3 py-5 overflow-y-auto space-y-5">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
               <p className="mb-1.5 px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/50">
