@@ -118,7 +118,7 @@ That is **browser QA / Next.js `next dev` host mismatch**, not an `/api` defect
 and not Mux-vs-Livepeer misrouting. HMR websocket handshake failures are expected
 Next.js dev-server noise.
 
-Mural HLS: if `stream.mux.com` is never requested, first confirm the smoke suite
-is running against `http://localhost:3000` (or that `allowedDevOrigins` includes
-`127.0.0.1` and the dev server was restarted). Do not silently drop a remaining
-FINDING if HLS still does not start after that alignment.
+Mural HLS: Chrome Origin `http://localhost:3000` loads `hls.js` and requests
+`stream.mux.com`. Origin `http://127.0.0.1:3000` without `allowedDevOrigins`
+returns HTTP 403 on those chunks and the player stays on "Loading media".
+Do not silently drop a FINDING if HLS still does not start after origin alignment.

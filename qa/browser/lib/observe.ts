@@ -52,6 +52,13 @@ export function isBenignConsole(entry: ConsoleEntry): boolean {
   // correlated from the network log instead of failing the smoke suite.
   if (/Failed to load resource: the server responded with a status of (403|404)/i.test(text)) return true;
   if (/WebSocket connection to .*\/_next\/hmr/i.test(text)) return true;
+  // Chrome injects caret-color on the unauthenticated sign-in email field.
+  if (
+    /A tree hydrated but some attributes of the server rendered HTML didn't match/i.test(text) &&
+    /caret-color/i.test(text)
+  ) {
+    return true;
+  }
   return false;
 }
 

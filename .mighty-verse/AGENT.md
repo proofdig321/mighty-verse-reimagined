@@ -213,8 +213,7 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
-- Experience Editor: Scene Library Add control can be invoked without the assembly updating (nested `h-screen` layout). Recorded in Stage 1 smoke; do not treat as a QA-layer defect.
-- Mural Mux player (previous `127.0.0.1` Chrome origin): page delivers `stream.mux.com` HLS URL and mounts the player, but Chrome stayed on "Loading media" and did not request `stream.mux.com`. Next.js 16 blocked `/_next/static` (including `hls.js`) from Origin `http://127.0.0.1:3000` with HTTP 403 `Unauthorized`. Browser QA now defaults to `http://localhost:3000`; `next.config.ts` also sets `allowedDevOrigins: ['127.0.0.1']`. Re-verify playback after that alignment. Not a Livepeer misroute. HLS URL itself is reachable (HTTP 200).
+- Mural Mux player: with Chrome Origin `http://localhost:3000`, the page delivers the Mux HLS URL, `hls.js` loads, `stream.mux.com` is requested, and the "Loading media" overlay clears. Duration renders (4:14). The paused video can still show a dark first frame at `0:00` until the user presses play. The earlier stuck-loading state was Next.js 16 blocking `/_next/static` (including `hls.js`) from Origin `http://127.0.0.1:3000` (HTTP 403 `Unauthorized`). Not a Livepeer misroute. Direct HLS URL HTTP 200.
 
 ---
 
