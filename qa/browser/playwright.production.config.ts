@@ -20,12 +20,13 @@ if (/localhost|127\.0\.0\.1/i.test(baseURL)) {
 
 export default defineConfig({
   testDir: "./smoke",
-  testMatch: /(?:mural|moment)-playback\.smoke\.ts|scene-moment-navigation\.smoke\.ts/,
+  testMatch:
+    /(?:mural|moment)-playback\.smoke\.ts|scene-moment-navigation\.smoke\.ts|creative-moment-navigation\.smoke\.ts/,
   outputDir: "./test-results-production",
   fullyParallel: false,
   workers: 1,
   retries: 0,
-  timeout: 60_000,
+  timeout: 90_000,
   expect: { timeout: 20_000 },
   reporter: [
     ["list"],

@@ -75,6 +75,29 @@ export const SIBLING_SCENE_MOMENTS = [
   SCENE_MOMENTS.handToHand,
 ] as const;
 
+/** Canonical Creative Moments parented to Super Hero Ego Universe. */
+export const CREATIVE_MOMENTS = {
+  proverb: {
+    masterId: "3b0de6b4-2ca0-43c0-8561-7dc1c0697435",
+    title: "Proverb",
+    projectionId: null as string | null,
+  },
+  mothipa: {
+    masterId: "32422bb4-d03c-465d-8348-942e49ae0051",
+    title: "Mothipa",
+    projectionId: "718372da-4941-41d6-bb64-3a0b0812b047",
+  },
+  reason: {
+    masterId: "2745a50a-5417-4613-b23b-ef4857ab112e",
+    title: "Reason",
+    projectionId: "89ba1c24-01c1-4bbd-8ed1-d48021600b71",
+  },
+} as const;
+
+export function creativeMomentHref(cm: { masterId: string; projectionId: string | null }): string {
+  return cm.projectionId ? `/moments/${cm.projectionId}` : `/creative-moments/${cm.masterId}`;
+}
+
 export const CANON = {
   universeId: "05ccc0c6-75f9-4864-b0c1-af5e36bf45cc",
   universeTitle: "Super Hero Ego",
