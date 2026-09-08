@@ -78,6 +78,7 @@ The config reuses an existing dev server when one is already listening.
 | `/authority/curate` | `/authority/curate` | Auth gate or Curate Studio gateway; incoming media; Sentinel; Open Creative Suite |
 | Super Hero Ego Creative Suite | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → suite; Identity / Mural / Scenes / Creative Moments boundaries |
 | Super Hero Ego Universe identity | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/identity` | Auth gate; title/description form; validation; idempotent save; return to suite |
+| Unbound Livepeer inspect | `/authority/media/inspect?assetId=bda79051-6bc9-497f-b0aa-12d95130290c` | Persist Sentinel evidence without a master; saved inspections remain after reload |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
 
 Canonical IDs live in `lib/canon.ts` and must match `.mighty-verse/AGENT.md`.
@@ -201,6 +202,10 @@ Shuffle remains.
 Stage 3.5–3.7 Chrome: Creative Suite hosts **Edit timing**, **Move earlier/later**,
 and Creative Moment **Edit identity** on the composition objects. Super Hero Ego
 writes are restored in each smoke.
+
+Stage 3.8 Chrome: unbound Livepeer Inspect persists Sentinel evidence without a
+canonical master. Saved inspections remain after reload. Super Hero Ego is not
+mutated. Storyboard/animation proposals are not in this increment.
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.

@@ -39,9 +39,20 @@ type AssetIdentity = {
   work_type: string | null;
 };
 
+type SavedInspection = {
+  session_id: string;
+  analysis_version: string;
+  status: string;
+  frame_count: number | null;
+  candidate_count: number | null;
+  started_at: string;
+  completed_at: string | null;
+};
+
 type Props = {
   canonicalScenes: CanonicalScene[];
   assetIdentity: AssetIdentity | null;
+  savedInspections: SavedInspection[];
 };
 
 function formatMs(ms: number | null): string {
@@ -49,6 +60,24 @@ function formatMs(ms: number | null): string {
   const s = Math.floor(ms / 1000);
   const m = Math.floor(s / 60);
   return `${m}:${String(s % 60).padStart(2, "0")}.${String(ms % 1000).padStart(3, "0")}`;
+}
+
+function formatSavedWhen(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return "Unknown time";
+  return date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+}
+
+function observationLabel(count: number | null | undefined): string {
+  const n = count ?? 0;
+  return n === 1 ? "1 observation" : `${n} observations`;
+}
+
+function serialiseFrames(frames: SampledFrame[]) {
+  return frames.map(({ dataUrl: _dataUrl, luminance, ...rest }) => ({
+    ...rest,
+    luminance: Array.from(luminance ?? []),
+  }));
 }
 
 function ConfidenceBadge({ confidence }: { confidence: SceneCandidate["confidence"] }) {
@@ -64,7 +93,7 @@ function ConfidenceBadge({ confidence }: { confidence: SceneCandidate["confidenc
   );
 }
 
-export default function MediaInspectClient({ canonicalScenes, assetIdentity }: Props) {
+export default function MediaInspectClient({ canonicalScenes, assetIdentity, savedInspections }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -90,6 +119,7 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   const [frames, setFrames] = useState<SampledFrame[]>([]);
   const [deltas, setDeltas] = useState<FrameDelta[]>([]);
   const [candidates, setCandidates] = useState<SceneCandidate[]>([]);
+  const [candidateTimestampsMs, setCandidateTimestampsMs] = useState<number[]>([]);
   const [inspecting, setInspecting] = useState(false);
   const [inspectMsg, setInspectMsg] = useState<string | null>(null);
   const [frameCount, setFrameCount] = useState(30);
@@ -99,6 +129,10 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustStart, setAdjustStart] = useState(0);
   const [adjustEnd, setAdjustEnd] = useState(0);
+  const [inspections, setInspections] = useState<SavedInspection[]>(savedInspections);
+  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Stable HLS loader — useCallback so effects can safely depend on it
   const loadHlsSource = useCallback(async (url: string) => {
@@ -127,7 +161,10 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setFrames([]);
     setDeltas([]);
     setCandidates([]);
+    setCandidateTimestampsMs([]);
     setInspectMsg(null);
+    setSaveStatus(null);
+    setSaveError(null);
     setLoadError(null);
 
     {
@@ -244,7 +281,10 @@ export default function MediaInspectClient({ canonicalScenes, assetIdentity }: P
     setFrames([]);
     setDeltas([]);
     setCandidates([]);
+    setCandidateTimestampsMs([]);
     setInspectMsg(null);
+    setSaveStatus(null);
+    setSaveError(null);
     setSourceStatus(null);
     setLoadError(null);
     const video = videoRef.current;
@@ -264,9 +304,12 @@ const runInspection = useCallback(async () => {
     }
     setInspecting(true);
     setInspectMsg("Sampling frames…");
+    setSaveStatus(null);
+    setSaveError(null);
     setFrames([]);
     setDeltas([]);
     setCandidates([]);
+    setCandidateTimestampsMs([]);
     try {
       const result = await inspectVideoForBoundaries(video, {
         frameCount,
@@ -280,6 +323,7 @@ const runInspection = useCallback(async () => {
       setMetadata(result.metadata);
       setFrames(result.frames);
       setDeltas(result.deltas);
+      setCandidateTimestampsMs(result.candidateTimestampsMs);
 
       // Build frame map and change score map for candidate creation
       const frameMap = new Map<number, string>();
@@ -303,6 +347,51 @@ const runInspection = useCallback(async () => {
       setInspecting(false);
     }
   }, [frameCount, threshold, minDurationMs]);
+
+  const saveInspection = useCallback(async () => {
+    if (!assetIdentity || !metadata || frames.length === 0) return;
+    setSaving(true);
+    setSaveError(null);
+    setSaveStatus(null);
+    try {
+      const response = await fetch("/api/authority/media/inspect", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          asset_id: assetIdentity.asset_id,
+          metadata,
+          frames: serialiseFrames(frames),
+          deltas,
+          candidateTimestampsMs,
+          parameters: { frameCount, threshold, minSceneDurationMs: minDurationMs },
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof payload.error === "string" ? payload.error : "Inspection could not be saved.");
+      }
+      const observationCount =
+        typeof payload.observation_count === "number" ? payload.observation_count : frames.length;
+      const savedAt = new Date().toISOString();
+      setSaveStatus(`Inspection saved. ${observationLabel(observationCount)} · ${formatSavedWhen(savedAt)}`);
+      setInspections((prev) => [
+        {
+          session_id: typeof payload.session_id === "string" ? payload.session_id : `saved-${savedAt}`,
+          analysis_version: typeof payload.analysis_version === "string" ? payload.analysis_version : "browser-v1",
+          status: "completed",
+          frame_count: observationCount,
+          candidate_count: typeof payload.candidate_count === "number" ? payload.candidate_count : null,
+          started_at: savedAt,
+          completed_at: savedAt,
+        },
+        ...prev,
+      ]);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Inspection could not be saved.");
+    } finally {
+      setSaving(false);
+    }
+  }, [assetIdentity, metadata, frames, deltas, candidateTimestampsMs, frameCount, threshold, minDurationMs]);
 
   function updateCandidate(updated: SceneCandidate) {
     setCandidates((prev) => prev.map((c) => c.candidateId === updated.candidateId ? updated : c));
@@ -354,6 +443,32 @@ const runInspection = useCallback(async () => {
             <p className="text-xs text-emerald-400/80">Source: {assetIdentity.provider} — ready to inspect</p>
           )}
           {loadError && <p className="text-xs text-destructive">{loadError}</p>}
+        </div>
+      )}
+
+      {assetIdentity && inspections.length > 0 && (
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2" aria-labelledby="saved-inspections-heading">
+          <p id="saved-inspections-heading" className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Saved inspections
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Earlier runs stay on this media. A new inspection is added; it does not replace the last one.
+          </p>
+          <ul className="divide-y divide-border rounded-md border border-border overflow-hidden">
+            {inspections.map((session) => (
+              <li
+                key={session.session_id}
+                title={session.session_id}
+                className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 px-3 py-2 text-sm"
+              >
+                <span className="text-foreground">{formatSavedWhen(session.started_at)}</span>
+                <span className="text-xs text-muted-foreground">
+                  {observationLabel(session.frame_count)}
+                  {session.candidate_count != null ? ` · ${session.candidate_count} candidates` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 
@@ -532,13 +647,25 @@ const runInspection = useCallback(async () => {
               />
             </label>
           </div>
-          <Button
-            size="sm"
-            disabled={inspecting || (!objectUrl && !hlsUrl)}
-            onClick={runInspection}
-          >
-            {inspecting ? "Inspecting…" : "Run Inspection"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              size="sm"
+              disabled={inspecting || (!objectUrl && !hlsUrl)}
+              onClick={runInspection}
+            >
+              {inspecting ? "Inspecting…" : "Run Inspection"}
+            </Button>
+            {assetIdentity && frames.length > 0 && (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={saving || inspecting}
+                onClick={saveInspection}
+              >
+                {saving ? "Saving…" : "Save inspection"}
+              </Button>
+            )}
+          </div>
           {!inspecting && (objectUrl || hlsUrl) && !metadata && (
             <p className="text-xs text-muted-foreground/60">
               {sourceStatus ?? "Waiting for video to load… The player must show a duration before inspection can run."}
@@ -547,6 +674,16 @@ const runInspection = useCallback(async () => {
           {inspectMsg && (
             <p className={`text-sm ${inspectMsg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>
               {inspectMsg}
+            </p>
+          )}
+          {saveStatus && (
+            <p role="status" className="text-sm text-foreground">
+              {saveStatus}
+            </p>
+          )}
+          {saveError && (
+            <p role="alert" className="text-sm text-destructive">
+              {saveError}
             </p>
           )}
         </CardContent>

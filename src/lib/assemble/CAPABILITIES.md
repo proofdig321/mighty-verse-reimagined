@@ -42,7 +42,7 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Associate media with existing Universe | `association.ts` + `associate-with-universe.tsx` + `POST /api/authority/media` `{ asset_id, universe_id }` | bind to existing Mural projection | `projection_media_binding` only | yes (decision/eligibility) | yes | playback consumes | yes | Stage 2.6. No Universe/Mural create. No `media_realization`. Occupied Mural is rejected. |
 | Register Mural for existing Universe | `mural-registration.ts` + `register-mural.tsx` + `POST /api/authority/murals` `{ universe_id, title? }` | compose existing `registerMaster` + `createCanonicalState` + `createProjection` | mural master + state + experiential projection | yes (decision) | yes | later playback | yes | Stage 2.7. No media attach. No second Mural when one exists. Not a Mural editor. Create Work remains the broader optional path. |
 | `/authority/curate` Sentinel inspect | `curate-client.tsx` | mural-bound HLS, frames, candidates | bind / accept scene (existing) | inspect UI Authority-hosted | yes | no | inspect kept | Evidence only; not Creative Suite |
-| Media inspect | `/authority/media/inspect` | asset identity + frames | none canonical | later | yes | no | existing | Asset-level inspect; not a Universe |
+| Media inspect | `/authority/media/inspect` | asset identity + frames + saved sessions | persist `inspection_session` + `frame_observation` | yes | yes | no | existing | Stage 3.8. Source-media persist; `master_id` optional. Not a Universe. |
 | Media intake | `/authority/media/intake` | `media_intake` | create intake | later | yes | no | existing | MEDIA ≠ UNIVERSE |
 | Media readiness | `src/lib/media/readiness.ts` | intake / processing / playable / ready | none | yes | no | no | yes | Existing states; no invented workflow table |
 | Scene timing / order | suite Scenes section; timeline PATCH; sort-order PATCH | binding `start_ms`/`end_ms`, `sort_order` | Suite hosts existing APIs | yes | yes | stills + sequence | yes | Stage 3.5 / 3.7. Scene creation stays in Sentinel. Catalogue drag-order remains; Suite uses accessible Move earlier/later. |
@@ -58,12 +58,12 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 3.7
+## Product questions after Stage 3.8
 
 - Creative Suite now names Scenes and Creative Moments, shapes existing Scene windows, and writes canonical Scene order on Super Hero Ego. This is not a timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
 - Gallery / Inspect still continue into Curate Studio with selected media identity. Create Work remains independent and still completes on the publishing record.
 - **Governance vs Experience.** `/authority/{id}` still carries a rights/realization checklist while authorised public Experience already plays. Solving that through a publish ontology is outside this stage.
-- **Sentinel inspect artifacts.** Schema is live (`inspection_session`, `frame_observation`). Persist API exists; Curate Studio inspection remains ephemeral because POST currently requires `master_id` and unbound media has none. Evidence may later inform Scene timing, storyboards, and animation without becoming canonical truth. Sentinel must not auto-create Scenes. Not skipped — deferred until that journey step.
+- **Sentinel inspect artifacts.** Schema is live (`inspection_session`, `frame_observation`). Stage 3.8 persists source-media inspection without a canonical master. Curate Studio Sentinel remains universe-scoped evidence UI, not the persist surface. Evidence may later inform Scene timing, storyboards, and animation without becoming canonical truth. Sentinel must not auto-create Scenes.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
-- **Still deferred:** Mural editor, Scene creation in Suite, publish/realize, `media_realization`, facedown authoring in Studio, 2.5D, collectibles.
+- **Still deferred:** Mural editor, Scene creation in Suite, publish/realize, `media_realization`, facedown authoring in Studio, 2.5D, collectibles, storyboard/animation/AI Scene proposals.
 - Scene Deck revealed thumbnails now use each Scene's `start_ms`. Shuffle remains presentation-only.

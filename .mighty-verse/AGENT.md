@@ -171,8 +171,8 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `inspection_session` table — one row per inspection run against a media_asset
 - `frame_observation` table — one row per sampled frame per session
 - `src/lib/media/sentinel.ts` — persistence adapter (decoupled from analyser)
-- `/api/authority/media/inspect` — authority-gated POST/GET for evidence persistence
-- 3 live sessions exist against asset `795c057e` (from verification runs)
+- `/api/authority/media/inspect` — authority-gated POST/GET; `asset_id` required, `master_id` optional. Source-media persist uses platform-scoped `authorise-projection`. Unauthenticated requests are rejected.
+- Historical inspection runs against Mux `795c057e` remain intact. New runs append sessions; they do not overwrite.
 
 ### Media Intelligence (browser-side, ephemeral)
 - `src/lib/media/intelligence.ts` — sampleFrames, computeFrameDeltas, detectBoundaryTimestamps
@@ -184,7 +184,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 ## 7. INTENTIONALLY DEFERRED (do not implement without explicit decision)
 
 - `media_realization` population (requires ISRC/rights product decision)
-- Sentinel candidate history persistence
+- Storyboard / animation / AI Scene-boundary proposals from Sentinel evidence
 - AI classification / object detection / embeddings
 - Storyboard / composition layers
 - 2.5D / holographic rendering
@@ -225,7 +225,7 @@ applied migration.
   on `(projection_id, binding_type='primary')` would allow upsert. Deferred.
 - Scene creation idempotency: title-based duplicate guard only. Not a true idempotency key.
 - `media_realization` table: 0 rows. Blocked on product decision.
-- Frame evidence: ephemeral browser-side only until Sentinel Phase 2.
+- Frame evidence: persisted as `inspection_session` + `frame_observation` against the media asset (Stage 3.8). Not canonical.
 - Sentinel has no persistent identity (no `inspection_session` in canonical ontology).
 - Scene rebind UI: API is safe; no UI surface yet.
 - Livepeer second Universe `f11c3aba`: Stage 2.7 registered Mural `f5872a92-1c38-4cff-836e-fbb22b25e506` (container only; no media attached). Super Hero Ego Mural `a75ae8af` is unchanged.
@@ -245,7 +245,8 @@ applied migration.
 - Stage 3.5: Creative Suite authors Scene timing on the Scene object via existing `PATCH /api/authority/media/timeline`. Compact start/end fields; canonical unit is ms; accepts `0:36.000`, `0:36`, and integer ms. Does not create Scenes. Sentinel still creates Scenes. Not a timeline dashboard.
 - Stage 3.6: Creative Suite authors Creative Moment identity with the same presentation primitive. Creative Moments stay Universe-parented. Does not create projections or media.
 - Stage 3.7: Creative Suite authors canonical Scene order via existing `PATCH /api/authority/masters/sort-order` as Move earlier / Move later. Catalogue drag-order remains. Scene Deck shuffle is not imported.
-- Sentinel UI inspection remains ephemeral in the browser; `POST /api/authority/media/inspect` persistence exists but is not wired from Curate Studio (persist currently requires a `master_id`; unbound media has none). Deferred. Evidence may later inform timing/storyboards/animation and must not auto-create Scenes.
+- Stage 3.8: Asset-level Inspect persists Sentinel evidence against `media_asset` without requiring a canonical master. Re-runs create a new `inspection_session`. Does not create Universe/Mural/Scene/Creative Moment/projection/binding/realization. Storyboard, animation, and AI Scene proposals remain deferred.
+- Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---
 

@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import { curateStudioHref } from "@/lib/assemble/studio";
+import { listInspectionSessions } from "@/lib/media/sentinel";
 import { buttonVariants } from "@/components/ui/button";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import MediaInspectClient from "./media-inspect-client";
@@ -113,9 +114,10 @@ export default async function MediaInspectPage({
   const inspectAssetId = typeof assetId === "string" && assetId.trim() ? assetId.trim() : null;
   const curateHref = inspectAssetId ? curateStudioHref(null, inspectAssetId) : curateStudioHref();
 
-  const [canonicalScenes, assetIdentity] = await Promise.all([
+  const [canonicalScenes, assetIdentity, savedInspections] = await Promise.all([
     getCanonicalScenes(),
     inspectAssetId ? getAssetIdentity(inspectAssetId) : Promise.resolve(null),
+    inspectAssetId ? listInspectionSessions(inspectAssetId) : Promise.resolve([]),
   ]);
 
   return (
@@ -132,8 +134,8 @@ export default async function MediaInspectPage({
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media Intelligence</p>
           <h1 className="text-3xl font-semibold tracking-tight">Media Inspection</h1>
           <p className="text-sm text-muted-foreground">
-            Inspect a video asset — sample frames, detect visual changes, and compare candidate boundaries
-            against existing canonical Scenes. Inspection is evidence only. No canonical state is modified.
+            Inspect a video asset — sample frames, detect visual changes, and save observational evidence
+            against the media itself. Inspection is evidence only. No canonical state is modified.
           </p>
         </div>
         {inspectAssetId ? (
@@ -146,6 +148,7 @@ export default async function MediaInspectPage({
       <MediaInspectClient
         canonicalScenes={canonicalScenes}
         assetIdentity={assetIdentity}
+        savedInspections={savedInspections}
       />
     </div>
   );
