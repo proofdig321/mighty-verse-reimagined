@@ -43,7 +43,7 @@ test("Authority curates Super Hero Ego identity without changing canonical value
 
   await page.getByLabel("Title").fill("   ");
   await page.getByRole("button", { name: "Save identity" }).click();
-  await expect(page.getByRole("alert")).toHaveText("Title is required.");
+  await expect(page.locator("#universe-title-error")).toHaveText("Title is required.");
   notes.push("empty title rejected without a write");
 
   await page.getByLabel("Title").fill(CANON.universeTitle);
