@@ -2,11 +2,19 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { validateAuthority, logOperation, getServiceClient } from "@/lib/authority/validate";
+import { decideCanonicalAssociation, mediaAssociationEligibility } from "@/lib/assemble/association";
+import { loadUniverseAssociationTarget } from "@/lib/assemble/load-studio";
 
 /**
  * POST /api/authority/media
  *
  * Creates a projection_media_binding linking a canonical projection to a media asset.
+ *
+ * Association path (Stage 2.6): { asset_id, universe_id }
+ * resolves the Universe's existing Mural projection server-side, then binds.
+ * Does not create a Universe, Mural, Scene, Creative Moment, projection, or media_realization.
+ *
+ * Direct path: { asset_id, projection_id, master_id } binds an already-ingested asset.
  *
  * For Mux: the media_asset already exists (created by the webhook handler).
  * This route creates only the projection_media_binding.
@@ -28,6 +36,7 @@ export async function POST(request: Request) {
     projection_id,
     master_id,
     session_id,
+    universe_id,
     // Direct asset binding — for already-ingested assets (e.g. Mux)
     asset_id,
     // Optional timing override — if omitted, existing binding timings are preserved
@@ -41,14 +50,115 @@ export async function POST(request: Request) {
     intake_id,
   } = await request.json();
 
+  const svc = getServiceClient();
+
+  // ── Universe association: resolve existing Mural projection, then bind ──
+  if (universe_id && asset_id && !session_id && !livepeer_asset_id) {
+    const auth = await validateAuthority(participantId, "authorise-projection", universe_id);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+
+    const { data: existingAsset } = await svc
+      .from("media_asset")
+      .select("asset_id, storage_ref")
+      .eq("asset_id", asset_id)
+      .maybeSingle();
+    if (!existingAsset) {
+      return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+    }
+
+    const placeholder = existingAsset.storage_ref?.startsWith("seed:placeholder:");
+    const eligibility = mediaAssociationEligibility({
+      readiness_overall: existingAsset.storage_ref && !placeholder ? "playable" : "processing",
+      readiness_blockers: placeholder || !existingAsset.storage_ref ? ["Media not yet ingested"] : [],
+    });
+
+    const target = await loadUniverseAssociationTarget(universe_id);
+    const decision = decideCanonicalAssociation({
+      assetId: asset_id,
+      universeId: universe_id,
+      eligibility,
+      target,
+      clientProjectionId: projection_id ?? null,
+    });
+
+    if (!decision.ok) {
+      const status = decision.code === "invalid_universe" ? 404 : 409;
+      return NextResponse.json({ error: decision.message, code: decision.code }, { status });
+    }
+
+    if (decision.action === "already_associated") {
+      const { data: existingBinding } = await svc
+        .from("projection_media_binding")
+        .select("binding_id, asset_id")
+        .eq("projection_id", decision.bind.projection_id)
+        .eq("binding_type", "primary")
+        .eq("asset_id", asset_id)
+        .maybeSingle();
+      return NextResponse.json({
+        binding_id: existingBinding?.binding_id ?? null,
+        asset_id,
+        universe_id,
+        mural_id: decision.bind.master_id,
+        projection_id: decision.bind.projection_id,
+        already_associated: true,
+      }, { status: 200 });
+    }
+
+    const muralAuth = await validateAuthority(participantId, "authorise-projection", decision.bind.master_id);
+    if ("error" in muralAuth) return NextResponse.json({ error: muralAuth.error }, { status: 403 });
+
+    const { data: projection } = await svc
+      .from("projection")
+      .select("projection_id, master_id")
+      .eq("projection_id", decision.bind.projection_id)
+      .maybeSingle();
+    if (!projection || projection.master_id !== decision.bind.master_id) {
+      return NextResponse.json({ error: "That presentation does not belong to the selected Universe's Mural.", code: "wrong_work" }, { status: 409 });
+    }
+
+    const { data: mural } = await svc
+      .from("master")
+      .select("master_id, parent_master_id, canonical_type")
+      .eq("master_id", decision.bind.master_id)
+      .maybeSingle();
+    if (!mural || mural.canonical_type !== "mural" || mural.parent_master_id !== universe_id) {
+      return NextResponse.json({ error: "That Mural does not belong to the selected Universe.", code: "wrong_work" }, { status: 409 });
+    }
+
+    const { data: binding, error: bErr } = await svc
+      .from("projection_media_binding")
+      .insert({
+        projection_id: decision.bind.projection_id,
+        asset_id,
+        binding_type: "primary",
+        access_level: "public",
+        created_by: participantId,
+        realization_id: null,
+        start_ms: null,
+        end_ms: null,
+      })
+      .select("binding_id")
+      .single();
+    if (bErr || !binding) {
+      return NextResponse.json({ error: bErr?.message ?? "Failed to create binding" }, { status: 500 });
+    }
+    await logOperation(muralAuth.authority_id, "attach-media-binding", binding.binding_id, "media-binding", "accepted");
+    return NextResponse.json({
+      binding_id: binding.binding_id,
+      asset_id,
+      universe_id,
+      mural_id: decision.bind.master_id,
+      projection_id: decision.bind.projection_id,
+      already_associated: false,
+    }, { status: 201 });
+  }
+
   if (!projection_id || !master_id) {
     return NextResponse.json({ error: "projection_id and master_id required" }, { status: 400 });
   }
 
   const auth = await validateAuthority(participantId, "authorise-projection", master_id);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
-
-  const svc = getServiceClient();
 
   // ── Direct asset_id path: bind an already-ingested asset (e.g. Mux) ──────
   if (asset_id && !session_id && !livepeer_asset_id) {
@@ -59,6 +169,15 @@ export async function POST(request: Request) {
       .maybeSingle();
     if (!existingAsset) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
+    }
+
+    const { data: projection } = await svc
+      .from("projection")
+      .select("projection_id, master_id")
+      .eq("projection_id", projection_id)
+      .maybeSingle();
+    if (!projection || projection.master_id !== master_id) {
+      return NextResponse.json({ error: "That presentation does not belong to the selected work.", code: "wrong_work" }, { status: 409 });
     }
 
     // Validate caller-supplied timings if provided
@@ -74,10 +193,18 @@ export async function POST(request: Request) {
     // Read existing binding to preserve timings and realization_id
     const { data: existingBinding } = await svc
       .from("projection_media_binding")
-      .select("start_ms, end_ms, realization_id, access_level")
+      .select("binding_id, asset_id, start_ms, end_ms, realization_id, access_level")
       .eq("projection_id", projection_id)
       .eq("binding_type", "primary")
       .maybeSingle();
+
+    if (existingBinding && existingBinding.asset_id === asset_id && !hasStart && !hasEnd) {
+      return NextResponse.json({
+        binding_id: existingBinding.binding_id,
+        asset_id,
+        already_associated: true,
+      }, { status: 200 });
+    }
 
     const preservedStartMs = hasStart ? start_ms : (existingBinding?.start_ms ?? null);
     const preservedEndMs = hasEnd ? end_ms : (existingBinding?.end_ms ?? null);

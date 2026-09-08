@@ -61,11 +61,13 @@ test("Authority dashboard opens Curate Studio then Super Hero Ego Creative Suite
   const inspectMux = page.locator(`a[href="/authority/media/inspect?assetId=${CANON.muxAssetId}"]`);
   await expect(inspectMux.first()).toBeVisible();
   const muxRow = page.locator("tr").filter({ has: inspectMux });
-  await expect(muxRow.getByRole("cell", { name: CANON.universeTitle, exact: true })).toBeVisible();
+  await expect(muxRow.getByText(CANON.universeTitle, { exact: true })).toBeVisible();
+  await expect(muxRow.getByText(`Mural ${CANON.muralTitle}`)).toBeVisible();
   await expect(muxRow.getByRole("link", { name: "Open Creative Suite", exact: true })).toHaveAttribute(
     "href",
     `${ROUTES.authorityUniverseWorkspace}?from=curate`,
   );
+  await expect(muxRow.getByRole("button", { name: "Associate with Universe" })).toHaveCount(0);
   notes.push(`incoming Mux asset ${CANON.muxAssetId} associated with ${CANON.universeTitle}; Inspect stays on media inspect; Open Creative Suite preserves from=curate`);
 
   await page.getByLabel("Select Universe for Curate Studio").selectOption(CANON.universeId);

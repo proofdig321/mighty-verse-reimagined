@@ -344,3 +344,17 @@ Verified checkpoint: `7c6953ad3cd9daf2abf4d93108652b2e875a97ff`
 **Highest-value next increment (if selected):** explicit Curate Studio association of inspected media to an **existing** Universe by reusing `POST /api/authority/media` against that Universe’s Mural projection. This closes the media → work path and advances ASSEMBLE / CURATE without a new ontology, migration, or editor.
 
 **Must not be touched from this checkpoint unless a later review selects them:** full Mural/Scene/Creative Moment editors, public-user curation, publication redesign, rights, AI, timeline/Experience redesign, 2.5D, commerce/NFT, unrelated refactors.
+
+---
+
+## Checkpoint evaluation (Stage 2.6)
+
+`CANONICAL` (2026-09-08)
+
+Starting checkpoint: `94a7a89cf133bf80515775b355dd03bafaaab457`
+
+Curate Studio now performs explicit association of playable unbound media to an existing Universe. The mutation reuses `POST /api/authority/media`. The server resolves the Universe’s existing Mural projection. Occupied Murals are not replaced. Universes without a Mural are blocked. No Universe, Mural, Scene, Creative Moment, projection, or `media_realization` is created.
+
+Sentinel persist remains deferred: `POST /api/authority/media/inspect` requires a `master_id`, which unbound media does not have.
+
+**Do not automatically begin** a Mural editor, Scene editor, Creative Moment editor, public curation, publication, rights, timeline redesign, AI, 2.5D, or commerce. Evaluate the next missing capability in the journey.

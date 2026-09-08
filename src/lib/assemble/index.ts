@@ -19,3 +19,17 @@ export {
 } from "./studio";
 export type { CurateStudioMedia, StudioAssociation } from "./studio";
 export { loadCurateStudioMedia } from "./load-studio";
+export {
+  CREATE_WORK_HREF,
+  associationStatusLabel,
+  buildUniverseAssociationTarget,
+  decideCanonicalAssociation,
+  existingMediaBindRequest,
+  mediaAssociationEligibility,
+  projectionBelongsToUniverse,
+} from "./association";
+export type {
+  AssociationDecision,
+  AssociationEligibility,
+  UniverseAssociationTarget,
+} from "./association";

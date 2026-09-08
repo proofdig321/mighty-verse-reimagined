@@ -11,7 +11,10 @@ import {
   studioReadinessLabel,
   type CurateStudioMedia,
 } from "@/lib/assemble/studio";
-import { CurateUniverseSelect, type CurateUniverseOption } from "./curate-universe-select";
+import { associationStatusLabel } from "@/lib/assemble/association";
+import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
+import { AssociateWithUniverse } from "./associate-with-universe";
+import { CurateUniverseSelect } from "./curate-universe-select";
 
 function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
@@ -23,7 +26,7 @@ export default function CurateStudioGateway({
   selectedUniverseId,
 }: {
   media: CurateStudioMedia[];
-  universes: CurateUniverseOption[];
+  universes: CurateStudioUniverse[];
   selectedUniverseId: string | null;
 }) {
   const selected = universes.find((universe) => universe.master_id === selectedUniverseId) ?? null;
@@ -87,7 +90,12 @@ export default function CurateStudioGateway({
                         {item.inspection?.candidate_count != null ? ` · ${item.inspection.candidate_count} candidates` : ""}
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">
-                        {item.association.universe_title ?? (
+                        {item.association.universe_id ? (
+                          <span>
+                            {associationStatusLabel(item.association)}
+                            {item.association.mural_title ? ` · Mural ${item.association.mural_title}` : ""}
+                          </span>
+                        ) : (
                           <span className="italic text-muted-foreground/50">Not associated — media is not a Universe</span>
                         )}
                       </td>
@@ -107,13 +115,15 @@ export default function CurateStudioGateway({
                               Sentinel
                             </Link>
                           )}
-                          {suiteHref && (
+                          {suiteHref ? (
                             <Link
                               href={suiteHref}
                               className="text-xs text-foreground hover:underline"
                             >
                               Open Creative Suite
                             </Link>
+                          ) : (
+                            <AssociateWithUniverse media={item} universes={universes} />
                           )}
                         </div>
                       </td>

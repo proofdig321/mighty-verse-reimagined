@@ -1178,3 +1178,15 @@ next: media → existing Universe association (if selected)
         ↓
 later editors / publication only after that path is truthful
 ```
+
+### Stage 2.6 — Explicit media → existing Universe association (2026-09-08)
+
+Checkpoint starts from `94a7a89cf133bf80515775b355dd03bafaaab457`.
+
+Curate Studio associates playable unbound media with an existing Universe by reusing `POST /api/authority/media`. The server resolves Universe → existing Mural → existing projection. Occupied Murals are not replaced. Universes without a Mural are blocked, with a link to existing Create Work. `media_realization` is not populated. Sentinel persist is deferred (inspect API requires `master_id`).
+
+```
+Stage 2.6 media → existing Universe association
+        ↓
+next: evaluate the journey; do not assume a Mural/Scene/CM editor
+```

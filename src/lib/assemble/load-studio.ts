@@ -1,10 +1,12 @@
 import { getServiceClient } from "@/lib/authority/validate";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
+import { buildUniverseAssociationTarget, type UniverseAssociationTarget } from "./association";
 import { associateAssetWithCanonicalWork, type CurateStudioMedia, type StudioInspectionSummary } from "./studio";
 
 export type CurateStudioUniverse = {
   master_id: string;
   title: string | null;
+  target: UniverseAssociationTarget;
 };
 
 /**
@@ -33,10 +35,58 @@ export async function loadCurateStudioMedia(): Promise<{
     ? await svc.from("work_presentation").select("master_id, title").in("master_id", universeIds)
     : { data: [] };
 
-  const universes: CurateStudioUniverse[] = (universeMasters ?? []).map((row) => ({
-    master_id: row.master_id,
-    title: (universePres ?? []).find((pres) => pres.master_id === row.master_id)?.title ?? null,
-  }));
+  const { data: muralMasters } = universeIds.length
+    ? await svc
+        .from("master")
+        .select("master_id, parent_master_id, created_at")
+        .eq("canonical_type", "mural")
+        .in("parent_master_id", universeIds)
+        .order("created_at", { ascending: true })
+    : { data: [] };
+
+  const muralIds = (muralMasters ?? []).map((row) => row.master_id);
+  const [{ data: muralPres }, { data: muralProjs }] = muralIds.length
+    ? await Promise.all([
+        svc.from("work_presentation").select("master_id, title").in("master_id", muralIds),
+        svc.from("projection").select("projection_id, master_id, created_at").in("master_id", muralIds).order("created_at", { ascending: true }),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const muralProjIds = (muralProjs ?? []).map((row) => row.projection_id);
+  const { data: muralBindings } = muralProjIds.length
+    ? await svc
+        .from("projection_media_binding")
+        .select("projection_id, asset_id")
+        .in("projection_id", muralProjIds)
+        .eq("binding_type", "primary")
+    : { data: [] };
+
+  const universes: CurateStudioUniverse[] = (universeMasters ?? []).map((row) => {
+    const title = (universePres ?? []).find((pres) => pres.master_id === row.master_id)?.title ?? null;
+    const mural = (muralMasters ?? []).find((item) => item.parent_master_id === row.master_id) ?? null;
+    const projection = mural
+      ? (muralProjs ?? []).find((item) => item.master_id === mural.master_id) ?? null
+      : null;
+    const binding = projection
+      ? (muralBindings ?? []).find((item) => item.projection_id === projection.projection_id) ?? null
+      : null;
+    return {
+      master_id: row.master_id,
+      title,
+      target: buildUniverseAssociationTarget({
+        universeId: row.master_id,
+        universeTitle: title,
+        mural: mural
+          ? {
+              master_id: mural.master_id,
+              title: (muralPres ?? []).find((pres) => pres.master_id === mural.master_id)?.title ?? null,
+            }
+          : null,
+        projectionId: projection?.projection_id ?? null,
+        boundAssetId: binding?.asset_id ?? null,
+      }),
+    };
+  });
 
   const assets = rawAssets ?? [];
   const assetIds = assets.map((asset) => asset.asset_id);
@@ -131,4 +181,72 @@ export async function loadCurateStudioMedia(): Promise<{
   });
 
   return { media, universes };
+}
+
+/**
+ * Server-side Universe → Mural → projection resolution.
+ * Does not create masters, projections, or bindings.
+ */
+export async function loadUniverseAssociationTarget(universeId: string): Promise<UniverseAssociationTarget | null> {
+  const svc = getServiceClient();
+  const { data: universe } = await svc
+    .from("master")
+    .select("master_id")
+    .eq("master_id", universeId)
+    .eq("canonical_type", "universe")
+    .maybeSingle();
+  if (!universe) return null;
+
+  const { data: universePres } = await svc
+    .from("work_presentation")
+    .select("title")
+    .eq("master_id", universeId)
+    .maybeSingle();
+
+  const { data: mural } = await svc
+    .from("master")
+    .select("master_id, parent_master_id")
+    .eq("canonical_type", "mural")
+    .eq("parent_master_id", universeId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (!mural) {
+    return buildUniverseAssociationTarget({
+      universeId,
+      universeTitle: universePres?.title ?? null,
+      mural: null,
+      projectionId: null,
+      boundAssetId: null,
+    });
+  }
+
+  const [{ data: muralPres }, { data: projection }] = await Promise.all([
+    svc.from("work_presentation").select("title").eq("master_id", mural.master_id).maybeSingle(),
+    svc
+      .from("projection")
+      .select("projection_id")
+      .eq("master_id", mural.master_id)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  const { data: binding } = projection
+    ? await svc
+        .from("projection_media_binding")
+        .select("asset_id")
+        .eq("projection_id", projection.projection_id)
+        .eq("binding_type", "primary")
+        .maybeSingle()
+    : { data: null };
+
+  return buildUniverseAssociationTarget({
+    universeId,
+    universeTitle: universePres?.title ?? null,
+    mural: { master_id: mural.master_id, title: muralPres?.title ?? null },
+    projectionId: projection?.projection_id ?? null,
+    boundAssetId: binding?.asset_id ?? null,
+  });
 }
