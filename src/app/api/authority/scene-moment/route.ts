@@ -155,6 +155,9 @@ export async function DELETE(request: Request) {
     alreadyRelated: Boolean(existingId),
   });
   if (!decision.ok) {
+    if (decision.code === "missing_relation") {
+      return NextResponse.json({ deleted: true, already: true, deletes_objects: false });
+    }
     return NextResponse.json({ error: decision.message, code: decision.code }, { status: statusFor(decision.code) });
   }
 
