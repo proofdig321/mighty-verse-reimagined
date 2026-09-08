@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { HierarchyBreadcrumb, type HierarchyBreadcrumbItem } from "@/components/assemble/breadcrumb";
 import {
   api, responseData, shortId, operatorError,
   WORK_TYPE_LABELS, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS,
@@ -223,23 +224,16 @@ export default function AuthorityWorkClient({
     <div className="space-y-10">
 
       {/* B5: Contextual breadcrumb */}
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <Link href="/authority" className="hover:text-foreground transition-colors">Authority</Link>
-        {listHref[master.canonical_type] && (
-          <>
-            <span className="opacity-30">/</span>
-            <Link href={listHref[master.canonical_type]} className="hover:text-foreground transition-colors">{listLabel[master.canonical_type]}</Link>
-          </>
-        )}
-        {parentHref && parentTitle && (
-          <>
-            <span className="opacity-30">/</span>
-            <Link href={parentHref} className="hover:text-foreground transition-colors">{parentTitle}</Link>
-          </>
-        )}
-        <span className="opacity-30">/</span>
-        <span className="text-foreground">{title}</span>
-      </nav>
+      <HierarchyBreadcrumb
+        items={([
+          { label: "Authority", href: "/authority" },
+          ...(listHref[master.canonical_type]
+            ? [{ label: listLabel[master.canonical_type], href: listHref[master.canonical_type] }]
+            : []),
+          ...(parentHref && parentTitle ? [{ label: parentTitle, href: parentHref }] : []),
+          { label: title },
+        ] satisfies HierarchyBreadcrumbItem[])}
+      />
 
       {/* Work identity */}
       <div className="space-y-1">

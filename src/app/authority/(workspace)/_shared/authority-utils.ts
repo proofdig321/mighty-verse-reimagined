@@ -33,13 +33,10 @@ export type AuthorityData = {
 };
 
 // ─── Timeline formatting ──────────────────────────────────────────────────────
-// Single canonical implementation — import from here, never redefine locally.
+// Canonical implementation lives in media/timing — re-exported so Authority
+// callers keep a single import path.
 
-export function formatTimelineMs(value: number | null): string {
-  if (value == null) return "--:--.---";
-  const totalSeconds = Math.floor(value / 1000);
-  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
-}
+export { formatTimelineMs } from "@/lib/media/timing";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

@@ -1,86 +1,27 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
-import { formatTimelineMs } from "../../_shared/authority-utils";
+import { formatTimelineMs } from "@/lib/media/timing";
+import type { UniverseAssembly } from "@/lib/assemble";
 
-export type UniverseCurationScene = {
-  master_id: string;
-  title: string | null;
-  sort_order: number | null;
-  start_ms: number | null;
-  end_ms: number | null;
-  projection_id: string | null;
-  creative_moment_id: string | null;
-  creative_moment_title: string | null;
-};
-
-export type UniverseCurationMural = {
-  master_id: string;
-  title: string | null;
-  scenes: UniverseCurationScene[];
-};
-
-export type UniverseCurationMoment = {
-  master_id: string;
-  title: string | null;
-  has_experience: boolean;
-  scene_titles: string[];
-};
-
-export type UniverseCurationData = {
-  master_id: string;
-  title: string | null;
-  description: string | null;
-  created_at: string;
-  murals: UniverseCurationMural[];
-  creative_moments: UniverseCurationMoment[];
+export type UniverseAssemblyProps = {
+  data: UniverseAssembly;
+  openHref: (masterId: string) => string;
+  openLabel?: string;
 };
 
 function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
 }
 
-export default function UniverseCurationWorkspace({ data }: { data: UniverseCurationData }) {
-  const title = data.title ?? "Untitled universe";
+export default function UniverseAssemblyView({
+  data,
+  openHref,
+  openLabel = "Open",
+}: UniverseAssemblyProps) {
   const sceneCount = data.murals.reduce((n, mural) => n + mural.scenes.length, 0);
-  const recordHref = `/authority/${data.master_id}`;
-  const publicHref = `/worlds/${data.master_id}`;
 
   return (
     <div className="space-y-10">
-      <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-        <Link href="/authority" className="hover:text-foreground transition-colors">
-          Authority
-        </Link>
-        <span className="opacity-30">/</span>
-        <Link href="/authority/universes" className="hover:text-foreground transition-colors">
-          Universes
-        </Link>
-        <span className="opacity-30">/</span>
-        <span className="text-foreground">{title}</span>
-      </nav>
-
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-1 min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Universe curation
-          </p>
-          <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
-          <p className="text-sm text-muted-foreground max-w-3xl">
-            Assemble this Universe from its canonical Mural, Scenes, and Creative Moments.
-            Editing those layers is added in later increments.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Link href={publicHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            View public experience
-          </Link>
-          <Link href={recordHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Canonical record
-          </Link>
-        </div>
-      </div>
-
       <section className="space-y-3" aria-labelledby="universe-identity">
         <h2 id="universe-identity" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Identity
@@ -118,11 +59,9 @@ export default function UniverseCurationWorkspace({ data }: { data: UniverseCura
       </div>
 
       <section className="space-y-3" aria-labelledby="universe-mural">
-        <div className="flex items-end justify-between gap-4">
-          <h2 id="universe-mural" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Mural
-          </h2>
-        </div>
+        <h2 id="universe-mural" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Mural
+        </h2>
         {data.murals.length === 0 ? (
           <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
             No mural assembled for this Universe yet.
@@ -141,10 +80,10 @@ export default function UniverseCurationWorkspace({ data }: { data: UniverseCura
                   <div className="flex items-center gap-3">
                     <Badge variant="outline">{mural.scenes.length} scene{mural.scenes.length === 1 ? "" : "s"}</Badge>
                     <Link
-                      href={`/authority/${mural.master_id}`}
+                      href={openHref(mural.master_id)}
                       className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                     >
-                      Open record
+                      {openLabel}
                     </Link>
                   </div>
                 </div>
@@ -182,10 +121,10 @@ export default function UniverseCurationWorkspace({ data }: { data: UniverseCura
                           </td>
                           <td className="px-4 py-3 text-right">
                             <Link
-                              href={`/authority/${scene.master_id}`}
+                              href={openHref(scene.master_id)}
                               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
-                              Open record
+                              {openLabel}
                             </Link>
                           </td>
                         </tr>
@@ -236,10 +175,10 @@ export default function UniverseCurationWorkspace({ data }: { data: UniverseCura
                     </td>
                     <td className="px-4 py-3 text-right">
                       <Link
-                        href={`/authority/${moment.master_id}`}
+                        href={openHref(moment.master_id)}
                         className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                       >
-                        Open record
+                        {openLabel}
                       </Link>
                     </td>
                   </tr>

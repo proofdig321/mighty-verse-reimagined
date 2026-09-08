@@ -18,6 +18,12 @@ export function formatDuration(seconds: number) {
   return `${minutes}:${String(wholeSeconds % 60).padStart(2, "0")}`;
 }
 
+export function formatTimelineMs(value: number | null): string {
+  if (value == null) return "--:--.---";
+  const totalSeconds = Math.floor(value / 1000);
+  return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
+}
+
 export function validateSceneTiming(scene: SceneTiming, durationMs?: number) {
   return scene.startMs >= 0 && scene.endMs > scene.startMs && (durationMs == null || scene.endMs <= durationMs);
 }
