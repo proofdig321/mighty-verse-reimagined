@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1 Mural Play assertion
+STATUS: Stage 1 smoke + Stage 1.1 local Play + Stage 1.2 production Play
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -62,6 +62,7 @@ npx playwright test --config qa/browser/playwright.config.ts --headed
 ```
 
 The config reuses an existing dev server when one is already listening.
+`PLAYWRIGHT_BASE_URL` overrides the local origin; leave it unset for localhost.
 
 ## Routes covered (Stage 1)
 
@@ -81,7 +82,8 @@ Canonical IDs live in `lib/canon.ts` and must match `.mighty-verse/AGENT.md`.
 
 ```
 qa/browser/
-  playwright.config.ts   Chrome + baseURL + webServer
+  playwright.config.ts              local Chrome + baseURL + webServer
+  playwright.production.config.ts   opt-in production Chrome (no webServer)
   lib/canon.ts           live Super Hero Ego IDs (not fake fixtures)
   lib/observe.ts         console / network / screenshot / evidence labels
   lib/health.ts          unexpected console, failed app requests, Mux-vs-Livepeer
@@ -133,3 +135,28 @@ pause an in-flight play).
 
 Mux `edgemv.mux.com` / `stream.mux.com` `net::ERR_ABORTED` segment requests
 are HLS unused-range aborts. They are recorded, not treated as `/api` failures.
+
+## Local vs production
+
+Local (`npm run test:qa:browser`): Chrome against `http://localhost:3000`
+(`next dev`). This is the default. It does not call production.
+
+Production (`npm run test:qa:browser:production`): Chrome against the deployed
+Mighty Verse origin. The origin is the GitHub repository homepage (Vercel
+`*.vercel.app`). It is **opt-in** and requires `QA_PRODUCTION_URL`.
+
+```bash
+QA_PRODUCTION_URL="$(gh repo view --json homepage --jq .homepage)"
+npm run test:qa:browser:production
+```
+
+That command runs only `smoke/mural-playback.smoke.ts`. It does not start
+`next dev`.
+
+Stage 1.2 Chrome result on production Super Hero Ego Mural
+(`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`): Play invoked, `readyState=4`,
+`currentTime` advanced, 1280×720 painted frame, Mux HLS
+`JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4`, no Livepeer misroute.
+
+Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
+production navigation prefetch cancellation. It is not a Mux playback failure.

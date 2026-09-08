@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/media/__tests__/provider-resolution.test.mjs && node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/media/__tests__/metadata.test.mjs && node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/media/__tests__/intake-workflow.test.mjs && node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/media/__tests__/inspection-wiring.test.mjs && node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/media/providers/mux/__tests__/mux.test.mjs && node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/media/__tests__/sentinel.test.mjs",
-    "test:qa:browser": "playwright test --config qa/browser/playwright.config.ts"
+    "test:qa:browser": "playwright test --config qa/browser/playwright.config.ts",
+    "test:qa:browser:production": "playwright test --config qa/browser/playwright.production.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.7.0",
