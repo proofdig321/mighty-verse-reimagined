@@ -7,9 +7,9 @@ import { attachObservers, type RuntimeObservation } from "./observe";
  * production components are not instrumented.
  */
 export const test = base.extend<{ observe: RuntimeObservation }>({
-  observe: async ({ page }, use) => {
+  observe: async ({ page }, provide) => {
     const observation = attachObservers(page);
-    await use(observation);
+    await provide(observation);
   },
 });
 

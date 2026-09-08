@@ -10,14 +10,19 @@ test("moments lists real media and uses the Mux provider path", async ({ page, o
   await expect(page.getByRole("heading", { name: /All Moments/i })).toBeVisible();
   await expect(page.getByText("No moments yet.")).toHaveCount(0);
 
-  const firstCard = page.locator("a.artifact-card").first();
-  await expect(firstCard).toBeVisible();
+  const muxCard = page
+    .locator("a.artifact-card")
+    .filter({ has: page.locator(`img[src*="${CANON.muxPlaybackId}"], img[src*="image.mux.com"]`) })
+    .first();
+  const fallbackCard = page.locator("a.artifact-card").first();
+  const targetCard = (await muxCard.count()) > 0 ? muxCard : fallbackCard;
+  await expect(targetCard).toBeVisible();
 
   await page.waitForTimeout(1500);
   const listingMux = muxMediaRequests(observe);
   expect(listingMux.length, "expected Mux thumbnail path on moments listing").toBeGreaterThan(0);
 
-  await firstCard.click();
+  await targetCard.click();
   await expect(page).toHaveURL(/\/moments\/[0-9a-f-]+/i);
   await page.waitForTimeout(2000);
 

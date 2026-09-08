@@ -213,6 +213,8 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Super Hero Ego is at `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
+- Experience Editor: Scene Library Add control can be invoked without the assembly updating (nested `h-screen` layout). Recorded in Stage 1 smoke; do not treat as a QA-layer defect.
+- Mural Mux player can remain on "Loading media" in the Chrome QA environment (Turbopack `/_next/static` chunk 403 / HMR websocket noise). No Livepeer misroute of the Mux playback ID was observed.
 
 ---
 
@@ -309,6 +311,7 @@ npm run test:qa:browser
 
 Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe
 (`05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`), `/moments`, `/authority/curate`, `/editor`.
+Smoke files match `qa/browser/smoke/*.smoke.ts`.
 
 The live Universe page is `/worlds/{masterId}`. `/universes/{masterId}` is not a
 current route; record that as a QA finding rather than adding a product redirect

@@ -79,7 +79,7 @@ qa/browser/
   lib/observe.ts         console / network / screenshot / evidence labels
   lib/health.ts          unexpected console, failed app requests, Mux-vs-Livepeer
   lib/fixtures.ts        Playwright fixture — do not put this in production components
-  smoke/                 Stage 1 runtime smoke
+  smoke/*.smoke.ts       Stage 1 runtime smoke (Playwright testMatch)
 ```
 
 Later suites should be added as siblings, not mixed into production code:

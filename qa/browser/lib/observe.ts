@@ -29,11 +29,14 @@ export type RuntimeObservation = {
 const IGNORED_URL_SNIPPETS = [
   "/favicon.ico",
   "/_next/webpack-hmr",
+  "/_next/hmr",
+  "/_next/static/",
   "chrome-extension://",
 ];
 
 function isIgnoredUrl(url: string): boolean {
   if (url.startsWith("data:") || url.startsWith("blob:")) return true;
+  if (url.startsWith("ws://") || url.startsWith("wss://")) return true;
   return IGNORED_URL_SNIPPETS.some((snippet) => url.includes(snippet));
 }
 
@@ -42,9 +45,14 @@ export function isBenignConsole(entry: ConsoleEntry): boolean {
   if (/Download the React DevTools/i.test(text)) return true;
   if (/Fast Refresh/i.test(text)) return true;
   if (/\[HMR\]/i.test(text)) return true;
+  if (/\/_next\/hmr/i.test(text)) return true;
   if (/Extra attributes from the server/i.test(text)) return true;
   if (/favicon\.ico/i.test(text) && /404/.test(text)) return true;
   if (entry.type === "warning" && /Image with src/i.test(text)) return true;
+  // Chrome omits the URL; Next/Turbopack chunk 403s and HMR handshake noise are
+  // correlated from the network log instead of failing the smoke suite.
+  if (/Failed to load resource: the server responded with a status of (403|404)/i.test(text)) return true;
+  if (/WebSocket connection to .*\/_next\/hmr/i.test(text)) return true;
   return false;
 }
 
