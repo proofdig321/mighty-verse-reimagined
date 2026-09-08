@@ -46,3 +46,10 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 Future public curator: same suite primitives and identity form; different auth, no Authority privileges, no canonical publishing, no rights/moderation.
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
+
+## Product questions after Stage 2.5 (constitution 2026-09-08)
+
+Not automatic tickets. See `.mighty-verse/06-product-vision.md`.
+
+- **Associate inspected media with an existing Universe.** Gateway can display “not associated.” Mutation is not a Curate Studio action. Reuse `POST /api/authority/media` (bind to the Universe’s Mural projection). Requires an existing Mural projection. Do not auto-create Universes. Do not populate `media_realization`.
+- **Sentinel UI persist.** `POST /api/authority/media/inspect` exists; Curate Studio inspection remains ephemeral. Provenance quality; secondary to the association gap.

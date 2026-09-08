@@ -13,12 +13,15 @@ This directory is the authoritative constitutional context for Mighty Verse Reim
 ├── 03-principles.md              ← product, creative, and architectural principles
 ├── 04-evolution.md               ← decisions, rejected approaches, lessons, open questions
 ├── 05-architecture.md            ← deep constitutional model
+├── 06-product-vision.md          ← product operating constitution (journey, ontology, how to select work)
 └── evidence/
     └── v1-historical-summary.md  ← what the old implementation attempted and what was learned
 ```
 
-Browser QA lives outside this directory at `qa/browser/`. `.mighty-verse/AGENT.md`
-is still the authoritative pointer for how and when to run it.
+`.mighty-verse/AGENT.md` is the practical working context. `.mighty-verse/06-product-vision.md`
+is the product operating constitution for choosing and bounding implementation increments.
+From Stage 2.5 onward, agents operate as product lead + architect + implementer against that constitution. The founder remains the ultimate product decision-maker. Do not implement the vision as one giant development task.
+
 
 ## Document Status Markers
 

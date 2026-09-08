@@ -1134,3 +1134,47 @@ song-world  →  universe
 Universe ≠ Multiverse. `universe` is a canonical database type.
 `multiverse` is not a canonical type and must not become one.
 Mighty Verse is the platform/multiverse; it is not represented as a canonical entity.
+
+---
+
+## Stage 2.5 — Curate Studio (2026-09-08, implemented)
+
+Checkpoint: `7c6953ad3cd9daf2abf4d93108652b2e875a97ff`
+
+`/authority/curate` is the Curate Studio doorway (incoming media, readiness, Sentinel inspect, bridge into Creative Suite). Creative Suite remains `/authority/universes/{id}` (Identity, Mural, Scenes, Creative Moments). Complementary, not merged. MEDIA ≠ UNIVERSE.
+
+---
+
+## Product constitution locked (2026-09-08)
+
+`CANONICAL` **Operating constitution** (2026-09-08, founder-established)
+
+Source: `.mighty-verse/06-product-vision.md`.
+
+Mighty Verse is a **truth-preserving creative universe engine**.
+The journey is **DISCOVER → REVEAL → ASSEMBLE / CURATE → EXPERIENCE**.
+Canonical creative world and Experience world must stay distinct.
+Work is selected by the missing capability in canonical-truth → Experience,
+not by the next missing editor screen.
+
+This document does **not** authorize building the future in one task.
+
+`CANONICAL` **Stage 2.5 gaps are product questions** (2026-09-08)
+
+1. Unbound inspected media has no clean existing-API *Curate Studio* workflow to associate with an existing Universe. Bind is projection/Mural-scoped (`POST /api/authority/media`). Requires an existing Mural projection. Do not auto-create Universes. Do not invent `media_realization` population.
+2. Sentinel UI inspection is still ephemeral; persist API exists unused.
+
+**Highest-value next increment (evaluated, not auto-started):**
+explicit Curate Studio association of inspected media to an existing Universe via the existing bind API.
+
+Do **not** start a Mural editor, Scene editor, Creative Moment editor,
+public curation, publication redesign, rights, AI, 2.5D, or commerce from
+this checkpoint unless a later product review selects them.
+
+```
+Stage 2.5 Curate Studio
+        ↓
+next: media → existing Universe association (if selected)
+        ↓
+later editors / publication only after that path is truthful
+```

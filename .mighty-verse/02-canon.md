@@ -50,6 +50,39 @@ A Mural is one expression of the World; it does not own the Creative Moments tha
 
 ---
 
+## Canonical creative structure — Reimagined operating model
+
+`CANONICAL` (2026-09-08, founder-established; refines the 2026-08-17 hierarchy without replacing Song/World)
+
+**Universe** is the canonical top-level creative work (Song / World). It is the container of canonical meaning.
+
+**Mural** is the complete audiovisual expression of the Universe. It is not “the video file.”
+
+**Scenes** are first-class canonical visual/spatial units. They may have identity, timing, ordering, and relationships to Creative Moments. **Mural does not own Scenes.**
+
+**Creative Moments** are contributor-centred units parented to the Universe. They relate to Scenes through `scene_moment`. A Creative Moment may appear in multiple Scenes; that is valid, not a defect.
+
+This diagram must not be read as a simple ownership tree:
+
+```
+Universe
+  ├── Mural
+  ├── Scenes
+  └── Creative Moments  →  related to Scenes through scene_moment
+```
+
+`CANONICAL` **MEDIA ≠ CREATIVE WORK** (2026-09-08)
+A media asset is a technical realization. Upload/intake does not create a Universe, Mural, Scene, Creative Moment, canonical meaning, or publication authority.
+
+`CANONICAL` **CREATIVE MOMENT ≠ MOMENT CARD** (2026-09-08)
+A Moment Card is an Experience representation of a Creative Moment. The Card must not become the canonical object. A Creative Moment may exist without a Card.
+
+`CANONICAL` **Role separation** (2026-09-08)
+Sentinel verifies/observes. The curator interprets/assembles. Authority authorizes. Experience presents. AI may propose; AI proposal is not canonical truth.
+
+
+---
+
 ## Projection Boundary
 
 `CANONICAL` (2026-08-17, founder-established)

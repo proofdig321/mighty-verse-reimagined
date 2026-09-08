@@ -1,15 +1,21 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 2.5 Curate Studio gateway)
+STATUS: current as of 2026-09-08 (product constitution locked at Stage 2.5)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
 working on the Mighty Verse Reimagined repository. It describes the current verified state
 of the implementation, the canonical architecture, and the mandatory development protocol.
 
-The deep constitutional model lives in `.mighty-verse/05-architecture.md`.
+The product operating constitution lives in `.mighty-verse/06-product-vision.md`.
+The deep technical model lives in `.mighty-verse/05-architecture.md`.
 This document is the practical working context.
+
+From this checkpoint forward, agents act as product lead + architect + implementer.
+The founder remains the ultimate product decision-maker.
+Do not treat Mighty Verse as a sequence of isolated tickets.
+Do not implement `.mighty-verse/06-product-vision.md` as one giant development task.
 
 ---
 
@@ -23,28 +29,34 @@ Those are delivery mechanisms. The canonical model is the product.
 
 **Product flow:**
 ```
-Discover → Reveal → Assemble → Experience
+Discover → Reveal → Assemble / Curate → Experience
 ```
+
+Mighty Verse is a truth-preserving creative universe engine.
+MEDIA ≠ CREATIVE WORK. Experience must not silently become the source of truth.
+See `.mighty-verse/06-product-vision.md`.
 
 ---
 
 ## 2. CANONICAL ONTOLOGY
 
-The canonical creative hierarchy is:
+The canonical creative structure is **not** a simple ownership tree:
 
 ```
-Universe (Song/World)
-    ↓
-Mural (complete visual expression of a Universe)
-    ↓
-Scene (canonical bounded visual/narrative unit)
-    ↓
-Creative Moment (smallest authored/contributor unit)
+Universe (Song/World)     ← primary creative identity; everything resolves here
+  ├── Mural               ← complete audiovisual expression; not “the video file”
+  ├── Scenes              ← first-class visual/spatial units (canonical timing)
+  └── Creative Moments    ← contributor-centred; Universe-parented
+           └── related to Scenes through scene_moment (sharing across Scenes is valid)
 ```
 
 These four entities are the canonical creative truth.
 They live in the `master` table with `canonical_type` values:
 `universe`, `mural`, `scene`, `creative-moment`.
+
+**Mural does not own Scenes.** Creative Moments are Universe-parented.
+Moment Cards are Experience representations, not the canonical Creative Moment.
+MEDIA ≠ CREATIVE WORK. A Mux asset is not a Universe, Mural, Scene, or Creative Moment.
 
 **DO NOT:**
 - Add new canonical creative entities without explicit founder decision
@@ -220,10 +232,33 @@ applied migration.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 - Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`. Stage 1.4 Chrome-verified Powerhouse, Dark Knight, and Hand-to-Hand through Universe → Mural sidebar navigation on the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (Scene seek, Play, painted frame, end reset-to-start, no Livepeer). Stage 1.5 Chrome-verified Scene Moment → `/creative-moments/{id}` identity pages (Proverb, Mothipa, Reason). Those pages are not a Mux playback surface. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
 - Authority Universe curation: Stage 2.1–2.4 establish Creative Suite. Stage 2.5 reconciles `/authority/curate` as the Curate Studio gateway (incoming media + Sentinel) into Creative Suite. `/authority/curate` is not the Universe editor. MEDIA ≠ UNIVERSE.
+- Product constitution locked 2026-09-08 in `.mighty-verse/06-product-vision.md`. Future increments are selected by the journey question, not by “next missing editor.”
+- Unbound inspected media still lacks an explicit associate-to-existing-Universe workflow. Existing `POST /api/authority/media` binds an asset to a **projection** (typically the Mural). This is a product question (realization semantics), not an isolated button. Do not auto-create Universes from media. Do not populate `media_realization` without the rights/ISRC product decision.
+- Sentinel UI inspection remains ephemeral in the browser; `POST /api/authority/media/inspect` persistence exists but is not wired from Curate Studio. Provenance question, not automatically the next increment.
 
 ---
 
-## 10. DEVELOPMENT PROTOCOL
+## 10. HOW TO SELECT WORK
+
+Ask: **What is the next missing capability in the journey from canonical creative truth to compelling Experience?**
+
+Do not select work merely because an editor, table, or screen is missing.
+Do not implement `.mighty-verse/06-product-vision.md` as one giant task.
+
+Priority:
+1. Close a genuine user/product gap
+2. Advance the canonical creative workflow
+3. Increase reusable capability
+4. Improve Experience consequences
+
+Inspect existing code, data, routes, APIs, tests, and UI first.
+Reuse before duplicating. No speculative migrations, frameworks, AI platforms, or 2.5D engines.
+
+No-go unless specifically selected: full Mural/Scene/Creative Moment editors, public-user curation, publication redesign, rights system, AI generation, timeline/Experience redesign, 2.5D/holographic, commerce/NFT, unrelated refactors.
+
+---
+
+## 11. DEVELOPMENT PROTOCOL
 
 Every implementation task must follow this protocol:
 
@@ -264,7 +299,7 @@ node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/
 node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs \
   src/lib/media/__tests__/sentinel.test.mjs
 
-# Browser smoke (Chrome, against the running app — see §11)
+# Browser smoke (Chrome, against the running app — see §12)
 npm run dev                      # if not already running
 npm run test:qa:browser
 
@@ -285,7 +320,7 @@ Do not use the retired Codespaces `source/main` workflow.
 
 ---
 
-## 11. BROWSER QA PRINCIPLE
+## 12. BROWSER QA PRINCIPLE
 
 **Static checks are necessary but insufficient. Runtime/browser verification is
 required for user-facing changes.**
@@ -349,7 +384,7 @@ Canonical public Universe/Mural pages are `/worlds/{masterId}`. `/universes/{mas
 
 ---
 
-## 12. CRITICAL INVARIANTS FOR AGENTS
+## 13. CRITICAL INVARIANTS FOR AGENTS
 
 **NEVER:**
 - Change canonical ontology (Universe/Mural/Scene/Creative Moment) without explicit founder decision
@@ -373,7 +408,7 @@ Canonical public Universe/Mural pages are `/worlds/{masterId}`. `/universes/{mas
 
 ---
 
-## 13. DEVELOPMENT ENVIRONMENT
+## 14. DEVELOPMENT ENVIRONMENT
 
 Primary development is **Cursor** against this GitHub repository (`origin`).
 Canonical default branch is `main`. Chrome is the primary browser QA client.
@@ -383,9 +418,10 @@ They do not depend on conversation memory or the retired Codespaces/`source` rem
 
 A new agent starting work on this repository should:
 1. Read this file
-2. Read `.mighty-verse/05-architecture.md` for deep constitutional context
-3. Run `git log --oneline -10` to understand recent work
-4. Query live Supabase to verify current data state
-5. Run `npm test` and `npm run test:qa:browser` to confirm baseline
+2. Read `.mighty-verse/06-product-vision.md` for the product operating constitution
+3. Read `.mighty-verse/05-architecture.md` for deep constitutional context
+4. Run `git log --oneline -10` to understand recent work
+5. Query live Supabase to verify current data state
+6. Run `npm test` and `npm run test:qa:browser` to confirm baseline
 
 The repository is self-documenting. Do not rely on external conversation history.
