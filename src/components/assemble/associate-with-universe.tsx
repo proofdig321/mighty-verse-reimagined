@@ -17,12 +17,14 @@ import { RegisterMural } from "./register-mural";
 export function AssociateWithUniverse({
   media,
   universes,
+  defaultOpen = false,
 }: {
   media: CurateStudioMedia;
   universes: CurateStudioUniverse[];
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [universeId, setUniverseId] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);

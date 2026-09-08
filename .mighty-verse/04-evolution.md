@@ -1200,5 +1200,19 @@ A Universe without a Mural can register its audiovisual container by composing t
 ```
 Stage 2.7 existing-Universe Mural registration
         ↓
+Stage 2.8 Gallery / Inspect → Curate media context
+        ↓
+next: evaluate the journey; do not assume a Mural/Scene/CM editor
+```
+
+### Stage 2.8 — Restore media context into Curate Studio (2026-09-08)
+
+Checkpoint starts from `4363432cd92c4441c46fa734384b9cb0c268e8c3`.
+
+Gallery and Inspect now continue into the existing Curate Studio with the selected `assetId` carried as query state. This restores context continuity. It does not restore Gallery → Create Work, does not treat media as a Universe, and does not add a MediaContext entity. Bound Super Hero Ego media continues toward Creative Suite. Unbound media stays selected for the existing Associate with Universe operation. Create Work remains the broader independent creation wizard.
+
+```
+Stage 2.8 Gallery / Inspect → Curate media context
+        ↓
 next: evaluate the journey; do not assume a Mural/Scene/CM editor
 ```

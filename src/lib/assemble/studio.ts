@@ -62,8 +62,19 @@ export function mediaInspectHref(assetId: string): string {
   return `${MEDIA_INSPECT_HREF}?assetId=${assetId}`;
 }
 
-export function curateStudioHref(universeId?: string | null): string {
-  return universeId ? `${CURATE_STUDIO_HREF}?universe=${universeId}` : CURATE_STUDIO_HREF;
+export function curateStudioHref(
+  universeId?: string | null,
+  assetId?: string | null,
+): string {
+  const params = new URLSearchParams();
+  if (universeId) {
+    params.set("universe", universeId);
+  }
+  if (assetId) {
+    params.set("asset", assetId);
+  }
+  const query = params.toString();
+  return query ? `${CURATE_STUDIO_HREF}?${query}` : CURATE_STUDIO_HREF;
 }
 
 export function creativeSuiteHref(universeId: string, from?: StudioFrom | null): string {

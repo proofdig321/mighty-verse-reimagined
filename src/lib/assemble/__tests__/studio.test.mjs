@@ -79,5 +79,11 @@ assert(sceneOnly.bound_as === "scene", "scene-only binding is not mural ownershi
 assert(mediaInspectHref(ASSET) === `/authority/media/inspect?assetId=${ASSET}`, "inspect reuses the existing media inspect route");
 assert(creativeSuiteHref(UNIVERSE, "curate") === `/authority/universes/${UNIVERSE}?from=curate`, "suite href preserves Curate origin");
 assert(curateStudioHref(UNIVERSE) === `/authority/curate?universe=${UNIVERSE}`, "studio inspects mural-bound media via existing universe query");
+assert(curateStudioHref(null, ASSET) === `/authority/curate?asset=${ASSET}`, "Gallery / Inspect context is carried as an existing asset query");
+assert(
+  curateStudioHref(UNIVERSE, ASSET) === `/authority/curate?universe=${UNIVERSE}&asset=${ASSET}`,
+  "asset context can coexist with Universe occupancy without a new route",
+);
+assert(curateStudioHref() === "/authority/curate", "Curate Studio without context stays on the existing route");
 
 console.log("Assemble Curate Studio tests: all passed");

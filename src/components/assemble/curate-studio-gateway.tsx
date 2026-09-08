@@ -12,6 +12,7 @@ import {
   type CurateStudioMedia,
 } from "@/lib/assemble/studio";
 import { associationStatusLabel } from "@/lib/assemble/association";
+import type { CurateAssetFocus } from "@/lib/assemble/curate-context";
 import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
@@ -21,14 +22,62 @@ function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
 }
 
+function CurateAssetContextBanner({ focusedAsset }: { focusedAsset: CurateAssetFocus }) {
+  if (focusedAsset.next === "unavailable") {
+    return (
+      <div
+        role="status"
+        className="rounded-lg border border-border bg-card/50 px-4 py-3 text-sm text-muted-foreground"
+      >
+        This media is not available in Curate Studio. The requested asset is not in the incoming
+        catalogue. Association still requires a real catalogue record.
+      </div>
+    );
+  }
+
+  if (focusedAsset.next === "creative_suite" && focusedAsset.universe_id) {
+    const work = focusedAsset.universe_title ?? "its canonical work";
+    return (
+      <div
+        role="status"
+        className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+      >
+        <p className="text-sm text-foreground">
+          This selected media is already associated with {work}
+          {focusedAsset.mural_title ? ` · Mural ${focusedAsset.mural_title}` : ""}. Continue in
+          Creative Suite rather than associating it again.
+        </p>
+        <Link
+          href={creativeSuiteHref(focusedAsset.universe_id, "curate")}
+          className={buttonVariants({ size: "sm" })}
+        >
+          Open Creative Suite
+        </Link>
+      </div>
+    );
+  }
+
+  return (
+    <div
+      role="status"
+      className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground"
+    >
+      Continuing with the media selected from Gallery or Inspect. Associate it with an existing
+      Universe to curate it. Inspection does not associate automatically.
+    </div>
+  );
+}
+
 export default function CurateStudioGateway({
   media,
   universes,
   selectedUniverseId,
+  focusedAsset,
 }: {
   media: CurateStudioMedia[];
   universes: CurateStudioUniverse[];
   selectedUniverseId: string | null;
+  focusedAsset: CurateAssetFocus | null;
 }) {
   const selected = universes.find((universe) => universe.master_id === selectedUniverseId) ?? null;
   const selectedMedia = selectedUniverseId
@@ -53,6 +102,8 @@ export default function CurateStudioGateway({
           </Link>
         </div>
 
+        {focusedAsset ? <CurateAssetContextBanner focusedAsset={focusedAsset} /> : null}
+
         {media.length === 0 ? (
           <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
             No incoming media yet. Register an intake first. Uploading media does not create a Universe.
@@ -74,8 +125,17 @@ export default function CurateStudioGateway({
                   const suiteHref = item.association.universe_id
                     ? creativeSuiteHref(item.association.universe_id, "curate")
                     : null;
+                  const isFocused = focusedAsset?.found === true && focusedAsset.asset_id === item.asset_id;
                   return (
-                    <tr key={item.asset_id} className="hover:bg-muted/20 transition-colors">
+                    <tr
+                      key={item.asset_id}
+                      aria-current={isFocused ? "true" : undefined}
+                      className={
+                        isFocused
+                          ? "bg-muted/40 hover:bg-muted/50 transition-colors"
+                          : "hover:bg-muted/20 transition-colors"
+                      }
+                    >
                       <td className="px-4 py-3">
                         <p className="font-medium text-foreground">{item.title ?? untitled("media")}</p>
                         <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
@@ -112,7 +172,7 @@ export default function CurateStudioGateway({
                           </Link>
                           {item.association.universe_id && (
                             <Link
-                              href={curateStudioHref(item.association.universe_id)}
+                              href={curateStudioHref(item.association.universe_id, item.asset_id)}
                               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
                               Sentinel
@@ -126,7 +186,11 @@ export default function CurateStudioGateway({
                               Open Creative Suite
                             </Link>
                           ) : (
-                            <AssociateWithUniverse media={item} universes={universes} />
+                            <AssociateWithUniverse
+                              media={item}
+                              universes={universes}
+                              defaultOpen={isFocused && focusedAsset?.next === "associate"}
+                            />
                           )}
                         </div>
                       </td>

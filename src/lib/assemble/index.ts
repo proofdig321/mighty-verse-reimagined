@@ -20,6 +20,12 @@ export {
 export type { CurateStudioMedia, StudioAssociation } from "./studio";
 export { loadCurateStudioMedia } from "./load-studio";
 export {
+  pinFocusedIncomingMedia,
+  resolveCurateAssetFocus,
+  resolveCurateUniverseSelection,
+} from "./curate-context";
+export type { CurateAssetFocus, CurateAssetNextAction } from "./curate-context";
+export {
   CREATE_WORK_HREF,
   associationStatusLabel,
   buildUniverseAssociationTarget,

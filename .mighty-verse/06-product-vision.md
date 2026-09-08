@@ -373,3 +373,17 @@ A curator can now register a Mural for an existing Universe via `POST /api/autho
 
 **Do not automatically begin** a Mural editor, Scene editor, Creative Moment editor, public curation, publication, rights, timeline redesign, AI, 2.5D, or commerce.
 
+---
+
+## Checkpoint evaluation (Stage 2.8)
+
+`CANONICAL` (2026-09-08)
+
+Starting checkpoint: `4363432cd92c4441c46fa734384b9cb0c268e8c3`
+
+The missing capability after Gallery → Asset Record → Inspect was context continuity into Curate Studio, not a Gallery → Create Work handoff. Create Work remains the independent new-work wizard and still starts from `/authority/create`. MEDIA ≠ UNIVERSE.
+
+Asset Record and Inspect now continue into the same Curate Studio with `?asset=`. Unbound playable media is already selected for Associate with Universe. Bound Super Hero Ego Mux media (`795c057e-2967-4e93-8f5e-06297c674cb0`) continues toward Creative Suite and is not offered a duplicate association. Client-supplied context cannot reassign a bound asset. No migration. Sentinel remains evidence: Inspect does not associate.
+
+**Do not automatically begin** a Mural editor, Scene editor, Creative Moment editor, public curation, publication, rights, timeline redesign, AI, 2.5D, or commerce. Create Work completion still lands on the publishing record; changing that destination was not required for this handoff.
+

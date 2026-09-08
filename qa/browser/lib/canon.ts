@@ -143,6 +143,13 @@ export const ROUTES = {
   authorityUniverseWorkspace: `/authority/universes/${CANON.universeId}`,
   authorityUntitledUniverseWorkspace: `/authority/universes/${CANON.untitledUniverseId}`,
   authorityUniverseIdentity: `/authority/universes/${CANON.universeId}/identity`,
+  authorityMedia: "/authority/media",
+  authorityMuxAsset: `/authority/media/${CANON.muxAssetId}`,
+  authorityUnboundAsset: `/authority/media/${CANON.unboundLivepeerAssetId}`,
+  authorityMuxInspect: `/authority/media/inspect?assetId=${CANON.muxAssetId}`,
+  authorityUnboundInspect: `/authority/media/inspect?assetId=${CANON.unboundLivepeerAssetId}`,
+  authorityCurateMuxAsset: `/authority/curate?asset=${CANON.muxAssetId}`,
+  authorityCurateUnboundAsset: `/authority/curate?asset=${CANON.unboundLivepeerAssetId}`,
   editor: "/editor",
   signIn: "/auth/sign-in",
 } as const;

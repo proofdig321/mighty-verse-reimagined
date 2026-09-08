@@ -4,8 +4,13 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
+import {
+  pinFocusedIncomingMedia,
+  resolveCurateAssetFocus,
+  resolveCurateUniverseSelection,
+} from "@/lib/assemble/curate-context";
 import { loadCurateStudioMedia } from "@/lib/assemble/load-studio";
-import { CURATE_LIFECYCLE, CURATE_STUDIO_HREF } from "@/lib/assemble/studio";
+import { CURATE_LIFECYCLE, curateStudioHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import CurateStudioGateway from "@/components/assemble/curate-studio-gateway";
 import CurateClient from "./curate-client";
@@ -170,28 +175,40 @@ async function loadInspectionContext(universeId: string | null, universeIds: str
 export default async function CuratePage({
   searchParams,
 }: {
-  searchParams: Promise<{ universe?: string }>;
+  searchParams: Promise<{ universe?: string; asset?: string }>;
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
   if (!await getParticipantId(supabase)) redirect("/auth/sign-in");
 
-  const { universe } = await searchParams;
+  const { universe, asset } = await searchParams;
   const { media, universes } = await loadCurateStudioMedia();
-  const selectedUniverseId = universe && universes.some((item) => item.master_id === universe)
-    ? universe
-    : null;
+  const focusedAsset = resolveCurateAssetFocus({
+    requestedAssetId: asset,
+    media,
+  });
+  const requestedUniverseId =
+    universe && universes.some((item) => item.master_id === universe) ? universe : null;
+  const selectedUniverseId = resolveCurateUniverseSelection({
+    requestedUniverseId,
+    focusedAsset,
+  });
   const selected = universes.find((item) => item.master_id === selectedUniverseId) ?? null;
+  const incomingMedia = pinFocusedIncomingMedia(
+    media,
+    focusedAsset?.found ? focusedAsset.asset_id : null,
+  );
   const inspection = await loadInspectionContext(
     selectedUniverseId,
     universes.map((item) => item.master_id),
   );
+  const curateHref = curateStudioHref(null, focusedAsset?.asset_id ?? null);
 
   const breadcrumb = selected
     ? [
         { label: "Authority", href: "/authority" },
-        { label: "Curate", href: CURATE_STUDIO_HREF },
+        { label: "Curate", href: curateHref },
         { label: selected.title ?? "Untitled universe" },
       ]
     : [
@@ -219,9 +236,10 @@ export default async function CuratePage({
       </div>
 
       <CurateStudioGateway
-        media={media}
+        media={incomingMedia}
         universes={universes}
         selectedUniverseId={selectedUniverseId}
+        focusedAsset={focusedAsset}
       />
 
       {selectedUniverseId && (

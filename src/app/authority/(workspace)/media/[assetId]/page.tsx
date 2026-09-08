@@ -5,9 +5,9 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import { ChevronRight, ScanSearch } from "lucide-react";
+import { ChevronRight, ScanSearch, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { formatIsrcDisplay, isIsrcEligible, type IsrcStatus } from "@/lib/media/isrc";
@@ -16,6 +16,7 @@ import { MetadataStatusPanel } from "./metadata-status-panel";
 import { buildCanonicalMetadata } from "@/lib/media/metadata-build";
 import { checkMetadataConsistency } from "@/lib/media/metadata-embed";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
+import { curateStudioHref, mediaInspectHref } from "@/lib/assemble/studio";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
@@ -188,15 +189,16 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
         </div>
         {/* Inspect Media action — for any non-placeholder asset with a provider */}
         {!isPlaceholder && !isThumbnail && asset.provider && (
-          <Link
-            href={`/authority/media/inspect?assetId=${assetId}`}
-            className="shrink-0"
-          >
-            <Button variant="outline" size="sm" className="gap-1.5">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Link href={curateStudioHref(null, assetId)} className={buttonVariants({ size: "sm" })}>
+              <Wand2 size={14} />
+              Continue in Curate
+            </Link>
+            <Link href={mediaInspectHref(assetId)} className={buttonVariants({ variant: "outline", size: "sm" })}>
               <ScanSearch size={14} />
               Inspect Media
-            </Button>
-          </Link>
+            </Link>
+          </div>
         )}
       </div>
 
