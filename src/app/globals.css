@@ -824,17 +824,20 @@
     text-transform: capitalize;
   }
 
-  .world-actions,
+  .world-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1rem;
+    margin-top: 1.75rem;
+  }
+
   .world-section-head {
     display: flex;
     flex-wrap: wrap;
     align-items: flex-end;
     justify-content: space-between;
     gap: 1rem 1.5rem;
-  }
-
-  .world-actions {
-    margin-top: 1.75rem;
   }
 
   .world-action-primary {
