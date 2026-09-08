@@ -25,8 +25,7 @@ export const CANON = {
 export const ROUTES = {
   home: "/",
   universes: "/universes",
-  /** Path listed in the Stage 1 brief. The live Universe page is `universeLive`. */
-  universeRequested: `/universes/${CANON.universeId}`,
+  /** Canonical public Universe page. There is no `/universes/[id]` route. */
   universeLive: `/worlds/${CANON.universeId}`,
   universeScenes: `/worlds/${CANON.universeId}/scenes`,
   muralLive: `/worlds/${CANON.muralId}`,

@@ -30,7 +30,6 @@ const IGNORED_URL_SNIPPETS = [
   "/favicon.ico",
   "/_next/webpack-hmr",
   "/_next/hmr",
-  "/_next/static/",
   "chrome-extension://",
 ];
 
@@ -54,6 +53,14 @@ export function isBenignConsole(entry: ConsoleEntry): boolean {
   if (/Failed to load resource: the server responded with a status of (403|404)/i.test(text)) return true;
   if (/WebSocket connection to .*\/_next\/hmr/i.test(text)) return true;
   return false;
+}
+
+/** `/_next/static` 403 "Unauthorized" when the request carries Origin — Cursor/dev-server noise. */
+export function originBlockedStaticRequests(observation: RuntimeObservation): NetworkEntry[] {
+  return observation.requests.filter((entry) => {
+    if (!entry.url.includes("/_next/static/")) return false;
+    return entry.status === 403 || /unauthorized/i.test(entry.failure ?? "");
+  });
 }
 
 export function unexpectedConsoles(observation: RuntimeObservation): ConsoleEntry[] {
@@ -171,7 +178,10 @@ export function formatEvidence(args: {
   observation: RuntimeObservation;
 }): string {
   const unexpected = unexpectedConsoles(args.observation);
-  const failed = failedRequests(args.observation);
+  const blockedStatic = originBlockedStaticRequests(args.observation);
+  const failed = failedRequests(args.observation).filter(
+    (entry) => !blockedStatic.some((blocked) => blocked.url === entry.url && blocked.status === entry.status),
+  );
   const mux = muxMediaRequests(args.observation);
   const misroute = livepeerMisrouteForMux(args.observation);
 
@@ -183,6 +193,7 @@ export function formatEvidence(args: {
     `pageErrors: ${args.observation.pageErrors.length ? args.observation.pageErrors.join(" | ") : "(none)"}`,
     `unexpectedConsoleErrors: ${unexpected.length ? unexpected.map((e) => `[${e.type}] ${e.text}`).join(" | ") : "(none)"}`,
     `failedRequests: ${failed.length ? failed.map((e) => `${e.status ?? "fail"} ${e.method} ${e.url}${e.failure ? ` (${e.failure})` : ""}`).join(" | ") : "(none)"}`,
+    `originBlockedStatic: ${blockedStatic.length ? blockedStatic.map((e) => `${e.status ?? "fail"} ${e.url}`).join(" | ") : "(none)"}`,
     `muxMediaRequests: ${mux.length}`,
     `livepeerMisrouteForMux: ${misroute.length ? misroute.map((e) => e.url).join(" | ") : "(none)"}`,
   ];

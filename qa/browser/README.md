@@ -63,7 +63,8 @@ The config reuses an existing dev server when one is already listening.
 |---|---|---|
 | `/` | `/` | Home loads, primary content, real Universe, Mux thumbnail traffic |
 | `/universes` | `/universes` | Universe list, real Super Hero Ego row |
-| `/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | **live page is `/worlds/{id}`** | Requested path is probed; mural + Scene Deck + Mux player on live routes |
+| Super Hero Ego Universe | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Canonical Universe page, mural CTA, Scene Deck, Mux HLS evidence |
+| Super Hero Ego Mural | `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` | Player mount, HLS URL in page, stream.mux.com request (or recorded FINDING) |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
@@ -100,3 +101,13 @@ Do not build those suites in Stage 1.
 - Chrome: `use.channel = "chrome"` (system Google Chrome)
 - Reports: `qa/browser/playwright-report/` (gitignored)
 - Per-test screenshots: `qa/browser/test-results/` (gitignored)
+
+## Dev-server noise vs product defects
+
+Chrome script requests that include an `Origin` header against `/_next/static/*` can receive HTTP 403 with body `Unauthorized` in this Cursor environment. Classic scripts without `Origin` return 200.
+
+This is recorded as `originBlockedStatic` in smoke evidence. It is **not** treated as an application `/api` failure.
+
+HMR websocket handshake failures are expected Next.js dev-server noise.
+
+Mural HLS not requesting `stream.mux.com` is correlated with the Origin/403 static-chunk behaviour. Do not silently drop that FINDING.

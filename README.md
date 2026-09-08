@@ -17,10 +17,15 @@ See `.mighty-verse/05-architecture.md` for the deep constitutional model.
 
 ## Development
 
+Current environment: **Cursor** against this GitHub repository (`origin`).
+Canonical default branch: **`main`** (`origin/main`). Chrome is the primary browser QA client.
+
 ```bash
-npm run dev        # local dev server (required for browser QA)
+npm run dev        # local Next.js server (required for browser QA)
 npx tsc --noEmit   # type check
 npm run lint       # lint
+npm test           # unit + Sentinel tests (no browser)
+npm run test:qa:browser  # Chrome smoke against the running app
 ```
 
 ## Tests
@@ -30,20 +35,17 @@ separate evidence layer. See `qa/browser/README.md`.
 
 ```bash
 # Unit tests (no browser)
-node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs \
-  src/lib/media/__tests__/provider-resolution.test.mjs \
-  src/lib/media/__tests__/metadata.test.mjs \
-  src/lib/media/__tests__/intake-workflow.test.mjs \
-  src/lib/media/__tests__/inspection-wiring.test.mjs \
-  src/lib/media/providers/mux/__tests__/mux.test.mjs \
-  src/lib/media/__tests__/sentinel.test.mjs
+npm test
 
 # Browser smoke (Chrome, against the running app)
 npm run test:qa:browser
 ```
 
-## Branch
+Canonical public Universe pages are `/worlds/[masterId]`.
+Example: `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`. There is no `/universes/[id]` route.
 
-`mighty-verse-reimagined` → remote `source/main`
+## Git
 
-Push: `env -u GITHUB_TOKEN git push source HEAD:main`
+Repository: this GitHub remote (`origin`)
+Canonical default branch: `main` (`origin/main`)
+Development environment: Cursor + Chrome + this GitHub remote.

@@ -211,10 +211,10 @@ applied migration.
 - Sentinel has no persistent identity (no `inspection_session` in canonical ontology).
 - Scene rebind UI: API is safe; no UI surface yet.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
-- `/universes/{masterId}` is not a live route (404). Super Hero Ego is at `/worlds/{masterId}`.
+- `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 - Experience Editor: Scene Library Add control can be invoked without the assembly updating (nested `h-screen` layout). Recorded in Stage 1 smoke; do not treat as a QA-layer defect.
-- Mural Mux player can remain on "Loading media" in the Chrome QA environment (Turbopack `/_next/static` chunk 403 / HMR websocket noise). No Livepeer misroute of the Mux playback ID was observed.
+- Mural Mux player: page delivers `stream.mux.com` HLS URL and mounts the player, but Chrome stays on "Loading media" and never requests `stream.mux.com`. Cause correlated with Origin-bearing `/_next/static` script requests returning HTTP 403 body `Unauthorized` in this Cursor/dev-server environment (hls.js loader 200; real hls.js module never fetched). Not a Livepeer misroute. HLS URL itself is reachable (HTTP 200) from the environment without Origin.
 
 ---
 
@@ -243,7 +243,7 @@ Every implementation task must follow this protocol:
 4. Verify live data unchanged
 5. `git diff` — review complete change set
 6. Commit with structured message
-7. `env -u GITHUB_TOKEN git push source HEAD:main`
+7. Push to the canonical GitHub default branch (`origin/main`) — do not leave work only on an isolated Cursor feature branch. Do not force-push.
 
 ### Test commands
 ```bash
@@ -264,10 +264,15 @@ npm run dev                      # if not already running
 npm run test:qa:browser
 ```
 
-### Git push command
+### Git
+Canonical remote: `origin`
+Canonical default branch: `main`
+
 ```bash
-env -u GITHUB_TOKEN git push source HEAD:main
+git push -u origin HEAD
 ```
+
+Do not use the retired Codespaces `source/main` workflow.
 
 ---
 
@@ -309,13 +314,11 @@ npm run dev
 npm run test:qa:browser
 ```
 
-Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe
-(`05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`), `/moments`, `/authority/curate`, `/editor`.
+Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe at
+`/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`, `/moments`, `/authority/curate`, `/editor`.
 Smoke files match `qa/browser/smoke/*.smoke.ts`.
 
-The live Universe page is `/worlds/{masterId}`. `/universes/{masterId}` is not a
-current route; record that as a QA finding rather than adding a product redirect
-in this stage.
+Canonical public Universe/Mural pages are `/worlds/{masterId}`. `/universes/{masterId}` is not a route.
 
 ---
 
@@ -330,7 +333,7 @@ in this stage.
 - Treat AI output as provenance truth
 - Replace Mux/Livepeer architecture without explicit decision
 - Expose service role key to browser
-- Leave implementation only in local Codespace — always commit and push
+- Leave implementation only locally — always commit and push to `origin/main`
 
 **ALWAYS:**
 - Resolve provider from `media_asset.provider`
@@ -339,22 +342,23 @@ in this stage.
 - Use service client for server-side Supabase operations
 - Verify canonical data before and after any data operation
 - Run TypeScript + tests + lint before committing
-- Push to `source/main` when implementation is complete
+- Push to `origin/main` when implementation is complete
 
 ---
 
-## 13. CURSOR MIGRATION NOTE
+## 13. DEVELOPMENT ENVIRONMENT
 
-This repository is being migrated from Amazon Q to Cursor as the primary development agent.
+Primary development is **Cursor** against this GitHub repository (`origin`).
+Canonical default branch is `main`. Chrome is the primary browser QA client.
 
 The canonical project instructions live in this file and `.mighty-verse/`.
-They do not depend on conversation memory.
+They do not depend on conversation memory or the retired Codespaces/`source` remote workflow.
 
 A new agent starting work on this repository should:
 1. Read this file
 2. Read `.mighty-verse/05-architecture.md` for deep constitutional context
 3. Run `git log --oneline -10` to understand recent work
 4. Query live Supabase to verify current data state
-5. Run the test suite to confirm baseline
+5. Run `npm test` and `npm run test:qa:browser` to confirm baseline
 
 The repository is self-documenting. Do not rely on external conversation history.
