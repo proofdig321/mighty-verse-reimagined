@@ -79,12 +79,12 @@ test("unassociated media can associate to an existing Universe without creating 
   const associateForm = unboundRow.getByRole("form", { name: "Associate media with Universe" });
   await expect(associateForm).toBeVisible();
   await associateForm.getByLabel("Select Universe to associate").selectOption(CANON.universeId);
-  await expect(associateForm.getByText(/already has different media/i)).toBeVisible();
+  await expect(associateForm.getByRole("alert")).toContainText(/already has different media/i);
   await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
   notes.push("Curate Studio shows Super Hero Ego as occupied for unbound media");
 
   await associateForm.getByLabel("Select Universe to associate").selectOption(CANON.untitledUniverseId);
-  await expect(associateForm.getByText(/has no Mural yet/i)).toBeVisible();
+  await expect(associateForm.getByRole("alert")).toContainText(/no Mural/i);
   await expect(associateForm.getByRole("link", { name: "Open Create Work" })).toHaveAttribute("href", "/authority/create");
   await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
   notes.push("Universe without Mural is a blocked state with a link to existing Create Work");

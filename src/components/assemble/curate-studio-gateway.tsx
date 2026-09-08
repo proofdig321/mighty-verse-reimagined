@@ -92,8 +92,10 @@ export default function CurateStudioGateway({
                       <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">
                         {item.association.universe_id ? (
                           <span>
-                            {associationStatusLabel(item.association)}
-                            {item.association.mural_title ? ` · Mural ${item.association.mural_title}` : ""}
+                            <span>{associationStatusLabel(item.association)}</span>
+                            {item.association.mural_title ? (
+                              <span className="text-muted-foreground"> · Mural {item.association.mural_title}</span>
+                            ) : null}
                           </span>
                         ) : (
                           <span className="italic text-muted-foreground/50">Not associated — media is not a Universe</span>
