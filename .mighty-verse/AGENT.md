@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 1.3 Moment playback QA coverage)
+STATUS: current as of 2026-09-08 (Stage 1.3 production Moment Mux playback verified)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -213,7 +213,7 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
-- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 adds the Sword Master Moment Play assertion on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` using the same shared `ProjectionMediaPlayer` / `MuxPlayer` path. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
+- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` through the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (seek 193s, Play, painted frame, no Livepeer). `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
 
 ---
 

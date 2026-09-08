@@ -160,9 +160,12 @@ Stage 1.2 Chrome result on production Super Hero Ego Mural
 `currentTime` advanced, 1280×720 painted frame, Mux HLS
 `JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4`, no Livepeer misroute.
 
-Stage 1.3 adds the Sword Master Moment Play assertion
-(`/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`) on the same production
-command. Local `npm run test:qa:browser` also picks up the new smoke file.
+Stage 1.3 Chrome result on production Super Hero Ego Sword Master Moment
+(`/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`): Scene/Mural/Creative Moment
+relationships visible, same Mux HLS, seek to 193.000s before Play, Play
+invoked, `readyState=4`, `currentTime` 193.000 → 193.372 inside 193–254s,
+1280×720 painted frame (`nonBlackRatio=1.000`), no Livepeer requests.
+Same production command still keeps Mural Play green (`currentTime` 0 → 0.448).
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.
