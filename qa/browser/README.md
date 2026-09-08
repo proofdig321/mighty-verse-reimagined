@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.2 ASSEMBLE Universe workspace
+STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.3 ASSEMBLE Universe identity
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -77,6 +77,7 @@ The config reuses an existing dev server when one is already listening.
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
 | Super Hero Ego Universe workspace | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → workspace; live Mural / Scenes / Creative Moments |
+| Super Hero Ego Universe identity | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/identity` | Auth gate; title/description form; validation; idempotent save; return to workspace |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
 
 Canonical IDs live in `lib/canon.ts` and must match `.mighty-verse/AGENT.md`.
