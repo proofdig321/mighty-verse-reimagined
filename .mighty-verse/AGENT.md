@@ -228,7 +228,7 @@ applied migration.
 - Frame evidence: ephemeral browser-side only until Sentinel Phase 2.
 - Sentinel has no persistent identity (no `inspection_session` in canonical ontology).
 - Scene rebind UI: API is safe; no UI surface yet.
-- Livepeer second Universe `f11c3aba`: used in Stage 2.7 as the real Universe-without-Mural registration target. Do not treat it as disposable. Do not bind unbound Livepeer onto Super Hero Ego.
+- Livepeer second Universe `f11c3aba`: Stage 2.7 registered Mural `f5872a92-1c38-4cff-836e-fbb22b25e506` (container only; no media attached). Super Hero Ego Mural `a75ae8af` is unchanged.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 - Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`. Stage 1.4 Chrome-verified Powerhouse, Dark Knight, and Hand-to-Hand through Universe → Mural sidebar navigation on the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (Scene seek, Play, painted frame, end reset-to-start, no Livepeer). Stage 1.5 Chrome-verified Scene Moment → `/creative-moments/{id}` identity pages (Proverb, Mothipa, Reason). Those pages are not a Mux playback surface. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
