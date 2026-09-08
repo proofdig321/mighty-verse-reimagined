@@ -212,6 +212,7 @@ export default function SceneDeck({
             playbackId={scene.playbackId}
             provider={scene.provider}
             title={scene.title ?? "Scene"}
+            startMs={scene.startMs}
             className="absolute inset-0 h-full w-full border-0"
           />
         ) : (
@@ -287,6 +288,7 @@ export default function SceneDeck({
             playbackId={scene.playbackId}
             provider={scene.provider}
             title={scene.title ?? "Scene"}
+            startMs={scene.startMs}
             className="absolute inset-0 h-full w-full border-0"
           />
         ) : (

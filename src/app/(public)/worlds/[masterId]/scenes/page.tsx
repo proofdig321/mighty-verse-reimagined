@@ -12,6 +12,8 @@ type SceneItem = {
   projection_id: string | null;
   playback_id: string | null;
   provider: string | null;
+  start_ms: number | null;
+  end_ms: number | null;
 };
 
 async function getData(masterId: string): Promise<{ universeTitle: string | null; scenes: SceneItem[] }> {
@@ -72,7 +74,7 @@ async function getData(masterId: string): Promise<{ universeTitle: string | null
     ...(muralProjs ?? []).map((p) => p.projection_id),
   ];
   const { data: bindings } = allProjectionIds.length
-    ? await svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", allProjectionIds).eq("binding_type", "primary").eq("access_level", "public")
+    ? await svc.from("projection_media_binding").select("projection_id, asset_id, start_ms, end_ms").in("projection_id", allProjectionIds).eq("binding_type", "primary").eq("access_level", "public")
     : { data: [] };
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
@@ -97,29 +99,25 @@ async function getData(masterId: string): Promise<{ universeTitle: string | null
 
   return {
     universeTitle: pres?.title ?? null,
-    scenes: sceneIds.map((id) => ({
-      master_id: id,
-      title: (scenePres ?? []).find((p) => p.master_id === id)?.title ?? null,
-      projection_id: (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id ?? null,
-      playback_id: (() => {
-        // Try scene's own binding
-        const projId = (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id;
-        const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
-        const asset = (assets ?? []).find((a) => a.asset_id === assetId);
-        if (asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")) return asset.storage_ref;
-        // Fall back to parent mural's binding
-        const muralId = sceneMuralMap.get(id);
-        return muralId ? (muralPlaybackMap.get(muralId)?.playback_id ?? null) : null;
-      })(),
-      provider: (() => {
-        const projId = (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id;
-        const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
-        const asset = (assets ?? []).find((a) => a.asset_id === assetId);
-        if (asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")) return asset.provider ?? null;
-        const muralId = sceneMuralMap.get(id);
-        return muralId ? (muralPlaybackMap.get(muralId)?.provider ?? null) : null;
-      })(),
-    })),
+    scenes: sceneIds.map((id) => {
+      const projId = (sceneProjs ?? []).find((p) => p.master_id === id)?.projection_id ?? null;
+      const binding = (bindings ?? []).find((row) => row.projection_id === projId);
+      const asset = (assets ?? []).find((row) => row.asset_id === binding?.asset_id);
+      const ownRef = asset?.storage_ref && !asset.storage_ref.startsWith("seed:placeholder:")
+        ? asset.storage_ref
+        : null;
+      const muralId = sceneMuralMap.get(id);
+      const muralFallback = muralId ? muralPlaybackMap.get(muralId) ?? null : null;
+      return {
+        master_id: id,
+        title: (scenePres ?? []).find((p) => p.master_id === id)?.title ?? null,
+        projection_id: projId,
+        playback_id: ownRef ?? muralFallback?.playback_id ?? null,
+        provider: ownRef ? (asset?.provider ?? null) : muralFallback?.provider ?? null,
+        start_ms: binding?.start_ms ?? null,
+        end_ms: binding?.end_ms ?? null,
+      };
+    }),
   };
 }
 

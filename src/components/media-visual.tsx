@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { livepeerThumbnailUrl, muxThumbnailUrl } from "@/lib/media/thumbnail";
 
 type Props = {
   playbackId?: string | null;
@@ -9,28 +10,42 @@ type Props = {
   title: string;
   className?: string;
   aspectRatio?: "1/1" | "16/9";
+  /** Scene window start. Mux stills use seconds; Livepeer stills use the matching keyframe. */
+  startMs?: number | null;
 };
 
-export default function MediaVisual({ playbackId, provider, title, className = "", aspectRatio = "16/9" }: Props) {
+export default function MediaVisual({
+  playbackId,
+  provider,
+  title,
+  className = "",
+  aspectRatio = "16/9",
+  startMs,
+}: Props) {
   const resolvedProvider = provider ?? "livepeer";
+  const timeSec = startMs != null ? Math.floor(startMs / 1000) : 0;
   const muxPosterUrl = resolvedProvider === "mux" && playbackId
-    ? `https://image.mux.com/${playbackId}/thumbnail.jpg?time=0`
+    ? muxThumbnailUrl(playbackId, timeSec)
     : null;
-  const [livepeerPosterUrl, setLivepeerPosterUrl] = useState<string | null>(null);
-  const posterUrl = muxPosterUrl ?? livepeerPosterUrl;
+  const timedLivepeerUrl =
+    resolvedProvider !== "mux" && playbackId && startMs != null
+      ? livepeerThumbnailUrl(playbackId, startMs)
+      : null;
+  const [fetchedLivepeerPosterUrl, setFetchedLivepeerPosterUrl] = useState<string | null>(null);
+  const posterUrl = muxPosterUrl ?? timedLivepeerUrl ?? fetchedLivepeerPosterUrl;
 
   useEffect(() => {
-    if (!playbackId || resolvedProvider === "mux") return;
+    if (!playbackId || resolvedProvider === "mux" || startMs != null) return;
     let active = true;
     fetch(`/api/livepeer/playback/${playbackId}`)
       .then(response => response.ok ? response.json() : null)
       .then(info => {
         const hlsUrl = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl")?.url;
-        if (active && hlsUrl) setLivepeerPosterUrl(hlsUrl.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
+        if (active && hlsUrl) setFetchedLivepeerPosterUrl(hlsUrl.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
       })
       .catch(() => null);
     return () => { active = false; };
-  }, [playbackId, resolvedProvider]);
+  }, [playbackId, resolvedProvider, startMs]);
 
   return (
     <div className={`relative overflow-hidden bg-card border border-border ${className}`} style={{ aspectRatio }}>
