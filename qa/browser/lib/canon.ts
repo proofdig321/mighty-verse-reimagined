@@ -14,6 +14,10 @@ export const CANON = {
   muxPlaybackId: "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4",
   muxThumbnailHost: "image.mux.com",
   muxStreamHost: "stream.mux.com",
+  swordMasterProjectionId: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd",
+  swordMasterSceneTitle: "Reason — Sword Master",
+  swordMasterStartMs: 193000,
+  swordMasterEndMs: 254000,
   sceneTitles: [
     "Golden Shovel — Powerhouse",
     "Mothipa — Dark Knight",
@@ -32,6 +36,7 @@ export const ROUTES = {
   universeScenes: `/worlds/${CANON.universeId}/scenes`,
   muralLive: `/worlds/${CANON.muralId}`,
   moments: "/moments",
+  momentSwordMaster: `/moments/${CANON.swordMasterProjectionId}`,
   curate: "/authority/curate",
   editor: "/editor",
   signIn: "/auth/sign-in",

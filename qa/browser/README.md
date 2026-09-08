@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1 local Play + Stage 1.2 production Play
+STATUS: Stage 1 smoke + Stage 1.1 local Play + Stage 1.2 production Mural Play + Stage 1.3 Moment Play coverage
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -72,6 +72,7 @@ The config reuses an existing dev server when one is already listening.
 | `/universes` | `/universes` | Universe list, real Super Hero Ego row |
 | Super Hero Ego Universe | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Canonical Universe page, mural CTA, Scene Deck, Mux HLS evidence |
 | Super Hero Ego Mural | `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` | Player mount, HLS URL, stream.mux.com, Play click, readyState, currentTime advance, painted frame |
+| Super Hero Ego Sword Master Moment | `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` | Same shared player as Mural; Scene title; Mux HLS; seek near 193s; Play; currentTime advances inside 193–254s; painted frame; no Livepeer |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
@@ -146,17 +147,22 @@ Mighty Verse origin. The origin is the GitHub repository homepage (Vercel
 `*.vercel.app`). It is **opt-in** and requires `QA_PRODUCTION_URL`.
 
 ```bash
-QA_PRODUCTION_URL="$(gh repo view --json homepage --jq .homepage)"
+QA_PRODUCTION_URL="$(gh repo view --json homepageUrl --jq .homepageUrl)"
 npm run test:qa:browser:production
 ```
 
-That command runs only `smoke/mural-playback.smoke.ts`. It does not start
-`next dev`.
+That command runs `smoke/mural-playback.smoke.ts` and
+`smoke/moment-playback.smoke.ts`. It does not start `next dev`.
+The GitHub field is `homepageUrl` (not `homepage`).
 
 Stage 1.2 Chrome result on production Super Hero Ego Mural
 (`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`): Play invoked, `readyState=4`,
 `currentTime` advanced, 1280×720 painted frame, Mux HLS
 `JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4`, no Livepeer misroute.
+
+Stage 1.3 adds the Sword Master Moment Play assertion
+(`/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`) on the same production
+command. Local `npm run test:qa:browser` also picks up the new smoke file.
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.

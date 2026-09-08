@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 1.2 production Mux playback verified)
+STATUS: current as of 2026-09-08 (Stage 1.3 Moment playback QA coverage)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -213,7 +213,7 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
-- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepage Vercel production origin. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
+- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 adds the Sword Master Moment Play assertion on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` using the same shared `ProjectionMediaPlayer` / `MuxPlayer` path. `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
 
 ---
 
@@ -262,8 +262,8 @@ node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/
 npm run dev                      # if not already running
 npm run test:qa:browser
 
-# Production Mural Play only (opt-in; not part of the local suite)
-QA_PRODUCTION_URL="$(gh repo view --json homepage --jq .homepage)"
+# Production Mural + Moment Play (opt-in; not part of the local suite)
+QA_PRODUCTION_URL="$(gh repo view --json homepageUrl --jq .homepageUrl)"
 npm run test:qa:browser:production
 ```
 
@@ -319,14 +319,17 @@ npm run test:qa:browser
 
 Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe at
 `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`, Super Hero Ego Mural Play at
-`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`, `/moments`, `/authority/curate`, `/editor`.
+`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`, Super Hero Ego Sword Master
+Moment Play at `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`, `/moments`,
+`/authority/curate`, `/editor`.
 Smoke files match `qa/browser/smoke/*.smoke.ts`. Stage 1.1 proves actual Mux
 playback after Play locally. Stage 1.2 proves the same Play path on the
-deployed Vercel production origin (GitHub repository homepage). Production
-Chrome verification is opt-in:
+deployed Vercel production origin (GitHub repository `homepageUrl`). Stage 1.3
+reuses that production command for the canonical Sword Master Moment as well.
+Production Chrome verification is opt-in:
 
 ```bash
-QA_PRODUCTION_URL="$(gh repo view --json homepage --jq .homepage)"
+QA_PRODUCTION_URL="$(gh repo view --json homepageUrl --jq .homepageUrl)"
 npm run test:qa:browser:production
 ```
 

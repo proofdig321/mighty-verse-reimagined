@@ -15,15 +15,22 @@ import {
   reportEvidence,
 } from "../lib/observe";
 
-test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, observe }, testInfo) => {
-  const response = await page.goto(ROUTES.muralLive, { waitUntil: "domcontentloaded" });
-  expect(response?.ok(), `mural HTTP ${response?.status()}`).toBeTruthy();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.muralLive}$`));
-  await expect(page.getByText(CANON.muralTitle).first()).toBeVisible();
+const START_SEC = CANON.swordMasterStartMs / 1000;
+const END_SEC = CANON.swordMasterEndMs / 1000;
+
+test("Super Hero Ego Sword Master Moment Play starts decoded Mux playback", async ({
+  page,
+  observe,
+}, testInfo) => {
+  const response = await page.goto(ROUTES.momentSwordMaster, { waitUntil: "domcontentloaded" });
+  expect(response?.ok(), `moment HTTP ${response?.status()}`).toBeTruthy();
+  await expect(page).toHaveURL(new RegExp(`${ROUTES.momentSwordMaster}$`));
+  await expect(page.getByText(CANON.swordMasterSceneTitle).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: CANON.muralTitle })).toBeVisible();
 
   const html = await page.content();
   const pageHasMuxHlsUrl = html.includes(`https://stream.mux.com/${CANON.muxPlaybackId}.m3u8`);
-  expect(pageHasMuxHlsUrl, "mural page must deliver the Mux HLS URL").toBeTruthy();
+  expect(pageHasMuxHlsUrl, "moment page must deliver the Mux HLS URL").toBeTruthy();
 
   const player = page.locator('video[aria-label="Mighty Verse media player"]');
   await expect(player).toBeVisible();
@@ -35,7 +42,7 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     .waitFor({ state: "hidden", timeout: 15000 })
     .then(() => true)
     .catch(() => false);
-  expect(loadingGone, "Mural player must leave Loading media before Play").toBeTruthy();
+  expect(loadingGone, "Moment player must leave Loading media before Play").toBeTruthy();
 
   await expect
     .poll(
@@ -54,7 +61,17 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     .poll(async () => (await readVideoSnapshot(player)).videoWidth, { timeout: 15000 })
     .toBeGreaterThan(0);
 
+  await expect
+    .poll(async () => (await readVideoSnapshot(player)).currentTime, { timeout: 15000 })
+    .toBeGreaterThan(START_SEC - 1);
+
   const beforePlay = await readVideoSnapshot(player);
+  expect(
+    beforePlay.currentTime,
+    `Scene timing must seek near ${START_SEC}s before Play (got ${beforePlay.currentTime})`,
+  ).toBeGreaterThan(START_SEC - 1);
+  expect(beforePlay.currentTime).toBeLessThan(END_SEC);
+
   await player.click();
 
   const playErrors: string[] = [];
@@ -84,7 +101,8 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     .toBe(false);
 
   const afterPlay = await readVideoSnapshot(player);
-  const frame = await samplePaintedFrame(player);
+  expect(afterPlay.currentTime).toBeLessThan(END_SEC + 1);
+
   await expect
     .poll(async () => (await samplePaintedFrame(player)).painted, { timeout: 10000 })
     .toBe(true);
@@ -95,7 +113,7 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
   const livepeerTraffic = livepeerRequests(observe);
   expect(
     livepeerTraffic,
-    `Mux Mural must not request Livepeer: ${livepeerTraffic.map((entry) => entry.url).join(" | ")}`,
+    `Mux Moment must not request Livepeer: ${livepeerTraffic.map((entry) => entry.url).join(" | ")}`,
   ).toEqual([]);
   const blocked = originBlockedStaticRequests(observe);
   const abortedMux = observe.requests.filter((entry) => isMuxHlsAbort(entry.url, entry.failure));
@@ -104,19 +122,22 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
   );
 
   const notes = [
-    `canonical Mural route ${ROUTES.muralLive}`,
+    `canonical Moment route ${ROUTES.momentSwordMaster}`,
+    `Scene title visible: ${CANON.swordMasterSceneTitle}`,
+    `Mural parent link present (${ROUTES.muralLive})`,
     pageHasMuxHlsUrl
       ? `Mux HLS URL present (stream.mux.com/${CANON.muxPlaybackId}.m3u8)`
       : "FINDING: Mux HLS URL missing",
-    "Mux player is a labelled <video> (Mighty Verse media player), not Livepeer",
+    "shared ProjectionMediaPlayer / MuxPlayer labelled <video>, not a Moment-specific player",
+    `Scene binding window ${CANON.swordMasterStartMs}-${CANON.swordMasterEndMs} ms`,
+    `before Play currentTime=${beforePlay.currentTime.toFixed(3)} readyState=${beforePlay.readyState} paused=${beforePlay.paused}`,
     `Play control: ${playAttempt.playControl}`,
     `Play invoked: ${playAttempt.playInvoked}`,
     playErrors.length
       ? `transient play() errors before start: ${[...new Set(playErrors)].join(" | ")}`
       : "play() did not throw",
-    `before Play currentTime=${beforePlay.currentTime.toFixed(3)} readyState=${beforePlay.readyState} paused=${beforePlay.paused}`,
     `after Play currentTime=${afterPlay.currentTime.toFixed(3)} readyState=${afterPlay.readyState} paused=${afterPlay.paused} duration=${afterPlay.duration.toFixed(3)}`,
-    `currentTime advanced: ${afterPlay.currentTime > beforePlay.currentTime + 0.2}`,
+    `currentTime advanced within Scene range: ${afterPlay.currentTime > beforePlay.currentTime + 0.2}`,
     `video ${afterPlay.videoWidth}x${afterPlay.videoHeight} currentSrc=${afterPlay.currentSrc || "(empty)"}`,
     painted.painted
       ? `decoded/painted frame: yes (nonBlackRatio=${painted.nonBlackRatio.toFixed(3)})`
@@ -124,8 +145,8 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     `stream.mux.com requests: ${hlsRequests.length}`,
     `mux media requests: ${muxRequests.length}`,
     livepeerTraffic.length
-      ? `FINDING: Livepeer traffic on Mux Mural (${livepeerTraffic.length})`
-      : "no Livepeer requests on this Mux Mural",
+      ? `FINDING: Livepeer traffic on Mux Moment (${livepeerTraffic.length})`
+      : "no Livepeer requests on this Mux Moment",
     blocked.length
       ? `FINDING: Origin-blocked /_next/static 403 (${blocked.length})`
       : "no Origin-blocked static chunks",
@@ -137,7 +158,7 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
       : "no playback pageErrors",
   ];
 
-  await testInfo.attach("mural-play-evidence.json", {
+  await testInfo.attach("moment-play-evidence.json", {
     contentType: "application/json",
     body: Buffer.from(
       JSON.stringify(
@@ -147,9 +168,14 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
           playErrors: [...new Set(playErrors)],
           beforePlay,
           afterPlay,
-          frame,
           painted,
-          hlsRequests: hlsRequests.map((entry) => ({ url: entry.url, status: entry.status, failure: entry.failure })),
+          startSec: START_SEC,
+          endSec: END_SEC,
+          hlsRequests: hlsRequests.map((entry) => ({
+            url: entry.url,
+            status: entry.status,
+            failure: entry.failure,
+          })),
           livepeerTraffic,
           abortedMuxCount: abortedMux.length,
           blocked,
@@ -161,7 +187,7 @@ test("Super Hero Ego Mural Play starts decoded Mux playback", async ({ page, obs
     ),
   });
 
-  await captureScreenshot(page, testInfo, "super-hero-ego-mural-playing");
+  await captureScreenshot(page, testInfo, "sword-master-moment-playing");
   assertRuntimeHealth(observe);
-  reportEvidence(testInfo, "BROWSER VERIFIED", "Super Hero Ego Mural Play", page.url(), notes, observe);
+  reportEvidence(testInfo, "BROWSER VERIFIED", "Super Hero Ego Moment Play", page.url(), notes, observe);
 });

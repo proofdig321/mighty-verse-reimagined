@@ -20,7 +20,7 @@ if (/localhost|127\.0\.0\.1/i.test(baseURL)) {
 
 export default defineConfig({
   testDir: "./smoke",
-  testMatch: /mural-playback\.smoke\.ts/,
+  testMatch: /(?:mural|moment)-playback\.smoke\.ts/,
   outputDir: "./test-results-production",
   fullyParallel: false,
   workers: 1,

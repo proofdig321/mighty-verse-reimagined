@@ -96,16 +96,19 @@ export function muxMediaRequests(observation: RuntimeObservation): NetworkEntry[
   });
 }
 
-export function livepeerMisrouteForMux(observation: RuntimeObservation): NetworkEntry[] {
+export function livepeerRequests(observation: RuntimeObservation): NetworkEntry[] {
   return observation.requests.filter((entry) => {
     const url = entry.url;
-    const mentionsMuxPlayback = url.includes(CANON.muxPlaybackId);
-    const livepeerPath =
+    return (
       url.includes("/api/livepeer/playback/") ||
       url.includes("livepeercdn") ||
-      url.includes("vod-cdn.lp-playback.studio");
-    return mentionsMuxPlayback && livepeerPath;
+      url.includes("vod-cdn.lp-playback.studio")
+    );
   });
+}
+
+export function livepeerMisrouteForMux(observation: RuntimeObservation): NetworkEntry[] {
+  return livepeerRequests(observation).filter((entry) => entry.url.includes(CANON.muxPlaybackId));
 }
 
 export function attachObservers(page: Page): RuntimeObservation {
