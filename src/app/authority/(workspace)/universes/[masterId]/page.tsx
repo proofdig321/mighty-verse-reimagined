@@ -11,10 +11,13 @@ import { buttonVariants } from "@/components/ui/button";
 
 export default async function UniverseCurationPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ masterId: string }>;
+  searchParams: Promise<{ identity?: string }>;
 }) {
   const { masterId } = await params;
+  const query = await searchParams;
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -43,11 +46,14 @@ export default async function UniverseCurationPage({
           </p>
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Assemble this Universe from its canonical Mural, Scenes, and Creative Moments.
-            Editing those layers is added in later increments.
+            Assemble this Universe from its canonical identity, Mural, Scenes, and Creative Moments.
+            Identity can be curated now. Mural, Scene, and Creative Moment editing are later increments.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
+          <Link href={`/authority/universes/${data.master_id}/identity`} className={buttonVariants({ size: "sm" })}>
+            Edit identity
+          </Link>
           <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             View public experience
           </Link>
@@ -56,6 +62,12 @@ export default async function UniverseCurationPage({
           </Link>
         </div>
       </div>
+
+      {query.identity === "saved" && (
+        <p role="status" className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">
+          Universe identity saved.
+        </p>
+      )}
 
       <UniverseAssemblyView
         data={data}

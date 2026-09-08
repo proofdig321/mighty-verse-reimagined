@@ -101,6 +101,7 @@ export function creativeMomentHref(cm: { masterId: string; projectionId: string 
 export const CANON = {
   universeId: "05ccc0c6-75f9-4864-b0c1-af5e36bf45cc",
   universeTitle: "Super Hero Ego",
+  universeDescription: "Golden Shovel ft Proverb, Reason and Mothipa",
   muralId: "a75ae8af-7b48-4b67-8392-d89447bae370",
   muralTitle: "Super Hero Ego",
   muxAssetId: "795c057e-2967-4e93-8f5e-06297c674cb0",
@@ -136,6 +137,7 @@ export const ROUTES = {
   authority: "/authority",
   authorityUniverses: "/authority/universes",
   authorityUniverseWorkspace: `/authority/universes/${CANON.universeId}`,
+  authorityUniverseIdentity: `/authority/universes/${CANON.universeId}/identity`,
   editor: "/editor",
   signIn: "/auth/sign-in",
 } as const;
