@@ -25,8 +25,15 @@ test("Super Hero Ego Sword Master Moment Play starts decoded Mux playback", asyn
   const response = await page.goto(ROUTES.momentSwordMaster, { waitUntil: "domcontentloaded" });
   expect(response?.ok(), `moment HTTP ${response?.status()}`).toBeTruthy();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.momentSwordMaster}$`));
-  await expect(page.getByText(CANON.swordMasterSceneTitle).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: CANON.muralTitle })).toBeVisible();
+  await expect(page.getByText(`Scene: ${CANON.swordMasterSceneTitle}`)).toBeVisible();
+  await expect(page.getByRole("link", { name: CANON.muralTitle, exact: true })).toHaveAttribute(
+    "href",
+    ROUTES.muralLive,
+  );
+  await expect(page.getByRole("link", { name: CANON.creativeMomentTitle, exact: true })).toHaveAttribute(
+    "href",
+    `/creative-moments/${CANON.creativeMomentId}`,
+  );
 
   const html = await page.content();
   const pageHasMuxHlsUrl = html.includes(`https://stream.mux.com/${CANON.muxPlaybackId}.m3u8`);
@@ -123,8 +130,9 @@ test("Super Hero Ego Sword Master Moment Play starts decoded Mux playback", asyn
 
   const notes = [
     `canonical Moment route ${ROUTES.momentSwordMaster}`,
-    `Scene title visible: ${CANON.swordMasterSceneTitle}`,
-    `Mural parent link present (${ROUTES.muralLive})`,
+    `Scene visible: ${CANON.swordMasterSceneTitle}`,
+    `Mural parent link ${ROUTES.muralLive}`,
+    `Creative Moment link /creative-moments/${CANON.creativeMomentId} (${CANON.creativeMomentTitle})`,
     pageHasMuxHlsUrl
       ? `Mux HLS URL present (stream.mux.com/${CANON.muxPlaybackId}.m3u8)`
       : "FINDING: Mux HLS URL missing",

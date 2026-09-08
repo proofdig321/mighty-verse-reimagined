@@ -18,6 +18,8 @@ export const CANON = {
   swordMasterSceneTitle: "Reason — Sword Master",
   swordMasterStartMs: 193000,
   swordMasterEndMs: 254000,
+  creativeMomentId: "2745a50a-5417-4613-b23b-ef4857ab112e",
+  creativeMomentTitle: "Reason",
   sceneTitles: [
     "Golden Shovel — Powerhouse",
     "Mothipa — Dark Knight",
