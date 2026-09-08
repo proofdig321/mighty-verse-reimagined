@@ -100,6 +100,12 @@ async function snapshotCanon(svc: ReturnType<typeof serviceClient>) {
   };
 }
 
+async function postInspect(page: import("@playwright/test").Page, payload: Record<string, unknown>) {
+  const response = await page.request.post("/api/authority/media/inspect", { data: payload });
+  const body = await response.json().catch(() => ({}));
+  return { status: response.status(), body };
+}
+
 test("Sentinel persists source-media inspection without creating canonical work", async ({ page, observe, context }, testInfo) => {
   test.setTimeout(180_000);
   const notes: string[] = [];
@@ -129,63 +135,28 @@ test("Sentinel persists source-media inspection without creating canonical work"
     .eq("asset_id", CANON.muxAssetId);
 
   try {
-    const missing = await page.evaluate(async (payload) => {
-      const response = await fetch("/api/authority/media/inspect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return { status: response.status, body: await response.json().catch(() => ({})) };
-    }, evidencePayload(MISSING_ASSET, 2));
+    const missing = await postInspect(page, evidencePayload(MISSING_ASSET, 2));
     expect(missing.status).toBe(404);
     notes.push("B: nonexistent media asset is rejected");
 
-    const invalid = await page.evaluate(async (payload) => {
-      const response = await fetch("/api/authority/media/inspect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return { status: response.status };
-    }, evidencePayload("not-an-asset", 2));
+    const invalid = await postInspect(page, evidencePayload("not-an-asset", 2));
     expect(invalid.status).toBe(400);
     notes.push("C: invalid asset scope is rejected");
 
-    const first = await page.evaluate(async (payload) => {
-      const response = await fetch("/api/authority/media/inspect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return { status: response.status, body: await response.json().catch(() => ({})) };
-    }, evidencePayload(CANON.unboundLivepeerAssetId, 2));
+    const first = await postInspect(page, evidencePayload(CANON.unboundLivepeerAssetId, 2));
     expect(first.status).toBe(201);
     expect(first.body.observation_count).toBe(2);
     expect(typeof first.body.session_id).toBe("string");
     createdSessions.push(first.body.session_id);
 
-    const second = await page.evaluate(async (payload) => {
-      const response = await fetch("/api/authority/media/inspect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return { status: response.status, body: await response.json().catch(() => ({})) };
-    }, evidencePayload(CANON.unboundLivepeerAssetId, 4));
+    const second = await postInspect(page, evidencePayload(CANON.unboundLivepeerAssetId, 4));
     expect(second.status).toBe(201);
     expect(second.body.session_id).not.toBe(first.body.session_id);
     expect(second.body.observation_count).toBe(4);
     createdSessions.push(second.body.session_id);
     notes.push("D: unbound media persist creates a new historical session rather than overwriting");
 
-    const masterScoped = await page.evaluate(async (payload) => {
-      const response = await fetch("/api/authority/media/inspect", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      return { status: response.status, body: await response.json().catch(() => ({})) };
-    }, evidencePayload(CANON.unboundLivepeerAssetId, 3, CANON.universeId));
+    const masterScoped = await postInspect(page, evidencePayload(CANON.unboundLivepeerAssetId, 3, CANON.universeId));
     expect(masterScoped.status).toBe(201);
     createdSessions.push(masterScoped.body.session_id);
     notes.push("E: optional master-scoped persist remains valid and still anchors to the media asset");
@@ -283,6 +254,9 @@ test("Sentinel persists source-media inspection without creating canonical work"
     .eq("asset_id", CANON.unboundLivepeerAssetId);
   expect(sessionsAfterCleanup).toBe(sessionsBefore ?? 0);
 
-  assertRuntimeHealth(observe);
+  assertRuntimeHealth(observe, {
+    allowFailedUrl: (url, status) =>
+      url.includes("/api/authority/media/inspect") && (status === 400 || status === 404),
+  });
   reportEvidence(testInfo, "BROWSER VERIFIED", "Stage 3.8 Sentinel source-media persist", page.url(), notes, observe);
 });
