@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.4 Play + Stage 1.5 Creative Moment navigation + Stage 2.1 Universe curation workspace
+STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.2 ASSEMBLE Universe workspace
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
