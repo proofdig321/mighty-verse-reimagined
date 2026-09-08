@@ -80,7 +80,7 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
   const { data: bindings } = projIds.length
     ? await svc
         .from("projection_media_binding")
-        .select("projection_id, start_ms, end_ms, asset_id")
+        .select("binding_id, projection_id, start_ms, end_ms, asset_id")
         .in("projection_id", projIds)
         .eq("binding_type", "primary")
     : { data: [] };

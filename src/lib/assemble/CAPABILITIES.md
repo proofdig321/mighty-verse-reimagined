@@ -24,9 +24,11 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Creative Suite sections/nav | `src/lib/assemble/suite.ts` + `creative-suite-nav.tsx` | Identity / Mural / Scenes / Creative Moments | none | yes | hrefs injected | no | yes | Hosts future editors without being an editor |
 | Universe assembly presentation | `src/components/assemble/universe-assembly.tsx` + Scene/CM/Mural objects | same read-model | none | yes | `openHref` | no | yes | Composition surface: objects not catalogue tables |
 | Creative Suite composition helpers | `src/lib/assemble/composition.ts` | ordinals, short titles, shared CM ids, still params | none | yes | no | no | yes | Studio language; not Experience deck |
-| Scene object | `scene-object.tsx` | SuiteScene | identity + presence | yes | open record | consumes title | yes | Face-up, numbered, known. Not facedown. |
-| Scene identity | `scene-identity.ts` + `scene-identity-authoring.tsx` + `POST /api/authority/presentation` | title + description on `work_presentation` | identity-only upsert; preserves artwork/markdown | yes | yes | titles | yes | Stage 3.3. Names the Scene in Studio. No timing, order, creation, or Mural editor. |
-| Creative Moment object | `creative-moment-object.tsx` | UniverseAssemblyMoment | none | yes | open record | no | yes | Contributor-centred; Proverb sharing is live data |
+| Scene object | `scene-object.tsx` | SuiteScene | identity + timing + order + presence | yes | open record | consumes title + still + window | yes | Face-up, numbered, known. Not facedown. Not a timeline dashboard. |
+| Scene identity | `scene-identity.ts` + `scene-identity-authoring.tsx` + `POST /api/authority/presentation` | title + description on `work_presentation` | identity-only upsert; preserves artwork/markdown | yes | yes | titles | yes | Stage 3.3. Names the Scene in Studio. Does not create Scenes. |
+| Scene timing | `scene-timing.ts` + `scene-timing-authoring.tsx` + `PATCH /api/authority/media/timeline` | binding `start_ms`/`end_ms` | shapes existing window only | yes | yes | stills + playback windows | yes | Stage 3.5. Compact start/end on the Scene object. Sentinel still creates Scenes. |
+| Canonical Scene order | `scene-order.ts` + `scene-order-authoring.tsx` + `PATCH /api/authority/masters/sort-order` | `master.sort_order` 1..n | Move earlier / Move later | yes | yes | Suite + catalogue order | yes | Stage 3.7. Does not import Scene Deck shuffle. |
+| Creative Moment object | `creative-moment-object.tsx` | UniverseAssemblyMoment | identity + presence | yes | open record | no | yes | Contributor-centred; Proverb sharing is live data |
 | Mural presence | `mural-presence.tsx` | UniverseAssemblyMural | none | yes | open record + public mural link | stills only | yes | Stage presence; not a second player |
 | Relationship focus | `composition-surface.tsx` | hover/focus related ids | none | yes | no | no | yes | Makes shared Proverb visible without a graph |
 | Hierarchy breadcrumbs | `src/components/assemble/breadcrumb.tsx` | labels + hrefs | none | yes | chrome | no | yes | Ontology chrome |
@@ -43,12 +45,12 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Media inspect | `/authority/media/inspect` | asset identity + frames | none canonical | later | yes | no | existing | Asset-level inspect; not a Universe |
 | Media intake | `/authority/media/intake` | `media_intake` | create intake | later | yes | no | existing | MEDIA ≠ UNIVERSE |
 | Media readiness | `src/lib/media/readiness.ts` | intake / processing / playable / ready | none | yes | no | no | yes | Existing states; no invented workflow table |
-| Scene timing / order | suite Scenes section; `POST /api/authority/scenes`; sort-order; timeline PATCH | binding `start_ms`/`end_ms`, `sort_order` | Authority APIs exist | later | yes | no | shell only | Timing and order remain later. Scene creation stays in Sentinel. |
+| Scene timing / order | suite Scenes section; timeline PATCH; sort-order PATCH | binding `start_ms`/`end_ms`, `sort_order` | Suite hosts existing APIs | yes | yes | stills + sequence | yes | Stage 3.5 / 3.7. Scene creation stays in Sentinel. Catalogue drag-order remains; Suite uses accessible Move earlier/later. |
 | Scene ↔ Creative Moment | `presence.ts` + `presence-authoring.tsx` + `POST/DELETE /api/authority/scene-moment` | primary `scene_moment` join | relate/unrelate existing objects | yes | yes | consumes existing presence | yes | Stage 3.2. Suite authors who is present in which Scene. No new objects, projections, or media. Proverb sharing remains valid. |
-| Creative Moment identity | suite CM section; parent = Universe | master + presentation; `has_experience` | none in suite | later | yes | no | shell only | Not Mural-owned |
+| Creative Moment identity | `creative-moment-identity.ts` + `creative-moment-identity-authoring.tsx` + `POST /api/authority/presentation` | title + description; parent = Universe | identity-only upsert; preserves artwork/markdown | yes | yes | titles | yes | Stage 3.6. Same presentation primitive as Scene identity. Does not create projections. |
 | Moment Card / `/moments` / players | `src/components/` | projections | none | no | no | **yes** | no | Do not reuse as assemble UI |
 | Public `/worlds` Universe landing | `(public)/worlds/[masterId]` + `src/components/experience/universe-world.tsx` | Universe + Mural + mural-child Scenes + scene_moment + Creative Moments | none | yes | no | **yes** | yes | Stage 3.0 world encounter. Not a second Scene Deck. Not Suite objects. |
-| Public `/worlds` Scene Deck / Mural player | `(public)/` Scene Deck + MediaHero | projections + bindings | none | no | no | **yes** | no | EXPERIENCE playback. Facedown/shuffle stay here. |
+| Public `/worlds` Scene Deck / Mural player | `(public)/` Scene Deck + MediaHero | projections + bindings + Scene `start_ms` | none | no | no | **yes** | no | EXPERIENCE playback. Facedown/shuffle stay here. Revealed stills use Scene start time (Stage 3.4). |
 | Media / Mux / bindings / realization / intake | `/authority/media*` | media_asset, bindings, realization | Authority media APIs | later | yes | playback consumes | no | Not this stage |
 | Canonical record / publishing | `/authority/[masterId]` | six-stage journey | many | no | yes | no | no | Publishing, not suite |
 
@@ -56,13 +58,12 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 3.3
+## Product questions after Stage 3.7
 
-- Creative Suite can now name existing Scenes on Super Hero Ego. This is not a timeline editor, Scene creator, Mural editor, Creative Moment editor, or publish/realize workflow.
+- Creative Suite now names Scenes and Creative Moments, shapes existing Scene windows, and writes canonical Scene order on Super Hero Ego. This is not a timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
 - Gallery / Inspect still continue into Curate Studio with selected media identity. Create Work remains independent and still completes on the publishing record.
 - **Governance vs Experience.** `/authority/{id}` still carries a rights/realization checklist while authorised public Experience already plays. Solving that through a publish ontology is outside this stage.
-- **Sentinel UI persist.** `POST /api/authority/media/inspect` exists; Curate Studio inspection remains ephemeral. Not wired because persist currently requires a `master_id`, and unbound media has none. Provenance quality; deferred. Sentinel must not become creative authority.
+- **Sentinel inspect artifacts.** Schema is live (`inspection_session`, `frame_observation`). Persist API exists; Curate Studio inspection remains ephemeral because POST currently requires `master_id` and unbound media has none. Evidence may later inform Scene timing, storyboards, and animation without becoming canonical truth. Sentinel must not auto-create Scenes. Not skipped — deferred until that journey step.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
-- **Mural editor / Scene timing / Scene order / Creative Moment identity.** Scene identity authoring does not open those editors.
-- **Scene Deck revealed thumbnails.** Facedown/reveal/shuffle/playback work; revealed cards still use the mural-level time=0 poster. Experience polish, not Suite authoring.
-- Next natural Studio increment after identity: Scene timing hosted on the same object, without turning Studio into a timeline dashboard.
+- **Still deferred:** Mural editor, Scene creation in Suite, publish/realize, `media_realization`, facedown authoring in Studio, 2.5D, collectibles.
+- Scene Deck revealed thumbnails now use each Scene's `start_ms`. Shuffle remains presentation-only.

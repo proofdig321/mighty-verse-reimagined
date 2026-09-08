@@ -59,7 +59,7 @@ export default async function UniverseIdentityPage({
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground max-w-3xl">
           Curate the canonical title and description for this Universe.
-          Scene identity is authored on each Scene object. Mural, timing, order, and Creative Moment identity remain later increments.
+          Scene identity, Scene timing, canonical Scene order, and Creative Moment identity are authored on the composition objects. Mural editing remains a later increment.
         </p>
       </div>
 

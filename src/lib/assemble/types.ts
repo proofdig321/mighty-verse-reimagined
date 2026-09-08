@@ -17,6 +17,7 @@ export type UniverseAssemblyScene = {
   sort_order: number | null;
   start_ms: number | null;
   end_ms: number | null;
+  binding_id: string | null;
   projection_id: string | null;
   creative_moments: UniverseAssemblySceneMoment[];
   creative_moment_id: string | null;
@@ -37,6 +38,7 @@ export type UniverseAssemblyMural = {
 export type UniverseAssemblyMoment = {
   master_id: string;
   title: string | null;
+  description: string | null;
   has_experience: boolean;
   scene_ids: string[];
   scene_titles: string[];
@@ -62,6 +64,7 @@ export type UniverseAssemblyRows = {
   muralProjections: { projection_id: string; master_id: string }[];
   momentProjections: { projection_id: string; master_id: string }[];
   bindings: {
+    binding_id?: string | null;
     projection_id: string;
     start_ms: number | null;
     end_ms: number | null;

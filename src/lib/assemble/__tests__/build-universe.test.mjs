@@ -51,11 +51,11 @@ const assembly = buildUniverseAssembly({
     { projection_id: "89ba1c24-01c1-4bbd-8ed1-d48021600b71", master_id: REASON },
   ],
   bindings: [
-    { projection_id: "3039ca84-7e11-4eb6-8895-d16d13a899c3", start_ms: 36000, end_ms: 79000, asset_id: MUX_ASSET },
-    { projection_id: "bb802400-b385-4025-9bb8-63df53abd9be", start_ms: 80000, end_ms: 124000, asset_id: MUX_ASSET },
-    { projection_id: "9c045ea3-ab09-4a6f-b89c-02dce076b8da", start_ms: 149000, end_ms: 192000, asset_id: MUX_ASSET },
-    { projection_id: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd", start_ms: 193000, end_ms: 254000, asset_id: MUX_ASSET },
-    { projection_id: MURAL_PROJECTION, start_ms: 0, end_ms: 254800, asset_id: MUX_ASSET },
+    { binding_id: "6ca3869d-ca39-4422-bfd1-8b1353d64ea5", projection_id: "3039ca84-7e11-4eb6-8895-d16d13a899c3", start_ms: 36000, end_ms: 79000, asset_id: MUX_ASSET },
+    { binding_id: "9b8fbc44-5d1b-438f-9e4f-13ffe51d95fb", projection_id: "bb802400-b385-4025-9bb8-63df53abd9be", start_ms: 80000, end_ms: 124000, asset_id: MUX_ASSET },
+    { binding_id: "1765324d-8f8a-42f2-93c3-a2a3fec1356e", projection_id: "9c045ea3-ab09-4a6f-b89c-02dce076b8da", start_ms: 149000, end_ms: 192000, asset_id: MUX_ASSET },
+    { binding_id: "44130ab6-2dd9-49f0-b2aa-756b91550ece", projection_id: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd", start_ms: 193000, end_ms: 254000, asset_id: MUX_ASSET },
+    { binding_id: "374f27cd-25b7-4379-b7d2-b0d324bdd14b", projection_id: MURAL_PROJECTION, start_ms: 0, end_ms: 254800, asset_id: MUX_ASSET },
   ],
   assets: [{ asset_id: MUX_ASSET, provider: "mux", storage_ref: MUX_PLAYBACK }],
   relations: [
@@ -84,6 +84,8 @@ assert(scenes[SWORD_MASTER].creative_moment_title === "Reason", "Sword Master â†
 
 const proverb = assembly.creative_moments.find((moment) => moment.master_id === PROVERB);
 assert(proverb && proverb.has_experience === false, "Proverb is identity-only");
+assert(proverb.description == null, "Proverb description is assembled from presentation");
+assert(scenes[POWERHOUSE].binding_id === "6ca3869d-ca39-4422-bfd1-8b1353d64ea5", "Powerhouse binding is assembled for timing");
 assert(proverb.scene_titles.length === 2, "Proverb related to two Scenes");
 assert(proverb.scene_ids.includes(POWERHOUSE) && proverb.scene_ids.includes(HAND_TO_HAND), "Proverb scene_ids preserve sharing");
 

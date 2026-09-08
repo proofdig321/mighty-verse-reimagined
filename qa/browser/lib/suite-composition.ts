@@ -47,6 +47,15 @@ export async function expectCreativeSuiteComposition(page: Page) {
       `#universe-moment-${scene.creativeMomentId}`,
     );
     await expect(object.getByRole("button", { name: "Edit identity" })).toBeVisible();
+    await expect(object.getByRole("button", { name: "Edit timing" })).toBeVisible();
+    await expect(object.getByRole("button", { name: "Move earlier" })).toBeVisible();
+    await expect(object.getByRole("button", { name: "Move later" })).toBeVisible();
+    if (index === 0) {
+      await expect(object.getByRole("button", { name: "Move earlier" })).toBeDisabled();
+    }
+    if (index === sceneValues.length - 1) {
+      await expect(object.getByRole("button", { name: "Move later" })).toBeDisabled();
+    }
     await expect(object.getByRole("button", { name: "Add presence" })).toBeVisible();
     await expect(object.getByRole("button", { name: new RegExp(`Remove ${scene.creativeMomentTitle} from ${scene.shortName}`) })).toBeVisible();
     await expect(object.getByRole("link", { name: /Open record/i })).toHaveAttribute(
@@ -60,6 +69,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
     const object = moments.locator(`#universe-moment-${cm.masterId}`);
     await expect(object).toBeVisible();
     await expect(object.getByRole("heading", { name: cm.title, exact: true })).toBeVisible();
+    await expect(object.getByRole("button", { name: "Edit identity" })).toBeVisible();
   }
 
   const proverb = moments.locator(`#universe-moment-${CREATIVE_MOMENTS.proverb.masterId}`);

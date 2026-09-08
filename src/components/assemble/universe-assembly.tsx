@@ -17,6 +17,8 @@ export type UniverseAssemblyProps = {
   experienceHref?: string;
   canAuthorPresence?: boolean;
   canAuthorIdentity?: boolean;
+  canAuthorTiming?: boolean;
+  canAuthorOrder?: boolean;
 };
 
 function untitled(kind: string) {
@@ -31,6 +33,8 @@ export default function UniverseAssemblyView({
   experienceHref,
   canAuthorPresence = false,
   canAuthorIdentity = false,
+  canAuthorTiming = false,
+  canAuthorOrder = false,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -101,7 +105,7 @@ export default function UniverseAssemblyView({
               Scenes
             </h2>
             <p className="suite-section-note">
-              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Presence and Scene identity can be authored here. Timing and order remain later increments.
+              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Identity, timing, canonical order, and presence can be authored here. Sentinel still creates Scenes.
             </p>
           </div>
           {scenes.length === 0 ? (
@@ -115,9 +119,12 @@ export default function UniverseAssemblyView({
                     index={index}
                     sharedIds={sharedIds}
                     candidates={availablePresenceOptions(momentOptions, sceneCreativeMomentIds(scene))}
+                    muralSceneIds={scenes.filter((row) => row.mural_id === scene.mural_id).map((row) => row.master_id)}
                     universeId={data.master_id}
                     canAuthorPresence={canAuthorPresence}
                     canAuthorIdentity={canAuthorIdentity}
+                    canAuthorTiming={canAuthorTiming}
+                    canAuthorOrder={canAuthorOrder}
                     openHref={openHref(scene.master_id)}
                     openLabel={openLabel}
                   />
@@ -133,7 +140,7 @@ export default function UniverseAssemblyView({
               Creative Moments
             </h2>
             <p className="suite-section-note">
-              Contributor-centred units of this Universe, not owned by the Mural. A Creative Moment may relate to more than one Scene.
+              Contributor-centred units of this Universe, not owned by the Mural. A Creative Moment may relate to more than one Scene. Identity and presence can be authored here.
             </p>
           </div>
           {data.creative_moments.length === 0 ? (
@@ -147,6 +154,7 @@ export default function UniverseAssemblyView({
                     candidates={availablePresenceOptions(sceneOptions, moment.scene_ids)}
                     universeId={data.master_id}
                     canAuthorPresence={canAuthorPresence}
+                    canAuthorIdentity={canAuthorIdentity}
                     openHref={openHref(moment.master_id)}
                     openLabel={openLabel}
                   />

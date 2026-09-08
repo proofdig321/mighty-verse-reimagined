@@ -2,6 +2,7 @@ import Link from "next/link";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { UniverseAssemblyMoment } from "@/lib/assemble";
 import type { PresenceOption } from "@/lib/assemble/presence";
+import { CreativeMomentIdentity } from "./creative-moment-identity-authoring";
 import { MomentPresence } from "./presence-authoring";
 
 export function CreativeMomentObject({
@@ -9,6 +10,7 @@ export function CreativeMomentObject({
   candidates,
   universeId,
   canAuthorPresence,
+  canAuthorIdentity,
   openHref,
   openLabel,
 }: {
@@ -16,6 +18,7 @@ export function CreativeMomentObject({
   candidates: PresenceOption[];
   universeId: string;
   canAuthorPresence: boolean;
+  canAuthorIdentity: boolean;
   openHref: string;
   openLabel: string;
 }) {
@@ -39,10 +42,21 @@ export function CreativeMomentObject({
       <h3 id={headingId} className="suite-moment-title">
         {title}
       </h3>
+      {moment.description?.trim() ? (
+        <p className="suite-scene-description">{moment.description.trim()}</p>
+      ) : null}
       <p className="suite-moment-presence">
         {moment.has_experience ? "Experience representation present" : "Identity only"}
         {shared ? " · Shared across Scenes" : ""}
       </p>
+      <CreativeMomentIdentity
+        universeId={universeId}
+        momentId={moment.master_id}
+        momentLabel={title}
+        title={moment.title ?? ""}
+        description={moment.description ?? ""}
+        canAuthor={canAuthorIdentity}
+      />
       <MomentPresence
         universeId={universeId}
         momentId={moment.master_id}

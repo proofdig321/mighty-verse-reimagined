@@ -2,9 +2,10 @@ import type { UniverseAssembly, UniverseAssemblyScene } from "./types";
 
 /**
  * Creative Suite sections hosted by the Universe assembly surface.
- * Editors for Mural identity / Scene timing remain later increments.
- * Scene identity and Scene ↔ Creative Moment presence are authored on this surface.
+ * Scene identity, timing, canonical order, and Scene ↔ Creative Moment presence
+ * are authored on this surface. Creative Moment identity is authored here too.
  * Creative Moments are Universe-parented, not Mural-owned.
+ * Sentinel still creates Scenes. Scene Deck shuffle is not imported.
  */
 export const CREATIVE_SUITE_SECTIONS = [
   { id: "identity", label: "Identity", fragment: "universe-identity" },

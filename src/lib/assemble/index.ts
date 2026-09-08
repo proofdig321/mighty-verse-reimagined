@@ -69,3 +69,18 @@ export type {
   SceneIdentityDecision,
   SceneIdentityMaster,
 } from "./scene-identity";
+export { decideSceneTiming } from "./scene-timing";
+export type {
+  SceneTimingDecision,
+  SceneTimingMaster,
+} from "./scene-timing";
+export { decideCreativeMomentIdentity } from "./creative-moment-identity";
+export type {
+  CreativeMomentIdentityDecision,
+  CreativeMomentIdentityMaster,
+} from "./creative-moment-identity";
+export { decideSceneOrder, proposeMovedSceneOrder } from "./scene-order";
+export type {
+  SceneOrderDecision,
+  SceneOrderMaster,
+} from "./scene-order";

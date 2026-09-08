@@ -60,6 +60,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       sort_order: scene.sort_order ?? null,
       start_ms: binding?.start_ms ?? null,
       end_ms: binding?.end_ms ?? null,
+      binding_id: binding?.binding_id ?? null,
       projection_id: projection?.projection_id ?? null,
       creative_moments: creativeMoments,
       creative_moment_id: creativeMomentId,
@@ -96,6 +97,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
     return {
       master_id: moment.master_id,
       title: titleFor(moment.master_id),
+      description: descriptionFor(moment.master_id),
       has_experience: rows.momentProjections.some((row) => row.master_id === moment.master_id),
       scene_ids: relatedScenes.map((scene) => scene.master_id),
       scene_titles: relatedScenes.map((scene) => titleFor(scene.master_id) ?? "Untitled scene"),

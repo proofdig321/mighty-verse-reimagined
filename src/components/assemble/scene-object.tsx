@@ -6,6 +6,8 @@ import type { PresenceOption } from "@/lib/assemble/presence";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { CreativeStill } from "./creative-still";
 import { SceneIdentity } from "./scene-identity-authoring";
+import { SceneOrder } from "./scene-order-authoring";
+import { SceneTiming } from "./scene-timing-authoring";
 import { ScenePresence } from "./presence-authoring";
 
 export function SceneObject({
@@ -13,9 +15,12 @@ export function SceneObject({
   index,
   sharedIds,
   candidates,
+  muralSceneIds,
   universeId,
   canAuthorPresence,
   canAuthorIdentity,
+  canAuthorTiming,
+  canAuthorOrder,
   openHref,
   openLabel,
 }: {
@@ -23,9 +28,12 @@ export function SceneObject({
   index: number;
   sharedIds: string[];
   candidates: PresenceOption[];
+  muralSceneIds: string[];
   universeId: string;
   canAuthorPresence: boolean;
   canAuthorIdentity: boolean;
+  canAuthorTiming: boolean;
+  canAuthorOrder: boolean;
   openHref: string;
   openLabel: string;
 }) {
@@ -82,6 +90,24 @@ export function SceneObject({
           description={scene.description ?? ""}
           muralId={scene.mural_id}
           canAuthor={canAuthorIdentity}
+        />
+        <SceneTiming
+          universeId={universeId}
+          sceneId={scene.master_id}
+          sceneLabel={shortTitle}
+          muralId={scene.mural_id}
+          bindingId={scene.binding_id}
+          startMs={scene.start_ms}
+          endMs={scene.end_ms}
+          canAuthor={canAuthorTiming}
+        />
+        <SceneOrder
+          universeId={universeId}
+          muralId={scene.mural_id}
+          sceneId={scene.master_id}
+          sceneLabel={shortTitle}
+          orderedSceneIds={muralSceneIds}
+          canAuthor={canAuthorOrder}
         />
         <ScenePresence
           universeId={universeId}

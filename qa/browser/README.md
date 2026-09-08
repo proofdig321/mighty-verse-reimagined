@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.5 ASSEMBLE Curate Studio
+STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.5 ASSEMBLE Curate Studio + Stage 3.4–3.7 Suite/Experience
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -193,6 +193,14 @@ for production and is not part of `test:qa:browser:production`.
 Stage 3.3 Chrome: Creative Suite Scene objects expose **Edit identity**. Super Hero
 Ego Powerhouse can be named in place via `POST /api/authority/presentation`, then
 restored. Timing, presence, and artwork are not part of that write.
+
+Stage 3.4 Chrome: `/worlds/{universeId}/scenes` revealed cards request Mux
+thumbnails at each Scene start (`time=36`, `80`, `149`, `193`), not mural `time=0`.
+Shuffle remains.
+
+Stage 3.5–3.7 Chrome: Creative Suite hosts **Edit timing**, **Move earlier/later**,
+and Creative Moment **Edit identity** on the composition objects. Super Hero Ego
+writes are restored in each smoke.
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.
