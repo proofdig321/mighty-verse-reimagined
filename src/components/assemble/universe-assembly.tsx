@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { formatTimelineMs } from "@/lib/media/timing";
+import { suiteScenes } from "@/lib/assemble/suite";
 import type { UniverseAssembly } from "@/lib/assemble";
 
 export type UniverseAssemblyProps = {
@@ -13,12 +14,16 @@ function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
 }
 
+function deferredNote(copy: string) {
+  return <p className="text-xs text-muted-foreground">{copy}</p>;
+}
+
 export default function UniverseAssemblyView({
   data,
   openHref,
   openLabel = "Open",
 }: UniverseAssemblyProps) {
-  const sceneCount = data.murals.reduce((n, mural) => n + mural.scenes.length, 0);
+  const scenes = suiteScenes(data);
 
   return (
     <div className="space-y-10">
@@ -48,7 +53,7 @@ export default function UniverseAssemblyView({
       <div className="grid grid-cols-3 gap-px overflow-hidden rounded-lg border border-border bg-border">
         {[
           { label: "Murals", value: data.murals.length },
-          { label: "Scenes", value: sceneCount },
+          { label: "Scenes", value: scenes.length },
           { label: "Creative Moments", value: data.creative_moments.length },
         ].map((item) => (
           <div key={item.label} className="bg-card px-5 py-5">
@@ -59,18 +64,21 @@ export default function UniverseAssemblyView({
       </div>
 
       <section className="space-y-3" aria-labelledby="universe-mural">
-        <h2 id="universe-mural" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Mural
-        </h2>
+        <div className="space-y-1">
+          <h2 id="universe-mural" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Mural
+          </h2>
+          {deferredNote("Complete audiovisual expression of this Universe. Mural curation is a later increment.")}
+        </div>
         {data.murals.length === 0 ? (
           <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
             No mural assembled for this Universe yet.
           </p>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {data.murals.map((mural) => (
               <div key={mural.master_id} className="rounded-lg border border-border overflow-hidden">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border bg-muted/20 px-4 py-3">
+                <div className="flex flex-wrap items-center justify-between gap-3 bg-muted/20 px-4 py-3">
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">
                       {mural.title ?? untitled("mural")}
@@ -87,61 +95,75 @@ export default function UniverseAssemblyView({
                     </Link>
                   </div>
                 </div>
-
-                <div className="px-4 py-3 border-b border-border">
-                  <h3 className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                    Scenes
-                  </h3>
-                </div>
-                {mural.scenes.length === 0 ? (
-                  <p className="px-4 py-6 text-sm text-muted-foreground">No scenes assembled on this Mural yet.</p>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead className="border-b border-border bg-muted/10">
-                      <tr>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Scene</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Timing</th>
-                        <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Creative Moment</th>
-                        <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"></th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-border">
-                      {mural.scenes.map((scene) => (
-                        <tr key={scene.master_id} className="hover:bg-muted/20 transition-colors">
-                          <td className="px-4 py-3 font-medium text-foreground">
-                            {scene.title ?? untitled("scene")}
-                          </td>
-                          <td className="px-4 py-3 hidden md:table-cell font-mono text-xs text-muted-foreground">
-                            {scene.start_ms != null && scene.end_ms != null
-                              ? `${formatTimelineMs(scene.start_ms)} → ${formatTimelineMs(scene.end_ms)}`
-                              : <span className="font-sans italic text-muted-foreground/50">Not set</span>}
-                          </td>
-                          <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">
-                            {scene.creative_moment_title ?? <span className="italic text-muted-foreground/50">Not related</span>}
-                          </td>
-                          <td className="px-4 py-3 text-right">
-                            <Link
-                              href={openHref(scene.master_id)}
-                              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                            >
-                              {openLabel}
-                            </Link>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
               </div>
             ))}
           </div>
         )}
       </section>
 
+      <section className="space-y-3" aria-labelledby="universe-scenes">
+        <div className="space-y-1">
+          <h2 id="universe-scenes" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Scenes
+          </h2>
+          {deferredNote("Canonical visual units on the Mural. Scene curation is a later increment.")}
+        </div>
+        {scenes.length === 0 ? (
+          <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
+            No scenes assembled for this Universe yet.
+          </p>
+        ) : (
+          <div className="rounded-lg border border-border overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border bg-muted/20">
+                <tr>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Scene</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden lg:table-cell">Mural</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Timing</th>
+                  <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Creative Moment</th>
+                  <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {scenes.map((scene) => (
+                  <tr key={scene.master_id} className="hover:bg-muted/20 transition-colors">
+                    <td className="px-4 py-3 font-medium text-foreground">
+                      {scene.title ?? untitled("scene")}
+                    </td>
+                    <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                      {scene.mural_title ?? untitled("mural")}
+                    </td>
+                    <td className="px-4 py-3 hidden md:table-cell font-mono text-xs text-muted-foreground">
+                      {scene.start_ms != null && scene.end_ms != null
+                        ? `${formatTimelineMs(scene.start_ms)} → ${formatTimelineMs(scene.end_ms)}`
+                        : <span className="font-sans italic text-muted-foreground/50">Not set</span>}
+                    </td>
+                    <td className="px-4 py-3 hidden sm:table-cell text-xs text-muted-foreground">
+                      {scene.creative_moment_title ?? <span className="italic text-muted-foreground/50">Not related</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <Link
+                        href={openHref(scene.master_id)}
+                        className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        {openLabel}
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
+
       <section className="space-y-3" aria-labelledby="universe-moments">
-        <h2 id="universe-moments" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Creative Moments
-        </h2>
+        <div className="space-y-1">
+          <h2 id="universe-moments" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            Creative Moments
+          </h2>
+          {deferredNote("Contributor-centred units of this Universe, not owned by the Mural. Creative Moment curation is a later increment.")}
+        </div>
         {data.creative_moments.length === 0 ? (
           <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
             No Creative Moments assembled in this Universe yet.

@@ -1,4 +1,5 @@
 import { buildUniverseAssembly } from "../build-universe";
+import { suiteScenes } from "../suite";
 
 const UNIVERSE = "05ccc0c6-75f9-4864-b0c1-af5e36bf45cc";
 const MURAL = "a75ae8af-7b48-4b67-8392-d89447bae370";
@@ -76,5 +77,10 @@ assert(proverb.scene_titles.length === 2, "Proverb related to two Scenes");
 
 const mothipa = assembly.creative_moments.find((moment) => moment.master_id === MOTHIPA);
 assert(mothipa && mothipa.has_experience === true, "Mothipa has an experiential projection");
+
+const suite = suiteScenes(assembly);
+assert(suite.length === 4, "suite flattens four Scenes");
+assert(suite.every((scene) => scene.mural_id === MURAL), "Scenes remain mural children, not Universe-owned");
+assert(suite.find((scene) => scene.master_id === POWERHOUSE)?.creative_moment_title === "Proverb", "Powerhouse still related to Proverb");
 
 console.log("Assemble Universe assembly tests: all passed");

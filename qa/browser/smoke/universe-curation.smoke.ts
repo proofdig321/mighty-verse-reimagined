@@ -48,7 +48,12 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await workspaceLink.click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
-  await expect(page.getByText("Universe curation").first()).toBeVisible();
+  await expect(page.getByText("Creative Suite").first()).toBeVisible();
+  const suiteNav = page.getByRole("navigation", { name: "Creative Suite" });
+  await expect(suiteNav.getByRole("link", { name: "Identity", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Mural", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Creative Moments", exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Universes", exact: true })).toHaveAttribute(
     "href",
     ROUTES.authorityUniverses,
@@ -59,14 +64,18 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await expect(page.getByRole("heading", { name: /^Mural$/i })).toBeVisible();
   await expect(page.getByText(CANON.muralId)).toBeVisible();
 
-  const muralSection = page.locator("section[aria-labelledby='universe-mural']");
+  const scenesSection = page.locator("section[aria-labelledby='universe-scenes']");
   const momentsSection = page.locator("section[aria-labelledby='universe-moments']");
 
+  await suiteNav.getByRole("link", { name: "Scenes", exact: true }).click();
+  await expect(scenesSection).toBeVisible();
+
   for (const scene of Object.values(SCENE_MOMENTS)) {
-    await expect(muralSection.getByRole("cell", { name: scene.sceneTitle, exact: true })).toBeVisible();
-    notes.push(`workspace Scene ${scene.sceneTitle} → ${scene.creativeMomentTitle}`);
+    await expect(scenesSection.getByRole("cell", { name: scene.sceneTitle, exact: true })).toBeVisible();
+    notes.push(`suite Scene ${scene.sceneTitle} → ${scene.creativeMomentTitle}`);
   }
 
+  await suiteNav.getByRole("link", { name: "Creative Moments", exact: true }).click();
   await expect(page.getByRole("heading", { name: /Creative Moments/i })).toBeVisible();
   for (const cm of Object.values(CREATIVE_MOMENTS)) {
     await expect(momentsSection.getByRole("cell", { name: cm.title, exact: true })).toBeVisible();
@@ -85,7 +94,7 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   reportEvidence(
     testInfo,
     "BROWSER VERIFIED",
-    "Super Hero Ego Universe curation workspace",
+    "Super Hero Ego Creative Suite",
     page.url(),
     notes,
     observe,

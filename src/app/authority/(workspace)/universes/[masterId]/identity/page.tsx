@@ -4,7 +4,9 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseAssembly } from "@/lib/assemble";
+import { creativeSuiteNavItems } from "@/lib/assemble/suite";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
+import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import IdentityCurationClient from "./identity-curation-client";
 
 export default async function UniverseIdentityPage({
@@ -23,6 +25,7 @@ export default async function UniverseIdentityPage({
   if (!data) notFound();
 
   const title = data.title ?? "Untitled universe";
+  const suiteHref = `/authority/universes/${data.master_id}`;
 
   return (
     <div className="space-y-10">
@@ -30,14 +33,14 @@ export default async function UniverseIdentityPage({
         items={[
           { label: "Authority", href: "/authority" },
           { label: "Universes", href: "/authority/universes" },
-          { label: title, href: `/authority/universes/${data.master_id}` },
+          { label: title, href: suiteHref },
           { label: "Identity" },
         ]}
       />
 
       <div className="space-y-1 min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Universe identity
+          Creative Suite
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground max-w-3xl">
@@ -45,6 +48,8 @@ export default async function UniverseIdentityPage({
           Mural, Scene, and Creative Moment editing remain later increments.
         </p>
       </div>
+
+      <CreativeSuiteNav items={creativeSuiteNavItems(suiteHref, "identity")} current="identity" />
 
       <IdentityCurationClient
         masterId={data.master_id}

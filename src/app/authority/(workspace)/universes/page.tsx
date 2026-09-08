@@ -46,7 +46,7 @@ export default async function UniversesPage() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Canonical</p>
         <h1 className="text-3xl font-semibold tracking-tight">Universes</h1>
         <p className="text-sm text-muted-foreground">
-          Top-level canonical containers. Open a Universe to enter its curation workspace.
+          Top-level canonical containers. Open a Universe to enter its Creative Suite.
           {universes.length > 0 && <span className="ml-2 text-muted-foreground/60">{universes.length} universe{universes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>
@@ -81,7 +81,7 @@ export default async function UniversesPage() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <Link href={`/authority/universes/${u.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      Open workspace <ChevronRight size={13} />
+                      Open Creative Suite <ChevronRight size={13} />
                     </Link>
                   </td>
                 </tr>
