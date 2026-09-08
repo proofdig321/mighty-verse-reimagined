@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 1.3 production Moment Mux playback verified)
+STATUS: current as of 2026-09-08 (Stage 1.4 sibling Scene Moment playback verified)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -69,10 +69,10 @@ They live in the `master` table with `canonical_type` values:
 **Four canonical Scenes (projection_id → timing):**
 | Scene | Projection ID | start_ms | end_ms |
 |---|---|---|---|
-| Golden Shovel — Powerhouse | `3039ca84-...` | 36000 | 79000 |
-| Mothipa — Dark Knight | `bb802400-...` | 80000 | 124000 |
-| ProVerb — Hand-to-Hand | `9c045ea3-...` | 149000 | 192000 |
-| Reason — Sword Master | `8100033e-...` | 193000 | 254000 |
+| Golden Shovel — Powerhouse | `3039ca84-7e11-4eb6-8895-d16d13a899c3` | 36000 | 79000 |
+| Mothipa — Dark Knight | `bb802400-b385-4025-9bb8-63df53abd9be` | 80000 | 124000 |
+| ProVerb — Hand-to-Hand | `9c045ea3-ab09-4a6f-b89c-02dce076b8da` | 149000 | 192000 |
+| Reason — Sword Master | `8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` | 193000 | 254000 |
 
 **Authority holder:** participant `866390ff-5d45-4c15-b64e-e7c0655780b8`
 - authority_record: `b7b453f9-...`
@@ -213,7 +213,7 @@ applied migration.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
 - `/universes/{masterId}` is not a live route (404). Canonical public Universe pages are `/worlds/{masterId}`.
 - `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
-- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` through the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (seek 193s, Play, painted frame, no Livepeer). `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
+- Mural Mux player: Stage 1.1 asserts Play on `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` locally. Stage 1.2 Chrome-verified the same Play path on the GitHub homepageUrl Vercel production origin. Stage 1.3 Chrome-verified Sword Master Moment Play on `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`. Stage 1.4 Chrome-verified Powerhouse, Dark Knight, and Hand-to-Hand through Universe → Mural sidebar navigation on the same shared `ProjectionMediaPlayer` / `MuxPlayer` path (Scene seek, Play, painted frame, end reset-to-start, no Livepeer). `MuxPlayer` keys HLS on `source.endpoint` / `source.playbackId` and destroys hls.js on cleanup.
 
 ---
 
@@ -319,13 +319,14 @@ npm run test:qa:browser
 
 Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe at
 `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`, Super Hero Ego Mural Play at
-`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`, Super Hero Ego Sword Master
-Moment Play at `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd`, `/moments`,
-`/authority/curate`, `/editor`.
+`/worlds/a75ae8af-7b48-4b67-8392-d89447bae370`, Super Hero Ego Scene Moments at
+`/moments/{projectionId}` for Powerhouse, Dark Knight, Hand-to-Hand, and Sword
+Master, `/moments`, `/authority/curate`, `/editor`.
 Smoke files match `qa/browser/smoke/*.smoke.ts`. Stage 1.1 proves actual Mux
 playback after Play locally. Stage 1.2 proves the same Play path on the
 deployed Vercel production origin (GitHub repository `homepageUrl`). Stage 1.3
-reuses that production command for the canonical Sword Master Moment as well.
+proves Sword Master Moment Play. Stage 1.4 proves the three sibling Scene
+Moments through Universe → Mural navigation on the same production command.
 Production Chrome verification is opt-in:
 
 ```bash

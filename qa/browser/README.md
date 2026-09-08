@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1 local Play + Stage 1.2 production Mural Play + Stage 1.3 Moment Play coverage
+STATUS: Stage 1 smoke + Stage 1.1–1.3 Play + Stage 1.4 sibling Scene Moment Play
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -73,6 +73,7 @@ The config reuses an existing dev server when one is already listening.
 | Super Hero Ego Universe | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Canonical Universe page, mural CTA, Scene Deck, Mux HLS evidence |
 | Super Hero Ego Mural | `/worlds/a75ae8af-7b48-4b67-8392-d89447bae370` | Player mount, HLS URL, stream.mux.com, Play click, readyState, currentTime advance, painted frame |
 | Super Hero Ego Sword Master Moment | `/moments/8100033e-4c7e-448f-8b9c-b9ff97fdc3fd` | Same shared player as Mural; Scene title; Mux HLS; seek near 193s; Play; currentTime advances inside 193–254s; painted frame; no Livepeer |
+| Super Hero Ego sibling Moments | Powerhouse / Dark Knight / Hand-to-Hand | Universe → View Mural → sidebar `/moments/{projectionId}`; same shared player; Scene windows 36–79s / 80–124s / 149–192s; Play; end reset-to-start; no Livepeer |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Route loads; auth gate or Curate Universe/Mural selector |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |
@@ -151,8 +152,10 @@ QA_PRODUCTION_URL="$(gh repo view --json homepageUrl --jq .homepageUrl)"
 npm run test:qa:browser:production
 ```
 
-That command runs `smoke/mural-playback.smoke.ts` and
-`smoke/moment-playback.smoke.ts`. It does not start `next dev`.
+That command runs `smoke/mural-playback.smoke.ts`,
+`smoke/moment-playback.smoke.ts` (Sword Master plus Powerhouse, Dark Knight,
+Hand-to-Hand), and `smoke/scene-moment-navigation.smoke.ts`. It does not start
+`next dev`.
 The GitHub field is `homepageUrl` (not `homepage`).
 
 Stage 1.2 Chrome result on production Super Hero Ego Mural
@@ -166,6 +169,11 @@ relationships visible, same Mux HLS, seek to 193.000s before Play, Play
 invoked, `readyState=4`, `currentTime` 193.000 → 193.372 inside 193–254s,
 1280×720 painted frame (`nonBlackRatio=1.000`), no Livepeer requests.
 Same production command still keeps Mural Play green (`currentTime` 0 → 0.448).
+
+Stage 1.4 Chrome on production: Universe → View Mural exposes all four Scene
+Moment hrefs. Sibling Play: Powerhouse 36.000→36.494, Dark Knight 80.000→80.406,
+Hand-to-Hand window 149–192s; each seeks to Scene start, paints a frame, and
+resets to start at the Scene end. Sword Master and Mural remain green.
 
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.
