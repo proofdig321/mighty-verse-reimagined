@@ -7,13 +7,18 @@ This directory is the authoritative constitutional context for Mighty Verse Reim
 ```
 .mighty-verse/
 ├── README.md                     ← this file
+├── AGENT.md                      ← practical working context (start here)
 ├── 01-soul.md                    ← what Mighty Verse fundamentally is
 ├── 02-canon.md                   ← canonical concepts and their definitions
 ├── 03-principles.md              ← product, creative, and architectural principles
 ├── 04-evolution.md               ← decisions, rejected approaches, lessons, open questions
+├── 05-architecture.md            ← deep constitutional model
 └── evidence/
     └── v1-historical-summary.md  ← what the old implementation attempted and what was learned
 ```
+
+Browser QA lives outside this directory at `qa/browser/`. `.mighty-verse/AGENT.md`
+is still the authoritative pointer for how and when to run it.
 
 ## Document Status Markers
 

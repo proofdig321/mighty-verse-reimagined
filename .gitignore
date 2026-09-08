@@ -13,3 +13,10 @@ tsconfig.tsbuildinfo
 .vercel
 .env*
 env.local
+
+# browser QA artifacts
+qa/browser/test-results/
+qa/browser/playwright-report/
+qa/browser/blob-report/
+test-results/
+playwright-report/

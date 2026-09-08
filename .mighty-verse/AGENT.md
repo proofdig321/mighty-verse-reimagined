@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-10
+STATUS: current as of 2026-09-08 (Stage 1 browser QA foundation)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -211,6 +211,8 @@ applied migration.
 - Sentinel has no persistent identity (no `inspection_session` in canonical ontology).
 - Scene rebind UI: API is safe; no UI surface yet.
 - Livepeer second Universe `f11c3aba`: not tested in this session but code paths preserved.
+- `/universes/{masterId}` is not a live route (404). Super Hero Ego is at `/worlds/{masterId}`.
+- `/authority/curate` requires an authenticated participant; unauthenticated browser QA only verifies the sign-in gate.
 
 ---
 
@@ -254,6 +256,10 @@ node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/
 # Sentinel tests (must remain 6/6)
 node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs \
   src/lib/media/__tests__/sentinel.test.mjs
+
+# Browser smoke (Chrome, against the running app — see §11)
+npm run dev                      # if not already running
+npm run test:qa:browser
 ```
 
 ### Git push command
@@ -279,9 +285,34 @@ DATABASE (live Supabase queries)
 BROWSER (actual UI verification)
 ```
 
-When browser access is unavailable in the agent environment, state that explicitly
-and perform the strongest available programmatic verification instead.
+**Evidence labels — use these exactly, never mix them:**
+
+- `BROWSER VERIFIED` — Chrome executed the route/action and observed the result
+- `STATIC VERIFIED` — only source/code/configuration was inspected
+- `TEST VERIFIED` — a deterministic automated test passed (no browser)
+- `NOT VERIFIED` — the environment prevented actual browser verification
+
+When browser access is unavailable, state `NOT VERIFIED` explicitly.
 Do not claim browser verification occurred if it did not.
+
+### Stage 1 foundation
+
+Config and smoke suite: `qa/browser/` (see `qa/browser/README.md`).
+Chrome channel is used. Production components must not contain QA logic.
+
+Start the app, then run smoke:
+
+```bash
+npm run dev
+npm run test:qa:browser
+```
+
+Stage 1 routes: `/`, `/universes`, Super Hero Ego Universe
+(`05ccc0c6-75f9-4864-b0c1-af5e36bf45cc`), `/moments`, `/authority/curate`, `/editor`.
+
+The live Universe page is `/worlds/{masterId}`. `/universes/{masterId}` is not a
+current route; record that as a QA finding rather than adding a product redirect
+in this stage.
 
 ---
 
