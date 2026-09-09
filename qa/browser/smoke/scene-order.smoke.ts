@@ -37,26 +37,25 @@ test("Creative Suite authors canonical Scene order without importing Scene Deck 
   notes.push("A: unauthenticated Scene order mutation is rejected");
 
   await applyAuthoritySession(context, baseURL);
-  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" });
   await restoreSceneOrder(page);
   await page.reload({ waitUntil: "domcontentloaded" });
 
   try {
-    const scenes = page.locator("section[aria-labelledby='universe-scenes']");
     await expect(page.getByRole("button", { name: /shuffle/i })).toHaveCount(0);
-    const powerhouse = scenes.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`);
-    const darkKnight = scenes.locator(`#universe-scene-${SCENE_MOMENTS.darkKnight.sceneMasterId}`);
+    const powerhouse = page.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`);
     await expect(powerhouse.locator(".suite-scene-ordinal")).toHaveText("01");
-    await expect(darkKnight.locator(".suite-scene-ordinal")).toHaveText("02");
     await expect(powerhouse.getByRole("button", { name: "Move earlier" })).toBeDisabled();
-    notes.push("B: canonical order is 01 Powerhouse, 02 Dark Knight; no shuffle control");
+    notes.push("B: canonical order is 01 Powerhouse; no shuffle control");
 
     await powerhouse.getByRole("button", { name: "Move later" }).click();
-    await expect(darkKnight.locator(".suite-scene-ordinal")).toHaveText("01");
     await expect(powerhouse.locator(".suite-scene-ordinal")).toHaveText("02");
     await expect(powerhouse.getByRole("heading", { name: /Scene 02\. Powerhouse/ })).toBeVisible();
-    await expect(darkKnight.getByRole("heading", { name: /Scene 01\. Dark Knight/ })).toBeVisible();
-    notes.push("C: Move later swaps Powerhouse with Dark Knight on the composition surface");
+    await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
+    const deck = page.locator("section[aria-labelledby='universe-scenes']");
+    await expect(deck.locator(`#universe-scene-${SCENE_MOMENTS.darkKnight.sceneMasterId}`).locator(".suite-scene-ordinal")).toHaveText("01");
+    await expect(deck.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`).locator(".suite-scene-ordinal")).toHaveText("02");
+    notes.push("C: Move later swaps Powerhouse with Dark Knight without mutating public Scene Deck");
   } finally {
     await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" }).catch(() => null);
     await restoreSceneOrder(page);

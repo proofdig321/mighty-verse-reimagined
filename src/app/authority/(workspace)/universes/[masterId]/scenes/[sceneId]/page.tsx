@@ -43,7 +43,6 @@ export default async function UniverseSceneWorkspacePage({
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
       workspaceLabel={sceneShortTitle(scene.title) ?? scene.title ?? "Scene"}
-      lead="Scene workspace. Canonical authoring stays here. Public Scene Deck shuffle does not change this Scene."
     >
       <div className="suite-stack">
         <StudioScenesWorkspace
@@ -53,6 +52,7 @@ export default async function UniverseSceneWorkspacePage({
           canAuthorTiming
           canAuthorOrder
           focusSceneId={sceneId}
+          fromCurate={fromCurate}
         />
         <section className="suite-section" aria-labelledby="scene-production">
           <div className="suite-section-head">

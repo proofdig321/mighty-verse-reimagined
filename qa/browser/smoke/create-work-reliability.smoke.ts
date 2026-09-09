@@ -36,7 +36,7 @@ test("Create Work and Curate expose processing and continuation without hidden U
   notes.push("C: Bound Curate media offers Inspect and Creative Suite continuation");
 
   await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("heading", { name: "Storyboard", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name: "Storyboard", exact: true })).toBeVisible();
   await expect(page.getByText(/2\.5D/i).first()).toBeVisible();
   await page.screenshot({ path: "/opt/cursor/artifacts/super_hero_ego_suite_storyboard.png", fullPage: true });
   notes.push("D: Super Hero Ego Creative Suite still mounts Storyboard and 2.5D");

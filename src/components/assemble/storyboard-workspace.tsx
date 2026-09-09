@@ -308,6 +308,8 @@ function StoryboardEvidencePanel({
     <button
       type="button"
       className={cn("storyboard-panel", selected && "storyboard-panel-current")}
+      data-panel-kind={panel.kind}
+      data-scene-id={panel.scene_master_id ?? undefined}
       onClick={onSelect}
     >
       {panel.still_url ? (

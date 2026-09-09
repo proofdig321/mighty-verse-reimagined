@@ -83,7 +83,7 @@ export function ScenePresence({
           <ul className="suite-presence-list">
             {related.map((moment) => (
               <li key={moment.master_id} className="suite-presence-item">
-                <Link href={`/authority/universes/${universeId}/scenes#universe-moment-${moment.master_id}`} className="suite-relation-link">
+                <Link href={`#universe-moment-${moment.master_id}`} className="suite-relation-link">
                   {optionLabel(moment, "moment")}
                 </Link>
                 {canAuthor ? (
@@ -140,7 +140,7 @@ export function MomentPresence({
           <ul className="suite-presence-list">
             {related.map((scene) => (
               <li key={scene.master_id} className="suite-presence-item">
-                <Link href={`/authority/universes/${universeId}/scenes#universe-scene-${scene.master_id}`} className="suite-relation-link">
+                <Link href={`/authority/universes/${universeId}/scenes/${scene.master_id}`} className="suite-relation-link">
                   {optionLabel(scene, "scene")}
                 </Link>
                 {canAuthor ? (

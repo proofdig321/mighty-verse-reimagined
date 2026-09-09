@@ -25,16 +25,12 @@ export default async function UniverseProductionPage({
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
       workspaceLabel="Production"
-      lead="Production turns storyboard intent into executable media work. Mux stays the infrastructure — playback IDs live in technical details."
     >
       <section className="suite-section" aria-labelledby="universe-production">
         <div className="suite-section-head">
           <h2 id="universe-production" className="suite-section-title">
             Production
           </h2>
-          <p className="suite-section-note">
-            Scene-centric instruction layer. A production plan is not a Scene and not canonical truth.
-          </p>
         </div>
         <ProductionBriefs
           universeId={workspace.data.master_id}

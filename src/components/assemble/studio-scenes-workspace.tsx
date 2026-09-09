@@ -5,6 +5,7 @@ import type { UniverseAssembly } from "@/lib/assemble";
 import { CompositionSurface } from "./composition-surface";
 import { CreativeMomentObject } from "./creative-moment-object";
 import { SceneObject } from "./scene-object";
+import { StudioSceneDeck } from "./studio-scene-deck";
 
 export function StudioScenesWorkspace({
   data,
@@ -13,6 +14,7 @@ export function StudioScenesWorkspace({
   canAuthorTiming = false,
   canAuthorOrder = false,
   focusSceneId,
+  fromCurate = false,
 }: {
   data: UniverseAssembly;
   canAuthorPresence?: boolean;
@@ -20,6 +22,7 @@ export function StudioScenesWorkspace({
   canAuthorTiming?: boolean;
   canAuthorOrder?: boolean;
   focusSceneId?: string;
+  fromCurate?: boolean;
 }) {
   const scenes = suiteScenes(data);
   const sharedIds = [...sharedCreativeMomentIds(scenes)];
@@ -38,6 +41,7 @@ export function StudioScenesWorkspace({
   const visibleMoments = focusSceneId
     ? data.creative_moments.filter((moment) => relatedMomentIds.has(moment.master_id))
     : data.creative_moments;
+  const from = fromCurate ? "curate" : null;
 
   return (
     <CompositionSurface>
@@ -45,15 +49,12 @@ export function StudioScenesWorkspace({
         <section className="suite-section" aria-labelledby="universe-scenes">
           <div className="suite-section-head">
             <h2 id="universe-scenes" className="suite-section-title">
-              Scenes
+              {focusSceneId ? "Scene" : "Scene deck"}
             </h2>
-            <p className="suite-section-note">
-              Face-up canonical visual units. Shared Creative Moments stay shared. Identity, timing, canonical order, and presence are authored here. Sentinel proposes windows; it does not create Scenes.
-            </p>
           </div>
           {visibleScenes.length === 0 ? (
             <p className="suite-empty">No scenes assembled for this Universe yet.</p>
-          ) : (
+          ) : focusSceneId ? (
             <ol className="suite-scene-grid">
               {visibleScenes.map((scene) => {
                 const index = scenes.findIndex((row) => row.master_id === scene.master_id);
@@ -77,6 +78,8 @@ export function StudioScenesWorkspace({
                 );
               })}
             </ol>
+          ) : (
+            <StudioSceneDeck universeId={data.master_id} scenes={scenes} from={from} identified />
           )}
         </section>
 
@@ -85,9 +88,6 @@ export function StudioScenesWorkspace({
             <h2 id="universe-moments" className="suite-section-title">
               Creative Moments
             </h2>
-            <p className="suite-section-note">
-              Contributor-centred units of this Universe, not owned by the Mural. A Creative Moment may relate to more than one Scene.
-            </p>
           </div>
           {visibleMoments.length === 0 ? (
             <p className="suite-empty">No Creative Moments assembled in this Universe yet.</p>

@@ -88,7 +88,10 @@ export function resolveStudioHash(hash: string): {
   if (!id) return null;
   const mapped = STUDIO_HASH_WORKSPACES[id];
   if (mapped) return mapped;
-  if (id.startsWith("universe-scene-") || id.startsWith("universe-moment-")) {
+  if (id.startsWith("universe-scene-")) {
+    return { path: `scenes/${id.slice("universe-scene-".length)}` };
+  }
+  if (id.startsWith("universe-moment-")) {
     return { path: "scenes", retainHash: id };
   }
   return null;

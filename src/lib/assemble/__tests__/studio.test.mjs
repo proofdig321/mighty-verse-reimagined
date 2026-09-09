@@ -101,6 +101,6 @@ assert(nav.find((item) => item.id === "preview")?.href === `${suite}/preview`, "
 assert(suiteChildHref(`${suite}?from=curate`, "scenes") === `${suite}/scenes?from=curate`, "child routes preserve Curate origin");
 assert(creativeSuiteWorkspaceHref(UNIVERSE, "sentinel") === `${suite}/storyboard?source=sentinel`, "Sentinel evidence lives on Storyboard");
 assert(resolveStudioHash("universe-sentinel")?.path === "storyboard", "legacy Sentinel hash maps to Storyboard");
-assert(resolveStudioHash("universe-scene-4790c7cf-bb19-4a01-a243-e5c3eb680555")?.path === "scenes", "legacy Scene hash maps to Scenes workspace");
+assert(resolveStudioHash("universe-scene-4790c7cf-bb19-4a01-a243-e5c3eb680555")?.path === "scenes/4790c7cf-bb19-4a01-a243-e5c3eb680555", "legacy Scene hash maps to the Scene workspace");
 
 console.log("Assemble Curate Studio tests: all passed");

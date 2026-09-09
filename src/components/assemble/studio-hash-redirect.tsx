@@ -6,7 +6,7 @@ import { resolveStudioHash, suiteChildHref } from "@/lib/assemble/suite";
 
 /**
  * Maps legacy Studio hash fragments onto child workspace routes.
- * Scene/Moment hashes stay on the Scenes workspace.
+ * Scene hashes open `/scenes/[sceneId]`. Moment hashes stay on Scenes.
  */
 export function StudioHashRedirect({ suiteHref }: { suiteHref: string }) {
   const router = useRouter();

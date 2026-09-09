@@ -469,6 +469,32 @@
     text-decoration: none;
   }
 
+  .studio-scene-card-still {
+    position: relative;
+  }
+
+  .studio-inspector > summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .studio-inspector-body {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .suite-intelligence-block summary {
+    cursor: pointer;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
   .studio-material-tabs {
     display: flex;
     flex-wrap: wrap;

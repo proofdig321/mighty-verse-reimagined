@@ -28,7 +28,6 @@ export default async function UniverseStoryboardPage({
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
       workspaceLabel="Storyboard"
-      lead="Storyboard is where a creative idea becomes a visual sequence. Sentinel evidence is one material, not the definition of Storyboard."
     >
       <StoryboardWorkspace
         universeId={workspace.data.master_id}

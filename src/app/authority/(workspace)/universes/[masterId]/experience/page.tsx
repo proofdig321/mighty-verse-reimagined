@@ -25,7 +25,6 @@ export default async function UniverseExperiencePage({
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
       workspaceLabel="Experience"
-      lead="Public Experience is separate from Studio. This workspace continues into what the audience sees."
     >
       <ExperienceContinuation
         href={`/worlds/${workspace.data.master_id}/holographic`}

@@ -25,7 +25,6 @@ export default async function UniverseScenesPage({
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
       workspaceLabel="Scenes"
-      lead="Canonical Scene authoring. Public Scene Deck shuffle remains presentation-only and does not mutate this order."
     >
       <StudioScenesWorkspace
         data={workspace.data}
@@ -33,6 +32,7 @@ export default async function UniverseScenesPage({
         canAuthorIdentity
         canAuthorTiming
         canAuthorOrder
+        fromCurate={fromCurate}
       />
     </StudioWorkspaceShell>
   );

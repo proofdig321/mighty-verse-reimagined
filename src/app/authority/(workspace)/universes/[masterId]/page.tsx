@@ -27,7 +27,6 @@ export default async function UniverseStudioOverviewPage({
       current="overview"
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
-      lead="What are you looking at, what can you create, and what happens next. Each workspace is a page — not a stacked database dump."
     >
       {query.identity === "saved" ? (
         <p role="status" className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">

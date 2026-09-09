@@ -31,7 +31,6 @@ export default async function UniversePreviewPage({
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
       workspaceLabel="2.5D"
-      lead="Play the composition. 2D is the mural source. 2.5D is the spatial studio preview."
     >
       <section className="suite-section" aria-labelledby="universe-preview">
         <div className="suite-section-head">

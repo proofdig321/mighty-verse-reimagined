@@ -160,6 +160,7 @@ export const ROUTES = {
   authorityUniverseStoryboard: `/authority/universes/${CANON.universeId}/storyboard`,
   authorityUniverseSentinel: `/authority/universes/${CANON.universeId}/storyboard?source=sentinel`,
   authorityUniverseScenes: `/authority/universes/${CANON.universeId}/scenes`,
+  authorityUniversePowerhouse: `/authority/universes/${CANON.universeId}/scenes/${SCENE_MOMENTS.powerhouse.sceneMasterId}`,
   authorityUniverseProduction: `/authority/universes/${CANON.universeId}/production`,
   authorityUniversePreview: `/authority/universes/${CANON.universeId}/preview`,
   authorityUniverseExperience: `/authority/universes/${CANON.universeId}/experience`,

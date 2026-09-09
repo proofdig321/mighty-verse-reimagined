@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Button } from "@/components/ui/button";
 import { formatTimelineMs } from "@/lib/media/timing";
@@ -87,7 +88,9 @@ export function ProductionBriefs({
               >
                 <p className="suite-kicker">Production plan</p>
                 <h3 className="text-base font-medium text-foreground">
-                  {sceneShortTitle(brief.title) ?? brief.title ?? "Untitled Scene"}
+                  <Link href={`/authority/universes/${universeId}/scenes/${brief.scene_master_id}`} className="hover:underline">
+                    {sceneShortTitle(brief.title) ?? brief.title ?? "Untitled Scene"}
+                  </Link>
                 </h3>
                 <p className="font-mono text-xs text-muted-foreground">{brief.window_label}</p>
                 <p className="suite-proposal-badge">

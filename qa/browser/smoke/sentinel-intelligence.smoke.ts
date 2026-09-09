@@ -96,13 +96,14 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     await page.goto(ROUTES.authorityUniverseSentinel, { waitUntil: "domcontentloaded" });
     const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
     await expect(sentinel.getByText("Golden Shovel — Powerhouse").first()).toBeVisible();
-    await expect(sentinel.locator("[data-panel-kind='scene']")).toHaveCount(4);
+    await expect(page.locator("[data-panel-kind='scene']")).toHaveCount(4);
+    await sentinel.getByText("Animation plan", { exact: true }).click();
     await expect(sentinel.locator("[data-animation-scene]")).toHaveCount(4);
     await expect(sentinel.getByRole("link", { name: "Open Inspect" })).toHaveAttribute("href", ROUTES.authorityMuxInspect);
-    notes.push("C: Creative Suite Sentinel shows evidence, storyboard, animation plan, and four Scene proposals");
+    notes.push("C: Creative Suite Sentinel shows evidence, observed panels, animation plan, and four Scene proposals");
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(sentinel.getByRole("heading", { name: "Storyboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Storyboard" })).toBeVisible();
     await expect(sentinel.getByRole("button", { name: /Authorise Sentinel windows/i })).toBeVisible();
     const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflowX, `narrow Suite overflow ${overflowX}px`).toBeLessThan(24);

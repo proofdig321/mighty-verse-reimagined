@@ -11,16 +11,14 @@ CURATE          (/authority/curate)     — incoming media + Universe picker
         ├── Mural    (/authority/curate/{id}/mural)
         ├── Moment   (/authority/curate/{id}/moment)
         └── Sentinel (/authority/curate/{id}/sentinel) — establish Scenes
-CREATIVE STUDIO (/authority/universes/{id})  — compose
-        ├── Production path (derived UI state)
-        ├── Identity
-        ├── Source (Mux preview of bound media)
-        ├── Mural
-        ├── Sentinel (evidence, storyboard, animation plan, proposals, authorise)
-        ├── 2.5D Studio Preview
-        ├── Scenes
-        ├── Creative Moments
-        └── Experience continuation
+CREATIVE STUDIO (/authority/universes/{id})  — Overview command centre
+        ├── /storyboard     — creative sequence; Sentinel is a material
+        ├── /scenes         — Scene deck + Creative Moments
+        ├── /scenes/{id}    — Scene workspace (authoring, production, 2.5D)
+        ├── /production     — Scene-centric production briefs
+        ├── /preview        — playable 2D / 2.5D studio
+        ├── /experience     — public Experience continuation
+        └── /identity       — Universe title + description
 PUBLIC EXPERIENCE (/worlds/{id}) — present; not Studio preview
 ```
 
@@ -31,8 +29,8 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Capability | Location | Data contract | Mutation | Reusable? | Authority? | Experience? | Modularised now? | Reason |
 |---|---|---|---|---|---|---|---|---|
 | Universe assembly read-model | `src/lib/assemble/load-universe.ts` | `UniverseAssembly` | none (read) | yes | route auth | no | yes | Shared hierarchy |
-| Creative Suite sections/nav | `src/lib/assemble/suite.ts` + `creative-suite-nav.tsx` | Identity / Source / Mural / Sentinel / Storyboard / 2.5D Preview / Scenes / Creative Moments / Experience | none | yes | hrefs injected | no | yes | Hosts future editors without being an editor |
-| Universe assembly presentation | `src/components/assemble/universe-assembly.tsx` + Scene/CM/Mural objects | same read-model | none | yes | `openHref` | no | yes | Composition surface: objects not catalogue tables |
+| Creative Suite sections/nav | `src/lib/assemble/suite.ts` + `creative-suite-nav.tsx` | Overview / Storyboard / Scenes / Production / 2.5D / Experience child routes | none | yes | hrefs injected | no | yes | Path workspaces, not hash sections |
+| Universe assembly presentation | `studio-workspace-shell.tsx` + Overview / Storyboard / Scene / Production / Preview pages | same read-model | none | yes | `openHref` | no | yes | Workspaces, not a stacked ontology dump |
 | Creative Suite composition helpers | `src/lib/assemble/composition.ts` | ordinals, short titles, shared CM ids, still params | none | yes | no | no | yes | Studio language; not Experience deck |
 | Scene object | `scene-object.tsx` | SuiteScene | identity + timing + order + presence | yes | open record | consumes title + still + window | yes | Face-up, numbered, known. Not facedown. Not a timeline dashboard. |
 | Scene identity | `scene-identity.ts` + `scene-identity-authoring.tsx` + `POST /api/authority/presentation` | title + description on `work_presentation` | identity-only upsert; preserves artwork/markdown | yes | yes | titles | yes | Stage 3.3. Names the Scene in Studio. Does not create Scenes. |

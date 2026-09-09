@@ -3,7 +3,7 @@ import { applyAuthoritySession } from "../lib/authority-auth";
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
 import { reportEvidence } from "../lib/observe";
-import { revealCanonicalIdentifiers } from "../lib/suite-composition";
+import { revealCanonicalIdentifiers, revealStudioInspector } from "../lib/suite-composition";
 
 test("a Universe without a Mural can register one without attaching media", async ({ page, observe, context }, testInfo) => {
   test.setTimeout(90_000);
@@ -85,6 +85,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
 
   await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
+  await revealStudioInspector(page);
   const sheMural = page.locator("section[aria-labelledby='universe-mural']");
   await revealCanonicalIdentifiers(sheMural);
   await expect(sheMural.getByText(CANON.muralId)).toBeVisible();
@@ -93,6 +94,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
 
   await page.goto(ROUTES.authorityUntitledUniverseWorkspace, { waitUntil: "domcontentloaded" });
   await expect(page.getByText("Creative Studio").first()).toBeVisible();
+  await revealStudioInspector(page);
   const untitledMural = page.locator("section[aria-labelledby='universe-mural']");
   await expect(untitledMural.getByText(/No mural assembled/i)).toHaveCount(0);
   await revealCanonicalIdentifiers(untitledMural);
