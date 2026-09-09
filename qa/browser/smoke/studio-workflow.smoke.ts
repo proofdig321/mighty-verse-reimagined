@@ -5,7 +5,7 @@ import { CANON, CREATIVE_MOMENTS, ROUTES, SCENE_MOMENTS } from "../lib/canon";
 import { applyAuthoritySession } from "../lib/authority-auth";
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
-import { reportEvidence } from "../lib/observe";
+import { reportEvidence, captureScreenshot } from "../lib/observe";
 import { expectCreativeSuiteComposition } from "../lib/suite-composition";
 
 const SCENE_IDS = Object.values(SCENE_MOMENTS).map((scene) => scene.sceneMasterId);
@@ -86,6 +86,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await page.locator(`a[href="${ROUTES.authorityUniverseWorkspace}"]`).filter({ hasText: CANON.universeTitle }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expectCreativeSuiteComposition(page);
+  await captureScreenshot(page, testInfo, "suite-production-path");
   notes.push("B: Universes → Super Hero Ego Creative Suite shows source, Sentinel, storyboard, proposals, and in-suite 2.5D");
 
   const preview = page.locator("section[aria-labelledby='universe-preview']");
@@ -94,6 +95,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await preview.getByRole("button", { name: "2.5D Studio Preview" }).click();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await captureScreenshot(page, testInfo, "suite-25d-preview");
   notes.push("C: Studio Preview switches 2D composition and 2.5D without leaving Creative Suite");
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -108,12 +110,14 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await continuation.getByRole("link", { name: /Enter Experience/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
+  await captureScreenshot(page, testInfo, "public-experience");
   notes.push("E: Experience is the Studio continuation into /worlds/{universeId}");
 
   await page.goto(ROUTES.universeHolographic, { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await captureScreenshot(page, testInfo, "public-holographic");
   notes.push("F: public holographic Experience remains intact");
 
   await page.goto(ROUTES.universeScenes, { waitUntil: "domcontentloaded" });

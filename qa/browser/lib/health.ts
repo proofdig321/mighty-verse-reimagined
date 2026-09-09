@@ -11,6 +11,10 @@ type HealthOptions = {
   allowFailedUrl?: (url: string, status: number | null) => boolean;
 };
 
+function isNextPerformanceMeasureNoise(message: string): boolean {
+  return /Failed to execute 'measure' on 'Performance'/.test(message) && /cannot have a negative time stamp/.test(message);
+}
+
 /**
  * Runtime health for the smoke suite.
  *
@@ -19,12 +23,15 @@ type HealthOptions = {
  *
  * Does not treat mixed-provider Livepeer traffic as a defect on pages that
  * also render the legacy Universe.
+ * Next.js 16 can throw Performance.measure negative-timestamp errors during
+ * RSC redirects; that is dev-runtime noise, not a product defect.
  */
 export function assertRuntimeHealth(
   observation: RuntimeObservation,
   options: HealthOptions = {},
 ): void {
-  expect(observation.pageErrors, `uncaught page errors: ${observation.pageErrors.join(" | ")}`).toEqual([]);
+  const pageErrors = observation.pageErrors.filter((error) => !isNextPerformanceMeasureNoise(error));
+  expect(pageErrors, `uncaught page errors: ${pageErrors.join(" | ")}`).toEqual([]);
 
   const consoles = unexpectedConsoles(observation);
   expect(
