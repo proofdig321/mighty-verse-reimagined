@@ -128,7 +128,17 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeScenes}$`));
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
   await expect(page.locator('[data-experience-entry="experience"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
-  await page.getByRole("link", { name: /Back to Universe/i }).click();
+  await page
+    .locator(`a[href="/moments/${SCENE_MOMENTS.powerhouse.projectionId}"]`)
+    .first()
+    .click();
+  await expect(page).toHaveURL(new RegExp(`/moments/${SCENE_MOMENTS.powerhouse.projectionId}$`));
+  await expect(page.getByRole("heading", { name: SCENE_MOMENTS.powerhouse.sceneTitle })).toBeVisible();
+  await page.locator('[data-experience-entry="experience"]').first().click();
+  await expectPublicExperience(page);
+  notes.push("Universe → Scene Deck → Powerhouse → Enter Experience");
+
+  await page.getByRole("link", { name: /Return to Universe/i }).click();
   await page
     .locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`)
     .getByRole("link", { name: /View Creative Moment/i })
@@ -141,6 +151,15 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   await expectPublicExperience(page);
   await captureScreenshot(page, testInfo, "click-path-reveal-surfaces");
   notes.push("Universe → Proverb → Enter Experience");
+
+  await page.goto(ROUTES.home, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-product-nav="moments"]').first().click();
+  await expect(page).toHaveURL(/\/moments$/);
+  await page.locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`).click();
+  await expect(page).toHaveURL(new RegExp(`/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}$`));
+  await page.locator('[data-experience-entry="experience"]').first().click();
+  await expectPublicExperience(page);
+  notes.push("Home → Creative Moments → Proverb → Enter Experience");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Reveal surfaces click into Experience", page.url(), notes, observe);

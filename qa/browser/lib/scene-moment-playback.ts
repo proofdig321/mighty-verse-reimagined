@@ -18,6 +18,24 @@ import {
 } from "./observe";
 
 /**
+ * Scene inspect identity: kicker Scene, heading is the Scene title.
+ * Mural and Universe share the Super Hero Ego name, so parent links are
+ * asserted by href rather than accessible name.
+ */
+export async function expectSceneInspectIdentity(page: Page, scene: SceneMomentCanon): Promise<void> {
+  await expect(page.getByText("Scene", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: scene.sceneTitle })).toBeVisible();
+  await expect(page.getByText("Experiential Moment")).toHaveCount(0);
+  await expect(page.getByText("Moment Card")).toHaveCount(0);
+  await expect(page.getByText("ERC-1155")).toHaveCount(0);
+  await expect(page.locator(`a[href="${ROUTES.muralLive}"]`).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: scene.creativeMomentTitle, exact: true })).toHaveAttribute(
+    "href",
+    `/creative-moments/${scene.creativeMomentId}`,
+  );
+}
+
+/**
  * Shared Scene-Moment playback assertions. Callers must already be on the
  * Moment route. Does not invent media identity — checks the page against
  * the live canonical Scene window and the shared Mux player.
@@ -35,15 +53,7 @@ export async function assertCanonicalSceneMomentPlayback(args: {
   const endSec = scene.endMs / 1000;
 
   await expect(page).toHaveURL(new RegExp(`${route}$`));
-  await expect(page.getByText(`Scene: ${scene.sceneTitle}`)).toBeVisible();
-  await expect(page.getByRole("link", { name: CANON.muralTitle, exact: true })).toHaveAttribute(
-    "href",
-    ROUTES.muralLive,
-  );
-  await expect(page.getByRole("link", { name: scene.creativeMomentTitle, exact: true })).toHaveAttribute(
-    "href",
-    `/creative-moments/${scene.creativeMomentId}`,
-  );
+  await expectSceneInspectIdentity(page, scene);
 
   const html = await page.content();
   const pageHasMuxHlsUrl = html.includes(`https://stream.mux.com/${CANON.muxPlaybackId}.m3u8`);

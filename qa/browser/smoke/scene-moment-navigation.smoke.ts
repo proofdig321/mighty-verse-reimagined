@@ -2,6 +2,7 @@ import { CANON, ROUTES, SCENE_MOMENTS, SIBLING_SCENE_MOMENTS } from "../lib/cano
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
 import { captureScreenshot, reportEvidence } from "../lib/observe";
+import { expectSceneInspectIdentity } from "../lib/scene-moment-playback";
 
 test("Super Hero Ego Universe and Mural expose sibling Scene Moment routes", async ({
   page,
@@ -49,15 +50,7 @@ test("Super Hero Ego Universe and Mural expose sibling Scene Moment routes", asy
     const href = `/moments/${scene.projectionId}`;
     await page.locator(`a[href="${href}"]`).click();
     await expect(page).toHaveURL(new RegExp(`${href}$`));
-    await expect(page.getByText(`Scene: ${scene.sceneTitle}`)).toBeVisible();
-    await expect(page.getByRole("link", { name: CANON.muralTitle, exact: true })).toHaveAttribute(
-      "href",
-      ROUTES.muralLive,
-    );
-    await expect(page.getByRole("link", { name: scene.creativeMomentTitle, exact: true })).toHaveAttribute(
-      "href",
-      `/creative-moments/${scene.creativeMomentId}`,
-    );
+    await expectSceneInspectIdentity(page, scene);
     muralNotes.push(`clicked Mural sidebar ${scene.shortName} → ${href} with Scene/Mural/Creative Moment`);
     await page.goto(ROUTES.muralLive, { waitUntil: "domcontentloaded" });
   }

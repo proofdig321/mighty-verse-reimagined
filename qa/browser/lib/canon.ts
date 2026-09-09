@@ -147,6 +147,7 @@ export const ROUTES = {
   experienceJourney: "/universes?intent=experience",
   muralLive: `/worlds/${CANON.muralId}`,
   moments: "/moments",
+  creativeMomentProverb: `/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}`,
   momentSwordMaster: `/moments/${CANON.swordMasterProjectionId}`,
   curate: "/authority/curate",
   authorityCurateHub: `/authority/curate/${CANON.universeId}`,
