@@ -59,6 +59,15 @@ export function StudioPreview({
         >
           2.5D Studio Preview
         </button>
+        {mode === "2.5d" && playback ? (
+          <button
+            type="button"
+            className={cn("suite-preview-mode")}
+            onClick={() => document.querySelector<HTMLButtonElement>("[data-holographic-play]")?.click()}
+          >
+            Play mural
+          </button>
+        ) : null}
       </div>
 
       {mode === "2.5d" ? (

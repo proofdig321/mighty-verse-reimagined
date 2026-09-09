@@ -106,7 +106,13 @@ export function HolographicLayerMedia({
         loop={playback.end_ms == null}
         aria-label={`${title} playback`}
       />
-      <button type="button" className="holographic-play" onClick={() => void toggle()} aria-pressed={playing}>
+      <button
+        type="button"
+        className="holographic-play"
+        data-holographic-play=""
+        onClick={() => void toggle()}
+        aria-pressed={playing}
+      >
         {playing ? "Pause" : ready ? "Play" : "Load"}
       </button>
     </div>
