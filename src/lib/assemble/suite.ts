@@ -6,6 +6,7 @@ import type { UniverseAssembly, UniverseAssemblyScene } from "./types";
  * and Sentinel-derived intelligence are authored on this surface. Creative Moment identity is authored here too.
  * Creative Moments are Universe-parented, not Mural-owned.
  * Sentinel remembers observations and proposes windows. It does not create Scenes.
+ * Production plans are derived Scene-centric instructions, not a second ontology.
  * Scene Deck shuffle is not imported.
  */
 export const CREATIVE_SUITE_SECTIONS = [
@@ -14,6 +15,7 @@ export const CREATIVE_SUITE_SECTIONS = [
   { id: "mural", label: "Mural", fragment: "universe-mural" },
   { id: "intelligence", label: "Sentinel", fragment: "universe-sentinel" },
   { id: "storyboard", label: "Storyboard", fragment: "sentinel-storyboard" },
+  { id: "production", label: "Production", fragment: "universe-production" },
   { id: "preview", label: "2.5D Preview", fragment: "universe-preview" },
   { id: "scenes", label: "Scenes", fragment: "universe-scenes" },
   { id: "moments", label: "Creative Moments", fragment: "universe-moments" },

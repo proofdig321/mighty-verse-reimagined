@@ -56,7 +56,9 @@ export function providerThumbnailUrl(
   storageRef: string,
   opts: { timeSec?: number; width?: number } = {}
 ): string {
-  if (provider === "mux") return muxThumbnailUrl(storageRef, opts.timeSec ?? 0, opts.width);
+  if (provider === "mux" || provider === "curated-reference") {
+    return muxThumbnailUrl(storageRef, opts.timeSec ?? 0, opts.width);
+  }
   return `${LIVEPEER_CDN_BASE}/${storageRef}/thumbnails/keyframes_0.png`;
 }
 

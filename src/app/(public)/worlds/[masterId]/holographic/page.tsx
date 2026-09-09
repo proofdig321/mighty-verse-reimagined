@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
+import { composeExperienceProjection } from "@/lib/production/projection";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import ExperienceToggle from "@/components/experience-toggle";
 import PageTopNav from "@/components/page-top-nav";
@@ -31,6 +32,10 @@ export default async function HolographicWorldPage({
   if (!data) notFound();
   const intelligence = await loadSentinelIntelligence(data, { includeObservations: false });
   const title = data.title ?? "Universe";
+  const projection = composeExperienceProjection({
+    canonical_layers: intelligence?.holographic ?? [],
+    realizations: [],
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -45,6 +50,7 @@ export default async function HolographicWorldPage({
             <p className="text-sm text-muted-foreground max-w-2xl">
               Creative Moments become spatial objects in front of their Scenes. The Mural is the back plane.
               This is Experience presentation. Canonical windows stay on the Creative Suite.
+              Approved production realizations are not dumped from Gallery. None exist yet.
             </p>
           </div>
           <ExperienceToggle
@@ -55,7 +61,7 @@ export default async function HolographicWorldPage({
         </div>
 
         {intelligence ? (
-          <HolographicStage title={title} layers={intelligence.holographic} />
+          <HolographicStage title={title} layers={projection.layers} />
         ) : (
           <p className="text-sm text-muted-foreground">This Universe has no spatial stage yet.</p>
         )}

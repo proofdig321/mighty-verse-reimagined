@@ -113,3 +113,4 @@ export type {
   CurateHubRow,
   CurateHubSnapshot,
 } from "./curate-hub";
+export { loadUniverseReferences } from "./load-references";

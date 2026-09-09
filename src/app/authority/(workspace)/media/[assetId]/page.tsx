@@ -17,6 +17,10 @@ import { buildCanonicalMetadata } from "@/lib/media/metadata-build";
 import { checkMetadataConsistency } from "@/lib/media/metadata-embed";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import { curateStudioHref, mediaInspectHref } from "@/lib/assemble/studio";
+import { isInspectableAssetType } from "@/lib/media/inspect-persist";
+import { isCuratedReferenceProvider } from "@/lib/production/lifecycle";
+import { parseReferenceProvenance } from "@/lib/production/reference";
+import { formatTimelineMs } from "@/lib/media/timing";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
@@ -148,12 +152,20 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
 
   const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness, registrant } = data;
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
-  const isThumbnail = asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail");
+  const isReference = isCuratedReferenceProvider(asset.provider);
+  const isThumbnail = !isReference && (asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail"));
   const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
+  const provenance = parseReferenceProvenance(intake?.provenance_notes);
+  const inspectable = isInspectableAssetType(asset.asset_type) && !isPlaceholder && !isThumbnail && !isReference;
 
-  const thumbnailUrl = !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail"
-    ? providerThumbnailUrl(asset.provider, asset.storage_ref, { timeSec: 5, width: 320 })
-    : null;
+  const thumbnailUrl = isReference
+    ? providerThumbnailUrl(asset.provider, asset.storage_ref, {
+        timeSec: Math.max(0, Math.floor((provenance?.time_ms ?? asset.duration_ms ?? 0) / 1000)),
+        width: 320,
+      })
+    : !isThumbnail && !isPlaceholder && asset.asset_type !== "thumbnail"
+      ? providerThumbnailUrl(asset.provider, asset.storage_ref, { timeSec: 5, width: 320 })
+      : null;
 
   return (
     <div className="space-y-10">
@@ -177,18 +189,23 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
           />
         )}
         <div className="flex-1 min-w-0 space-y-1">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media Asset</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            {isReference ? "Curated reference" : "Media Asset"}
+          </p>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
           <div className="flex flex-wrap items-center gap-2 pt-1">
-            <Badge variant="outline">{asset.asset_type}</Badge>
-            {intake?.work_type && <Badge variant="outline">{intake.work_type}</Badge>}
+            <Badge variant="outline">{isReference ? "reference" : asset.asset_type}</Badge>
+            {intake?.work_type && !isReference && <Badge variant="outline">{intake.work_type}</Badge>}
             {asset.format && <Badge variant="outline">{asset.format}</Badge>}
-            {asset.duration_ms && <Badge variant="outline">{formatDuration(asset.duration_ms / 1000)}</Badge>}
+            {isReference && provenance ? (
+              <Badge variant="outline">{formatTimelineMs(provenance.time_ms)}</Badge>
+            ) : asset.duration_ms && !isReference ? (
+              <Badge variant="outline">{formatDuration(asset.duration_ms / 1000)}</Badge>
+            ) : null}
             {isPlaceholder && <Badge variant="destructive">Placeholder</Badge>}
           </div>
         </div>
-        {/* Inspect Media action — for any non-placeholder asset with a provider */}
-        {!isPlaceholder && !isThumbnail && asset.provider && (
+        {inspectable && (
           <div className="flex shrink-0 flex-wrap justify-end gap-2">
             <Link href={curateStudioHref(null, assetId)} className={buttonVariants({ size: "sm" })}>
               <Wand2 size={14} />
@@ -202,7 +219,41 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
         )}
       </div>
 
-      {/* Readiness checklist */}
+      {isReference ? (
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2" data-reference-record="">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Provenance</p>
+          <p className="text-sm text-foreground">
+            Human-selected production reference. This is not a Scene, Creative Moment, or publication.
+          </p>
+          <dl className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-2">
+            <div>
+              <dt className="text-muted-foreground">Source asset</dt>
+              <dd className="font-mono text-foreground">
+                {provenance?.source_asset_id ?? asset.provider_asset_id ?? "unknown"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Frame</dt>
+              <dd className="font-mono text-foreground">{formatTimelineMs(provenance?.time_ms ?? asset.duration_ms)}</dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground">Role</dt>
+              <dd className="text-foreground">{provenance?.role ?? asset.format ?? "still"}</dd>
+            </div>
+            {provenance?.scene_master_id ? (
+              <div>
+                <dt className="text-muted-foreground">Scene</dt>
+                <dd className="font-mono text-foreground">{provenance.scene_master_id}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {provenance?.source_asset_id ? (
+            <Link href={`/authority/media/${provenance.source_asset_id}`} className="inline-block text-xs text-muted-foreground underline hover:text-foreground">
+              Open source asset
+            </Link>
+          ) : null}
+        </div>
+      ) : (
       <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Readiness</p>
@@ -228,6 +279,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
           </p>
         )}
       </div>
+      )}
 
       {/* Overview grid */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">

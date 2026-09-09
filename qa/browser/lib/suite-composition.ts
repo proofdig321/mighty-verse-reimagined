@@ -39,6 +39,13 @@ export async function expectCreativeSuiteComposition(page: Page) {
     ROUTES.universeLive,
   );
 
+  const production = page.locator("section[aria-labelledby='universe-production']");
+  await expect(production.getByRole("heading", { name: "Production" })).toBeVisible();
+  await expect(production.locator("[data-production-scene]")).toHaveCount(4);
+  await expect(production.getByText("No production realization yet").first()).toBeVisible();
+  await expect(production.getByText(/Powerhouse/i).first()).toBeVisible();
+  await expect(production.getByText("Proverb").first()).toBeVisible();
+
   const mural = page.locator("section[aria-labelledby='universe-mural']");
   await expect(mural.getByText(/audiovisual expression/i)).toBeVisible();
   await revealCanonicalIdentifiers(mural);

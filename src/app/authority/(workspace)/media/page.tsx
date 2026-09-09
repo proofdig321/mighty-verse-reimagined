@@ -10,6 +10,8 @@ import { Badge } from "@/components/ui/badge";
 import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
+import { classifyGalleryAssetRole, type GalleryAssetRole } from "@/lib/production/lifecycle";
+import { parseReferenceProvenance } from "@/lib/production/reference";
 import MediaLibraryClient from "./media-library-client";
 
 export type MediaLibraryItem = {
@@ -38,6 +40,8 @@ export type MediaLibraryItem = {
   // Readiness
   readiness_overall: string;
   readiness_blockers: string[];
+  production_role: GalleryAssetRole;
+  bound: boolean;
 };
 
 async function getData() {
@@ -50,7 +54,7 @@ async function getData() {
       .order("created_at", { ascending: false }),
     svc
       .from("media_intake")
-      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at")
+      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -109,10 +113,20 @@ async function getData() {
     ? await svc.from("master").select("master_id, canonical_type").in("master_id", grandparentIds)
     : { data: [] };
 
+  const intakeMasterIds = [...new Set((intakes ?? []).map((i) => i.master_id).filter(Boolean) as string[])];
+  const provenanceSceneIds: string[] = [];
+  for (const intake of intakes ?? []) {
+    const provenance = parseReferenceProvenance(intake.provenance_notes);
+    if (provenance?.scene_master_id) provenanceSceneIds.push(provenance.scene_master_id);
+    if (provenance?.universe_id) intakeMasterIds.push(provenance.universe_id);
+  }
+
   const allMasterIds = [
     ...masterIds,
     ...parentIds,
     ...grandparentIds,
+    ...intakeMasterIds,
+    ...provenanceSceneIds,
   ].filter((id, i, arr) => arr.indexOf(id) === i);
 
   const { data: presentations } = allMasterIds.length
@@ -156,8 +170,10 @@ async function getData() {
     assetContext.set(binding.asset_id, { universe_title, mural_title, scene_title, canonical_context_type: ct });
   }
 
+  const boundAssetIds = new Set((bindings ?? []).map((binding) => binding.asset_id));
+
   // Build intake map
-  const intakeByAsset = new Map<string, { intake_id: string; asset_id: string | null; title: string; work_type: string; isrc: string | null; isrc_status: string | null; creator_name: string | null; created_at: string }>();
+  const intakeByAsset = new Map<string, { intake_id: string; asset_id: string | null; title: string; work_type: string; isrc: string | null; isrc_status: string | null; creator_name: string | null; created_at: string; master_id: string | null; provenance_notes: string | null }>();
   for (const i of intakes ?? []) {
     if (i.asset_id) intakeByAsset.set(i.asset_id, i);
   }
@@ -165,12 +181,14 @@ async function getData() {
   const items: MediaLibraryItem[] = realAssets.map((a) => {
     const intake = intakeByAsset.get(a.asset_id);
     const context = assetContext.get(a.asset_id);
+    const provenance = parseReferenceProvenance(intake?.provenance_notes);
+    const production_role = classifyGalleryAssetRole(a);
     const isPlaceholder = a.storage_ref.startsWith("seed:placeholder:");
     const isThumbnail = a.storage_ref.startsWith("thumbnail:") || a.storage_ref.startsWith("http");
     const hasCredits = intake ? intakesWithCredits.has(intake.intake_id) : false;
 
     const readiness = deriveMediaReadiness({
-      hasAsset: !isPlaceholder && !isThumbnail,
+      hasAsset: !isPlaceholder && !isThumbnail && production_role === "source",
       isPlaceholder,
       hasRights: !!a.rights_holder_ref,
       hasCredits,
@@ -178,13 +196,20 @@ async function getData() {
       workType: intake?.work_type ?? null,
     });
 
-    // Provider-aware thumbnail derivation
     let thumbnail_url: string | null = null;
-    if (isThumbnail) {
+    if (production_role === "reference") {
+      thumbnail_url = providerThumbnailUrl(a.provider, a.storage_ref, {
+        timeSec: Math.max(0, Math.floor((provenance?.time_ms ?? a.duration_ms ?? 0) / 1000)),
+        width: 320,
+      });
+    } else if (isThumbnail) {
       thumbnail_url = a.storage_ref.startsWith("thumbnail:") ? null : a.storage_ref;
     } else if (!isPlaceholder && a.asset_type !== "thumbnail" && a.asset_type !== "metadata") {
       thumbnail_url = providerThumbnailUrl(a.provider, a.storage_ref, { timeSec: 5, width: 320 });
     }
+
+    const universe_title = context?.universe_title ?? (intake?.master_id ? presMap.get(intake.master_id) ?? null : null);
+    const scene_title = context?.scene_title ?? (provenance?.scene_master_id ? presMap.get(provenance.scene_master_id) ?? null : null);
 
     return {
       asset_id: a.asset_id,
@@ -201,13 +226,15 @@ async function getData() {
       isrc: intake?.isrc ?? null,
       isrc_status: intake?.isrc_status ?? null,
       has_credits: hasCredits,
-      universe_title: context?.universe_title ?? null,
+      universe_title,
       mural_title: context?.mural_title ?? null,
-      scene_title: context?.scene_title ?? null,
-      canonical_context_type: context?.canonical_context_type ?? null,
+      scene_title,
+      canonical_context_type: context?.canonical_context_type ?? (production_role === "reference" ? "reference" : null),
       thumbnail_url,
-      readiness_overall: readiness.overall,
-      readiness_blockers: readiness.blockers,
+      readiness_overall: production_role === "reference" ? "playable" : readiness.overall,
+      readiness_blockers: production_role === "reference" ? [] : readiness.blockers,
+      production_role,
+      bound: boundAssetIds.has(a.asset_id),
     };
   });
 
@@ -231,7 +258,8 @@ export default async function MediaGalleryPage() {
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Media</p>
           <h1 className="text-3xl font-semibold tracking-tight">Media Library</h1>
           <p className="text-sm text-muted-foreground">
-            Golden Shovel media catalogue — audio, video, and animation.
+            Authority production catalogue — sources, curated references, and production results.
+            Sentinel observations stay in Sentinel. They are not Gallery assets.
             {items.length > 0 && (
               <span className="ml-2 text-muted-foreground/60">
                 {items.length} asset{items.length !== 1 ? "s" : ""}

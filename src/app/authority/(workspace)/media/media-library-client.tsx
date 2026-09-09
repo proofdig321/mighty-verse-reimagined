@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import type { MediaLibraryItem } from "./page";
+import { galleryRoleLabel, type GalleryAssetRole } from "@/lib/production/lifecycle";
 
 type UnlinkedIntake = { intake_id: string; title: string; work_type: string; creator_name: string | null; created_at: string };
 
@@ -15,8 +16,15 @@ type Props = {
   unlinkedIntakes: UnlinkedIntake[];
 };
 
-const TYPE_FILTERS = [
+const ROLE_FILTERS: { value: GalleryAssetRole | "all"; label: string }[] = [
   { value: "all", label: "All" },
+  { value: "source", label: "Sources" },
+  { value: "reference", label: "References" },
+  { value: "production", label: "Productions" },
+];
+
+const TYPE_FILTERS = [
+  { value: "all", label: "All types" },
   { value: "audio", label: "Audio" },
   { value: "video", label: "Video" },
   { value: "animation", label: "Animation" },
@@ -74,6 +82,8 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
   return (
     <Link
       href={`/authority/media/${item.asset_id}`}
+      data-gallery-role={item.production_role}
+      data-gallery-bound={item.bound ? "bound" : "unbound"}
       className="group flex flex-col rounded-lg border border-border bg-card/50 overflow-hidden hover:border-border/80 hover:bg-card/80 transition-colors"
     >
       {/* Thumbnail / media representation */}
@@ -116,20 +126,33 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
         <CanonicalContext item={item} />
 
         <div className="flex flex-wrap items-center gap-1.5 mt-auto pt-1.5">
-          {item.work_type && (
+          <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+            {galleryRoleLabel(item.production_role)}
+          </Badge>
+          {item.bound ? (
+            <span className="text-[10px] text-muted-foreground/60">Bound</span>
+          ) : (
+            <span className="text-[10px] text-muted-foreground/40">Unbound</span>
+          )}
+          {item.work_type && item.production_role === "source" && (
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
               {item.work_type}
             </Badge>
           )}
-          {item.duration_ms && (
+          {item.format && item.production_role === "reference" && (
+            <span className="text-[10px] text-muted-foreground/60">{item.format}</span>
+          )}
+          {item.duration_ms && item.production_role !== "reference" && (
             <span className="text-[10px] text-muted-foreground/60">
               {formatDuration(item.duration_ms / 1000)}
             </span>
           )}
-          {item.rights_holder_ref ? (
-            <span className="text-[10px] text-emerald-400/80">Rights ✓</span>
-          ) : (
-            <span className="text-[10px] text-amber-400/80">Rights?</span>
+          {item.production_role === "source" && (
+            item.rights_holder_ref ? (
+              <span className="text-[10px] text-emerald-400/80">Rights ✓</span>
+            ) : (
+              <span className="text-[10px] text-amber-400/80">Rights?</span>
+            )
           )}
           {item.isrc && (
             <span className="text-[10px] text-muted-foreground/60 font-mono">ISRC</span>
@@ -355,22 +378,42 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
 }
 
 export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
+  const [roleFilter, setRoleFilter] = useState<GalleryAssetRole | "all">("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [readinessFilter, setReadinessFilter] = useState<string>("all");
 
   const filtered = items.filter((item) => {
+    const roleMatch = roleFilter === "all" || item.production_role === roleFilter;
     const typeMatch =
       typeFilter === "all" ||
       item.work_type === typeFilter ||
       (typeFilter === "other" && !["song", "audio", "video", "animation"].includes(item.work_type ?? ""));
     const readinessMatch = readinessFilter === "all" || item.readiness_overall === readinessFilter;
-    return typeMatch && readinessMatch;
+    return roleMatch && typeMatch && readinessMatch;
   });
 
   return (
     <div className="space-y-8">
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center gap-1 rounded-lg border border-border bg-card/50 p-1" role="tablist" aria-label="Asset role">
+          {ROLE_FILTERS.map((f) => (
+            <button
+              key={f.value}
+              type="button"
+              role="tab"
+              aria-selected={roleFilter === f.value}
+              onClick={() => setRoleFilter(f.value)}
+              className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
+                roleFilter === f.value
+                  ? "bg-foreground text-background"
+                  : "text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
         <div className="flex items-center gap-1 rounded-lg border border-border bg-card/50 p-1">
           {TYPE_FILTERS.map((f) => (
             <button
@@ -403,7 +446,7 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
             </button>
           ))}
         </div>
-        {(typeFilter !== "all" || readinessFilter !== "all") && (
+        {(roleFilter !== "all" || typeFilter !== "all" || readinessFilter !== "all") && (
           <span className="text-xs text-muted-foreground">
             {filtered.length} of {items.length}
           </span>
@@ -416,7 +459,11 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
           <p className="text-sm text-muted-foreground">
             {items.length === 0
               ? "No media assets yet."
-              : "No assets match this filter."}
+              : roleFilter === "production"
+                ? "No production realizations yet. External AI/MCP execution is not connected."
+                : roleFilter === "reference"
+                  ? "No curated references yet. Keep a Sentinel still as a reference to add one."
+                  : "No assets match this filter."}
           </p>
           {items.length === 0 && (
             <Link href="/authority/media/intake" className="mt-3 inline-block text-xs text-muted-foreground underline hover:text-foreground">

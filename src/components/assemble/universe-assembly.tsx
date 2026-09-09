@@ -9,12 +9,15 @@ import { CompositionSurface } from "./composition-surface";
 import { CreativeMomentObject } from "./creative-moment-object";
 import { ExperienceContinuation } from "./experience-continuation";
 import { CanonicalIdentifiers, MuralEmpty, MuralPresence } from "./mural-presence";
+import { ProductionBriefs } from "./production-briefs";
 import { ProductionPath } from "./production-path";
 import { SceneObject } from "./scene-object";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
 import { SourcePreview } from "./source-preview";
 import { StudioPreview } from "./studio-preview";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
+import { composeExperienceProjection } from "@/lib/production/projection";
+import type { SceneProductionBrief } from "@/lib/production/plan";
 
 export type UniverseAssemblyProps = {
   data: UniverseAssembly;
@@ -32,6 +35,7 @@ export type UniverseAssemblyProps = {
   holographicHref?: string | null;
   source?: SuiteSourcePreview | null;
   productionPath?: ProductionPathStep[];
+  productionBriefs?: SceneProductionBrief[];
 };
 
 function untitled(kind: string) {
@@ -54,6 +58,7 @@ export default function UniverseAssemblyView({
   holographicHref = null,
   source = null,
   productionPath = [],
+  productionBriefs = [],
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -147,11 +152,25 @@ export default function UniverseAssemblyView({
               universeId={data.master_id}
               intelligence={intelligence}
               canAuthorise={canAuthoriseSentinel}
+              canRetainReference={canAuthoriseSentinel}
               inspectHref={inspectHref}
               previewHref="#universe-preview"
             />
           </section>
         ) : null}
+
+        <section className="suite-section" aria-labelledby="universe-production">
+          <div className="suite-section-head">
+            <h2 id="universe-production" className="suite-section-title">
+              Production
+            </h2>
+            <p className="suite-section-note">
+              Scene-centric instruction layer. A production plan is not a Scene, not a generated video, and not canonical truth.
+              Keep Sentinel stills as references to attach them here. External AI/MCP tools are not connected.
+            </p>
+          </div>
+          <ProductionBriefs briefs={productionBriefs} />
+        </section>
 
         {intelligence && experienceHref && holographicHref ? (
           <section className="suite-section" aria-labelledby="universe-preview">
@@ -166,7 +185,7 @@ export default function UniverseAssemblyView({
             <StudioPreview
               universeTitle={data.title ?? "this Universe"}
               scenes={scenes}
-              layers={intelligence.holographic}
+              layers={composeExperienceProjection({ canonical_layers: intelligence.holographic, realizations: [] }).layers}
               experienceHref={experienceHref}
               holographicHref={holographicHref}
             />

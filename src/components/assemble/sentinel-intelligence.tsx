@@ -13,12 +13,14 @@ export function SentinelIntelligencePanel({
   universeId,
   intelligence,
   canAuthorise,
+  canRetainReference = false,
   inspectHref,
   previewHref,
 }: {
   universeId: string;
   intelligence: SentinelIntelligence;
   canAuthorise: boolean;
+  canRetainReference?: boolean;
   inspectHref?: string | null;
   previewHref?: string | null;
 }) {
@@ -30,6 +32,8 @@ export function SentinelIntelligencePanel({
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [openBeat, setOpenBeat] = useState<string | null>(null);
+  const [retainBusy, setRetainBusy] = useState<string | null>(null);
+  const [retainNote, setRetainNote] = useState<string | null>(null);
 
   const decision = useMemo(
     () =>
@@ -73,6 +77,44 @@ export function SentinelIntelligencePanel({
 
   function toggle(id: string) {
     setSelected((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
+  }
+
+  async function retain(panel: (typeof intelligence.storyboard)[number]) {
+    if (!intelligence.asset_id) {
+      setRetainNote("Source media is required before a still can be retained.");
+      return;
+    }
+    setRetainBusy(panel.panel_id);
+    setRetainNote(null);
+    try {
+      const response = await fetch("/api/authority/references", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          universe_id: universeId,
+          source_asset_id: intelligence.asset_id,
+          time_ms: panel.time_ms,
+          role: "still",
+          scene_master_id: panel.scene_master_id,
+          panel_id: panel.panel_id,
+          session_id: intelligence.session_id,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(typeof payload.error === "string" ? payload.error : "Reference could not be retained.");
+      }
+      setRetainNote(
+        payload.already
+          ? "That still is already a curated reference."
+          : "Kept as a production reference. It appears in Gallery → References and on the Scene production plan.",
+      );
+      router.refresh();
+    } catch (caught) {
+      setRetainNote(caught instanceof Error ? caught.message : "Reference could not be retained.");
+    } finally {
+      setRetainBusy(null);
+    }
   }
 
   const adjustCount = intelligence.proposals.filter((proposal) => proposal.status === "adjust").length;
@@ -121,7 +163,13 @@ export function SentinelIntelligencePanel({
         </h3>
         <p className="suite-section-note">
           Sequence through time. A canonical Scene is authorised meaning. A storyboard beat is Sentinel evidence and is not a Scene.
+          Keeping a still as a reference curates it for production. It does not create a Scene or Creative Moment.
         </p>
+        {retainNote ? (
+          <p role="status" className="suite-section-note mt-2">
+            {retainNote}
+          </p>
+        ) : null}
         <ol className="sentinel-storyboard">
           {intelligence.storyboard.map((panel) => (
             <li
@@ -144,11 +192,25 @@ export function SentinelIntelligencePanel({
                 <p className="font-mono text-[10px] text-muted-foreground">{formatTimelineMs(panel.time_ms)}</p>
               </button>
               {openBeat === panel.panel_id ? (
-                <p className="suite-section-note mt-2">
-                  {panel.kind === "scene"
-                    ? "This panel is an existing authorised Scene. Sentinel did not create it."
-                    : `This beat exists because Sentinel observed a change${panel.change_score != null ? ` (score ${panel.change_score.toFixed(2)})` : ""}. It is not a canonical Scene.`}
-                </p>
+                <div className="mt-2 space-y-2">
+                  <p className="suite-section-note">
+                    {panel.kind === "scene"
+                      ? "This panel is an existing authorised Scene. Sentinel did not create it."
+                      : `This beat exists because Sentinel observed a change${panel.change_score != null ? ` (score ${panel.change_score.toFixed(2)})` : ""}. It is not a canonical Scene.`}
+                  </p>
+                  {canRetainReference && intelligence.asset_id ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={retainBusy === panel.panel_id}
+                      data-retain-panel={panel.panel_id}
+                      onClick={() => void retain(panel)}
+                    >
+                      {retainBusy === panel.panel_id ? "Keeping…" : "Keep as reference"}
+                    </Button>
+                  ) : null}
+                </div>
               ) : null}
             </li>
           ))}
