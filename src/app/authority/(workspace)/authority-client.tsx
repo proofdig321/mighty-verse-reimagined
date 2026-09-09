@@ -413,7 +413,7 @@ export default function AuthorityClient() {
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
           {[
-            { step: "01", label: "Create Work", sub: "Register a new creative work", href: "/authority/create" },
+            { step: "01", label: "Create Work", sub: "Register a work. Video processing continues on the work record if you leave.", href: "/authority/create" },
             { step: "02", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media/intake" },
             { step: "03", label: "Rights review", sub: "Confirm provenance", href: "/authority/proof-of-rights" },
           ].map(item => (

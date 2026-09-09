@@ -217,12 +217,16 @@ function IntakeUploadPanel({ intake, onDone, onCancel }: { intake: UnlinkedIntak
           body: JSON.stringify({ session_id: session.session_id }),
         });
         const reconcileData = await reconcileRes.json();
-        if (reconcileRes.ok && (reconcileData.reconciled || reconcileData.already_ingested)) {
+        if (reconcileRes.ok && (reconcileData.reconciled || reconcileData.already_ingested || reconcileData.phase === "ingested")) {
           setMsg("Media reconciled and ready in the Media Library.");
           setTimeout(onDone, 1500);
           return;
         }
-        throw new Error("Processing timed out and reconciliation failed. The media may still be processing — check the Media Library shortly.");
+        if (reconcileData.outcome === "failed" || reconcileData.phase === "failed") {
+          throw new Error("The media provider reported that processing failed.");
+        }
+        setMsg("This page stopped waiting. Processing may still be running. Check the Media Library or the work record — a request timeout is not a processing failure.");
+        return;
       }
 
       setMsg("Media processed and ready in the Media Library.");

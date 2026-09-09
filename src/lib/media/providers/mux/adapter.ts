@@ -9,6 +9,12 @@
 import type { MediaProvider, MediaClass, MediaPlaybackSource, ProviderAsset, DirectUploadResult } from "../interface";
 import { getMuxClient } from "./client";
 
+export type DirectUploadStatus = {
+  providerUploadId: string;
+  status: string;
+  assetId: string | null;
+};
+
 /** Mux HLS base URL. Owned by the adapter — not scattered through the application. */
 const MUX_STREAM_BASE = "https://stream.mux.com";
 
@@ -94,6 +100,20 @@ export class MuxAdapter implements MediaProvider {
       uploadUrl: upload.url ?? "",
       providerUploadId: upload.id,
     };
+  }
+
+  async retrieveDirectUpload(providerUploadId: string): Promise<DirectUploadStatus | null> {
+    try {
+      const mux = getMuxClient();
+      const upload = await mux.video.uploads.retrieve(providerUploadId);
+      return {
+        providerUploadId: upload.id,
+        status: typeof upload.status === "string" ? upload.status : "waiting",
+        assetId: upload.asset_id ?? null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   async getAsset(providerAssetId: string): Promise<ProviderAsset | null> {

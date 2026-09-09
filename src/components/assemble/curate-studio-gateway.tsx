@@ -17,6 +17,7 @@ import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
 import { RegisterMural } from "./register-mural";
+import { CurateContinuationLinks } from "./curate-continuation";
 
 function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
@@ -40,19 +41,18 @@ function CurateAssetContextBanner({ focusedAsset }: { focusedAsset: CurateAssetF
     return (
       <div
         role="status"
-        className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+        className="flex flex-col gap-3 rounded-lg border border-border bg-card px-4 py-3"
       >
         <p className="text-sm text-foreground">
           This selected media is already associated with {work}
-          {focusedAsset.mural_title ? ` · Mural ${focusedAsset.mural_title}` : ""}. Continue in
-          Creative Suite to inspect source, Sentinel, storyboard, and 2.5D Preview rather than associating it again.
+          {focusedAsset.mural_title ? ` · Mural ${focusedAsset.mural_title}` : ""}.
         </p>
-        <Link
-          href={creativeSuiteHref(focusedAsset.universe_id, "curate")}
-          className={buttonVariants({ size: "sm" })}
-        >
-          Open Creative Suite
-        </Link>
+        <CurateContinuationLinks
+          universeId={focusedAsset.universe_id}
+          assetId={focusedAsset.asset_id}
+          associated
+          mediaAttached
+        />
       </div>
     );
   }
@@ -249,10 +249,13 @@ export default function CurateStudioGateway({
                 <Link href={`/authority/${selected.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                   Canonical record
                 </Link>
-                <Link href={`/worlds/${selected.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  View public experience
-                </Link>
               </div>
+              <CurateContinuationLinks
+                universeId={selected.master_id}
+                assetId={selectedMedia[0]?.asset_id ?? null}
+                associated={selectedMedia.length > 0}
+                mediaAttached={selectedMedia.length > 0}
+              />
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">

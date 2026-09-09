@@ -5,13 +5,13 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { CREATE_WORK_HREF } from "@/lib/assemble/association";
-import { creativeSuiteHref } from "@/lib/assemble/studio";
+import { CurateContinuationLinks } from "./curate-continuation";
 
 export function RegisterMural({
   universeId,
   universeTitle,
   layout = "panel",
-  fromCurate = false,
+  fromCurate: _fromCurate = false,
 }: {
   universeId: string;
   universeTitle: string | null;
@@ -60,15 +60,14 @@ export function RegisterMural({
       <div className="space-y-2" role="status">
         <p className="text-xs text-foreground">
           {already
-            ? `${workName} already has its Mural. Continue in Creative Suite.`
-            : `Mural registered for ${workName}. Media is not attached.`}
+            ? `${workName} already has its Mural.`
+            : `Mural registered for ${workName}.`}
         </p>
-        <Link
-          href={creativeSuiteHref(universeId, fromCurate ? "curate" : null)}
-          className="text-xs text-foreground hover:underline"
-        >
-          Open Creative Suite
-        </Link>
+        <CurateContinuationLinks
+          universeId={universeId}
+          muralRegistered
+          mediaAttached={false}
+        />
       </div>
     );
   }

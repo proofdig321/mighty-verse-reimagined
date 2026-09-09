@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceClient } from "@/lib/authority/validate";
 import { verifyMuxWebhook, mapMuxAsset } from "@/lib/media/providers/mux/adapter";
 import { muxAdapter } from "@/lib/media/providers/mux/adapter";
+import { ingestMuxReadySession } from "@/lib/media/upload-advance";
 
 /**
  * POST /api/webhooks/mux
@@ -178,21 +179,8 @@ async function handleAssetReady(data: MuxEventData) {
     return;
   }
 
-  // If media_asset already exists for this session, skip creation but update phase
-  if (session.asset_id) {
-    await svc
-      .from("media_upload_session")
-      .update({ phase: "ingested", updated_at: new Date().toISOString() })
-      .eq("session_id", session.session_id)
-      .neq("phase", "ingested");
-    console.info(`[mux-webhook] asset.ready: asset already exists for session ${session.session_id} — phase updated`);
-    return;
-  }
-
-  // Map Mux asset payload to normalized ProviderAsset
   const providerAsset = mapMuxAsset(data);
   if (!providerAsset.playbackId) {
-    // Payload may lack playback_ids — fetch from Mux
     const fetched = await muxAdapter.getAsset(muxAssetId);
     if (!fetched?.playbackId) {
       console.error(`[mux-webhook] asset.ready: no playback_id for mux_asset_id=${muxAssetId}`);
@@ -201,94 +189,15 @@ async function handleAssetReady(data: MuxEventData) {
     Object.assign(providerAsset, fetched);
   }
 
-  const playbackSource = muxAdapter.buildPlaybackSource(providerAsset.playbackId, providerAsset.mediaClass);
+  const ingested = await ingestMuxReadySession({
+    sessionId: session.session_id,
+    muxAssetId,
+    intakeId: session.intake_id ?? null,
+    existingAssetId: session.asset_id ?? null,
+    providerAsset,
+  });
 
-  // Create media_asset — use INSERT with conflict handling on (provider, provider_asset_id)
-  // to prevent duplicates under concurrent webhook delivery.
-  const { data: asset, error: assetError } = await svc
-    .from("media_asset")
-    .insert({
-      asset_type: "original",
-      storage_ref: providerAsset.playbackId,
-      integrity_hash: providerAsset.integrityHash,
-      format: providerAsset.format,
-      resolution: providerAsset.resolution,
-      duration_ms: providerAsset.durationMs,
-      media_class: providerAsset.mediaClass,
-      provider: "mux",
-      provider_asset_id: muxAssetId,
-      intake_id: session.intake_id ?? null,
-    })
-    .select("asset_id")
-    .single();
-
-  if (assetError) {
-    // Check if this is a duplicate (concurrent handler already created it)
-    if (assetError.code === "23505") {
-      // Unique constraint violation — another handler created it first
-      console.info(`[mux-webhook] asset.ready: duplicate asset creation prevented for ${muxAssetId}`);
-      // Find the existing asset and update session
-      const { data: existing } = await svc
-        .from("media_asset")
-        .select("asset_id")
-        .eq("provider", "mux")
-        .eq("provider_asset_id", muxAssetId)
-        .maybeSingle();
-      if (existing) {
-        await svc
-          .from("media_upload_session")
-          .update({ phase: "ingested", asset_id: existing.asset_id, updated_at: new Date().toISOString() })
-          .eq("session_id", session.session_id)
-          .neq("phase", "ingested");
-      }
-      return;
-    }
-    console.error("[mux-webhook] asset.ready: media_asset insert failed:", assetError.message);
-    throw assetError;
-  }
-
-  // Create delivery_variant — idempotent via asset_id + delivery_format
-  const { error: variantError } = await svc
-    .from("delivery_variant")
-    .insert({
-      asset_id: asset.asset_id,
-      delivery_format: "hls",
-      endpoint_ref: playbackSource.endpoint,
-    });
-
-  if (variantError && variantError.code !== "23505") {
-    console.error("[mux-webhook] asset.ready: delivery_variant insert failed:", variantError.message);
-    throw variantError;
-  }
-
-  // Update session: phase = ingested, asset_id = canonical Mighty Verse UUID
-  // Use conditional update to prevent race condition with concurrent handler
-  const { error: sessionError } = await svc
-    .from("media_upload_session")
-    .update({
-      phase: "ingested",
-      asset_id: asset.asset_id,
-      provider_asset_id: muxAssetId,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("session_id", session.session_id)
-    .neq("phase", "ingested"); // Only update if not already ingested
-
-  if (sessionError) {
-    console.error("[mux-webhook] asset.ready: session update failed:", sessionError.message);
-    // Non-fatal — asset and variant were created successfully
-  }
-
-  // Link intake record to asset if intake_id is present
-  if (session.intake_id) {
-    await svc
-      .from("media_intake")
-      .update({ asset_id: asset.asset_id })
-      .eq("intake_id", session.intake_id)
-      .is("asset_id", null); // Only set if not already linked
-  }
-
-  console.info(`[mux-webhook] asset.ready: created asset=${asset.asset_id} for session=${session.session_id} media_class=${providerAsset.mediaClass}`);
+  console.info(`[mux-webhook] asset.ready: asset=${ingested.asset_id} session=${session.session_id} media_class=${providerAsset.mediaClass} already=${ingested.already}`);
 }
 
 // ---------------------------------------------------------------------------

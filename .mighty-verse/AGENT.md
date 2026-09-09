@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-09 (Stage 4.0 Creative Suite production path)
+STATUS: current as of 2026-09-09 (Stage 4.1 Create Work reliability & Curate continuation)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -255,6 +255,7 @@ applied migration.
 - Stage 3.8: Asset-level Inspect persists Sentinel evidence against `media_asset` without requiring a canonical master. Re-runs create a new `inspection_session`. Does not create Universe/Mural/Scene/Creative Moment/projection/binding/realization.
 - Stage 3.9: Sentinel evidence becomes storyboard, animation plan, Scene-boundary proposals, and CSS 2.5D holographic presentation on Super Hero Ego. Extra candidates stay beats. Authorise writes existing Scene windows only. Sentinel does not create Scenes. Scene Deck shuffle stays in Experience. No migration. No Three.js.
 - Stage 4.0: Creative Suite is a followable Studio production path. Source media preview, Sentinel, storyboard, animation plan, Scene proposals, authorise, and 2.5D Studio Preview are visible from the dashboard/Universes entry without hidden routes. 2.5D remains a realization/preview. No workflow-state table. No migration. No media_realization. Super Hero Ego stays four Scenes at 36/80/149/193.
+- Stage 4.1: Create Work processing no longer depends on Mux webhooks or a single open browser request. Polling advances `media_upload_session` from live Mux state. A request timeout is not a processing failure. Retry resumes the existing master/session. Curate associate/register expose Inspect → Sentinel → Creative Suite continuation. No migration. No job table. No Three.js. Super Hero Ego remains the regression reference.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---

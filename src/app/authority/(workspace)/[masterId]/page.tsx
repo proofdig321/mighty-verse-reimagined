@@ -125,6 +125,13 @@ export default async function AuthorityWorkPage({
     .maybeSingle();
   const intakeId = masterIntake?.intake_id ?? null;
 
+  const { data: uploadSessionRows } = await svc
+    .from("media_upload_session")
+    .select("session_id, phase, provider, asset_id, created_at, updated_at")
+    .eq("master_id", masterId)
+    .order("created_at", { ascending: false })
+    .limit(5);
+
   const authority = {
     authority_id: authorities[0].authority_id,
     authority_type: authorities[0].authority_type,
@@ -162,6 +169,7 @@ export default async function AuthorityWorkPage({
       childItems={childItems}
       rightsHolderLabel={rightsHolderLabel}
       intakeId={intakeId}
+      uploadSessions={uploadSessionRows ?? []}
     />
   );
 }

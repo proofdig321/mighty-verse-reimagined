@@ -55,6 +55,7 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Public `/worlds` holographic | `(public)/worlds/[masterId]/holographic` + `holographic-stage.tsx` | canonical stills as CSS 3D layers | none | yes | no | **yes** | yes | Stage 3.9 2.5D. Creative Moments are spatial objects; Mural is the back plane. Not a Three.js engine. |
 | Media intake | `/authority/media/intake` | `media_intake` | create intake | later | yes | no | existing | MEDIA ≠ UNIVERSE |
 | Media readiness | `src/lib/media/readiness.ts` | intake / processing / playable / ready | none | yes | no | no | yes | Existing states; no invented workflow table |
+| Media upload advance | `upload-advance.ts` + GET upload-session + reconcile | Mux upload/asset → `media_upload_session.phase` + `media_asset` | ingest only | yes | poll/reconcile | no | yes | Stage 4.1. Webhooks optional. Does not bind. No job table. |
 | Scene timing / order | suite Scenes section; timeline PATCH; sort-order PATCH | binding `start_ms`/`end_ms`, `sort_order` | Suite hosts existing APIs | yes | yes | stills + sequence | yes | Stage 3.5 / 3.7. Scene creation stays outside Suite. Catalogue drag-order remains; Suite uses accessible Move earlier/later. |
 | Scene ↔ Creative Moment | `presence.ts` + `presence-authoring.tsx` + `POST/DELETE /api/authority/scene-moment` | primary `scene_moment` join | relate/unrelate existing objects | yes | yes | consumes existing presence | yes | Stage 3.2. Suite authors who is present in which Scene. No new objects, projections, or media. Proverb sharing remains valid. |
 | Creative Moment identity | `creative-moment-identity.ts` + `creative-moment-identity-authoring.tsx` + `POST /api/authority/presentation` | title + description; parent = Universe | identity-only upsert; preserves artwork/markdown | yes | yes | titles | yes | Stage 3.6. Same presentation primitive as Scene identity. Does not create projections. |
@@ -68,10 +69,11 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 4.0
+## Product questions after Stage 4.1
 
-- Creative Suite now makes the production path visible: source media, Sentinel evidence, storyboard, animation plan, Scene proposals, authorise, 2.5D Studio Preview, then Experience. This is not a wizard, timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
-- Gallery / Inspect still continue into Curate Studio with selected media identity. Bound Inspect continues into Suite Sentinel. Create Work remains independent and still completes on the publishing record.
+- Create Work registers canonical master/state/projection before media finishes. Failed or slow Mux processing must not duplicate Universes on retry. Poll `media_upload_session` against Mux; webhooks are optional. Browser timeout ≠ provider failure.
+- Creative Suite still makes the production path visible: source media, Sentinel evidence, storyboard, animation plan, Scene proposals, authorise, 2.5D Studio Preview, then Experience. This is not a wizard, timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
+- Gallery / Inspect still continue into Curate Studio with selected media identity. Bound Inspect continues into Suite Sentinel. After associate/register, Curate names Inspect → Sentinel → Creative Suite. Create Work completion offers Suite / Curate / work record from the resulting state.
 - **Governance vs Experience.** `/authority/{id}` still carries a rights/realization checklist while authorised public Experience already plays. Solving that through a publish ontology is outside this stage.
 - **Sentinel now remembers.** Schema is live (`inspection_session`, `frame_observation`). Stage 3.8 persists source-media inspection. Stage 3.9 derives intelligence and lets the curator authorise existing Scene windows. Stage 4.0 makes those surfaces discoverable. Curate Studio Sentinel remains universe-scoped evidence UI, not the persist surface. Sentinel must not auto-create Scenes.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HierarchyBreadcrumb, type HierarchyBreadcrumbItem } from "@/components/assemble/breadcrumb";
@@ -28,6 +28,14 @@ type ProjPresentation = { projection_id: string; title: string; description: str
 type Realization = { realization_id: string; master_id: string; realization_type: string; rights_holder_ref: string | null; rights_basis: string | null; production_notes: string | null };
 type Participant = { participant_id: string; label: string };
 type ChildItem = { master_id: string; title: string | null; canonical_type: string };
+type UploadSession = {
+  session_id: string;
+  phase: string;
+  provider: string | null;
+  asset_id: string | null;
+  created_at: string;
+  updated_at: string;
+};
 
 type Props = {
   authority: { authority_id: string; authority_type: string; scope_type: string; capabilities: string[] };
@@ -45,6 +53,7 @@ type Props = {
   childItems: ChildItem[];
   rightsHolderLabel: string | null;
   intakeId: string | null;
+  uploadSessions: UploadSession[];
 };
 
 // ─── AttachVideoPanel ─────────────────────────────────────────────────────────
@@ -134,15 +143,31 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
           });
           setMsg("Uploading… processing media.");
           let phase = "uploading";
-          for (let i = 0; phase !== "ingested" && phase !== "ready" && i < 60; i++) {
-            await new Promise(r => setTimeout(r, 5000));
+          let outcome: "ingested" | "failed" | "request_timeout" = "request_timeout";
+          for (let i = 0; i <= 60; i++) {
             const s = await fetch(`/api/authority/media/upload-session/${session.session_id}`).then(responseData);
             if (s.error) throw new Error(s.error);
             phase = s.phase ?? "unknown";
-            if (phase === "failed") throw new Error("Media processing failed");
-            setMsg(`Processing… (${phase})`);
+            if (phase === "ingested" || phase === "ready") { outcome = "ingested"; break; }
+            if (phase === "failed") { outcome = "failed"; break; }
+            setMsg("Processing video…");
+            if (i === 60) break;
+            await new Promise(r => setTimeout(r, 5000));
           }
-          if (phase !== "ingested" && phase !== "ready") throw new Error("Processing timed out");
+          if (outcome === "failed" || phase === "failed") throw new Error("The media provider reported that processing failed. This work is preserved.");
+          if (outcome !== "ingested") {
+            const reconcileRes = await fetch("/api/authority/media/reconcile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ session_id: session.session_id }),
+            });
+            const reconcile = await reconcileRes.json().catch(() => ({}));
+            if (!(reconcileRes.ok && (reconcile.reconciled || reconcile.already_ingested || reconcile.phase === "ingested"))) {
+              setMsg("This page stopped waiting. Processing may still be running. Open this work later to resume — a request timeout is not a processing failure.");
+              setBusy(false);
+              return;
+            }
+          }
           const attach = await api("/api/authority/media", { projection_id: projId, master_id: masterId, session_id: session.session_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis, intake_id: intakeId ?? null });
           if (attach.error) throw new Error(attach.error);
           setMsg("Media attached.");
@@ -155,12 +180,138 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   );
 }
 
+function ResumeMediaPanel({
+  session,
+  projectionId,
+  masterId,
+  workTitle,
+  participants,
+  intakeId,
+  bound,
+}: {
+  session: UploadSession;
+  projectionId: string;
+  masterId: string;
+  workTitle: string;
+  participants: Participant[];
+  intakeId: string | null;
+  bound: boolean;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+  const [phase, setPhase] = useState(session.phase);
+  const [rightsHolderRef, setRightsHolderRef] = useState(participants[0]?.participant_id ?? "");
+  const [rightsBasis, setRightsBasis] = useState("owned");
+
+  const ingested = phase === "ingested" || phase === "ready";
+  const failed = phase === "failed";
+
+  useEffect(() => {
+    if (bound && ingested) return;
+    if (phase === "ingested" || phase === "ready" || phase === "failed") return;
+    void checkStatus();
+    // Load live processing state when returning to the work.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session.session_id]);
+
+  async function checkStatus() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const s = await fetch(`/api/authority/media/upload-session/${session.session_id}`).then(responseData);
+      if (s.error) throw new Error(s.error);
+      setPhase(s.phase ?? phase);
+      if (s.phase === "ingested" || s.phase === "ready") {
+        setMsg("Processing complete. Attach this media to the work.");
+      } else if (s.phase === "failed") {
+        setMsg("The media provider reported that processing failed. Retry attach against this work — do not create a new Universe.");
+      } else {
+        setMsg("Processing video… You can leave this page and return. A request timeout is not a processing failure.");
+      }
+    } catch (err) {
+      setMsg(operatorError(err instanceof Error ? err.message : err, { workTitle, operation: "Check processing" }));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function attachReady() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const attach = await api("/api/authority/media", {
+        projection_id: projectionId,
+        master_id: masterId,
+        session_id: session.session_id,
+        rights_holder_ref: rightsHolderRef,
+        rights_basis: rightsBasis,
+        intake_id: intakeId,
+      });
+      if (attach.error) throw new Error(attach.error);
+      setMsg("Media attached.");
+      window.location.reload();
+    } catch (err) {
+      setMsg(operatorError(err instanceof Error ? err.message : err, { workTitle, operation: "Attach media" }));
+      setBusy(false);
+    }
+  }
+
+  if (bound && ingested) return null;
+
+  return (
+    <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Media processing</p>
+      <p className="text-sm text-foreground">
+        {failed
+          ? "Provider processing failed. Canonical work is preserved."
+          : ingested
+            ? "Video is processed and ready to attach to this work."
+            : "Video processing continues on this work. You can leave and return."}
+      </p>
+      {!ingested && !failed && (
+        <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
+          <div className="h-full w-2/5 rounded-full animate-pulse" style={{ background: "var(--accent-mv)" }} />
+        </div>
+      )}
+      {ingested && !bound && (
+        <div className="grid gap-2 sm:grid-cols-2">
+          <select value={rightsHolderRef} onChange={(e) => setRightsHolderRef(e.target.value)} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+            {participants.map((p) => (
+              <option key={p.participant_id} value={p.participant_id}>{p.label}</option>
+            ))}
+          </select>
+          <select value={rightsBasis} onChange={(e) => setRightsBasis(e.target.value)} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
+            <option value="owned">Owned</option>
+            <option value="licensed">Licensed</option>
+            <option value="commissioned">Commissioned</option>
+            <option value="co-owned">Co-owned</option>
+          </select>
+        </div>
+      )}
+      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
+      <div className="flex flex-wrap gap-2">
+        {!ingested && (
+          <Button size="sm" disabled={busy} onClick={() => void checkStatus()}>
+            {busy ? "Checking…" : "Check processing"}
+          </Button>
+        )}
+        {ingested && !bound && (
+          <Button size="sm" disabled={busy || !rightsHolderRef} onClick={() => void attachReady()}>
+            {busy ? "Attaching…" : "Attach media"}
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function AuthorityWorkClient({
   master, states, projections, bindings, presentation,
   projectionPresentations, realizations, participants,
   parentTitle, parentMasterId, parentCanonicalType, childItems, rightsHolderLabel, intakeId,
+  uploadSessions,
 }: Props) {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
@@ -246,6 +397,18 @@ export default function AuthorityWorkClient({
           </Link>
         )}
       </div>
+
+      {projection && uploadSessions[0] && (
+        <ResumeMediaPanel
+          session={uploadSessions[0]}
+          projectionId={projection.projection_id}
+          masterId={master.master_id}
+          workTitle={title}
+          participants={participants}
+          intakeId={intakeId}
+          bound={Boolean(binding)}
+        />
+      )}
 
       {/* Six-stage tracker — Media cell respects creative-moment */}
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">

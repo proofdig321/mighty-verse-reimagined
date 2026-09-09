@@ -413,3 +413,13 @@ Pipeline: MEDIA → SENTINEL EVIDENCE → DERIVED INTELLIGENCE → HUMAN AUTHORI
 
 **Do not automatically begin** a Scene creator, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, Three.js engines, AI classification, or commerce.
 
+---
+
+## Checkpoint evaluation (Stage 4.1)
+
+`CANONICAL` (2026-09-09)
+
+Create Work processing is recovered from live Mux state via `media_upload_session`. A browser request timeout is not a processing failure. Retry resumes the existing canonical work. Curate associate/register continue into Inspect → Sentinel → Creative Suite. No migration. No job table. No Three.js. Super Hero Ego remains the regression reference.
+
+**Do not automatically begin** a Scene creator, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, Three.js engines, AI classification, or commerce.
+

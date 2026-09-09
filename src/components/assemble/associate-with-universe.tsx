@@ -10,9 +10,10 @@ import {
   decideCanonicalAssociation,
   mediaAssociationEligibility,
 } from "@/lib/assemble/association";
-import { creativeSuiteHref, type CurateStudioMedia } from "@/lib/assemble/studio";
+import type { CurateStudioMedia } from "@/lib/assemble/studio";
 import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { RegisterMural } from "./register-mural";
+import { CurateContinuationLinks } from "./curate-continuation";
 
 export function AssociateWithUniverse({
   media,
@@ -73,9 +74,12 @@ export function AssociateWithUniverse({
 
   if (associatedUniverseId) {
     return (
-      <Link href={creativeSuiteHref(associatedUniverseId, "curate")} className="text-xs text-foreground hover:underline">
-        Open Creative Suite
-      </Link>
+      <CurateContinuationLinks
+        universeId={associatedUniverseId}
+        assetId={media.asset_id}
+        associated
+        mediaAttached
+      />
     );
   }
 

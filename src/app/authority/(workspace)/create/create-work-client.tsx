@@ -4,6 +4,19 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { api, responseData } from "../_shared/authority-utils";
+import {
+  classifyPollBudget,
+  PROCESSING_FAILED_COPY,
+  PROCESSING_POLL_ATTEMPTS,
+  PROCESSING_POLL_MS,
+  REQUEST_TIMEOUT_COPY,
+} from "@/lib/media/processing-state";
+import {
+  createWorkContinuations,
+  createWorkStorageKey,
+  nextCreateWorkStep,
+  type CreateWorkCheckpoint,
+} from "@/lib/authority/create-work-progress";
 
 type Universe = { master_id: string; title: string | null };
 type Mural = { master_id: string; parent_master_id: string | null; title: string | null };
@@ -35,7 +48,7 @@ const TYPE_DESCRIPTIONS: Record<WorkType, string> = {
 // Types that can have a video attached during creation
 const HAS_MEDIA: WorkType[] = ["universe", "mural"];
 
-type Step = "type" | "placement" | "identity" | "media" | "review" | "creating" | "done";
+type Step = "type" | "placement" | "identity" | "media" | "review" | "creating" | "waiting" | "done";
 
 const STEP_LABELS: Record<Step, string> = {
   type: "Type",
@@ -44,6 +57,7 @@ const STEP_LABELS: Record<Step, string> = {
   media: "Media",
   review: "Review",
   creating: "Creating",
+  waiting: "Processing",
   done: "Done",
 };
 
@@ -68,13 +82,50 @@ export default function CreateWorkClient({ universes, murals, participants, curr
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Progress / result
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
   const [statusLine, setStatusLine] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [createdMasterId, setCreatedMasterId] = useState<string | null>(null);
+  const [checkpoint, setCheckpoint] = useState<CreateWorkCheckpoint | null>(null);
+  const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
 
-  const needsParent = workType === "mural" || workType === "scene" || workType === "creative-moment";
+  const _needsParent = workType === "mural" || workType === "scene" || workType === "creative-moment";
   const canHaveMedia = HAS_MEDIA.includes(workType);
+  const wantsMedia = canHaveMedia && hasVideo && Boolean(videoFile || checkpoint?.uploaded || checkpoint?.sessionId);
+
+  function loadStoredCheckpoint(type: WorkType, workTitle: string): CreateWorkCheckpoint | null {
+    if (typeof window === "undefined" || !workTitle.trim()) return null;
+    try {
+      const raw = sessionStorage.getItem(createWorkStorageKey(type, workTitle));
+      if (!raw) return null;
+      const saved = JSON.parse(raw) as CreateWorkCheckpoint;
+      return saved?.masterId ? saved : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function persistCheckpoint(next: CreateWorkCheckpoint) {
+    setCheckpoint(next);
+    setCreatedMasterId(next.masterId);
+    if (next.assetId) setCreatedAssetId(next.assetId);
+    try {
+      sessionStorage.setItem(createWorkStorageKey(next.workType, next.title), JSON.stringify(next));
+    } catch {
+      // sessionStorage may be unavailable
+    }
+  }
+
+  function clearCheckpoint() {
+    try {
+      if (title.trim()) sessionStorage.removeItem(createWorkStorageKey(workType, title));
+    } catch {
+      // ignore
+    }
+    setCheckpoint(null);
+    setCreatedMasterId(null);
+    setCreatedAssetId(null);
+  }
 
   const parentOptions: (Universe | Mural)[] =
     workType === "mural" || workType === "creative-moment"
@@ -96,7 +147,18 @@ export default function CreateWorkClient({ universes, murals, participants, curr
   function nextStep() {
     const steps = stepsFor(workType);
     const idx = steps.indexOf(step);
-    if (idx < steps.length - 1) setStep(steps[idx + 1]);
+    if (idx < steps.length - 1) {
+      const upcoming = steps[idx + 1];
+      if (upcoming === "review") {
+        const saved = loadStoredCheckpoint(workType, title);
+        if (saved) {
+          setCheckpoint(saved);
+          setCreatedMasterId(saved.masterId);
+          if (saved.assetId) setCreatedAssetId(saved.assetId);
+        }
+      }
+      setStep(upcoming);
+    }
   }
 
   function prevStep() {
@@ -105,99 +167,170 @@ export default function CreateWorkClient({ universes, murals, participants, curr
     if (idx > 0) setStep(steps[idx - 1]);
   }
 
+  async function pollProcessing(sessionId: string): Promise<"ingested" | "failed" | "request_timeout"> {
+    let phase = "uploading";
+    for (let attempt = 0; attempt <= PROCESSING_POLL_ATTEMPTS; attempt++) {
+      const budget = classifyPollBudget({ phase, attempt, maxAttempts: PROCESSING_POLL_ATTEMPTS });
+      if (budget === "ingested") return "ingested";
+      if (budget === "failed") return "failed";
+      if (budget === "request_timeout") {
+        setStatusLine("Still processing — checking provider…");
+        const reconcileRes = await fetch("/api/authority/media/reconcile", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ session_id: sessionId }),
+        });
+        const reconcile = await reconcileRes.json().catch(() => ({}));
+        if (reconcileRes.ok && (reconcile.reconciled || reconcile.already_ingested || reconcile.phase === "ingested")) {
+          if (reconcile.asset_id) setCreatedAssetId(reconcile.asset_id);
+          return "ingested";
+        }
+        if (reconcile.outcome === "failed" || reconcile.phase === "failed") return "failed";
+        return "request_timeout";
+      }
+      if (attempt > 0) await new Promise((r) => setTimeout(r, PROCESSING_POLL_MS));
+      const s = await fetch(`/api/authority/media/upload-session/${sessionId}`).then(responseData);
+      if (s.error) throw new Error(s.error);
+      phase = s.phase ?? "unknown";
+      if (s.asset_id) setCreatedAssetId(s.asset_id);
+      setStatusLine("Processing video…");
+    }
+    return "request_timeout";
+  }
+
   // ── Creation ────────────────────────────────────────────────────────────────
   async function createWork() {
     setStep("creating");
     setError(null);
-    setUploadProgress(0);
+    setUploadProgress(null);
+
+      const workTitle = title.trim();
+    const stored = loadStoredCheckpoint(workType, workTitle);
+    let cp: CreateWorkCheckpoint = checkpoint ?? stored ?? {
+      workType,
+      title: workTitle,
+      masterId: createdMasterId ?? "",
+    };
 
     try {
-      // 1. Register master
-      setStatusLine("Registering work…");
-      const masterRes = await api("/api/authority/masters", {
-        canonical_type: workType,
-        parent_master_id: parentMasterId || null,
-        title: title.trim() || null,
-        description: description.trim() || null,
-      });
-      if (masterRes.error) throw new Error(masterRes.error);
-      const masterId: string = masterRes.master_id;
-      setCreatedMasterId(masterId);
-
-      // 2. Authorise canonical state
-      setStatusLine("Authorising canonical state…");
-      const stateRes = await api("/api/authority/states", { master_id: masterId });
-      if (stateRes.error) throw new Error(stateRes.error);
-
-      // 3. Create projection
-      setStatusLine("Creating experience…");
-      const projRes = await api("/api/authority/projections", {
-        canonical_state_id: stateRes.canonical_state_id,
-        master_id: masterId,
-        projection_type: projectionType,
-      });
-      if (projRes.error) throw new Error(projRes.error);
-      const projectionId: string = projRes.projection_id;
-
-      // 4. Upload + attach video (if provided)
-      if (canHaveMedia && hasVideo && videoFile) {
-        setStatusLine("Starting upload session…");
-        const session = await api("/api/authority/media/upload-session", {
-          name: videoFile.name,
-          projection_id: projectionId,
-          master_id: masterId,
-          intake_id: null,
+      if (nextCreateWorkStep(cp.masterId ? cp : null, wantsMedia) === "register_master" || !cp.masterId) {
+        setStatusLine("Registering work…");
+        const masterRes = await api("/api/authority/masters", {
+          canonical_type: workType,
+          parent_master_id: parentMasterId || null,
+          title: workTitle || null,
+          description: description.trim() || null,
         });
-        if (session.error || !session.upload_url || !session.session_id) {
-          throw new Error(session.error ?? "Upload session failed");
+        if (masterRes.error) throw new Error(masterRes.error);
+        cp = { ...cp, workType, title: workTitle, masterId: masterRes.master_id };
+        persistCheckpoint(cp);
+      }
+
+      if (!cp.stateId) {
+        setStatusLine("Authorising canonical state…");
+        const stateRes = await api("/api/authority/states", { master_id: cp.masterId });
+        if (stateRes.error) throw new Error(stateRes.error);
+        cp = { ...cp, stateId: stateRes.canonical_state_id };
+        persistCheckpoint(cp);
+      }
+
+      if (!cp.projectionId) {
+        setStatusLine("Creating experience…");
+        const projRes = await api("/api/authority/projections", {
+          canonical_state_id: cp.stateId,
+          master_id: cp.masterId,
+          projection_type: projectionType,
+        });
+        if (projRes.error) throw new Error(projRes.error);
+        cp = { ...cp, projectionId: projRes.projection_id };
+        persistCheckpoint(cp);
+      }
+
+      if (wantsMedia) {
+        if (!cp.sessionId) {
+          setStatusLine("Starting upload session…");
+          const session = await api("/api/authority/media/upload-session", {
+            name: videoFile?.name ?? "upload",
+            projection_id: cp.projectionId,
+            master_id: cp.masterId,
+            intake_id: null,
+          });
+          if (session.error || !session.session_id) {
+            throw new Error(session.error ?? "Upload session failed");
+          }
+          cp = { ...cp, sessionId: session.session_id, uploadUrl: session.upload_url ?? null };
+          persistCheckpoint(cp);
         }
 
-        setStatusLine("Uploading video…");
-        await new Promise<void>((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.upload.onprogress = (e) => {
-            if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
-          };
-          xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`)));
-          xhr.onerror = () => reject(new Error("Network error during upload"));
-          xhr.open("PUT", session.upload_url);
-          xhr.send(videoFile);
-        });
+        if (!cp.uploaded) {
+          const uploadUrl = cp.uploadUrl;
+          if (!videoFile) {
+            throw new Error("Select the video file again to finish uploading this existing work.");
+          }
+          if (!uploadUrl) {
+            throw new Error("Upload URL missing for this session. Open the work record to resume processing.");
+          }
+          setStatusLine("Uploading video…");
+          setUploadProgress(0);
+          await new Promise<void>((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.upload.onprogress = (e) => {
+              if (e.lengthComputable) setUploadProgress(Math.round((e.loaded / e.total) * 100));
+            };
+            xhr.onload = () => (xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`)));
+            xhr.onerror = () => reject(new Error("Network error during upload"));
+            xhr.open("PUT", uploadUrl);
+            xhr.send(videoFile);
+          });
+          cp = { ...cp, uploaded: true };
+          persistCheckpoint(cp);
+          setUploadProgress(null);
+        }
 
         setStatusLine("Processing video…");
-        let phase = "uploading";
-        for (let i = 0; phase !== "ingested" && phase !== "ready" && i < 60; i++) {
-          await new Promise((r) => setTimeout(r, 5000));
-          const s = await fetch(`/api/authority/media/upload-session/${session.session_id}`).then(responseData);
-          if (s.error) throw new Error(s.error);
-          phase = s.phase ?? "unknown";
-          if (phase === "failed") throw new Error("Media processing failed");
-          setStatusLine(`Processing video… (${phase})`);
+        const outcome = await pollProcessing(cp.sessionId!);
+        if (outcome === "failed") {
+          setError(PROCESSING_FAILED_COPY);
+          setStep("review");
+          return;
         }
-        if (phase !== "ingested" && phase !== "ready") throw new Error("Video processing timed out");
+        if (outcome === "request_timeout") {
+          setStep("waiting");
+          return;
+        }
 
         setStatusLine("Attaching media…");
         const attach = await api("/api/authority/media", {
-          projection_id: projectionId,
-          master_id: masterId,
-          session_id: session.session_id,
+          projection_id: cp.projectionId,
+          master_id: cp.masterId,
+          session_id: cp.sessionId,
           rights_holder_ref: rightsHolderRef,
           rights_basis: rightsBasis,
           intake_id: null,
         });
         if (attach.error) throw new Error(attach.error);
+        cp = { ...cp, attached: true, assetId: attach.asset_id ?? cp.assetId };
+        persistCheckpoint(cp);
+        if (attach.asset_id) setCreatedAssetId(attach.asset_id);
       }
 
       setStatusLine("Done.");
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Creation failed");
-      setStep("review"); // return to review so they can retry
+      setStep("review");
     }
   }
 
   // ── Done screen ─────────────────────────────────────────────────────────────
   if (step === "done" && createdMasterId) {
+    const continuations = createWorkContinuations({
+      workType,
+      masterId: createdMasterId,
+      parentMasterId: parentMasterId || null,
+      assetId: createdAssetId ?? checkpoint?.assetId ?? null,
+      mediaAttached: Boolean(checkpoint?.attached || createdAssetId),
+    });
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 max-w-lg mx-auto text-center px-4">
         <div
@@ -213,19 +346,70 @@ export default function CreateWorkClient({ universes, murals, participants, curr
           <p className="text-base text-foreground font-medium">{title.trim() || "Untitled"}</p>
           <p className="text-sm text-muted-foreground">
             Canonical state authorised · Projection created
-            {canHaveMedia && hasVideo && videoFile ? " · Video attached" : ""}
+            {checkpoint?.attached ? " · Video attached" : wantsMedia ? " · Media still processing on the work record" : ""}
           </p>
         </div>
         <div className="flex flex-wrap gap-3 justify-center">
-          <Button size="lg" onClick={() => router.push(`/authority/${createdMasterId}`)}>
-            Open work →
-          </Button>
+          {continuations.map((action) => (
+            <Button
+              key={action.href}
+              size="lg"
+              variant={action.primary ? "default" : "outline"}
+              onClick={() => router.push(action.href)}
+            >
+              {action.label}
+            </Button>
+          ))}
           <Button size="lg" variant="outline" onClick={() => {
             setStep("type"); setTitle(""); setDescription(""); setParentMasterId("");
             setVideoFile(null); setRightsHolderRef(currentParticipantId); setRightsBasis("owned");
-            setHasVideo(true); setCreatedMasterId(null); setError(null);
+            setHasVideo(true); setError(null); clearCheckpoint();
           }}>
             Create another
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === "waiting" && createdMasterId) {
+    const continuations = createWorkContinuations({
+      workType,
+      masterId: createdMasterId,
+      parentMasterId: parentMasterId || null,
+      mediaAttached: false,
+      processingWaiting: true,
+    });
+    return (
+      <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 max-w-lg mx-auto text-center px-4">
+        <div className="relative flex h-20 w-20 items-center justify-center">
+          <svg className="absolute inset-0 h-full w-full animate-spin" viewBox="0 0 96 96" fill="none">
+            <circle cx="48" cy="48" r="44" stroke="var(--border)" strokeWidth="4" />
+            <path d="M48 4 A44 44 0 0 1 92 48" stroke="var(--accent-mv)" strokeWidth="4" strokeLinecap="round" />
+          </svg>
+          <span className="text-2xl">⏳</span>
+        </div>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-semibold tracking-tight">Processing continues</h1>
+          <p className="text-base text-foreground font-medium">{title.trim() || "Untitled"}</p>
+          <p className="text-sm text-muted-foreground">{REQUEST_TIMEOUT_COPY}</p>
+        </div>
+        <div className="w-full h-2 overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
+          <div className="h-full w-2/5 rounded-full animate-pulse" style={{ background: "var(--accent-mv)" }} />
+        </div>
+        <div className="flex flex-wrap gap-3 justify-center">
+          {continuations.map((action) => (
+            <Button
+              key={action.href}
+              size="lg"
+              variant={action.primary ? "default" : "outline"}
+              onClick={() => router.push(action.href)}
+            >
+              {action.label}
+            </Button>
+          ))}
+          <Button size="lg" variant="outline" onClick={() => void createWork()}>
+            Keep waiting
           </Button>
         </div>
       </div>
@@ -243,18 +427,17 @@ export default function CreateWorkClient({ universes, murals, participants, curr
       { key: "process",    label: "Processing video" },
       { key: "attach",     label: "Attaching media" },
     ];
-    const stages = canHaveMedia && hasVideo && videoFile ? ALL_STAGES : ALL_STAGES.slice(0, 3);
+    const stages = wantsMedia ? ALL_STAGES : ALL_STAGES.slice(0, 3);
     const s = statusLine.toLowerCase();
     const stageIdx = s.includes("attaching") ? stages.length - 1
-      : s.includes("processing") ? stages.findIndex(x => x.key === "process")
+      : s.includes("processing") || s.includes("still processing") ? stages.findIndex(x => x.key === "process")
       : s.includes("uploading")  ? stages.findIndex(x => x.key === "upload")
       : s.includes("starting")   ? stages.findIndex(x => x.key === "session")
       : s.includes("creating")   ? stages.findIndex(x => x.key === "projection")
       : s.includes("authoris")   ? stages.findIndex(x => x.key === "state")
       : 0;
-    const isUploading  = s.includes("uploading");
+    const isUploading  = s.includes("uploading") && uploadProgress !== null;
     const isProcessing = s.includes("processing");
-    const processPhase = statusLine.match(/\(([^)]+)\)/)?.[1];
 
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center gap-8 max-w-lg mx-auto px-4">
@@ -297,8 +480,8 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                 </span>
                 <span className="text-sm flex-1" style={{ color: active ? "var(--foreground)" : "var(--muted-foreground)", fontWeight: active ? 500 : 400 }}>
                   {stage.label}
-                  {active && isProcessing && processPhase && (
-                    <span className="ml-2 text-xs" style={{ color: "var(--accent-mv)" }}>({processPhase})</span>
+                  {active && isProcessing && (
+                    <span className="ml-2 text-xs" style={{ color: "var(--accent-mv)" }}>in progress</span>
                   )}
                 </span>
                 {active && !isUploading && (
@@ -309,7 +492,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
           })}
         </div>
 
-        {isUploading && (
+        {isUploading && uploadProgress !== null && (
           <div className="w-full space-y-2">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Uploading video</span>
@@ -322,7 +505,19 @@ export default function CreateWorkClient({ universes, murals, participants, curr
               />
             </div>
             <p className="text-xs text-center text-muted-foreground">
-              {uploadProgress < 100 ? "Do not close this page" : "Upload complete — processing…"}
+              {uploadProgress < 100 ? "Keep this page open until the file has been sent." : "Upload complete — processing…"}
+            </p>
+          </div>
+        )}
+
+        {isProcessing && !isUploading && (
+          <div className="w-full space-y-2">
+            <p className="text-sm text-center text-foreground">Processing video…</p>
+            <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
+              <div className="h-full w-2/5 rounded-full animate-pulse" style={{ background: "var(--accent-mv)" }} />
+            </div>
+            <p className="text-xs text-center text-muted-foreground">
+              Provider progress is not a percentage. You can leave; processing continues on the work record.
             </p>
           </div>
         )}
@@ -635,8 +830,9 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
             <div className="px-5 py-3">
               <p className="text-xs text-muted-foreground">
-                This will register the master, authorise its canonical state, and create the experiential projection
-                {canHaveMedia && hasVideo && videoFile ? ", then upload and attach the video." : "."}
+                {checkpoint?.masterId
+                  ? "This work is already registered. Continue processing media against the existing canonical record — this will not create another Universe."
+                  : "This registers the master and authorises its canonical state first. Video upload and processing then continue on the work record. A request timeout is not a processing failure."}
               </p>
             </div>
           </div>
@@ -650,7 +846,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
           <div className="flex gap-3">
             <Button variant="outline" onClick={prevStep}>← Back</Button>
             <Button onClick={createWork}>
-              Create {TYPE_LABELS[workType]}
+              {checkpoint?.masterId ? "Continue this work" : `Create ${TYPE_LABELS[workType]}`}
             </Button>
           </div>
         </div>
