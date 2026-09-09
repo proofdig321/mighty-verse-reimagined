@@ -12,14 +12,16 @@ export function RegisterMural({
   universeTitle,
   layout = "panel",
   fromCurate: _fromCurate = false,
+  defaultOpen = false,
 }: {
   universeId: string;
   universeTitle: string | null;
   layout?: "panel" | "inline";
   fromCurate?: boolean;
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{

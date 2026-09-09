@@ -6,7 +6,16 @@
  * and inspection evidence that already exist.
  */
 import { classifyProcessingPhase } from "../media/processing-state";
-import { creativeSuiteHref, curateStudioHref, mediaInspectHref } from "./studio";
+import {
+  CURATE_STUDIO_HREF,
+  creativeSuiteHref,
+  curateHubHref,
+  curateIncomingHref,
+  curateMomentHref,
+  curateMuralHref,
+  curateSentinelHref,
+  mediaInspectHref,
+} from "./studio";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
 
@@ -70,10 +79,6 @@ function studioHref(universeId: string) {
   return creativeSuiteHref(universeId, "curate");
 }
 
-function curateHref(universeId: string, hash = "") {
-  return `${curateStudioHref(universeId)}${hash}`;
-}
-
 export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
   const { assembly, inspectCount } = input;
   const universeId = assembly.master_id;
@@ -106,7 +111,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         label: "Source media",
         tone: "complete",
         summary: "Attached to this Universe.",
-        href: boundAssetId ? `/authority/${encodeURIComponent(boundAssetId)}` : curateHref(universeId),
+        href: boundAssetId ? `/authority/${encodeURIComponent(boundAssetId)}` : curateHubHref(universeId),
         actionLabel: "Open asset",
       }
     : processing
@@ -137,8 +142,8 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
               tone: "attention",
               summary: "Ingested and waiting for curator attachment.",
               href: incomingAssetId
-                ? curateStudioHref(universeId, incomingAssetId)
-                : curateHref(universeId),
+                ? curateIncomingHref(incomingAssetId)
+                : CURATE_STUDIO_HREF,
               actionLabel: "Attach media",
             }
           : {
@@ -160,8 +165,8 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
             sceneCount === 0
               ? "Evidence is available. Review candidates before establishing canonical Scenes."
               : "Evidence is on record. Canonical Scenes already exist.",
-          href: inspectAssetId ? mediaInspectHref(inspectAssetId) : curateHref(universeId, "#establish-scene"),
-          actionLabel: sceneCount === 0 ? "Review evidence" : "Open inspect",
+          href: curateSentinelHref(universeId),
+          actionLabel: sceneCount === 0 ? "Establish Scene" : "Open Sentinel",
         }
       : {
           key: "sentinel",
@@ -189,7 +194,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         label: "Mural",
         tone: "attention",
         summary: "No Mural is registered for this Universe yet. Registration is canonical, not minting.",
-        href: curateHref(universeId, "#register-mural"),
+        href: curateMuralHref(universeId),
         actionLabel: "Register Mural",
       };
 
@@ -211,7 +216,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
             inspectCount > 0
               ? "Sentinel candidates are ready for human authorisation into canonical Scenes."
               : "No canonical Scenes yet.",
-          href: curateHref(universeId, "#establish-scene"),
+          href: curateSentinelHref(universeId),
           actionLabel: "Establish Scene",
         };
 
@@ -233,7 +238,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
           label: "Creative Moments",
           tone: "pending",
           summary: "No Creative Moments are registered on this Universe.",
-          href: curateHref(universeId, "#register-moment"),
+          href: curateMomentHref(universeId),
           actionLabel: "Add Creative Moment",
         };
 
@@ -330,7 +335,7 @@ function resolveNextAction(input: {
     return {
       title: "Processing source media",
       body: "You can leave this workspace. We'll preserve the work state and continue when the provider is ready.",
-      href: curateHref(universeId),
+      href: curateHubHref(universeId),
       label: "Stay with this work",
     };
   }
@@ -346,8 +351,8 @@ function resolveNextAction(input: {
 
   if (input.ingestedUnbound) {
     const href = input.incomingAssetId
-      ? curateStudioHref(universeId, input.incomingAssetId)
-      : curateHref(universeId);
+      ? curateIncomingHref(input.incomingAssetId)
+      : CURATE_STUDIO_HREF;
     return {
       title: "Source media ready",
       body: "Attach it to the appropriate canonical expression. Media is not the Universe.",
@@ -360,7 +365,7 @@ function resolveNextAction(input: {
     return {
       title: "Register a Mural",
       body: "A Mural is the complete audiovisual expression of this Universe. Registration is canonical, not minting.",
-      href: curateHref(universeId, "#register-mural"),
+      href: curateMuralHref(universeId),
       label: "Register Mural",
     };
   }
@@ -387,7 +392,7 @@ function resolveNextAction(input: {
     return {
       title: "Establish canonical Scenes",
       body: "Sentinel may propose candidates. You authorise the canonical windows.",
-      href: curateHref(universeId, "#establish-scene"),
+      href: curateSentinelHref(universeId),
       label: "Establish Scene",
     };
   }
@@ -396,7 +401,7 @@ function resolveNextAction(input: {
     return {
       title: "Add a Creative Moment",
       body: "Creative Moments are contributor-centred units parented to the Universe, not owned by the Mural.",
-      href: curateHref(universeId, "#register-moment"),
+      href: curateMomentHref(universeId),
       label: "Add Creative Moment",
     };
   }

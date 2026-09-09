@@ -62,19 +62,37 @@ export function mediaInspectHref(assetId: string): string {
   return `${MEDIA_INSPECT_HREF}?assetId=${assetId}`;
 }
 
+export function curateHubHref(universeId: string): string {
+  return `${CURATE_STUDIO_HREF}/${encodeURIComponent(universeId)}`;
+}
+
+export function curateMuralHref(universeId: string): string {
+  return `${curateHubHref(universeId)}/mural`;
+}
+
+export function curateMomentHref(universeId: string): string {
+  return `${curateHubHref(universeId)}/moment`;
+}
+
+export function curateSentinelHref(universeId: string): string {
+  return `${curateHubHref(universeId)}/sentinel`;
+}
+
+export function curateIncomingHref(assetId?: string | null): string {
+  if (!assetId) return CURATE_STUDIO_HREF;
+  return `${CURATE_STUDIO_HREF}?asset=${encodeURIComponent(assetId)}`;
+}
+
+/**
+ * Incoming catalogue stays on `/authority/curate`.
+ * Occupied work lives on `/authority/curate/{universeId}` — not as query-stacked sections.
+ */
 export function curateStudioHref(
   universeId?: string | null,
   assetId?: string | null,
 ): string {
-  const params = new URLSearchParams();
-  if (universeId) {
-    params.set("universe", universeId);
-  }
-  if (assetId) {
-    params.set("asset", assetId);
-  }
-  const query = params.toString();
-  return query ? `${CURATE_STUDIO_HREF}?${query}` : CURATE_STUDIO_HREF;
+  if (universeId) return curateHubHref(universeId);
+  return curateIncomingHref(assetId);
 }
 
 export function creativeSuiteHref(universeId: string, from?: StudioFrom | null): string {

@@ -23,7 +23,7 @@ import type {
   CurateMural,
   CurateScene,
   CurateAsset,
-} from "./page";
+} from "@/lib/assemble/load-curate-inspection";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 

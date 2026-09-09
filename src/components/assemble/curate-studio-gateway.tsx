@@ -5,7 +5,7 @@ import { formatDuration } from "@/lib/media/timing";
 import {
   MEDIA_INTAKE_HREF,
   creativeSuiteHref,
-  curateStudioHref,
+  curateSentinelHref,
   mediaInspectHref,
   studioInspectionLabel,
   studioReadinessLabel,
@@ -16,7 +16,6 @@ import type { CurateAssetFocus } from "@/lib/assemble/curate-context";
 import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
-import { RegisterMural } from "./register-mural";
 import { CurateContinuationLinks } from "./curate-continuation";
 
 function untitled(kind: string) {
@@ -79,11 +78,6 @@ export default function CurateStudioGateway({
   selectedUniverseId: string | null;
   focusedAsset: CurateAssetFocus | null;
 }) {
-  const selected = universes.find((universe) => universe.master_id === selectedUniverseId) ?? null;
-  const selectedMedia = selectedUniverseId
-    ? media.filter((item) => item.association.universe_id === selectedUniverseId)
-    : [];
-
   return (
     <div className="space-y-10">
       <section className="space-y-3" aria-labelledby="curate-incoming">
@@ -172,7 +166,7 @@ export default function CurateStudioGateway({
                           </Link>
                           {item.association.universe_id && (
                             <Link
-                              href={curateStudioHref(item.association.universe_id, item.asset_id)}
+                              href={curateSentinelHref(item.association.universe_id)}
                               className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                             >
                               Sentinel
@@ -209,59 +203,17 @@ export default function CurateStudioGateway({
             Curation context
           </h2>
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Choose an existing Universe to shape it here. Creative Studio is for precision composition.
+            Choose an existing Universe to open its Curate Hub. Creative Studio is for precision composition.
             Creating a new canonical work remains a separate Create Work operation.
           </p>
         </div>
 
         <div className="rounded-lg border border-border bg-card px-5 py-4 space-y-4">
           <CurateUniverseSelect universes={universes} selectedUniverseId={selectedUniverseId} />
-
-          {selected ? (
-            <div className="space-y-3">
-              <p className="text-sm text-foreground">
-                {selected.title ?? untitled("universe")} is the canonical work. Use the hub above for what is true and what needs you. Precision composition lives in Creative Studio.
-              </p>
-              {selectedMedia.length > 0 && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedMedia.length} associated media record{selectedMedia.length === 1 ? "" : "s"} in this Universe.
-                </p>
-              )}
-              {(selected.target.blocked_reason === "no_mural" ||
-                selected.target.blocked_reason === "no_projection") && (
-                <div className="space-y-2 rounded-md border border-border bg-background px-4 py-3">
-                  <p className="text-sm text-foreground">
-                    {selected.target.blocked_reason === "no_mural"
-                      ? "This Universe has no Mural yet. Register the Mural to establish the audiovisual container. This is not minting and does not attach media."
-                      : "This Universe's Mural has no presentation yet. Register the Mural presentation. This does not attach media."}
-                  </p>
-                  <RegisterMural
-                    universeId={selected.master_id}
-                    universeTitle={selected.title}
-                    fromCurate
-                  />
-                </div>
-              )}
-              <div className="flex flex-wrap gap-2">
-                <Link href={creativeSuiteHref(selected.master_id, "curate")} className={buttonVariants({ size: "sm" })}>
-                  Open Creative Studio
-                </Link>
-                <Link href={`/authority/${selected.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                  Canonical record
-                </Link>
-              </div>
-              <CurateContinuationLinks
-                universeId={selected.master_id}
-                assetId={selectedMedia[0]?.asset_id ?? null}
-                associated={selectedMedia.length > 0}
-                mediaAttached={selectedMedia.length > 0}
-              />
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No Universe selected. Incoming media stays in intake until an operator associates it with an existing creative work. It does not become a Universe by being uploaded.
-            </p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            Selecting a Universe opens that work. Incoming media stays in intake until you associate
+            it with an existing creative work. It does not become a Universe by being uploaded.
+          </p>
         </div>
       </section>
     </div>

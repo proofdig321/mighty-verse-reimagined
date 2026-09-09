@@ -1,4 +1,4 @@
-import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, curateStudioHref } from "../studio";
+import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref } from "../studio";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -79,12 +79,17 @@ assert(sceneOnly.bound_as === "scene", "scene-only binding is not mural ownershi
 assert(mediaInspectHref(ASSET) === `/authority/media/inspect?assetId=${ASSET}`, "inspect reuses the existing media inspect route");
 assert(creativeSuiteHref(UNIVERSE, "curate") === `/authority/universes/${UNIVERSE}?from=curate`, "suite href preserves Curate origin");
 assert(creativeSuiteSentinelHref(UNIVERSE) === `/authority/universes/${UNIVERSE}#universe-sentinel`, "inspect continues into Suite Sentinel without merging the surfaces");
-assert(curateStudioHref(UNIVERSE) === `/authority/curate?universe=${UNIVERSE}`, "studio inspects mural-bound media via existing universe query");
-assert(curateStudioHref(null, ASSET) === `/authority/curate?asset=${ASSET}`, "Gallery / Inspect context is carried as an existing asset query");
+assert(curateHubHref(UNIVERSE) === `/authority/curate/${UNIVERSE}`, "occupied work opens a Curate Hub child route");
+assert(curateSentinelHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/sentinel`, "Sentinel is a child page, not a stacked section");
+assert(curateMuralHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/mural`, "Mural registration is a child page");
+assert(curateMomentHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/moment`, "Creative Moment registration is a child page");
+assert(curateStudioHref(UNIVERSE) === `/authority/curate/${UNIVERSE}`, "universe occupancy is the hub path");
+assert(curateStudioHref(null, ASSET) === `/authority/curate?asset=${ASSET}`, "Gallery / Inspect context stays on the incoming catalogue");
 assert(
-  curateStudioHref(UNIVERSE, ASSET) === `/authority/curate?universe=${UNIVERSE}&asset=${ASSET}`,
-  "asset context can coexist with Universe occupancy without a new route",
+  curateStudioHref(UNIVERSE, ASSET) === `/authority/curate/${UNIVERSE}`,
+  "bound work occupancy prefers the hub over stacking asset query onto the index",
 );
-assert(curateStudioHref() === "/authority/curate", "Curate Studio without context stays on the existing route");
+assert(curateIncomingHref(ASSET) === `/authority/curate?asset=${ASSET}`, "incoming attach stays on the catalogue");
+assert(curateStudioHref() === "/authority/curate", "Curate without context stays on the incoming catalogue");
 
 console.log("Assemble Curate Studio tests: all passed");

@@ -63,7 +63,7 @@ const done = createWorkContinuations({
   mediaAttached: true,
 });
 assert(done[0].label === "Continue in Curate", "completed universe continues in Curate");
-assert(done[0].href === `/authority/curate?universe=${afterMaster.masterId}`, "Curate is the created universe, not Super Hero Ego");
+assert(done[0].href === `/authority/curate/${afterMaster.masterId}`, "Curate is the created universe hub, not Super Hero Ego");
 assert(done.some((action) => action.label === "Open Creative Studio"), "completed universe offers Creative Studio");
 assert(done.some((action) => action.label === "Inspect media"), "attached media offers Inspect");
 

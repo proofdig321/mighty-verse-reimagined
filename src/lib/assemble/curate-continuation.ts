@@ -6,7 +6,8 @@
 import {
   creativeSuiteHref,
   creativeSuiteSentinelHref,
-  curateStudioHref,
+  curateHubHref,
+  curateSentinelHref,
   mediaInspectHref,
 } from "./studio";
 
@@ -39,7 +40,7 @@ export function curateContinuation(input: {
   const actions: CurateContinuationAction[] = [];
   if (input.assetId) {
     actions.push({ href: mediaInspectHref(input.assetId), label: "Inspect" });
-    actions.push({ href: curateStudioHref(universeId, input.assetId), label: "Sentinel" });
+    actions.push({ href: curateSentinelHref(universeId), label: "Sentinel" });
   }
   actions.push({ href: creativeSuiteHref(universeId, "curate"), label: "Open Creative Studio" });
   if (input.assetId) {
@@ -50,6 +51,7 @@ export function curateContinuation(input: {
     return {
       copy: "Mural registered. Media is not attached. Next: associate incoming media, then inspect, then continue in Creative Studio for storyboard, animation planning, and 2.5D Preview.",
       actions: [
+        { href: curateHubHref(universeId), label: "Back to Curate" },
         { href: "/authority/curate", label: "Incoming media" },
         { href: creativeSuiteHref(universeId, "curate"), label: "Open Creative Studio" },
       ],

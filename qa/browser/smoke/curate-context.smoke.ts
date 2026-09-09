@@ -60,11 +60,10 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   await page.goto(`${ROUTES.curate}?asset=${CANON.muxAssetId}&universe=${CANON.untitledUniverseId}`, {
     waitUntil: "domcontentloaded",
   });
-  const spoofedFocus = page.locator("tr[aria-current='true']");
-  await expect(spoofedFocus).toContainText(CANON.universeTitle);
-  await expect(spoofedFocus.getByRole("button", { name: "Associate with Universe" })).toHaveCount(0);
-  await expect(page.getByRole("status").filter({ hasText: /already associated/i })).toBeVisible();
-  notes.push("client-supplied untitled Universe query cannot re-offer association for Super Hero Ego media");
+  await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.untitledUniverseId}$`));
+  await expect(page.getByRole("heading", { name: /Curate Hub/i })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Associate with Universe" })).toHaveCount(0);
+  notes.push("legacy universe query opens that work's hub and cannot re-associate Super Hero Ego media");
 
   await page.goto(ROUTES.authorityUnboundAsset, { waitUntil: "domcontentloaded" });
   await page.getByRole("link", { name: "Continue in Curate", exact: true }).click();
@@ -79,12 +78,18 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   notes.push("Path C: unbound asset arrives preselected with Associate with Universe; Super Hero Ego remains occupied; no bind confirmed");
 
   await page.goto(ROUTES.authorityCurateMuxAsset, { waitUntil: "domcontentloaded" });
-  await expect(page.getByLabel("Select Universe for Curate Studio")).toHaveValue(CANON.universeId);
-  await expect(page.getByRole("heading", { name: /Inspect \/ Sentinel/i })).toBeVisible();
+  await expect(page.getByLabel("Select Universe for Curate Studio")).toHaveValue("");
+  await expect(page.getByRole("heading", { name: /Incoming \/ Media/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Curate Hub/i })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Run Inspection/i })).toHaveCount(0);
+  await expect(page.locator("tr[aria-current='true']").getByRole("link", { name: "Sentinel", exact: true })).toHaveAttribute(
+    "href",
+    ROUTES.authorityCurateSentinel,
+  );
   await page.locator("tr[aria-current='true']").getByRole("link", { name: "Open Creative Studio", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}\\?from=curate`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
-  notes.push("Path D: bound Super Hero Ego context continues to Creative Suite");
+  notes.push("Path D: bound Super Hero Ego context stays on the incoming catalogue and continues to Creative Studio; Sentinel is a child route");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Stage 2.8 Curate media context", page.url(), notes, observe);

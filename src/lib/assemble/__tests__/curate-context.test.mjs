@@ -79,8 +79,8 @@ assert(fromInspect.next === "creative_suite", "spoofed universe query cannot cha
 assert(fromInspect.universe_id === UNIVERSE, "spoofed universe query cannot reassign the Mux asset");
 
 assert(
-  resolveCurateUniverseSelection({ requestedUniverseId: null, focusedAsset: fromInspect }) === UNIVERSE,
-  "bound asset defaults Curate occupancy to its canonical Universe",
+  resolveCurateUniverseSelection({ requestedUniverseId: null, focusedAsset: fromInspect }) === null,
+  "bound asset does not auto-open a Universe hub from the incoming catalogue",
 );
 assert(
   resolveCurateUniverseSelection({ requestedUniverseId: null, focusedAsset: fromGallery }) === null,

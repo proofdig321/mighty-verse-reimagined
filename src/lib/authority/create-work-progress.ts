@@ -85,14 +85,14 @@ export function createWorkContinuations(input: {
   if (input.processingWaiting) {
     actions.push({ href: `/authority/${input.masterId}`, label: "Open work", primary: true });
     if (universeId) {
-      actions.push({ href: `/authority/curate?universe=${universeId}`, label: "Continue in Curate" });
+      actions.push({ href: `/authority/curate/${universeId}`, label: "Continue in Curate" });
     }
     return actions;
   }
 
   if (universeId) {
     actions.push({
-      href: `/authority/curate?universe=${universeId}`,
+      href: `/authority/curate/${universeId}`,
       label: "Continue in Curate",
       primary: true,
     });

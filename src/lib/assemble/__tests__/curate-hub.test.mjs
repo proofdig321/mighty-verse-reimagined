@@ -118,7 +118,8 @@ const ingested = deriveCurateHub({
 assert(ingested.nextAction.title === "Source media ready", "ingested unbound media asks for attachment");
 assert(ingested.nextAction.label === "Attach media", "attachment is curator work");
 assert(ingested.rows.find((row) => row.key === "mural")?.actionLabel === "Register Mural", "unregistered mural is register, not mint");
-assert(ingested.nextAction.href.includes(FR), "FR ingested work stays on Father Raymond");
+assert(ingested.rows.find((row) => row.key === "mural")?.href === `/authority/curate/${FR}/mural`, "mural registration is a child page");
+assert(ingested.nextAction.href.includes(FR_ASSET), "FR ingested attach stays on incoming media, not Super Hero Ego");
 
 const noScenes = deriveCurateHub({
   assembly: {
@@ -131,7 +132,7 @@ const noScenes = deriveCurateHub({
   boundAssetId: ASSET,
 });
 assert(noScenes.nextAction.label === "Establish Scene", "evidence without scenes needs human authorisation");
-assert(noScenes.nextAction.href.includes("#establish-scene"), "scene establishment stays in Curate");
+assert(noScenes.nextAction.href === `/authority/curate/${UNIVERSE}/sentinel`, "scene establishment is a Curate Sentinel child page");
 
 const noMoments = deriveCurateHub({
   assembly: {
@@ -156,6 +157,6 @@ const noMoments = deriveCurateHub({
   boundAssetId: ASSET,
 });
 assert(noMoments.nextAction.label === "Add Creative Moment", "scenes without moments stay in Curate");
-assert(noMoments.nextAction.href.includes("#register-moment"), "moment registration is contextual, not Create Work");
+assert(noMoments.nextAction.href === `/authority/curate/${UNIVERSE}/moment`, "moment registration is a Curate child page, not Create Work");
 
 console.log("curate-hub.test.mjs: ok");

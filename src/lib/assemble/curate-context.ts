@@ -85,11 +85,10 @@ export function resolveCurateAssetFocus(input: {
 }
 
 /**
- * Universe for Sentinel / occupancy is still an explicit operator choice.
- * A bound incoming asset may default the studio to its canonical Universe
- * so continuation toward Creative Suite is natural. An explicit `universe`
- * query still wins for occupancy inspection, but never rewrites the
- * focused asset's association.
+ * Universe occupancy is an explicit choice. Bound incoming media does not
+ * auto-open that Universe's hub — Curate index stays a short incoming catalogue.
+ * An explicit `universe` query still selects occupancy for legacy redirects,
+ * but never rewrites the focused asset's association.
  */
 export function resolveCurateUniverseSelection(input: {
   requestedUniverseId: string | null | undefined;
@@ -98,9 +97,7 @@ export function resolveCurateUniverseSelection(input: {
   if (isId(input.requestedUniverseId)) {
     return input.requestedUniverseId.trim();
   }
-  if (input.focusedAsset?.next === "creative_suite" && input.focusedAsset.universe_id) {
-    return input.focusedAsset.universe_id;
-  }
+  void input.focusedAsset;
   return null;
 }
 

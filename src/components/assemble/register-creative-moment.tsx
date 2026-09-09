@@ -12,12 +12,14 @@ import { CurateContinuationLinks } from "./curate-continuation";
 export function RegisterCreativeMoment({
   universeId,
   universeTitle,
+  defaultOpen = false,
 }: {
   universeId: string;
   universeTitle: string | null;
+  defaultOpen?: boolean;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const [title, setTitle] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);

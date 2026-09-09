@@ -19,6 +19,10 @@ const associated = curateContinuation({
 });
 assert(associated.actions.some((a) => a.label === "Inspect"), "associated media offers Inspect");
 assert(associated.actions.some((a) => a.label === "Sentinel"), "associated media offers Sentinel");
+assert(
+  associated.actions.find((a) => a.label === "Sentinel")?.href === `/authority/curate/${UNIVERSE}/sentinel`,
+  "Sentinel continuation is the Curate child page",
+);
 assert(associated.actions.some((a) => a.label === "Open Creative Studio"), "associated media offers Creative Studio");
 assert(associated.copy.includes("Creative Studio"), "associated copy names the Studio continuation");
 assert(
@@ -32,6 +36,8 @@ const registered = curateContinuation({
   mediaAttached: false,
 });
 assert(registered.actions.some((a) => a.label === "Incoming media"), "registered mural without media points back to incoming media");
+assert(registered.actions.some((a) => a.label === "Back to Curate"), "registered mural returns to the Curate Hub");
+assert(registered.actions.find((a) => a.label === "Back to Curate")?.href === `/authority/curate/${UNIVERSE}`, "hub return stays on the same Universe");
 assert(registered.actions.some((a) => a.label === "Open Creative Studio"), "registered mural still offers Creative Studio");
 assert(registered.copy.includes("Media is not attached"), "registered mural does not pretend media is bound");
 

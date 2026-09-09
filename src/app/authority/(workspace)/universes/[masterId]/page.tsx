@@ -9,7 +9,7 @@ import { creativeSuiteNavItems } from "@/lib/assemble/suite";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
 import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
 import { deriveProductionPath, productionPathInputFrom } from "@/lib/assemble/workflow";
-import { CURATE_STUDIO_HREF, creativeSuiteHref, creativeSuiteIdentityHref, mediaInspectHref } from "@/lib/assemble/studio";
+import { creativeSuiteHref, creativeSuiteIdentityHref, curateHubHref, mediaInspectHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import UniverseAssemblyView from "@/components/assemble/universe-assembly";
@@ -51,7 +51,7 @@ export default async function UniverseCurationPage({
           fromCurate
             ? [
                 { label: "Authority", href: "/authority" },
-                { label: "Curate", href: CURATE_STUDIO_HREF },
+                { label: "Curate", href: curateHubHref(data.master_id) },
                 { label: title },
               ]
             : [

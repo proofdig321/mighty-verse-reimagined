@@ -1,8 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import type { CurateHubRow, CurateHubSnapshot } from "@/lib/assemble/curate-hub";
-import { RegisterCreativeMoment } from "./register-creative-moment";
-import { RegisterMural } from "./register-mural";
 
 function toneClass(tone: CurateHubRow["tone"]) {
   if (tone === "complete") return "border-emerald-500/40 bg-emerald-500/10";
@@ -88,38 +86,6 @@ export function CurateHub({ snapshot }: { snapshot: CurateHubSnapshot }) {
             ) : null}
           </article>
         ))}
-      </div>
-
-      {!snapshot.muralRegistered && (
-        <div
-          id="register-mural"
-          className="rounded-xl border border-border bg-card px-5 py-4 space-y-3"
-        >
-          <h3 className="text-sm font-medium text-foreground">Register Mural</h3>
-          <p className="text-xs text-muted-foreground max-w-3xl">
-            Establishes the audiovisual expression of this Universe. This is not minting and does
-            not attach media.
-          </p>
-          <RegisterMural
-            universeId={snapshot.universeId}
-            universeTitle={snapshot.universeTitle}
-            fromCurate
-          />
-        </div>
-      )}
-
-      <div
-        id="register-moment"
-        className="rounded-xl border border-border bg-card px-5 py-4 space-y-3"
-      >
-        <h3 className="text-sm font-medium text-foreground">Add Creative Moment</h3>
-        <p className="text-xs text-muted-foreground max-w-3xl">
-          Contributor-centred, parented to the Universe. Place it in Scenes from Creative Studio.
-        </p>
-        <RegisterCreativeMoment
-          universeId={snapshot.universeId}
-          universeTitle={snapshot.universeTitle}
-        />
       </div>
     </section>
   );

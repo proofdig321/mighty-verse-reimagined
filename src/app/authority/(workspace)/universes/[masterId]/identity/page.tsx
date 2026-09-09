@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseAssembly } from "@/lib/assemble";
 import { creativeSuiteNavItems } from "@/lib/assemble/suite";
-import { CURATE_STUDIO_HREF, creativeSuiteHref } from "@/lib/assemble/studio";
+import { creativeSuiteHref, curateHubHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import IdentityCurationClient from "./identity-curation-client";
@@ -39,7 +39,7 @@ export default async function UniverseIdentityPage({
           fromCurate
             ? [
                 { label: "Authority", href: "/authority" },
-                { label: "Curate", href: CURATE_STUDIO_HREF },
+                { label: "Curate", href: curateHubHref(data.master_id) },
                 { label: title, href: suiteHref },
                 { label: "Identity" },
               ]
