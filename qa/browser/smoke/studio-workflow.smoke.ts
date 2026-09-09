@@ -96,7 +96,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await expect(preview.locator("[data-preview-scene]")).toHaveCount(4);
   await preview.getByRole("button", { name: "2.5D Studio Preview" }).click();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(2);
   await captureScreenshot(page, testInfo, "suite-25d-preview");
   notes.push("C: Studio Preview switches 2D composition and 2.5D without leaving Creative Suite");
 
@@ -113,7 +113,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(2);
   const publicProduction = page.locator("[data-holographic-kind='production']");
   await expect(publicProduction).toHaveCount(1);
   await expect(publicProduction).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);

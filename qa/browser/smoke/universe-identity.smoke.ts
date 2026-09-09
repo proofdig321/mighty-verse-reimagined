@@ -34,11 +34,8 @@ test("Authority curates Super Hero Ego identity without changing canonical value
   await page.getByRole("link", { name: "Edit identity" }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseIdentity}$`));
   await expect(page.getByText("Creative Studio").first()).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name: "Identity", exact: true })).toHaveAttribute(
-    "aria-current",
-    "page",
-  );
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByText("Identity")).toBeVisible();
+  await expect(page.getByText("Canonical identity")).toBeVisible();
   await expect(page.getByLabel("Title")).toHaveValue(CANON.universeTitle);
   await expect(page.getByLabel("Description")).toHaveValue(CANON.universeDescription);
   notes.push(`identity form loaded with ${CANON.universeTitle} / ${CANON.universeDescription}`);

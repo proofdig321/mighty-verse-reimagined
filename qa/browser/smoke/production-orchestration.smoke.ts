@@ -188,7 +188,7 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
 
   await page.goto(ROUTES.universeHolographic, { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(2);
   const publicProduction = page.locator("[data-holographic-kind='production']");
   const publicProductionCount = await publicProduction.count();
   expect(publicProductionCount === 0 || publicProductionCount === 1).toBeTruthy();

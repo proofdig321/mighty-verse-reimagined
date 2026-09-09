@@ -114,7 +114,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     await expect(page.getByRole("link", { name: "Universe", exact: true })).toHaveAttribute("href", ROUTES.universeLive);
     await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
     await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-    await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+    await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(2);
     for (const scene of Object.values(SCENE_MOMENTS)) {
       const timeSec = Math.floor(scene.startMs / 1000);
       await expect(page.locator(`[data-holographic-kind='scene'][data-master-id='${scene.sceneMasterId}'] img`)).toHaveAttribute(

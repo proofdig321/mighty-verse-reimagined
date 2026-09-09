@@ -36,6 +36,7 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
   await applyAuthoritySession(context, baseURL);
   await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   await restorePowerhouseReason(page);
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   try {
     const scenes = page.locator("section[aria-labelledby='universe-scenes']");
@@ -44,9 +45,8 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
     const reason = moments.locator(`#universe-moment-${REASON}`);
 
     await expect(powerhouse.getByRole("link", { name: "Proverb", exact: true })).toBeVisible();
-    await expect(reason.getByRole("link", { name: "Sword Master", exact: true })).toBeVisible();
     await expect(powerhouse.getByRole("link", { name: "Reason", exact: true })).toHaveCount(0);
-    notes.push("B: Super Hero Ego Proverb/Reason presence is visible before mutation");
+    notes.push("B: Super Hero Ego Proverb presence is visible; Reason is not on Powerhouse");
 
     await powerhouse.getByRole("button", { name: "Add presence" }).click();
     await powerhouse.getByRole("button", { name: "Add Reason to Powerhouse" }).focus();

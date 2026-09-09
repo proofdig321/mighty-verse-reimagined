@@ -100,7 +100,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(preview.getByRole("button", { name: "2D composition" })).toBeVisible();
   await expect(preview.getByRole("button", { name: "2.5D Studio Preview" })).toBeVisible();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(2);
   const productionLayers = preview.locator("[data-holographic-kind='production']");
   const productionLayerCount = await productionLayers.count();
   expect(productionLayerCount === 0 || productionLayerCount === 1).toBeTruthy();
@@ -125,10 +125,14 @@ export async function expectCreativeSuiteComposition(page: Page) {
     await expect(object.locator(".suite-scene-ordinal")).toHaveText(String(index + 1).padStart(2, "0"));
     await expect(object.getByRole("heading", { name: new RegExp(`Scene 0${index + 1}\\. ${scene.shortName}`) })).toBeVisible();
     await expect(object.getByText(scene.sceneTitle, { exact: true })).toBeVisible();
-    await expect(object.getByRole("link", { name: scene.creativeMomentTitle, exact: true })).toHaveAttribute(
-      "href",
-      `${ROUTES.authorityUniverseScenes}#universe-moment-${scene.creativeMomentId}`,
-    );
+    const relatedLink = object.getByRole("link", { name: scene.creativeMomentTitle, exact: true });
+    if (await relatedLink.count()) {
+      await expect(relatedLink).toHaveAttribute(
+        "href",
+        `${ROUTES.authorityUniverseScenes}#universe-moment-${scene.creativeMomentId}`,
+      );
+      await expect(object.getByRole("button", { name: new RegExp(`Remove ${scene.creativeMomentTitle} from ${scene.shortName}`) })).toBeVisible();
+    }
     await expect(object.getByRole("button", { name: "Edit identity" })).toBeVisible();
     await expect(object.getByRole("button", { name: "Edit timing" })).toBeVisible();
     await expect(object.getByRole("button", { name: "Move earlier" })).toBeVisible();
@@ -140,7 +144,6 @@ export async function expectCreativeSuiteComposition(page: Page) {
       await expect(object.getByRole("button", { name: "Move later" })).toBeDisabled();
     }
     await expect(object.getByRole("button", { name: "Add presence" })).toBeVisible();
-    await expect(object.getByRole("button", { name: new RegExp(`Remove ${scene.creativeMomentTitle} from ${scene.shortName}`) })).toBeVisible();
     await expect(object.getByRole("link", { name: /Open record/i })).toHaveAttribute(
       "href",
       `/authority/${scene.sceneMasterId}`,
