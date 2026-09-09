@@ -1058,6 +1058,11 @@
     min-height: 28rem;
   }
 
+  .holographic-stage:not(.holographic-stage-compact) {
+    overflow: visible;
+    min-height: 36rem;
+  }
+
   .holographic-stage-compact {
     min-height: 22rem;
   }
@@ -1100,14 +1105,17 @@
   .holographic-layer-mural {
     width: min(22rem, 86vw);
     opacity: 0.72;
+    z-index: 1;
   }
 
   .holographic-layer-scene {
     width: min(14.5rem, 64vw);
+    z-index: 2;
   }
 
   .holographic-layer-moment {
     width: min(8.5rem, 42vw);
+    z-index: 3;
   }
 
   .holographic-kicker {

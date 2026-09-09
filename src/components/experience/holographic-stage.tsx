@@ -49,7 +49,7 @@ export function HolographicStage({
             data-holographic-kind={layer.kind}
             data-master-id={layer.master_id}
             style={{
-              transform: `translate(-50%, -50%) translate3d(${layer.offset_x}px, 0, ${layer.depth}px)`,
+              transform: `translate(-50%, -50%) translate3d(${layer.offset_x}px, ${layer.offset_y}px, ${layer.depth}px)`,
             }}
           >
             {layer.still_url ? (

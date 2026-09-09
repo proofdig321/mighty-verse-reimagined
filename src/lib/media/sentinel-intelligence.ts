@@ -92,6 +92,7 @@ export type HolographicLayer = {
   still_url: string | null;
   depth: number;
   offset_x: number;
+  offset_y: number;
   related_scene_ids: string[];
 };
 
@@ -326,6 +327,7 @@ export function composeSentinelIntelligence(input: {
       still_url: muralStill,
       depth: 0,
       offset_x: 0,
+      offset_y: 28,
       related_scene_ids: windows.map((scene) => scene.master_id),
     });
   }
@@ -336,8 +338,9 @@ export function composeSentinelIntelligence(input: {
       master_id: scene.master_id,
       title: scene.title,
       still_url: stillFor(scene, scene.start_ms as number),
-      depth: (index + 1) * 48,
-      offset_x: (index - (windows.length - 1) / 2) * 18,
+      depth: (index + 1) * 72,
+      offset_x: (index - (windows.length - 1) / 2) * 108,
+      offset_y: index % 2 === 0 ? -8 : 22,
       related_scene_ids: [scene.master_id],
     });
   });
@@ -356,8 +359,9 @@ export function composeSentinelIntelligence(input: {
         master_id: related.master_id,
         title: related.title,
         still_url: stillFor(scene, scene.start_ms as number),
-        depth: (index + 1) * 48 + 24,
-        offset_x: sceneIds.length > 1 ? 0 : (index - (windows.length - 1) / 2) * 28,
+        depth: (index + 1) * 72 + 36,
+        offset_x: sceneIds.length > 1 ? 0 : (index - (windows.length - 1) / 2) * 124,
+        offset_y: -72,
         related_scene_ids: sceneIds,
       });
     }
