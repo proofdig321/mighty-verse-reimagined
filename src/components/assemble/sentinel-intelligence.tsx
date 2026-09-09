@@ -219,10 +219,7 @@ export function SentinelIntelligencePanel({
 
       <details className="suite-intelligence-block mt-8">
         <summary className="suite-section-title">Animation plan</summary>
-        <section aria-labelledby="sentinel-animation" className="mt-3">
-          <h3 id="sentinel-animation" className="sr-only">
-            Animation plan
-          </h3>
+        <div className="mt-3">
           <p className="suite-section-note">
             Derived planning language from change intensity. This is not a render.
           </p>
@@ -238,7 +235,7 @@ export function SentinelIntelligencePanel({
               </li>
             ))}
           </ol>
-        </section>
+        </div>
       </details>
 
       <section aria-labelledby="sentinel-proposals" className="suite-intelligence-block mt-8">

@@ -5,7 +5,7 @@ export async function revealCanonicalIdentifiers(scope: Locator) {
   const details = scope.locator("details").filter({ hasText: "Canonical identifiers" }).first();
   if (!(await details.count())) return;
   if (!(await details.getAttribute("open"))) {
-    await details.locator("summary").click();
+    await details.locator(":scope > summary").click();
   }
 }
 
@@ -13,7 +13,7 @@ export async function revealStudioInspector(page: Page) {
   const inspector = page.locator("details.studio-inspector").filter({ hasText: "Source and mural" }).first();
   if (!(await inspector.count())) return;
   if (!(await inspector.getAttribute("open"))) {
-    await inspector.locator("summary").click();
+    await inspector.locator(":scope > summary").click();
   }
 }
 
@@ -62,7 +62,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await openStudioWorkspace(page, "Storyboard");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseStoryboard}`));
   await expect(page.getByRole("heading", { name: "Storyboard", exact: true })).toBeVisible();
-  await expect(page.locator("[data-panel-kind='scene']")).toHaveCount(4);
+  await expect(page.locator(".storyboard-panel-strip [data-panel-kind='scene']")).toHaveCount(4);
   await expect(page.getByText("Canonical Scene").first()).toBeVisible();
   await expect(page.getByText("Storyboard beat").first()).toBeVisible();
 
@@ -80,7 +80,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   );
   await expect(sentinel.getByRole("button", { name: /Authorise Sentinel windows/i })).toBeVisible();
   await expect(sentinel.getByText("System proposal").or(sentinel.getByText("Canonical", { exact: true })).first()).toBeVisible();
-  await sentinel.getByText("Animation plan", { exact: true }).click();
+  await sentinel.locator("summary").filter({ hasText: "Animation plan" }).click();
   await expect(sentinel.locator("[data-animation-scene]")).toHaveCount(4);
 
   await openStudioWorkspace(page, "Production");
