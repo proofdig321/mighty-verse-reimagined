@@ -318,7 +318,7 @@ export default function AuthorityClient() {
             { step: "01", label: "Create Work", sub: "Establish the work. Source media can keep processing after you leave.", href: "/authority/create" },
             { step: "02", label: "Curate", sub: "Shape an existing Universe from live state. Not a second Create wizard.", href: "/authority/curate" },
             { step: "03", label: "Creative Studio", sub: "Compose Scenes, presence, timing, and the 2.5D Preview.", href: "/authority/universes" },
-            { step: "04", label: "Experience", sub: "Public presentation. Distinct from Studio preview.", href: "/universes" },
+            { step: "04", label: "Experience", sub: "Public Universes. Enter 2.5D from a work. Distinct from Studio preview.", href: "/universes" },
           ].map(item => (
             <Link key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
               <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">{item.step}</span>

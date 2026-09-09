@@ -113,12 +113,16 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await captureScreenshot(page, testInfo, "public-experience");
   notes.push("E: Experience is the Studio continuation into /worlds/{universeId}");
 
-  await page.goto(ROUTES.universeHolographic, { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: /Enter 2\.5D/i }).click();
+  await expect(page).toHaveURL(new RegExp(`${ROUTES.universeHolographic}$`));
   await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  const publicProduction = page.locator("[data-holographic-kind='production']");
+  await expect(publicProduction).toHaveCount(1);
+  await expect(publicProduction).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);
   await captureScreenshot(page, testInfo, "public-holographic");
-  notes.push("F: public holographic Experience remains intact");
+  notes.push("F: World Enter 2.5D opens public holographic Experience with the Powerhouse production layer");
 
   await page.goto(ROUTES.universeScenes, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("button", { name: /shuffle/i })).toBeVisible();

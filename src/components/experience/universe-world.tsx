@@ -79,7 +79,15 @@ export function UniverseWorldExperience({
           </p>
         ) : null}
         <div className="world-actions">
-          <Link href={sceneDeckHref} className={cn(buttonVariants({ size: "lg" }), "world-action-primary")}>
+          <Link
+            href={`/worlds/${universeId}/holographic`}
+            className={cn(buttonVariants({ size: "lg" }), "world-action-primary")}
+            data-experience-entry="2.5d"
+          >
+            Enter 2.5D
+            <span className="sr-only">{` for ${title}`}</span>
+          </Link>
+          <Link href={sceneDeckHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
             Enter Scene Deck
           </Link>
           {muralHref ? (
