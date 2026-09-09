@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import MomentCard from "@/components/moment-card";
 import { Separator } from "@/components/ui/separator";
+import { buttonVariants } from "@/components/ui/button";
 
 type CMPageData = {
   master_id: string;
@@ -103,6 +104,20 @@ export default async function CreativeMomentPage({
           {data.description && (
             <p className="text-lg text-muted-foreground">{data.description}</p>
           )}
+          {data.universe_master_id ? (
+            <div className="flex flex-wrap gap-2 pt-4">
+              <Link
+                href={`/worlds/${data.universe_master_id}/holographic`}
+                className={buttonVariants()}
+                data-experience-entry="experience"
+              >
+                Enter Experience
+              </Link>
+              <Link href={`/worlds/${data.universe_master_id}`} className={buttonVariants({ variant: "outline" })}>
+                Open Universe
+              </Link>
+            </div>
+          ) : null}
         </div>
       </div>
 

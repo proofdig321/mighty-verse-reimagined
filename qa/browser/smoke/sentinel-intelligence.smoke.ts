@@ -110,7 +110,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
 
     await page.goto(ROUTES.universeHolographic, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
-    await expect(page.getByRole("link", { name: "2D", exact: true })).toHaveAttribute("href", ROUTES.universeLive);
+    await expect(page.getByRole("link", { name: "Universe", exact: true })).toHaveAttribute("href", ROUTES.universeLive);
     await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
     await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
     await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
@@ -142,7 +142,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     notes.push("G: Scene Deck stills remain Mux time=36/80/149/193");
 
     await page.goto(ROUTES.momentSwordMaster, { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("link", { name: "View in 2.5D" })).toHaveAttribute("href", ROUTES.universeHolographic);
+    await expect(page.getByRole("link", { name: /Enter Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
     notes.push("H: Sword Master Moment continues into Super Hero Ego 2.5D");
 
     await page.goto(ROUTES.authorityMuxInspect, { waitUntil: "domcontentloaded" });

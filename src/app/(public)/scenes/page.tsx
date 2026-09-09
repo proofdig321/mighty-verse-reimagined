@@ -90,12 +90,12 @@ export default async function ScenesPage() {
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-1" style={{ color: "var(--accent-mv)" }}>Children of the Mural</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-1" style={{ color: "var(--accent-mv)" }}>Scenes in the Mural</p>
             <h1 className="text-3xl font-semibold" style={{ fontFamily: "var(--font-display, inherit)" }}>Scene Deck</h1>
-            <p className="text-sm text-muted-foreground mt-1">Shuffle the deck to reveal hidden creative moments. Create your own timeline.</p>
+            <p className="text-sm text-muted-foreground mt-1">Reveal the Scenes of a Universe. Shuffle is presentation, not canonical order.</p>
           </div>
-          <Link href="/editor" className="shrink-0 mt-1">
-            <Button variant="outline" size="sm">Build Experience →</Button>
+          <Link href="/universes" className="shrink-0 mt-1">
+            <Button variant="outline" size="sm">Explore Universes</Button>
           </Link>
         </div>
         <SceneDeckClient scenes={scenes} faceDownUntilSelected label="From the Mural" hideHeader />

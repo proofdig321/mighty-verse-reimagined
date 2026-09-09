@@ -20,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { masterId } = await params;
   const data = await loadUniverseAssembly(masterId);
-  return { title: data ? `${data.title ?? "Universe"} · 2.5D` : "2.5D" };
+  return { title: data ? `${data.title ?? "Universe"} · Experience` : "Experience" };
 }
 
 export default async function HolographicWorldPage({
@@ -40,29 +40,31 @@ export default async function HolographicWorldPage({
     canonical_layers: intelligence?.holographic ?? [],
     realizations: productionLayersFromResults(productionResults),
   });
+  const mural = data.murals[0] ?? null;
 
   return (
     <div className="min-h-screen bg-background">
       <PageTopNav />
-      <main className="mx-auto w-full max-w-6xl space-y-8 px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-7xl space-y-8 px-4 py-10 sm:px-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="space-y-2 min-w-0">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">2.5D holographic</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Experience</p>
             <h1 className="text-3xl font-semibold tracking-tight text-foreground" style={{ fontFamily: "var(--font-display, inherit)" }}>
               {title}
             </h1>
-            <p className="text-sm text-muted-foreground max-w-2xl">
-              Creative Moments become spatial objects in front of their Scenes. The Mural is the back plane.
-              This is Experience presentation. Canonical windows stay on the Creative Suite.
+            <p className="text-sm text-muted-foreground max-w-3xl">
+              The Mural is the audiovisual foundation. Scenes are spatial units. Creative Moments stand in front of
+              their Scenes. Approved production realizations appear on the Scenes they realize. They do not replace
+              canonical Scenes.
               {projection.production_count > 0
-                ? ` ${projection.production_count} approved production layer${projection.production_count === 1 ? "" : "s"} attached to Scene planes.`
-                : " Approved production realizations are not dumped from Gallery. None exist yet."}
+                ? ` ${projection.production_count} approved production layer${projection.production_count === 1 ? "" : "s"} attached.`
+                : " No approved production layers are attached yet."}
             </p>
           </div>
           <ExperienceToggle
-            twoDHref={`/worlds/${data.master_id}`}
-            holographicHref={`/worlds/${data.master_id}/holographic`}
-            current="2.5d"
+            universeHref={`/worlds/${data.master_id}`}
+            experienceHref={`/worlds/${data.master_id}/holographic`}
+            current="experience"
           />
         </div>
 
@@ -74,8 +76,13 @@ export default async function HolographicWorldPage({
 
         <div className="flex flex-wrap gap-2">
           <Link href={`/worlds/${data.master_id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Return to 2D world
+            Return to Universe
           </Link>
+          {mural ? (
+            <Link href={`/worlds/${mural.master_id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              View Mural
+            </Link>
+          ) : null}
           <Link href={`/worlds/${data.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
             Scene Deck
           </Link>

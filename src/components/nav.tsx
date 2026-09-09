@@ -13,10 +13,10 @@ const NAV_LINKS = [
 ];
 
 const CORE_PRINCIPLES = [
-  { icon: "◎", label: "Universe", sub: "Top level container (Song World reimagined)" },
-  { icon: "▦", label: "Mural", sub: "Animated video (visual world)" },
-  { icon: "◻", label: "Scene", sub: "Chapter / segment within a mural" },
-  { icon: "◈", label: "Creative Moment", sub: "Card (collectible moment)" },
+  { icon: "◎", label: "Universe", sub: "Canonical creative work" },
+  { icon: "▦", label: "Mural", sub: "Complete audiovisual expression" },
+  { icon: "◻", label: "Scene", sub: "Spatial unit in the Mural" },
+  { icon: "◈", label: "Creative Moment", sub: "Contributor-centred unit" },
   { icon: "⬡", label: "Authority", sub: "Governance, rights, and publication layer" },
 ];
 

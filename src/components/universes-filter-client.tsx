@@ -10,7 +10,6 @@ type UniverseItem = {
   master_id: string;
   title: string | null;
   attribution_roles: string[];
-  projection_count: number;
   playback_id: string | null;
   provider: string | null;
 };
@@ -42,7 +41,7 @@ export default function UniversesFilterClient({ universes }: Props) {
               All Universes
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Explore all song universes. Each one holds its own stories, murals and moments.
+              Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter Experience.
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -96,9 +95,7 @@ export default function UniversesFilterClient({ universes }: Props) {
                       ? u.attribution_roles.map((r) => r.replace(/-/g, " ")).join(", ")
                       : "Various Artists"}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    {u.projection_count} Moment{u.projection_count !== 1 ? "s" : ""}
-                  </p>
+                  <p className="mt-2 text-xs text-muted-foreground">Explore, then enter Experience</p>
                 </div>
               </Link>
             ))}

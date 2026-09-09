@@ -76,7 +76,7 @@ export default async function MuralsPage() {
         <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              Visual expressions of Worlds
+              Audiovisual expressions of Universes
             </p>
             <h1
               className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
@@ -124,7 +124,7 @@ export default async function MuralsPage() {
                   {m.artist && (
                     <p className="mt-1 text-xs text-muted-foreground truncate capitalize">{m.artist}</p>
                   )}
-                  <p className="mt-1 text-xs text-muted-foreground">Mural Scene</p>
+                  <p className="mt-1 text-xs text-muted-foreground">Mural</p>
                 </div>
               </Link>
             ))}

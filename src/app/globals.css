@@ -1212,6 +1212,16 @@
     min-width: 0;
   }
 
+  .world-encounter-link {
+    display: block;
+    color: inherit;
+    text-decoration: none;
+  }
+
+  .world-encounter-link:hover .world-encounter-title {
+    opacity: 0.8;
+  }
+
   .world-encounter-ordinal {
     margin: 0.85rem 0 0.2rem;
     font-family: var(--font-display, inherit);

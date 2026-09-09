@@ -36,6 +36,10 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(continuation.getByText("Experience", { exact: true }).first()).toBeVisible();
   await expect(continuation.getByRole("link", { name: /Enter Experience/i })).toHaveAttribute(
     "href",
+    ROUTES.universeHolographic,
+  );
+  await expect(continuation.getByRole("link", { name: /Open Universe/i })).toHaveAttribute(
+    "href",
     ROUTES.universeLive,
   );
 
@@ -81,7 +85,8 @@ export async function expectCreativeSuiteComposition(page: Page) {
   if (productionLayerCount === 1) {
     await expect(productionLayers).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);
   }
-  await expect(preview.getByRole("link", { name: "Open public 2.5D" })).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(preview.getByRole("link", { name: "Enter Experience" })).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(preview.getByRole("link", { name: "Open Universe" })).toHaveAttribute("href", ROUTES.universeLive);
 
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");
   const moments = page.locator("section[aria-labelledby='universe-moments']");

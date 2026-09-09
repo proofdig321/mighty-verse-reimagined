@@ -25,6 +25,7 @@ export type UniverseAssemblyProps = {
   openLabel?: string;
   muralEmptyAction?: ReactNode;
   experienceHref?: string;
+  universeHref?: string | null;
   canAuthorPresence?: boolean;
   canAuthorIdentity?: boolean;
   canAuthorTiming?: boolean;
@@ -32,7 +33,6 @@ export type UniverseAssemblyProps = {
   canAuthoriseSentinel?: boolean;
   intelligence?: SentinelIntelligence | null;
   inspectHref?: string | null;
-  holographicHref?: string | null;
   source?: SuiteSourcePreview | null;
   productionPath?: ProductionPathStep[];
   productionBriefs?: SceneProductionBrief[];
@@ -50,6 +50,7 @@ export default function UniverseAssemblyView({
   openLabel = "Open",
   muralEmptyAction,
   experienceHref,
+  universeHref = null,
   canAuthorPresence = false,
   canAuthorIdentity = false,
   canAuthorTiming = false,
@@ -57,7 +58,6 @@ export default function UniverseAssemblyView({
   canAuthoriseSentinel = false,
   intelligence = null,
   inspectHref = null,
-  holographicHref = null,
   source = null,
   productionPath = [],
   productionBriefs = [],
@@ -81,7 +81,7 @@ export default function UniverseAssemblyView({
       <div className="suite-stack">
         <section className="suite-section" aria-labelledby="universe-identity">
           <div className="suite-identity">
-            <p className="suite-kicker">World</p>
+            <p className="suite-kicker">Universe</p>
             <h2 id="universe-identity" className="suite-section-title">
               Identity
             </h2>
@@ -177,7 +177,7 @@ export default function UniverseAssemblyView({
           <ProductionBriefs universeId={data.master_id} briefs={productionBriefs} proofExecutorAvailable={proofExecutorAvailable} />
         </section>
 
-        {intelligence && experienceHref && holographicHref ? (
+        {intelligence && experienceHref && universeHref ? (
           <section className="suite-section" aria-labelledby="universe-preview">
             <div className="suite-section-head">
               <h2 id="universe-preview" className="suite-section-title">
@@ -192,7 +192,7 @@ export default function UniverseAssemblyView({
               scenes={scenes}
               layers={composeExperienceProjection({ canonical_layers: intelligence.holographic, realizations: productionLayers }).layers}
               experienceHref={experienceHref}
-              holographicHref={holographicHref}
+              universeHref={universeHref}
             />
           </section>
         ) : null}
@@ -265,7 +265,7 @@ export default function UniverseAssemblyView({
         {experienceHref ? (
           <ExperienceContinuation
             href={experienceHref}
-            holographicHref={holographicHref}
+            universeHref={universeHref}
             universeTitle={data.title ?? "this Universe"}
           />
         ) : null}

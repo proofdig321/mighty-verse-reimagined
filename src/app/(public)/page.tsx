@@ -29,7 +29,7 @@ export default async function HomePage() {
         <div className="relative z-10 mx-auto max-w-7xl px-6 py-24 md:py-36">
           <div className="max-w-3xl space-y-7">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              A living catalogue of worlds
+              A living catalogue of Universes
             </p>
             <h1
               className="text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl"
@@ -40,8 +40,7 @@ export default async function HomePage() {
               is a Legend.
             </h1>
             <p className="max-w-lg text-lg text-muted-foreground leading-relaxed">
-              Explore animated universes where music, art and story come to life.
-              Collect the moments that matter.
+              Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter Experience.
             </p>
             <div className="flex flex-wrap gap-3 pt-2">
               <Link href="/universes">
@@ -62,8 +61,8 @@ export default async function HomePage() {
           <div className="mt-16 flex flex-wrap gap-8 border-t border-border/40 pt-8">
             {[
               { n: featured.length || "—", label: "Universes" },
-              { n: "∞", label: "Creative Moments" },
-              { n: "Base", label: "Network" },
+              { n: "Scenes", label: "Spatial units" },
+              { n: "Moments", label: "Contributors" },
             ].map(({ n, label }) => (
               <div key={label} className="flex items-baseline gap-2">
                 <span
@@ -166,14 +165,14 @@ export default async function HomePage() {
       <section className="border-t border-border/50">
         <div className="mx-auto max-w-7xl px-6 py-12">
           <p className="mb-6 text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-            The experience
+            The creative structure
           </p>
           <div className="grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-4">
             {[
-              { icon: "◎", label: "Universe", sub: "The canonical song world" },
-              { icon: "▦", label: "Mural", sub: "The animated visual expression" },
-              { icon: "◻", label: "Scene", sub: "A chapter within the Mural" },
-              { icon: "◈", label: "Creative Moment", sub: "A collectible card" },
+              { icon: "◎", label: "Universe", sub: "The canonical creative work" },
+              { icon: "▦", label: "Mural", sub: "The complete audiovisual expression" },
+              { icon: "◻", label: "Scene", sub: "A spatial unit in the Mural" },
+              { icon: "◈", label: "Creative Moment", sub: "A contributor-centred unit" },
             ].map(({ icon, label, sub }) => (
               <div key={label} className="bg-card px-5 py-6">
                 <span

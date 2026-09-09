@@ -91,8 +91,11 @@ export default async function UniverseCurationPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ size: "sm" })}>
+          <Link href={`/worlds/${data.master_id}/holographic`} className={buttonVariants({ size: "sm" })}>
             Enter Experience
+          </Link>
+          <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            Open Universe
           </Link>
           <Link href={creativeSuiteIdentityHref(data.master_id, fromCurate ? "curate" : null)} className={buttonVariants({ variant: "outline", size: "sm" })}>
             Edit identity
@@ -115,7 +118,8 @@ export default async function UniverseCurationPage({
         data={data}
         openHref={(id) => `/authority/${id}`}
         openLabel="Open record"
-        experienceHref={`/worlds/${data.master_id}`}
+        experienceHref={`/worlds/${data.master_id}/holographic`}
+        universeHref={`/worlds/${data.master_id}`}
         canAuthorPresence
         canAuthorIdentity
         canAuthorTiming
@@ -123,7 +127,6 @@ export default async function UniverseCurationPage({
         canAuthoriseSentinel
         intelligence={intelligence}
         inspectHref={inspectAssetId ? mediaInspectHref(inspectAssetId) : null}
-        holographicHref={`/worlds/${data.master_id}/holographic`}
         source={source}
         productionPath={productionPath}
         productionBriefs={productionBriefs}

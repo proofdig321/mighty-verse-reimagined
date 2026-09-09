@@ -3,11 +3,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import MediaHero from "@/components/media-hero";
 import { UniverseWorldExperience } from "@/components/experience/universe-world";
 import PageTopNav from "@/components/page-top-nav";
 import { sceneStillUrl } from "@/lib/experience/universe-world";
+import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
 
 type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
 type MomentRow = { master_id: string; title: string | null; projection_id: string | null };
@@ -369,6 +370,7 @@ export default async function WorldPage({
         <div className="mv-hero-gradient border-b border-border">
           <div className="mx-auto max-w-7xl px-6 py-8">
             <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Mural</p>
               {data.universe_title && (
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
                   {data.universe_title}
@@ -385,6 +387,20 @@ export default async function WorldPage({
                   {data.description.length > 160 ? data.description.slice(0, 160).trimEnd() + "…" : data.description}
                 </p>
               )}
+              {data.universe_master_id ? (
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Link
+                    href={`/worlds/${data.universe_master_id}/holographic`}
+                    className={buttonVariants({ size: "lg" })}
+                    data-experience-entry="experience"
+                  >
+                    Enter Experience
+                  </Link>
+                  <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
+                    Scene Deck
+                  </Link>
+                </div>
+              ) : null}
             </div>
           </div>
         </div>
@@ -463,6 +479,10 @@ export default async function WorldPage({
         storage_ref: data.scenes[0]?.playback_id,
         start_ms: data.scenes[0]?.start_ms ?? 5000,
       });
+  const productionResults = await loadUniverseProductionResults(masterId);
+  const productionSceneIds = productionResults
+    .filter((result) => result.approval === "approved" && result.attached)
+    .map((result) => result.scene_master_id);
 
   return (
     <div className="min-h-screen bg-background">
@@ -494,6 +514,7 @@ export default async function WorldPage({
         moments={data.moments}
         sceneMoments={data.scene_moments}
         muralStill={muralStill}
+        productionSceneIds={productionSceneIds}
       />
     </div>
   );

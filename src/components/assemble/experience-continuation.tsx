@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 
 export function ExperienceContinuation({
   href,
-  holographicHref,
+  universeHref,
   universeTitle,
 }: {
   href: string;
-  holographicHref?: string | null;
+  universeHref?: string | null;
   universeTitle: string;
 }) {
   return (
@@ -18,8 +18,8 @@ export function ExperienceContinuation({
         Experience
       </h2>
       <p className="suite-section-note">
-        The Universe is composed in Studio. Enter its public Experience. This is navigation, not a publish or realize action.
-        Public 2.5D remains an audience surface. Studio Preview stays here.
+        Studio composes the work. Experience presents it. This is navigation, not a publish or realize action.
+        2.5D is the presentation of Mural, Scenes, Creative Moments, and approved production layers.
       </p>
       <ol className="suite-continuation-flow">
         <li>Assemble</li>
@@ -33,9 +33,9 @@ export function ExperienceContinuation({
           Enter Experience
           <span className="sr-only">{` for ${universeTitle}`}</span>
         </Link>
-        {holographicHref ? (
-          <Link href={holographicHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-            Open public 2.5D
+        {universeHref ? (
+          <Link href={universeHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+            Open Universe
           </Link>
         ) : null}
       </div>

@@ -16,13 +16,13 @@ export function StudioPreview({
   scenes,
   layers,
   experienceHref,
-  holographicHref,
+  universeHref,
 }: {
   universeTitle: string;
   scenes: SuiteScene[];
   layers: HolographicLayer[];
   experienceHref: string;
-  holographicHref: string;
+  universeHref: string;
 }) {
   const [mode, setMode] = useState<"2d" | "2.5d">("2.5d");
 
@@ -47,8 +47,8 @@ export function StudioPreview({
         </button>
       </div>
       <p className="suite-section-note">
-        2.5D is a realization/preview of the canonical composition. It is not a new canonical source.
-        Scene Deck shuffle stays in public Experience.
+        Studio Preview is not the public Experience. 2.5D here is a curator preview of canonical composition.
+        Scene Deck remains a public Reveal surface, not Studio.
       </p>
 
       {mode === "2.5d" ? (
@@ -75,8 +75,8 @@ export function StudioPreview({
         <Link href={experienceHref} className={cn(buttonVariants({ size: "sm" }))}>
           Enter Experience
         </Link>
-        <Link href={holographicHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-          Open public 2.5D
+        <Link href={universeHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          Open Universe
         </Link>
       </div>
     </div>

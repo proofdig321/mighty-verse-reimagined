@@ -312,16 +312,20 @@ export default async function MomentPage({
 
             {/* Tag pills */}
             <div className="flex flex-wrap gap-2">
+              {isScene ? (
+                <Badge variant="outline">Scene</Badge>
+              ) : (
+                <Badge variant="outline">Moment Card</Badge>
+              )}
               {projection.collectible_designated && (
                 <Badge variant="outline" style={{ color: "var(--accent-mv-gold)", borderColor: "var(--accent-mv-gold)" }}>
                   Collectible
                 </Badge>
               )}
-              <Badge variant="outline">Moment Card</Badge>
-              <Badge variant="outline">ERC-1155</Badge>
             </div>
 
             {/* Metadata grid */}
+            {!isScene && (
             <div className="grid grid-cols-2 gap-3">
               {[
                 { label: "Rarity", value: rarityLabel },
@@ -335,19 +339,27 @@ export default async function MomentPage({
                 </div>
               ))}
             </div>
+            )}
 
             {/* Action buttons */}
-            <div className="flex gap-3">
+            <div className="flex flex-wrap gap-3">
               {worldMasterId ? (
-                <Link href={`/worlds/${worldMasterId}/holographic`} className={buttonVariants({ variant: "outline" })}>
-                  View in 2.5D
+                <Link href={`/worlds/${worldMasterId}/holographic`} className={buttonVariants()} data-experience-entry="experience">
+                  Enter Experience
                 </Link>
               ) : (
-                <Button variant="outline" disabled>View in 2.5D</Button>
+                <Button disabled>Enter Experience</Button>
               )}
-              <Button disabled style={{ background: "var(--accent-mv)" }} className="text-white">
-                Add to Timeline
-              </Button>
+              {worldMasterId ? (
+                <Link href={`/worlds/${worldMasterId}`} className={buttonVariants({ variant: "outline" })}>
+                  Open Universe
+                </Link>
+              ) : null}
+              {isScene && muralMasterId ? (
+                <Link href={`/worlds/${muralMasterId}`} className={buttonVariants({ variant: "outline" })}>
+                  View Mural
+                </Link>
+              ) : null}
             </div>
 
           </div>

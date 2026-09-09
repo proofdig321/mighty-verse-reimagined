@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import { buttonVariants } from "@/components/ui/button";
-import ExperienceToggle from "@/components/experience-toggle";
 import {
   contributorPresence,
   sceneOrdinal,
@@ -24,6 +23,7 @@ export type UniverseWorldExperienceProps = {
   moments: UniverseMomentPresence[];
   sceneMoments: UniverseSceneMomentRel[];
   muralStill: { provider: string; storage_ref: string; timeSec: number } | null;
+  productionSceneIds?: string[];
 };
 
 function EncounterStill({
@@ -53,6 +53,7 @@ export function UniverseWorldExperience({
   moments,
   sceneMoments,
   muralStill,
+  productionSceneIds = [],
 }: UniverseWorldExperienceProps) {
   const mural = murals[0] ?? null;
   const muralStillUrl = muralStill
@@ -64,6 +65,8 @@ export function UniverseWorldExperience({
   const contributors = contributorPresence(moments, scenes, sceneMoments);
   const sceneDeckHref = `/worlds/${universeId}/scenes`;
   const muralHref = mural ? `/worlds/${mural.master_id}` : null;
+  const experienceHref = `/worlds/${universeId}/holographic`;
+  const productionSet = new Set(productionSceneIds);
 
   return (
     <div className="world-experience">
@@ -80,11 +83,11 @@ export function UniverseWorldExperience({
         ) : null}
         <div className="world-actions">
           <Link
-            href={`/worlds/${universeId}/holographic`}
+            href={experienceHref}
             className={cn(buttonVariants({ size: "lg" }), "world-action-primary")}
-            data-experience-entry="2.5d"
+            data-experience-entry="experience"
           >
-            Enter 2.5D
+            Enter Experience
             <span className="sr-only">{` for ${title}`}</span>
           </Link>
           <Link href={sceneDeckHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
@@ -95,22 +98,17 @@ export function UniverseWorldExperience({
               View Mural
             </Link>
           ) : null}
-          <ExperienceToggle
-            twoDHref={`/worlds/${universeId}`}
-            holographicHref={`/worlds/${universeId}/holographic`}
-            current="2d"
-          />
         </div>
       </section>
 
       {mural ? (
         <section className="world-section" aria-labelledby="world-mural-heading">
-          <p className="world-kicker">Stage</p>
+          <p className="world-kicker">Reveal</p>
           <h2 id="world-mural-heading" className="world-section-title">
             The Mural
           </h2>
           <p className="world-section-note">
-            The audiovisual expression of this Universe. Playback lives on the Mural experience.
+            The complete audiovisual expression of this Universe. Playback lives on the Mural.
           </p>
           <Link href={`/worlds/${mural.master_id}`} className="world-mural-stage">
             <EncounterStill url={muralStillUrl} alt="" />
@@ -127,12 +125,12 @@ export function UniverseWorldExperience({
         <section className="world-section" aria-labelledby="world-encounters-heading">
           <div className="world-section-head">
             <div>
-              <p className="world-kicker">Encounters</p>
+              <p className="world-kicker">Reveal</p>
               <h2 id="world-encounters-heading" className="world-section-title">
                 Scenes
               </h2>
               <p className="world-section-note">
-                Cinematic encounters in this Universe. The Scene Deck remains the place to reveal them.
+                Canonical spatial units in the Mural. Inspect a Scene, or continue to the Scene Deck.
               </p>
             </div>
             <Link href={sceneDeckHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
@@ -153,18 +151,30 @@ export function UniverseWorldExperience({
                     width: 720,
                   })
                 : null;
+              const sceneHref = scene.projection_id ? `/moments/${scene.projection_id}` : sceneDeckHref;
+              const hasProduction = productionSet.has(scene.master_id);
               return (
                 <li key={scene.master_id}>
-                  <article className="world-encounter" aria-labelledby={`world-scene-${scene.master_id}`}>
-                    <EncounterStill url={stillUrl} alt="" />
-                    <p className="world-encounter-ordinal">{sceneOrdinal(index)}</p>
-                    <h3 id={`world-scene-${scene.master_id}`} className="world-encounter-title">
-                      {shortTitle}
-                    </h3>
-                    {scene.title && scene.title !== shortTitle ? (
-                      <p className="world-encounter-full">{scene.title}</p>
-                    ) : null}
-                  </article>
+                  <Link href={sceneHref} className="world-encounter-link">
+                    <article
+                      className="world-encounter"
+                      data-scene-id={scene.master_id}
+                      data-has-production={hasProduction ? "true" : "false"}
+                      aria-labelledby={`world-scene-${scene.master_id}`}
+                    >
+                      <EncounterStill url={stillUrl} alt="" />
+                      <p className="world-encounter-ordinal">{sceneOrdinal(index)}</p>
+                      <h3 id={`world-scene-${scene.master_id}`} className="world-encounter-title">
+                        {shortTitle}
+                      </h3>
+                      {scene.title && scene.title !== shortTitle ? (
+                        <p className="world-encounter-full">{scene.title}</p>
+                      ) : null}
+                      {hasProduction ? (
+                        <p className="world-encounter-full">Approved production layer</p>
+                      ) : null}
+                    </article>
+                  </Link>
                 </li>
               );
             })}
@@ -174,7 +184,7 @@ export function UniverseWorldExperience({
 
       {contributors.length > 0 ? (
         <section className="world-section" aria-labelledby="world-presence-heading">
-          <p className="world-kicker">Presence</p>
+          <p className="world-kicker">Reveal</p>
           <h2 id="world-presence-heading" className="world-section-title">
             Creative Moments
           </h2>

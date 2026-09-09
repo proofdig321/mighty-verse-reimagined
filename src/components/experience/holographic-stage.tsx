@@ -39,7 +39,7 @@ export function HolographicStage({
       onPointerLeave={onLeave}
     >
       <p id={stageId} className="sr-only">
-        2.5D holographic stage for {title}
+        Experience stage for {title}
       </p>
       <div className="holographic-space" aria-hidden={false}>
         {layers.map((layer) => (

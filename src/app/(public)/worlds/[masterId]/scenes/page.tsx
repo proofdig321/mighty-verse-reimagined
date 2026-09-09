@@ -5,6 +5,7 @@ import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import PageTopNav from "@/components/page-top-nav";
 import SceneDeckClient from "@/components/scene-deck-client";
+import { buttonVariants } from "@/components/ui/button";
 
 type SceneItem = {
   master_id: string;
@@ -134,23 +135,28 @@ export default async function UniverseScenesPage({
     <div className="min-h-screen bg-background">
       <PageTopNav activePath="/scenes" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
-        <div className="space-y-3">
-          <Link
-            href={`/worlds/${masterId}`}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← {universeTitle ?? "Universe"}
-          </Link>
-          <h1
-            className="text-3xl font-semibold text-foreground"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            Scene Deck
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            Shuffle the deck to reveal hidden creative moments. Create your own timeline.
-          </p>
-        </div>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="space-y-3">
+              <Link
+                href={`/worlds/${masterId}`}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                ← {universeTitle ?? "Universe"}
+              </Link>
+              <h1
+                className="text-3xl font-semibold text-foreground"
+                style={{ fontFamily: "var(--font-display, inherit)" }}
+              >
+                Scene Deck
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Reveal the Scenes of this Universe. Shuffle is presentation, not canonical order.
+              </p>
+            </div>
+            <Link href={`/worlds/${masterId}/holographic`} className={buttonVariants({ size: "lg" })} data-experience-entry="experience">
+              Enter Experience
+            </Link>
+          </div>
         <SceneDeckClient scenes={scenes} hideHeader />
       </div>
     </div>
