@@ -23,7 +23,7 @@ test("Creative Suite authors Creative Moment identity without leaving Super Hero
   notes.push("A: unauthenticated Creative Moment identity mutation is rejected");
 
   await applyAuthoritySession(context, baseURL);
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
 
   const proverb = page.locator(`#universe-moment-${PROVERB.masterId}`);
   await proverb.getByRole("button", { name: "Edit identity" }).click();
@@ -65,7 +65,7 @@ test("Creative Suite authors Creative Moment identity without leaving Super Hero
     await expect(proverb.getByRole("link", { name: SCENE_MOMENTS.powerhouse.shortName, exact: true })).toBeVisible();
     notes.push("D: Proverb can be named in place; sharing and identity-only stay");
   } finally {
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" }).catch(() => null);
+    await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" }).catch(() => null);
     await restoreProverbIdentity();
   }
 

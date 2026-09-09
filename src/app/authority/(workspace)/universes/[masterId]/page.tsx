@@ -1,27 +1,12 @@
 export const dynamic = "force-dynamic";
 
-import Link from "next/link";
-import { notFound, redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import { getParticipantId } from "@/lib/supabase/participant";
-import { loadUniverseAssembly } from "@/lib/assemble";
-import { creativeSuiteNavItems } from "@/lib/assemble/suite";
-import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
-import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
-import { loadUniverseReferences } from "@/lib/assemble/load-references";
-import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
-import { deriveProductionPath, productionPathInputFrom } from "@/lib/assemble/workflow";
-import { deriveSceneProductionBriefs } from "@/lib/production/plan";
-import { isFfmpegProofExecutor } from "@/lib/production/adapter";
-import { productionLayersFromResults } from "@/lib/production/projection";
-import { creativeSuiteHref, creativeSuiteIdentityHref, curateHubHref, mediaInspectHref } from "@/lib/assemble/studio";
-import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
-import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
-import UniverseAssemblyView from "@/components/assemble/universe-assembly";
 import { RegisterMural } from "@/components/assemble/register-mural";
-import { buttonVariants } from "@/components/ui/button";
+import { StudioOverview } from "@/components/assemble/studio-overview";
+import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { MuralEmpty } from "@/components/assemble/mural-presence";
+import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
-export default async function UniverseCurationPage({
+export default async function UniverseStudioOverviewPage({
   params,
   searchParams,
 }: {
@@ -30,120 +15,37 @@ export default async function UniverseCurationPage({
 }) {
   const { masterId } = await params;
   const query = await searchParams;
-
-  const supabase = await createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/auth/sign-in?next=/authority/universes/${masterId}`);
-  if (!await getParticipantId(supabase)) redirect(`/auth/sign-in?next=/authority/universes/${masterId}`);
-
-  const data = await loadUniverseAssembly(masterId);
-  if (!data) notFound();
-  const [intelligence, source, references, productionResults] = await Promise.all([
-    loadSentinelIntelligence(data),
-    loadSuiteSourcePreview(data),
-    loadUniverseReferences(data.master_id),
-    loadUniverseProductionResults(data.master_id),
-  ]);
-  const inspectAssetId = data.murals.flatMap((mural) => mural.scenes).find((scene) => scene.asset_id)?.asset_id ?? null;
-
-  const title = data.title ?? "Untitled universe";
   const fromCurate = query.from === "curate";
-  const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
-  const productionPath = deriveProductionPath(productionPathInputFrom(data, intelligence, suiteHref));
-  const productionBriefs = deriveSceneProductionBriefs(data, intelligence, references, productionResults);
-  const productionLayers = productionLayersFromResults(productionResults);
+  const workspace = await requireStudioWorkspace(masterId, fromCurate);
+  const title = workspace.data.title ?? "Untitled universe";
 
   return (
-    <div className="space-y-10">
-      <HierarchyBreadcrumb
-        items={
-          fromCurate
-            ? [
-                { label: "Authority", href: "/authority" },
-                { label: "Curate", href: curateHubHref(data.master_id) },
-                { label: title },
-              ]
-            : [
-                { label: "Authority", href: "/authority" },
-                { label: "Universes", href: "/authority/universes" },
-                { label: title },
-              ]
-        }
-      />
-
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-        <div className="space-y-2 min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Creative Studio
-          </p>
-          <h1
-            className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
-            style={{ fontFamily: "var(--font-display, inherit)" }}
-          >
-            {title}
-          </h1>
-          {data.description ? (
-            <p className="text-base text-foreground/80 max-w-3xl">{data.description}</p>
-          ) : null}
-          <p className="text-sm text-muted-foreground max-w-3xl">
-            Compose this work: Source → Sentinel → Storyboard → Production plan → 2.5D Preview → Experience.
-            This is Studio navigation, not a wizard. Sentinel remembers observations. The curator authorises meaning. Sentinel does not create Scenes. Scene Deck shuffle stays presentation-only.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 shrink-0">
-          <Link
-            href={`/worlds/${data.master_id}/holographic`}
-            className={buttonVariants({ size: "sm" })}
-            data-experience-entry="experience"
-          >
-            Enter Experience
-          </Link>
-          <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Open Universe
-          </Link>
-          <Link href={creativeSuiteIdentityHref(data.master_id, fromCurate ? "curate" : null)} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Edit identity
-          </Link>
-          <Link href={`/authority/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-            Canonical record
-          </Link>
-        </div>
-      </div>
-
-      <CreativeSuiteNav items={creativeSuiteNavItems(suiteHref)} />
-
-      {query.identity === "saved" && (
-        <p role="status" className="rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">
+    <StudioWorkspaceShell
+      universeId={workspace.data.master_id}
+      title={title}
+      description={workspace.data.description}
+      current="overview"
+      suiteHref={workspace.suiteHref}
+      fromCurate={fromCurate}
+      lead="What are you looking at, what can you create, and what happens next. Each workspace is a page — not a stacked database dump."
+    >
+      {query.identity === "saved" ? (
+        <p role="status" className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">
           Universe identity saved.
         </p>
-      )}
-
-      <UniverseAssemblyView
-        data={data}
-        openHref={(id) => `/authority/${id}`}
-        openLabel="Open record"
-        experienceHref={`/worlds/${data.master_id}/holographic`}
-        universeHref={`/worlds/${data.master_id}`}
-        canAuthorPresence
-        canAuthorIdentity
-        canAuthorTiming
-        canAuthorOrder
-        canAuthoriseSentinel
-        intelligence={intelligence}
-        inspectHref={inspectAssetId ? mediaInspectHref(inspectAssetId) : null}
-        source={source}
-        productionPath={productionPath}
-        productionBriefs={productionBriefs}
-        productionLayers={productionLayers}
-        proofExecutorAvailable={isFfmpegProofExecutor(process.env.MV_PRODUCTION_PROOF_EXECUTOR)}
+      ) : null}
+      <StudioOverview
+        workspace={workspace}
         muralEmptyAction={
-          <RegisterMural
-            universeId={data.master_id}
-            universeTitle={data.title}
-            fromCurate={fromCurate}
-          />
+          <MuralEmpty>
+            <RegisterMural
+              universeId={workspace.data.master_id}
+              universeTitle={workspace.data.title}
+              fromCurate={fromCurate}
+            />
+          </MuralEmpty>
         }
       />
-    </div>
+    </StudioWorkspaceShell>
   );
 }

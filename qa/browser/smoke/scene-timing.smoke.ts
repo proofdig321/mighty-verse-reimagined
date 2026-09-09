@@ -45,7 +45,7 @@ test("Creative Suite authors Scene timing without leaving Super Hero Ego mutated
   notes.push("A: unauthenticated Scene timing mutation is rejected");
 
   await applyAuthoritySession(context, baseURL);
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   await restorePowerhouseTiming(page);
   await page.reload({ waitUntil: "domcontentloaded" });
 
@@ -73,7 +73,7 @@ test("Creative Suite authors Scene timing without leaving Super Hero Ego mutated
     await expect(page.locator(`#world-scene-${POWERHOUSE.sceneMasterId}`)).toBeVisible();
     notes.push("D: Experience encounter still presents Powerhouse after the timing write");
   } finally {
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" }).catch(() => null);
+    await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" }).catch(() => null);
     await restorePowerhouseTiming(page);
   }
 

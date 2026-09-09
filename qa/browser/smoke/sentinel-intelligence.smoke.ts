@@ -93,6 +93,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
 
     await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
     await expectCreativeSuiteComposition(page);
+    await page.goto(ROUTES.authorityUniverseSentinel, { waitUntil: "domcontentloaded" });
     const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
     await expect(sentinel.getByText("Golden Shovel — Powerhouse").first()).toBeVisible();
     await expect(sentinel.locator("[data-panel-kind='scene']")).toHaveCount(4);
@@ -148,7 +149,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     await page.goto(ROUTES.authorityMuxInspect, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("link", { name: "Open Sentinel in Suite" })).toHaveAttribute(
       "href",
-      `${ROUTES.authorityUniverseWorkspace}#universe-sentinel`,
+      ROUTES.authorityUniverseSentinel,
     );
     notes.push("I: Mux Inspect links into Suite Sentinel without merging the surfaces");
   } finally {

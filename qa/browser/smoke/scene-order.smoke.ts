@@ -37,7 +37,7 @@ test("Creative Suite authors canonical Scene order without importing Scene Deck 
   notes.push("A: unauthenticated Scene order mutation is rejected");
 
   await applyAuthoritySession(context, baseURL);
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   await restoreSceneOrder(page);
   await page.reload({ waitUntil: "domcontentloaded" });
 
@@ -58,7 +58,7 @@ test("Creative Suite authors canonical Scene order without importing Scene Deck 
     await expect(darkKnight.getByRole("heading", { name: /Scene 01\. Dark Knight/ })).toBeVisible();
     notes.push("C: Move later swaps Powerhouse with Dark Knight on the composition surface");
   } finally {
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" }).catch(() => null);
+    await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" }).catch(() => null);
     await restoreSceneOrder(page);
   }
 

@@ -8,17 +8,17 @@
  */
 
 import type { SentinelIntelligence } from "../media/sentinel-intelligence";
-import { suiteScenes } from "./suite";
+import { suiteChildHref, suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
 
 export const PRODUCTION_PATH_STEPS = [
-  { id: "source", label: "Source", fragment: "universe-source" },
-  { id: "sentinel", label: "Sentinel", fragment: "universe-sentinel" },
-  { id: "storyboard", label: "Storyboard", fragment: "sentinel-storyboard" },
-  { id: "proposals", label: "Scene proposals", fragment: "sentinel-proposals" },
-  { id: "authorise", label: "Authorise", fragment: "sentinel-authorise" },
-  { id: "preview", label: "2.5D Preview", fragment: "universe-preview" },
-  { id: "experience", label: "Experience", fragment: "universe-experience-continuation" },
+  { id: "source", label: "Source", path: "", fragment: "universe-source" },
+  { id: "sentinel", label: "Sentinel", path: "storyboard", fragment: "universe-sentinel", search: { source: "sentinel" } },
+  { id: "storyboard", label: "Storyboard", path: "storyboard", fragment: "sentinel-storyboard" },
+  { id: "proposals", label: "Scene proposals", path: "storyboard", fragment: "sentinel-proposals", search: { source: "sentinel" } },
+  { id: "authorise", label: "Authorise", path: "storyboard", fragment: "sentinel-authorise", search: { source: "sentinel" } },
+  { id: "preview", label: "2.5D Preview", path: "preview", fragment: "universe-preview" },
+  { id: "experience", label: "Experience", path: "experience", fragment: "universe-experience-continuation" },
 ] as const;
 
 export type ProductionStepId = (typeof PRODUCTION_PATH_STEPS)[number]["id"];
@@ -29,6 +29,7 @@ export type ProductionPathStep = {
   id: ProductionStepId;
   label: string;
   fragment: string;
+  path: string;
   href: string;
   status: ProductionStepStatus;
 };
@@ -80,11 +81,21 @@ export function deriveProductionPath(input: ProductionPathInput): ProductionPath
     } else if (step.id === "experience") {
       status = input.hasMural ? "ready" : "waiting";
     }
+    const href = suiteChildHref(input.suiteHref, step.path);
+    const extra = "search" in step ? step.search : undefined;
+    let resolved = href;
+    if (extra) {
+      const [path, existing] = href.split("?");
+      const params = new URLSearchParams(existing ?? "");
+      for (const [key, value] of Object.entries(extra)) params.set(key, value);
+      resolved = `${path}?${params.toString()}`;
+    }
     return {
       id: step.id,
       label: step.label,
       fragment: step.fragment,
-      href: `${input.suiteHref}#${step.fragment}`,
+      path: step.path,
+      href: resolved,
       status,
     };
   });

@@ -168,6 +168,7 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
   expect((await registerRes.json()).code).toBe("canonical_source");
   notes.push("Canonical SHE Mux source cannot be registered as a production result");
 
+  await page.goto(ROUTES.authorityUniverseSentinel, { waitUntil: "domcontentloaded" });
   const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
   const powerhousePanel = sentinel.locator(`li[data-scene-id='${SCENE_MOMENTS.powerhouse.sceneMasterId}']`).first();
   await powerhousePanel.locator("button.sentinel-panel-open").click();

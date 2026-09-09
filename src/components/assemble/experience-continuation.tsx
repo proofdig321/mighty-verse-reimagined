@@ -18,8 +18,7 @@ export function ExperienceContinuation({
         Experience
       </h2>
       <p className="suite-section-note">
-        Studio composes the work. Experience presents it. This is navigation, not a publish or realize action.
-        2.5D is the presentation of Mural, Scenes, Creative Moments, and approved production layers.
+        Studio composes the work. Experience is what the audience sees.
       </p>
       <ol className="suite-continuation-flow">
         <li>Assemble</li>

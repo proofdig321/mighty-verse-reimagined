@@ -7,8 +7,7 @@ export function ProductionPath({ steps }: { steps: ProductionPathStep[] }) {
     <nav aria-label="Creative production path" className="suite-production-path">
       <p className="suite-kicker">Production path</p>
       <p className="suite-section-note">
-        Follow source media through Sentinel, storyboard, authorisation, and 2.5D preview.
-        This is navigation, not a wizard. Jump to any stage.
+        Jump to any creative workspace. This is navigation, not a wizard.
       </p>
       <ol className="suite-production-steps">
         {steps.map((step, index) => (

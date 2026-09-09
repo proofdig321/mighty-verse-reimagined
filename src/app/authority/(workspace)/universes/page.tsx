@@ -46,7 +46,7 @@ export default async function UniversesPage() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Creative Studio</p>
         <h1 className="text-3xl font-semibold tracking-tight">Universes</h1>
         <p className="text-sm text-muted-foreground">
-          Compose an established Universe. Open a work to enter Creative Studio: Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience.
+          Compose an established Universe. Open a work to enter Creative Studio workspaces: Overview, Storyboard, Scenes, Production, 2.5D, Experience.
           {universes.length > 0 && <span className="ml-2 text-muted-foreground/60">{universes.length} universe{universes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>

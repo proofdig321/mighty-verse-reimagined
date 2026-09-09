@@ -16,8 +16,9 @@ test("Creative Suite presents Super Hero Ego as a composition surface", async ({
   await page.locator(`a[href="${ROUTES.authorityUniverseWorkspace}"]`).filter({ hasText: CANON.universeTitle }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expectCreativeSuiteComposition(page);
-  notes.push("A: Authority → Universes → Super Hero Ego reads as a creative work, not a UUID catalogue");
+  notes.push("A: Authority → Universes → Super Hero Ego reads as routed Creative Studio workspaces");
 
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");
   const moments = page.locator("section[aria-labelledby='universe-moments']");
   await expect(scenes.locator("article[data-scene-id]")).toHaveCount(4);
@@ -38,19 +39,21 @@ test("Creative Suite presents Super Hero Ego as a composition surface", async ({
   await expect(scenes.locator(`#universe-scene-${SCENE_MOMENTS.handToHand.sceneMasterId}`)).toHaveAttribute("data-related", "");
   notes.push("D: Proverb relates to Powerhouse and Hand-to-Hand without duplicating Proverb");
 
+  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
   const mural = page.locator("section[aria-labelledby='universe-mural']");
   await expect(mural.getByText(/audiovisual expression/i)).toBeVisible();
   await expect(mural.locator("video")).toHaveCount(0);
   notes.push("E: Mural is stage presence without a second Experience player");
 
-  await powerhouse.getByRole("link", { name: /Open record/i }).click();
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
+  await scenes.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`).getByRole("link", { name: /Open record/i }).click();
   await expect(page).toHaveURL(new RegExp(`/authority/${SCENE_MOMENTS.powerhouse.sceneMasterId}`));
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   await moments.locator(`#universe-moment-${CREATIVE_MOMENTS.proverb.masterId}`).getByRole("link", { name: /Open record/i }).click();
   await expect(page).toHaveURL(new RegExp(`/authority/${CREATIVE_MOMENTS.proverb.masterId}`));
   notes.push("F: existing Open record routes still work");
 
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(scenes.locator("article[data-scene-id]")).toHaveCount(4);

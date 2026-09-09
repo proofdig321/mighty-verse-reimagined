@@ -9,7 +9,10 @@ import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import { CreativeStill } from "./creative-still";
+import { SourcePreview } from "./source-preview";
 import { cn } from "@/lib/utils";
+import type { SuiteSourcePreview } from "@/lib/assemble/load-source-preview";
+import type { HolographicPlayback } from "@/components/experience/holographic-layer-media";
 
 export function StudioPreview({
   universeTitle,
@@ -17,14 +20,25 @@ export function StudioPreview({
   layers,
   experienceHref,
   universeHref,
+  source = null,
 }: {
   universeTitle: string;
   scenes: SuiteScene[];
   layers: HolographicLayer[];
   experienceHref: string;
   universeHref: string;
+  source?: SuiteSourcePreview | null;
 }) {
   const [mode, setMode] = useState<"2d" | "2.5d">("2.5d");
+  const playback: HolographicPlayback | null = source
+    ? {
+        playback_id: source.playback_id,
+        endpoint_ref: source.endpoint_ref,
+        projection_id: source.mural_projection_id,
+        master_id: source.mural_id,
+        canonical_state_id: source.mural_canonical_state_id ?? source.mural_id,
+      }
+    : null;
 
   return (
     <div className="suite-studio-preview" data-suite-studio-preview="">
@@ -46,13 +60,28 @@ export function StudioPreview({
           2.5D Studio Preview
         </button>
       </div>
-      <p className="suite-section-note">
-        Studio Preview is not the public Experience. 2.5D here is a curator preview of canonical composition.
-        Scene Deck remains a public Reveal surface, not Studio.
-      </p>
 
       {mode === "2.5d" ? (
-        <HolographicStage title={universeTitle} layers={layers} />
+        <HolographicStage title={universeTitle} layers={layers} playback={playback} />
+      ) : source ? (
+        <div className="space-y-4">
+          <SourcePreview source={source} />
+          <ol className="suite-preview-2d">
+            {scenes.map((scene, index) => {
+              const still = sceneStillUrl(scene);
+              const url = still
+                ? providerThumbnailUrl(still.provider, still.storage_ref, { timeSec: still.timeSec, width: 640 })
+                : null;
+              return (
+                <li key={scene.master_id} data-preview-scene={scene.master_id}>
+                  <CreativeStill url={url} alt="" />
+                  <p className="suite-kicker">Scene {String(index + 1).padStart(2, "0")}</p>
+                  <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled scene"}</p>
+                </li>
+              );
+            })}
+          </ol>
+        </div>
       ) : (
         <ol className="suite-preview-2d">
           {scenes.map((scene, index) => {

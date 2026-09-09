@@ -4,14 +4,18 @@ import { useId, type PointerEvent } from "react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import { cn } from "@/lib/utils";
 
+import { HolographicLayerMedia, type HolographicPlayback } from "./holographic-layer-media";
+
 export function HolographicStage({
   title,
   layers,
   compact = false,
+  playback = null,
 }: {
   title: string;
   layers: HolographicLayer[];
   compact?: boolean;
+  playback?: HolographicPlayback | null;
 }) {
   const stageId = useId();
 
@@ -53,7 +57,13 @@ export function HolographicStage({
               transform: `translate(-50%, -50%) translate3d(${layer.offset_x}px, ${layer.offset_y}px, ${layer.depth}px)`,
             }}
           >
-            {layer.still_url ? (
+            {layer.kind === "mural" && playback ? (
+              <HolographicLayerMedia
+                playback={playback}
+                posterUrl={layer.still_url}
+                title={layer.title ?? title}
+              />
+            ) : layer.still_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={layer.still_url} alt="" />
             ) : (
