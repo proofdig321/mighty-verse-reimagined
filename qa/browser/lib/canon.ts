@@ -144,6 +144,7 @@ export const ROUTES = {
   universeLive: `/worlds/${CANON.universeId}`,
   universeScenes: `/worlds/${CANON.universeId}/scenes`,
   universeHolographic: `/worlds/${CANON.universeId}/holographic`,
+  experienceJourney: "/universes?intent=experience",
   muralLive: `/worlds/${CANON.muralId}`,
   moments: "/moments",
   momentSwordMaster: `/moments/${CANON.swordMasterProjectionId}`,

@@ -3,16 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-
-const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/universes", label: "Universes" },
-  { href: "/moments", label: "Moments" },
-  { href: "/murals", label: "Murals" },
-  { href: "/scenes", label: "Scenes" },
-  { href: "/authority/public", label: "Authority" },
-  { href: "/about", label: "About" },
-];
+import { PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
 
 type Props = { activePath?: string };
 
@@ -38,13 +29,17 @@ export default function PageTopNav({ activePath = "" }: Props) {
           </Link>
 
           {/* Desktop nav — hidden on mobile */}
-          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center">
-            {NAV_LINKS.map((link) => {
-              const isActive = activePath === link.href;
+          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center" aria-label="Product">
+            {PUBLIC_PRODUCT_NAV.map((link) => {
+              const isActive =
+                link.href === "/"
+                  ? activePath === "/"
+                  : activePath === link.href || activePath.startsWith(`${link.href}/`);
               return (
                 <Link
                   key={link.href}
                   href={link.href}
+                  data-product-nav={link.surface}
                   className={[
                     "shrink-0 px-3 py-1.5 text-sm transition-colors rounded-md",
                     isActive
@@ -61,7 +56,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              href="/auth/sign-in"
+              href="/auth/sign-in?next=/authority"
               className="hidden sm:block px-3 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-85"
               style={{ background: "var(--accent-mv)" }}
             >
@@ -88,13 +83,17 @@ export default function PageTopNav({ activePath = "" }: Props) {
             style={{ background: "var(--background)" }}
             onClick={(e) => e.stopPropagation()}
           >
-            <nav className="flex flex-col px-4 py-3 gap-0.5">
-              {NAV_LINKS.map((link) => {
-                const isActive = activePath === link.href;
+            <nav className="flex flex-col px-4 py-3 gap-0.5" aria-label="Product">
+              {PUBLIC_PRODUCT_NAV.map((link) => {
+                const isActive =
+                  link.href === "/"
+                    ? activePath === "/"
+                    : activePath === link.href || activePath.startsWith(`${link.href}/`);
                 return (
                   <Link
                     key={link.href}
                     href={link.href}
+                    data-product-nav={link.surface}
                     onClick={() => setMobileOpen(false)}
                     className={[
                       "px-3 py-2.5 text-sm rounded-md transition-colors",
@@ -109,7 +108,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
               })}
               <div className="pt-2 pb-1 border-t border-border mt-1">
                 <Link
-                  href="/auth/sign-in"
+                  href="/auth/sign-in?next=/authority"
                   onClick={() => setMobileOpen(false)}
                   className="block w-full text-center px-3 py-2 rounded-md text-sm font-semibold text-white"
                   style={{ background: "var(--accent-mv)" }}

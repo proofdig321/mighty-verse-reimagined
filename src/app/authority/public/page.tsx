@@ -1,45 +1,39 @@
+import Link from "next/link";
 import PageTopNav from "@/components/page-top-nav";
-import { Button } from "@/components/ui/button";
-
-const INFO_BLOCKS = [
-  { icon: "📋", label: "Notices", sub: "Official notices and publications" },
-  { icon: "🔏", label: "Proof of Publication", sub: "Verify authenticity and publication records" },
-  { icon: "👥", label: "Participants", sub: "Contributors and creators" },
-  { icon: "⬡", label: "Governance", sub: "Rules, policies and frameworks" },
-];
+import { buttonVariants } from "@/components/ui/button";
+import { CREATIVE_STUDIO_HREF, DASHBOARD_HREF } from "@/lib/product-nav";
+import { cn } from "@/lib/utils";
 
 export default function AuthorityPublicPage() {
   return (
     <div className="min-h-screen bg-background">
       <PageTopNav activePath="/authority/public" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-10">
-
         <div className="space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Assemble</p>
           <h1
             className="text-3xl font-semibold text-foreground"
             style={{ fontFamily: "var(--font-display, inherit)" }}
           >
-            Authority
+            Creative Studio
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Governance, rights and proof of publication for the Mighty Verse.
+          <p className="text-sm text-muted-foreground max-w-2xl">
+            Sign in to assemble a Universe in Creative Studio, or continue from the Authority dashboard.
+            Studio is not the public Experience.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {INFO_BLOCKS.map(({ icon, label, sub }) => (
-            <div key={label} className="bg-card border border-border rounded-lg px-4 py-4 space-y-2">
-              <span className="text-2xl">{icon}</span>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{label}</p>
-                <p className="text-xs text-muted-foreground mt-0.5 leading-snug">{sub}</p>
-              </div>
-            </div>
-          ))}
+        <div className="flex flex-wrap gap-3">
+          <Link href={CREATIVE_STUDIO_HREF} className={cn(buttonVariants({ size: "lg" }))} data-product-nav="studio">
+            Open Creative Studio
+          </Link>
+          <Link href={DASHBOARD_HREF} className={cn(buttonVariants({ variant: "outline", size: "lg" }))} data-dashboard-surface="dashboard">
+            Open Dashboard
+          </Link>
+          <Link href="/universes" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
+            Discover Universes
+          </Link>
         </div>
-
-        <Button variant="outline" disabled>Learn More</Button>
-
       </div>
     </div>
   );

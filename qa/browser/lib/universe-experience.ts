@@ -1,5 +1,5 @@
 import { expect, type Page } from "@playwright/test";
-import { CANON, CREATIVE_MOMENTS, ROUTES, creativeMomentHref } from "./canon";
+import { CANON, CREATIVE_MOMENTS, ROUTES } from "./canon";
 
 export async function expectUniverseExperience(page: Page) {
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
@@ -35,7 +35,7 @@ export async function expectUniverseExperience(page: Page) {
     const object = presence.locator(`[data-moment-id="${cm.masterId}"]`);
     await expect(object).toBeVisible();
     await expect(object.getByRole("heading", { name: cm.title, exact: true })).toBeVisible();
-    await expect(object.getByRole("link")).toHaveAttribute("href", creativeMomentHref(cm));
+    await expect(object.getByRole("link")).toHaveAttribute("href", `/creative-moments/${cm.masterId}`);
   }
 
   const proverb = presence.locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`);
@@ -43,7 +43,7 @@ export async function expectUniverseExperience(page: Page) {
   await expect(proverb.getByText(/creative identity/i)).toBeVisible();
   await expect(proverb.getByText(/Powerhouse/)).toBeVisible();
   await expect(proverb.getByText(/Hand-to-Hand/)).toBeVisible();
-  await expect(proverb.getByRole("link", { name: /View identity/i })).toHaveAttribute(
+  await expect(proverb.getByRole("link", { name: /View Creative Moment/i })).toHaveAttribute(
     "href",
     `/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}`,
   );

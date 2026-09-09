@@ -33,8 +33,8 @@ export default async function UniverseCurationPage({
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/sign-in");
-  if (!await getParticipantId(supabase)) redirect("/auth/sign-in");
+  if (!user) redirect(`/auth/sign-in?next=/authority/universes/${masterId}`);
+  if (!await getParticipantId(supabase)) redirect(`/auth/sign-in?next=/authority/universes/${masterId}`);
 
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();

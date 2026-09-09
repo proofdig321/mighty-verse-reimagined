@@ -215,7 +215,7 @@ export function UniverseWorldExperience({
                     </p>
                   ) : null}
                   <Link href={contributor.href} className="world-presence-link">
-                    {contributor.hasMomentProjection ? "Encounter" : "View identity"}
+                    View Creative Moment
                     <span className="sr-only">
                       {` ${contributor.title ?? "Creative Moment"}`}
                     </span>

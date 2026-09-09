@@ -12,6 +12,7 @@ import {
   getWorkStatus, getJourneySteps, type WorkStatus, type JourneyStep, type AuthorityData,
 } from "./_shared/authority-utils";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
+import { CREATIVE_STUDIO_HREF, EXPERIENCE_JOURNEY_HREF } from "@/lib/product-nav";
 
 // AuthorityData is imported from authority-utils — single canonical definition.
 
@@ -315,17 +316,41 @@ export default function AuthorityClient() {
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
           {[
-            { step: "01", label: "Create Work", sub: "Establish the work. Source media can keep processing after you leave.", href: "/authority/create" },
-            { step: "02", label: "Curate", sub: "Shape an existing Universe from live state. Not a second Create wizard.", href: "/authority/curate" },
-            { step: "03", label: "Creative Studio", sub: "Compose Scenes, presence, timing, and the 2.5D Preview.", href: "/authority/universes" },
-            { step: "04", label: "Experience", sub: "Discover a Universe, reveal the work, then enter Experience. Distinct from Studio preview.", href: "/universes" },
+            { step: "01", label: "Create Work", sub: "Establish the work. Source media can keep processing after you leave.", href: "/authority/create", surface: "create" },
+            { step: "02", label: "Curate", sub: "Shape an existing Universe from live state. Not a second Create wizard.", href: "/authority/curate", surface: "curate" },
+            { step: "03", label: "Creative Studio", sub: "Compose Scenes, presence, timing, and the 2.5D Preview.", href: CREATIVE_STUDIO_HREF, surface: "studio" },
+            { step: "04", label: "Experience", sub: "Open a Universe, then enter the public Experience. Distinct from Studio preview.", href: EXPERIENCE_JOURNEY_HREF, surface: "experience" },
           ].map(item => (
-            <Link key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
+            <Link key={item.label} href={item.href} data-dashboard-surface={item.surface} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
               <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">{item.step}</span>
               <p className="mt-2 text-sm font-medium text-foreground">{item.label}</p>
               <p className="mt-0.5 text-xs text-muted-foreground/70">{item.sub}</p>
               <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
                 Continue <ArrowRight size={12} />
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Product surfaces</p>
+          <p className="mt-1 text-xs text-muted-foreground/70">
+            Discover → Reveal → Assemble → Experience. These controls open the mounted product, not slogans.
+          </p>
+        </div>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
+          {[
+            { label: "Discover", sub: "Public Universes catalog.", href: "/universes", surface: "discover" },
+            { label: "Creative Studio", sub: "Assemble an established Universe.", href: CREATIVE_STUDIO_HREF, surface: "studio-entry" },
+            { label: "Public Experience", sub: "Choose a Universe, then enter Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "public-experience" },
+          ].map((item) => (
+            <Link key={item.label} href={item.href} data-dashboard-surface={item.surface} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
+              <p className="text-sm font-medium text-foreground">{item.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground/70">{item.sub}</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
+                Open <ArrowRight size={12} />
               </span>
             </Link>
           ))}
@@ -486,7 +511,7 @@ export default function AuthorityClient() {
       {/* ── Canonical entities ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-px sm:grid-cols-4 rounded-lg overflow-hidden border border-border bg-border">
         {[
-          { label: "Universes",        sub: "Top-level canonical containers", href: "/authority/universes" },
+          { label: "Universes",        sub: "Top-level canonical containers", href: CREATIVE_STUDIO_HREF },
           { label: "Murals",           sub: "Canonical Murals",               href: "/authority/murals" },
           { label: "Scenes",           sub: "Canonical Scenes",               href: "/authority/scenes" },
           { label: "Creative Moments", sub: "Canonical Creative Moments",     href: "/authority/creative-moments" },

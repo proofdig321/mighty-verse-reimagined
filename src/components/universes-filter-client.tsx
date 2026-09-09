@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
@@ -18,6 +19,8 @@ type Props = { universes: UniverseItem[] };
 
 export default function UniversesFilterClient({ universes }: Props) {
   const [query, setQuery] = useState("");
+  const searchParams = useSearchParams();
+  const experienceJourney = searchParams.get("intent") === "experience";
 
   const filtered = query.trim()
     ? universes.filter((u) =>
@@ -26,22 +29,24 @@ export default function UniversesFilterClient({ universes }: Props) {
     : universes;
 
   return (
-    <div>
+    <div data-experience-journey={experienceJourney ? "true" : "false"}>
       {/* Header band — heading + description left, controls right */}
       <div className="border-b border-border bg-card/20">
         <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              Discover the canon
+              {experienceJourney ? "Experience" : "Discover the canon"}
             </p>
             <h1
               className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
               style={{ fontFamily: "var(--font-display, inherit)" }}
             >
-              All Universes
+              {experienceJourney ? "Enter Experience" : "All Universes"}
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter Experience.
+              {experienceJourney
+                ? "Open a Universe, then enter its public Experience. This is not Studio preview."
+                : "Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter Experience."}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
@@ -66,7 +71,12 @@ export default function UniversesFilterClient({ universes }: Props) {
         {filtered.length > 0 ? (
           <div className="artifact-grid-wide">
             {filtered.map((u) => (
-              <Link key={u.master_id} href={`/worlds/${u.master_id}`} className="artifact-card group">
+              <Link
+                key={u.master_id}
+                href={`/worlds/${u.master_id}`}
+                className="artifact-card group"
+                data-universe-card={u.master_id}
+              >
                 {u.playback_id ? (
                   <MediaVisual playbackId={u.playback_id} provider={u.provider} title={u.title ?? "Universe"} aspectRatio="16/9" />
                 ) : (
@@ -95,7 +105,9 @@ export default function UniversesFilterClient({ universes }: Props) {
                       ? u.attribution_roles.map((r) => r.replace(/-/g, " ")).join(", ")
                       : "Various Artists"}
                   </p>
-                  <p className="mt-2 text-xs text-muted-foreground">Explore, then enter Experience</p>
+                  <p className="mt-2 text-xs text-muted-foreground">
+                    {experienceJourney ? "Open Universe, then Enter Experience" : "Explore, then enter Experience"}
+                  </p>
                 </div>
               </Link>
             ))}

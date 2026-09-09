@@ -35,8 +35,8 @@ async function getData() {
 export default async function UniversesPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/sign-in");
-  if (!await getParticipantId(supabase)) redirect("/auth/sign-in");
+  if (!user) redirect("/auth/sign-in?next=/authority/universes");
+  if (!await getParticipantId(supabase)) redirect("/auth/sign-in?next=/authority/universes");
 
   const universes = await getData();
 

@@ -77,7 +77,8 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
 
   await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Authority Console/i })).toBeVisible();
-  const suiteCta = page.locator(`a[href="${ROUTES.authorityUniverses}"]`).filter({ hasText: "2.5D Preview" });
+  const suiteCta = page.locator('[data-dashboard-surface="studio"]').first();
+  await expect(suiteCta).toBeVisible();
   await expect(suiteCta).toHaveAttribute("href", ROUTES.authorityUniverses);
   notes.push("A: dashboard exposes Creative Suite production path without a hidden holographic route");
 

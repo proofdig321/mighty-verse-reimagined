@@ -6,10 +6,10 @@ import AuthorityClient from "./authority-client";
 export default async function AuthorityPage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/auth/sign-in");
+  if (!user) redirect("/auth/sign-in?next=/authority");
 
   const participantId = await getParticipantId(supabase);
-  if (!participantId) redirect("/auth/sign-in");
+  if (!participantId) redirect("/auth/sign-in?next=/authority");
 
   return <AuthorityClient />;
 }

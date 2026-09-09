@@ -359,8 +359,7 @@ export default async function WorldPage({
                 href={`/worlds/${data.universe_master_id}`}
                 className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                <span>←</span>
-                <span>{data.universe_title ?? "Universe"}</span>
+                ← Back to Universe{data.universe_title ? ` · ${data.universe_title}` : ""}
               </Link>
             </div>
           </div>

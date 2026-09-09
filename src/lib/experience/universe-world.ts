@@ -61,9 +61,7 @@ export function contributorPresence(
     return {
       master_id: moment.master_id,
       title: moment.title,
-      href: moment.projection_id
-        ? `/moments/${moment.projection_id}`
-        : `/creative-moments/${moment.master_id}`,
+      href: `/creative-moments/${moment.master_id}`,
       hasMomentProjection: Boolean(moment.projection_id),
       scenes: related.map((scene) => ({
         master_id: scene.master_id,

@@ -1,15 +1,9 @@
 import Link from "next/link";
+import { PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home" },
-  { href: "/universes", label: "Universes" },
-  { href: "/moments", label: "Moments" },
-  { href: "/murals", label: "Murals" },
-  { href: "/scenes", label: "Scenes" },
-  { href: "/editor", label: "Editor" },
-  { href: "/participants", label: "Participants" },
-  { href: "/authority/public", label: "Authority" },
-  { href: "/about", label: "About" },
+  ...PUBLIC_PRODUCT_NAV,
+  { href: "/about", label: "About", surface: "about" as const },
 ];
 
 const CORE_PRINCIPLES = [
@@ -76,9 +70,9 @@ export default function Nav() {
         <div className="grid grid-cols-4 gap-1">
           {[
             { icon: "🔭", label: "DISCOVER", sub: "Explore Universes" },
-            { icon: "⚡", label: "MOMENTS", sub: "Collect & Engage" },
-            { icon: "✦", label: "CREATE", sub: "Build & Contribute" },
-            { icon: "⬡", label: "AUTHORITY", sub: "Govern & Publish" },
+            { icon: "⚡", label: "REVEAL", sub: "Mural, Scene, Moment" },
+            { icon: "✦", label: "ASSEMBLE", sub: "Creative Studio" },
+            { icon: "⬡", label: "EXPERIENCE", sub: "Enter the work" },
           ].map((p) => (
             <div key={p.label} className="flex flex-col items-center text-center gap-0.5">
               <span className="text-base">{p.icon}</span>
@@ -99,6 +93,7 @@ export default function Nav() {
             <li key={link.href}>
               <Link
                 href={link.href}
+                data-product-nav={"surface" in link ? link.surface : undefined}
                 className="flex items-center gap-2.5 px-2 py-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-current opacity-40 shrink-0" />

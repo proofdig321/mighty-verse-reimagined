@@ -42,7 +42,7 @@ assert(proverb && proverb.hasMomentProjection === false, "Proverb remains identi
 assert(proverb.href === `/creative-moments/${PROVERB}`, "Proverb does not fabricate a Moment Card route");
 assert(proverb.scenes.map((scene) => scene.shortTitle).join(",") === "Powerhouse,Hand-to-Hand", "Proverb stays related to both Scenes");
 assert(mothipa && mothipa.hasMomentProjection === true, "Mothipa keeps its Moment projection");
-assert(mothipa.href === "/moments/718372da-4941-41d6-bb64-3a0b0812b047", "Mothipa encounter uses existing Moment route");
+assert(mothipa.href === `/creative-moments/${MOTHIPA}`, "Mothipa identity uses the Creative Moment route");
 assert(reason && reason.scenes[0].shortTitle === "Sword Master", "Reason relates to Sword Master only");
 assert(sceneShortTitle("Golden Shovel — Powerhouse") === "Powerhouse", "encounter titles use cinematic short names");
 

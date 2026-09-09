@@ -141,7 +141,7 @@ export default async function UniverseScenesPage({
                 href={`/worlds/${masterId}`}
                 className="text-xs text-muted-foreground hover:text-foreground transition-colors"
               >
-                ← {universeTitle ?? "Universe"}
+                ← Back to Universe{universeTitle ? ` · ${universeTitle}` : ""}
               </Link>
               <h1
                 className="text-3xl font-semibold text-foreground"

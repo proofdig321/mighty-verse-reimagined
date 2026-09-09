@@ -124,13 +124,13 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
 
   await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Authority Console/i })).toBeVisible();
-  const experienceCard = page.locator(`a[href="${ROUTES.universes}"]`).filter({ hasText: "Discover a Universe" });
+  const experienceCard = page.locator('[data-dashboard-surface="experience"]').first();
   await expect(experienceCard).toBeVisible();
-  await expect(experienceCard).toContainText("Distinct from Studio preview");
-  notes.push("A: dashboard Experience stays a public Universes path, not a global 2.5D sidebar item");
+  await expect(experienceCard).toContainText("enter the public Experience");
+  notes.push("A: dashboard Experience is a public Experience journey, not a global 2.5D sidebar item");
 
   await experienceCard.click();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.universes}$`));
+  await expect(page).toHaveURL(/\/universes(?:\?intent=experience)?$/);
   await expect(page.getByRole("heading", { name: /All Universes/i })).toBeVisible();
   const universeCard = page.locator(`a[href="${ROUTES.universeLive}"]`).filter({ hasText: CANON.universeTitle }).first();
   await expect(universeCard).toBeVisible();

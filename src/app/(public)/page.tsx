@@ -109,6 +109,7 @@ export default async function HomePage() {
                 key={w.master_id}
                 href={`/worlds/${w.master_id}`}
                 className="artifact-card group"
+                data-universe-card={w.master_id}
               >
                 {w.visual_playback_id ? (
                   <MediaVisual
@@ -148,7 +149,7 @@ export default async function HomePage() {
                       : "Various Artists"}
                   </p>
                   <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{w.projections.length} Moment{w.projections.length !== 1 ? "s" : ""}</span>
+                    <span>{w.projections.length} Creative Moment{w.projections.length !== 1 ? "s" : ""}</span>
                   </div>
                 </div>
               </Link>

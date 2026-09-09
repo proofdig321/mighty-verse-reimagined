@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { safeAuthNext } from "@/lib/auth-next";
 
-export default function SignInForm() {
+export default function SignInForm({ next }: { next?: string | null }) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const destination = safeAuthNext(next);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -17,7 +19,9 @@ export default function SignInForm() {
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${location.origin}/auth/callback` },
+      options: {
+        emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(destination)}`,
+      },
     });
 
     if (error) {

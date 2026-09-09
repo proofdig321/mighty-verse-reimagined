@@ -3,7 +3,6 @@ import {
   CREATIVE_MOMENTS,
   ROUTES,
   SCENE_MOMENTS,
-  creativeMomentHref,
 } from "../lib/canon";
 import { test, expect } from "../lib/fixtures";
 import { assertRuntimeHealth } from "../lib/health";
@@ -65,7 +64,11 @@ test("Super Hero Ego navigation exposes Universe, Mural, Scenes, and Creative Mo
     await expect(page).toHaveURL(new RegExp(`${ROUTES.muralLive}$`));
     await page.locator(`a[href="/moments/${scene.projectionId}"]`).click();
     await expect(page).toHaveURL(new RegExp(`/moments/${scene.projectionId}$`));
-    await expect(page.getByText(`Scene: ${scene.sceneTitle}`)).toBeVisible();
+    await expect(page.getByText("Scene", { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: scene.sceneTitle })).toBeVisible();
+    await expect(page.getByText("Experiential Moment")).toHaveCount(0);
+    await expect(page.getByText("Moment Card")).toHaveCount(0);
+    await expect(page.getByText("ERC-1155")).toHaveCount(0);
     await expect(page.getByRole("link", { name: CANON.muralTitle, exact: true })).toHaveAttribute(
       "href",
       ROUTES.muralLive,
@@ -80,12 +83,12 @@ test("Super Hero Ego navigation exposes Universe, Mural, Scenes, and Creative Mo
       "href",
       ROUTES.universeLive,
     );
-    const hasMomentCard = (await page.getByText("No Moment Card representation yet.").count()) === 0;
+    const hasRelatedScenes = (await page.getByRole("heading", { name: /Related Scenes/i }).count()) > 0;
     notes.push(
-      `${scene.shortName} Scene ${scene.sceneMasterId} → /moments/${scene.projectionId} → /creative-moments/${scene.creativeMomentId} (${scene.creativeMomentTitle}; ${hasMomentCard ? "Moment Card present" : "no Moment Card representation"})`,
+      `${scene.shortName} Scene ${scene.sceneMasterId} → /moments/${scene.projectionId} → /creative-moments/${scene.creativeMomentId} (${scene.creativeMomentTitle}; ${hasRelatedScenes ? "related Scenes mounted" : "no related Scenes heading"})`,
     );
 
-    await page.getByRole("link", { name: CANON.universeTitle }).first().click();
+    await page.getByRole("link", { name: /Back to Universe/i }).first().click();
     await openMuralFromUniverse(page);
   }
 
@@ -93,25 +96,19 @@ test("Super Hero Ego navigation exposes Universe, Mural, Scenes, and Creative Mo
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
 
   for (const cm of Object.values(CREATIVE_MOMENTS)) {
-    const href = creativeMomentHref(cm);
+    const href = `/creative-moments/${cm.masterId}`;
     const card = page.locator(`a[href="${href}"]`).filter({ hasText: cm.title });
     await expect(card, `Universe presence missing ${cm.title}`).toBeVisible();
     notes.push(`Universe presence ${cm.title} href ${href}`);
   }
 
   for (const cm of Object.values(CREATIVE_MOMENTS)) {
-    const href = creativeMomentHref(cm);
+    const href = `/creative-moments/${cm.masterId}`;
     await page.locator(`a[href="${href}"]`).filter({ hasText: cm.title }).click();
     await expect(page).toHaveURL(new RegExp(`${href}$`));
     await expect(page.getByText(cm.title).first()).toBeVisible();
     notes.push(`clicked Universe presence ${cm.title} → ${href}`);
-    if (page.url().includes("/creative-moments/")) {
-      await page.getByRole("link", { name: CANON.universeTitle }).first().click();
-    } else {
-      await page.getByRole("link", { name: "Universes", exact: true }).click();
-      await expect(page).toHaveURL(/\/universes$/);
-      await page.locator(`a[href="${ROUTES.universeLive}"]`).first().click();
-    }
+    await page.getByRole("link", { name: /Back to Universe/i }).first().click();
     await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
   }
 

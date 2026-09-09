@@ -2,9 +2,16 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
-import MomentCard from "@/components/moment-card";
+import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Separator } from "@/components/ui/separator";
 import { buttonVariants } from "@/components/ui/button";
+import PageTopNav from "@/components/page-top-nav";
+
+type RelatedScene = {
+  master_id: string;
+  title: string | null;
+  projection_id: string | null;
+};
 
 type CMPageData = {
   master_id: string;
@@ -12,7 +19,7 @@ type CMPageData = {
   description: string | null;
   universe_master_id: string | null;
   universe_title: string | null;
-  projection_id: string | null;
+  scenes: RelatedScene[];
 };
 
 async function getCMData(masterId: string): Promise<CMPageData | null> {
@@ -32,7 +39,6 @@ async function getCMData(masterId: string): Promise<CMPageData | null> {
     .eq("master_id", masterId)
     .maybeSingle();
 
-  // Universe parent
   let universe_master_id: string | null = master.parent_master_id ?? null;
   let universe_title: string | null = null;
   if (universe_master_id) {
@@ -40,12 +46,26 @@ async function getCMData(masterId: string): Promise<CMPageData | null> {
     universe_title = uPres?.title ?? null;
   }
 
-  const { data: projection } = await svc
-    .from("projection")
-    .select("projection_id")
-    .eq("master_id", masterId)
-    .order("created_at", { ascending: false })
-    .maybeSingle();
+  const { data: relations } = await svc
+    .from("scene_moment")
+    .select("scene_master_id, sort_order")
+    .eq("moment_master_id", masterId)
+    .eq("relationship_type", "primary")
+    .order("sort_order", { ascending: true, nullsFirst: false });
+
+  const sceneIds = [...new Set((relations ?? []).map((row) => row.scene_master_id))];
+  const [{ data: scenePres }, { data: sceneProjs }] = sceneIds.length
+    ? await Promise.all([
+        svc.from("work_presentation").select("master_id, title").in("master_id", sceneIds),
+        svc.from("projection").select("master_id, projection_id").in("master_id", sceneIds).eq("projection_type", "experiential"),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  const scenes: RelatedScene[] = sceneIds.map((id) => ({
+    master_id: id,
+    title: (scenePres ?? []).find((row) => row.master_id === id)?.title ?? null,
+    projection_id: (sceneProjs ?? []).find((row) => row.master_id === id)?.projection_id ?? null,
+  }));
 
   return {
     master_id: masterId,
@@ -53,7 +73,7 @@ async function getCMData(masterId: string): Promise<CMPageData | null> {
     description: pres?.description ?? null,
     universe_master_id,
     universe_title,
-    projection_id: projection?.projection_id ?? null,
+    scenes,
   };
 }
 
@@ -79,68 +99,81 @@ export default async function CreativeMomentPage({
   if (!data) notFound();
 
   return (
-    <div className="min-h-screen bg-background multiverse-page">
+    <div className="min-h-screen bg-background">
+      <PageTopNav activePath="/moments" />
 
-      {/* Breadcrumb → Universe */}
-      <div className="mx-auto max-w-7xl px-4 pt-5 pb-3">
-        {data.universe_master_id && (
-          <Link href={`/worlds/${data.universe_master_id}`}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <span>←</span>
-            <span>{data.universe_title ?? "Universe"}</span>
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
+        {data.universe_master_id ? (
+          <Link
+            href={`/worlds/${data.universe_master_id}`}
+            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            ← Back to Universe{data.universe_title ? ` · ${data.universe_title}` : ""}
           </Link>
-        )}
-      </div>
+        ) : null}
 
-      {/* Identity */}
-      <div className="multiverse-stage border-b border-border">
-        <div className="mx-auto max-w-7xl px-4 py-12 space-y-3">
+        <div className="space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Creative Moment</p>
           <h1
-            className="text-5xl md:text-6xl font-semibold leading-none tracking-tight text-foreground"
+            className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display, inherit)" }}
           >
             {data.title ?? "Creative Moment"}
           </h1>
-          {data.description && (
-            <p className="text-lg text-muted-foreground">{data.description}</p>
-          )}
+          {data.description ? (
+            <p className="text-lg text-muted-foreground max-w-2xl">{data.description}</p>
+          ) : null}
+          {data.universe_master_id && data.universe_title ? (
+            <p className="text-sm text-muted-foreground">
+              Universe:{" "}
+              <Link href={`/worlds/${data.universe_master_id}`} className="text-foreground hover:opacity-70 transition-opacity">
+                {data.universe_title}
+              </Link>
+            </p>
+          ) : null}
           {data.universe_master_id ? (
-            <div className="flex flex-wrap gap-2 pt-4">
+            <div className="flex flex-wrap gap-2 pt-2">
               <Link
                 href={`/worlds/${data.universe_master_id}/holographic`}
-                className={buttonVariants()}
+                className={buttonVariants({ size: "lg" })}
                 data-experience-entry="experience"
               >
                 Enter Experience
               </Link>
-              <Link href={`/worlds/${data.universe_master_id}`} className={buttonVariants({ variant: "outline" })}>
+              <Link href={`/worlds/${data.universe_master_id}`} className={buttonVariants({ variant: "outline", size: "lg" })}>
                 Open Universe
               </Link>
             </div>
           ) : null}
         </div>
-      </div>
-
-      <div className="mx-auto max-w-7xl px-4 py-10 space-y-8">
-
-        {/* A projection is the Creative Moment's audience-facing representation. */}
-        {data.projection_id ? (
-          <section className="space-y-3">
-            <h2 className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Moment Card</h2>
-            <MomentCard
-              projectionId={data.projection_id}
-              title={data.title}
-              typeLabel="Creative Moment representation"
-              hasMedia={false}
-              collectible={false}
-            />
-          </section>
-        ) : (
-          <p className="text-sm text-muted-foreground">No Moment Card representation yet.</p>
-        )}
 
         <Separator />
 
+        <section className="space-y-3" aria-labelledby="creative-moment-scenes">
+          <h2 id="creative-moment-scenes" className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
+            Related Scenes
+          </h2>
+          {data.scenes.length > 0 ? (
+            <ul className="space-y-2">
+              {data.scenes.map((scene) => (
+                <li key={scene.master_id}>
+                  {scene.projection_id ? (
+                    <Link href={`/moments/${scene.projection_id}`} className="text-sm text-foreground hover:opacity-70 transition-opacity">
+                      {sceneShortTitle(scene.title) ?? scene.title ?? "Scene"}
+                    </Link>
+                  ) : (
+                    <span className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Scene"}</span>
+                  )}
+                  {scene.title && sceneShortTitle(scene.title) !== scene.title ? (
+                    <span className="text-xs text-muted-foreground"> · {scene.title}</span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted-foreground">This Creative Moment is not yet present in a Scene.</p>
+          )}
+        </section>
       </div>
     </div>
   );

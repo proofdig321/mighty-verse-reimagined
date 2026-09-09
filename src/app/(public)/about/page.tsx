@@ -41,7 +41,7 @@ export default async function AboutPage() {
         <div className="max-w-3xl space-y-4">
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">What We Are</p>
           <p className="text-lg text-foreground leading-relaxed">
-            Mighty Verse is a structured, navigable, attributable cultural universe. Songs become worlds. Murals bring those worlds to life. Creative Moments are the canonical units of meaning within each world — collectible, attributable, and permanent.
+            Mighty Verse is a structured, navigable, attributable cultural Universe. Songs become Universes. Murals bring those Universes to life. Creative Moments are the canonical units of meaning within each Universe.
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Mighty Verse Reimagined is a living ecosystem where music, art and story come together with provenance, rights and ownership built in from the ground up. A new way to experience, collect and participate in culture.
@@ -68,10 +68,10 @@ export default async function AboutPage() {
           <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">How It Works</p>
           <div className="artifact-grid">
             {[
-              { icon: "🔭", label: "Discover", desc: "Explore song universes, murals and creative moments freely. No wallet required." },
-              { icon: "⚡", label: "Collect", desc: "Own authorised projections of canonical creative moments as Cards, Editions and more." },
-              { icon: "✦", label: "Participate", desc: "Contribute to the universe. Attribution and provenance are built into every work." },
-              { icon: "⬡", label: "Authority", desc: "Canonical authority is held by Mighty Verse. Provenance is public and verifiable." },
+              { icon: "🔭", label: "Discover", desc: "Explore Universes, Murals, Scenes and Creative Moments freely. No wallet required." },
+              { icon: "⚡", label: "Reveal", desc: "Understand the Mural, Scenes, and Creative Moments that make a Universe." },
+              { icon: "✦", label: "Assemble", desc: "Compose the work in Creative Studio. Studio is not the public Experience." },
+              { icon: "⬡", label: "Experience", desc: "Enter the public Experience of a Universe. 2.5D is presentation, not a second ontology." },
             ].map(({ icon, label, desc }) => (
               <div key={label} className="artifact-card artifact-copy space-y-2">
                 <span className="text-2xl">{icon}</span>

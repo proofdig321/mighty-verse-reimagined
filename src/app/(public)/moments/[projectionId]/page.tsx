@@ -11,18 +11,13 @@ import ArtworkFrame from "@/components/artwork-frame";
 import PageTopNav from "@/components/page-top-nav";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
 
-const PROJ_LABELS: Record<string, string> = {
-  "experiential": "Experiential",
-  "distributional": "Distributional",
-  "archival": "Archival",
-  "other": "Moment",
-};
-
 type SceneMomentData = MomentData & {
-  worldDescription: string | null;
+  sceneTitle: string | null;
+  sceneDescription: string | null;
   muralTitle: string | null;
   muralMasterId: string | null;
-  worldMasterId: string | null;
+  universeMasterId: string | null;
+  universeTitle: string | null;
   cmTitle: string | null;
   cmMasterId: string | null;
 };
@@ -86,7 +81,8 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
 
   let muralTitle: string | null = null;
   let muralMasterId: string | null = null;
-  let worldMasterId: string | null = null;
+  let universeMasterId: string | null = null;
+  let universeTitle: string | null = null;
   let cmTitle: string | null = null;
   let cmMasterId: string | null = null;
 
@@ -98,7 +94,11 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
       const { data: muralPres } = await svc.from("work_presentation").select("title").eq("master_id", muralMasterId).maybeSingle();
       muralTitle = muralPres?.title ?? null;
       const { data: muralMaster } = await svc.from("master").select("parent_master_id").eq("master_id", muralMasterId).single();
-      worldMasterId = muralMaster?.parent_master_id ?? null;
+      universeMasterId = muralMaster?.parent_master_id ?? null;
+      if (universeMasterId) {
+        const { data: universePres } = await svc.from("work_presentation").select("title").eq("master_id", universeMasterId).maybeSingle();
+        universeTitle = universePres?.title ?? null;
+      }
     }
     // Resolve primary Creative Moment from scene_moment join table
     const { data: sm } = await svc
@@ -142,10 +142,12 @@ async function getMoment(projectionId: string): Promise<SceneMomentData | null> 
     media,
     presentation: projPresentation ?? null,
     worldTitle: worldPresentation?.title ?? null,
-    worldDescription: worldPresentation?.description ?? null,
+    sceneTitle: worldPresentation?.title ?? null,
+    sceneDescription: worldPresentation?.description ?? null,
     muralTitle,
     muralMasterId,
-    worldMasterId,
+    universeMasterId,
+    universeTitle,
     cmTitle,
     cmMasterId,
   };
@@ -189,14 +191,16 @@ export default async function MomentPage({
   if (!moment) notFound();
 
   const { projection, canonical_state, master, provenance, attribution, media, presentation,
-          worldTitle, muralTitle, muralMasterId, worldMasterId, cmTitle, cmMasterId } = moment;
+          sceneTitle, sceneDescription, muralTitle, muralMasterId, universeMasterId, universeTitle, cmTitle, cmMasterId } = moment;
 
-  const projTypeLabel = PROJ_LABELS[projection.projection_type] ?? projection.projection_type.replace(/-/g, " ");
   const isScene = master.canonical_type === "scene";
-  const title = presentation?.title ?? `${projTypeLabel} Moment`;
+  const title = isScene
+    ? (sceneTitle ?? presentation?.title ?? "Scene")
+    : (presentation?.title ?? sceneTitle ?? "Creative Moment");
+  const description = presentation?.description || sceneDescription;
 
-  const breadcrumbHref = muralMasterId ? `/worlds/${muralMasterId}` : worldMasterId ? `/worlds/${worldMasterId}` : "/";
-  const breadcrumbLabel = muralTitle ?? worldTitle ?? "Universe";
+  const breadcrumbHref = universeMasterId ? `/worlds/${universeMasterId}` : muralMasterId ? `/worlds/${muralMasterId}` : "/";
+  const breadcrumbLabel = universeTitle ? `Back to Universe · ${universeTitle}` : "Back to Universe";
 
   const rarityLabel = projection.collectible_designated ? "Rare" : "Common";
 
@@ -221,7 +225,7 @@ export default async function MomentPage({
           {/* Left: card artwork */}
           <div className="w-full md:w-64 shrink-0 space-y-3">
             <div className="relative">
-              {projection.collectible_designated && (
+              {!isScene && projection.collectible_designated && (
                 <div className="absolute top-3 left-3 z-10">
                   <span
                     className="text-xs font-bold px-2 py-0.5 rounded uppercase tracking-wider"
@@ -254,6 +258,9 @@ export default async function MomentPage({
           <div className="flex-1 min-w-0 space-y-6">
 
             <div className="space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                {isScene ? "Scene" : "Creative Moment"}
+              </p>
               <h1
                 className="text-3xl font-semibold text-foreground leading-tight"
                 style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -261,12 +268,14 @@ export default async function MomentPage({
                 {title}
               </h1>
 
-              {/* Scene identity — plain text, no self-link */}
-              {isScene && worldTitle && (
+              {isScene && universeMasterId && universeTitle ? (
                 <p className="text-sm text-muted-foreground">
-                  Scene: {worldTitle}
+                  Universe:{" "}
+                  <Link href={`/worlds/${universeMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
+                    {universeTitle}
+                  </Link>
                 </p>
-              )}
+              ) : null}
 
               {/* Mural navigable parent context */}
               {isScene && muralMasterId && muralTitle && (
@@ -304,8 +313,8 @@ export default async function MomentPage({
             )}
 
             {/* Description */}
-            {presentation?.description ? (
-              <p className="text-sm text-muted-foreground leading-relaxed">{presentation.description}</p>
+            {description ? (
+              <p className="text-sm text-muted-foreground leading-relaxed">{description}</p>
             ) : (
               <p className="text-sm text-muted-foreground italic">No description yet.</p>
             )}
@@ -315,9 +324,9 @@ export default async function MomentPage({
               {isScene ? (
                 <Badge variant="outline">Scene</Badge>
               ) : (
-                <Badge variant="outline">Moment Card</Badge>
+                <Badge variant="outline">Creative Moment</Badge>
               )}
-              {projection.collectible_designated && (
+              {!isScene && projection.collectible_designated && (
                 <Badge variant="outline" style={{ color: "var(--accent-mv-gold)", borderColor: "var(--accent-mv-gold)" }}>
                   Collectible
                 </Badge>
@@ -343,15 +352,15 @@ export default async function MomentPage({
 
             {/* Action buttons */}
             <div className="flex flex-wrap gap-3">
-              {worldMasterId ? (
-                <Link href={`/worlds/${worldMasterId}/holographic`} className={buttonVariants()} data-experience-entry="experience">
+              {universeMasterId ? (
+                <Link href={`/worlds/${universeMasterId}/holographic`} className={buttonVariants()} data-experience-entry="experience">
                   Enter Experience
                 </Link>
               ) : (
                 <Button disabled>Enter Experience</Button>
               )}
-              {worldMasterId ? (
-                <Link href={`/worlds/${worldMasterId}`} className={buttonVariants({ variant: "outline" })}>
+              {universeMasterId ? (
+                <Link href={`/worlds/${universeMasterId}`} className={buttonVariants({ variant: "outline" })}>
                   Open Universe
                 </Link>
               ) : null}
