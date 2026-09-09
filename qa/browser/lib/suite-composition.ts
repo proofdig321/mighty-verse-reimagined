@@ -10,7 +10,7 @@ export async function revealCanonicalIdentifiers(scope: Locator) {
 }
 
 export async function expectCreativeSuiteComposition(page: Page) {
-  await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true }).first()).toBeVisible();
   await expect(page.getByText("Creative Suite").first()).toBeVisible();
   await expect(page.getByText(CANON.universeDescription).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /shuffle/i })).toHaveCount(0);

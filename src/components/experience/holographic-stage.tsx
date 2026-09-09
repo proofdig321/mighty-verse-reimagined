@@ -59,7 +59,7 @@ export function HolographicStage({
               <div className="holographic-placeholder" />
             )}
             <p className="holographic-kicker">{layer.kind}</p>
-            <h3 className="holographic-title">{layer.title ?? "Untitled"}</h3>
+            <p className="holographic-title">{layer.title ?? "Untitled"}</p>
           </article>
         ))}
       </div>
