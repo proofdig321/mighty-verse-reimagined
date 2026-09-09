@@ -1,8 +1,14 @@
 import { classifyGalleryAssetRole, classifyLifecycleKind, galleryRoleLabel, isGalleryProductionAsset } from "../lifecycle";
 import { decideRetainReference, parseReferenceProvenance } from "../reference";
 import { deriveSceneProductionBriefs } from "../plan";
-import { decideProductionDispatch, PRODUCTION_ADAPTER_CONNECTED } from "../adapter";
-import { composeExperienceProjection } from "../projection";
+import { decideProductionDispatch, PRODUCTION_ADAPTER_CONNECTED, PRODUCTION_VIDEO_INFRASTRUCTURE } from "../adapter";
+import { composeExperienceProjection, productionLayersFromResults } from "../projection";
+import {
+  decideApproveProductionResult,
+  decideAttachProductionLayer,
+  decideRegisterProductionResult,
+  parseProductionProvenance,
+} from "../result";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -25,10 +31,11 @@ assert(classifyLifecycleKind("production_plan") === "plan", "production plan is 
 assert(classifyLifecycleKind("media_realization") === "realization", "media_realization stays the later realization layer");
 assert(classifyLifecycleKind("holographic") === "projection", "2.5D is projection");
 assert(classifyGalleryAssetRole({ provider: "mux", asset_type: "original", storage_ref: PLAYBACK }) === "source", "Mux original is a source");
+assert(classifyGalleryAssetRole({ provider: "mux", asset_type: "original", storage_ref: PLAYBACK, integrity_hash: `production:${UNIVERSE}:${POWERHOUSE}:muxAsset` }) === "production", "Mux production result is a production catalogue role");
 assert(classifyGalleryAssetRole({ provider: "curated-reference", asset_type: "thumbnail", storage_ref: PLAYBACK }) === "reference", "curated still is a reference");
 assert(classifyGalleryAssetRole({ provider: "production", asset_type: "preview", storage_ref: "job" }) === "production", "production provider is a production result");
 assert(classifyGalleryAssetRole({ provider: "mux", asset_type: "thumbnail", storage_ref: "http://x" }) === "other", "artwork thumbnails are not source dumps");
-assert(isGalleryProductionAsset("source") && isGalleryProductionAsset("reference"), "sources and references are usable production assets");
+assert(isGalleryProductionAsset("source") && isGalleryProductionAsset("reference") && isGalleryProductionAsset("production"), "sources, references, and production results are catalogue roles");
 assert(!isGalleryProductionAsset("other"), "other is not a production catalogue role");
 assert(galleryRoleLabel("reference") === "Reference", "reference label");
 
@@ -173,6 +180,8 @@ assert(briefs[0].scene_master_id === POWERHOUSE, "Powerhouse is first");
 assert(briefs[0].moments[0].title === "Proverb", "Proverb remains present in Powerhouse");
 assert(briefs[0].references.length === 1, "retained still is attached to Powerhouse");
 assert(briefs[0].realization === null && briefs[0].status === "planning", "no fake realization");
+assert(briefs[0].execution === "not_connected", "executor stays not_connected");
+assert(briefs[0].result === null && briefs[0].projects === false, "no fabricated production result");
 assert(briefs[0].provider_target === "unassigned", "MCP is not assigned");
 assert(briefs[1].references.length === 0, "Hand-to-Hand does not inherit the Powerhouse still");
 assert(briefs[0].window_label.includes("0:36.000"), "canonical timing stays on the brief");
@@ -181,7 +190,75 @@ const dispatch = decideProductionDispatch({ universe_id: UNIVERSE, brief: briefs
 assert(!dispatch.ok && dispatch.code === "not_connected", "adapter refuses to pretend a provider ran");
 assert(dispatch.creates_canonical === false && dispatch.populates_media_realization === false, "dispatch does not write realization");
 assert(PRODUCTION_ADAPTER_CONNECTED === false, "no MCP provider is connected");
+assert(PRODUCTION_VIDEO_INFRASTRUCTURE === "mux", "Mux remains the video infrastructure");
 assert(decideProductionDispatch({}).code === "missing_plan", "empty dispatch is rejected");
+
+const blockedRegister = decideRegisterProductionResult({
+  universe_id: UNIVERSE,
+  scene_master_id: POWERHOUSE,
+  mux_asset_id: "muxCanonicalAsset",
+  playback_id: PLAYBACK,
+  blocked_playback_ids: [PLAYBACK],
+});
+assert(!blockedRegister.ok && blockedRegister.code === "canonical_source", "canonical Mux playback cannot become a production result");
+
+const missingPlayback = decideRegisterProductionResult({
+  universe_id: UNIVERSE,
+  scene_master_id: POWERHOUSE,
+  mux_asset_id: "muxNewAsset",
+  playback_id: "",
+});
+assert(!missingPlayback.ok && missingPlayback.code === "missing_playback", "processing Mux assets are not registered with invented playback");
+
+const register = decideRegisterProductionResult({
+  universe_id: UNIVERSE,
+  scene_master_id: POWERHOUSE,
+  mux_asset_id: "muxNewAsset",
+  playback_id: "playbackNewAsset",
+  canonical_start_ms: 36000,
+  canonical_end_ms: 79000,
+  blocked_mux_asset_ids: ["muxCanonicalAsset"],
+  blocked_playback_ids: [PLAYBACK],
+});
+assert(register.ok && register.action === "register_production_result", "a distinct Mux result can be registered");
+assert(register.integrity_hash === `production:${UNIVERSE}:${POWERHOUSE}:muxNewAsset`, "production hash is idempotent");
+assert(
+  register.creates_universe === false &&
+    register.creates_scene === false &&
+    register.creates_binding === false &&
+    register.creates_realization === false &&
+    register.canonicalises === false &&
+    register.replaces_canonical_mux === false,
+  "registration does not canonicalise",
+);
+
+const parsedProduction = parseProductionProvenance(JSON.stringify({
+  kind: "production-result",
+  universe_id: UNIVERSE,
+  scene_master_id: POWERHOUSE,
+  mux_asset_id: "muxNewAsset",
+  playback_id: "playbackNewAsset",
+  video_infrastructure: "mux",
+  approval: "awaiting",
+  attached: false,
+}));
+assert(parsedProduction?.approval === "awaiting" && parsedProduction.attached === false, "production provenance starts awaiting");
+
+const approve = decideApproveProductionResult({
+  asset_id: "11111111-1111-4111-8111-111111111111",
+  provenance: parsedProduction,
+  attach: false,
+});
+assert(approve.ok && approve.creates_canonical === false && approve.binds_canonical_mux === false, "approval does not canonicalise");
+assert(approve.populates_media_realization === false, "approval does not populate media_realization");
+
+const attachDenied = decideAttachProductionLayer({ provenance: parsedProduction });
+assert(!attachDenied.ok && attachDenied.code === "not_approved", "unapproved results cannot enter Experience");
+
+const attachOk = decideAttachProductionLayer({
+  provenance: { ...parsedProduction, approval: "approved" },
+});
+assert(attachOk.ok && attachOk.attached === true, "approved results may attach to a Scene plane");
 
 const projected = composeExperienceProjection({
   canonical_layers: intelligence.holographic,
@@ -193,9 +270,34 @@ assert(projected.redefines_timing === false, "production does not rewrite Scene 
 assert(
   composeExperienceProjection({
     canonical_layers: intelligence.holographic,
-    realizations: [{ layer_id: "fake", scene_master_id: POWERHOUSE, still_url: "https://example", approved: true }],
+    realizations: [{ layer_id: "unapproved", scene_master_id: POWERHOUSE, still_url: "https://example", approved: true, attached: false }],
   }).layers.length === 1,
-  "even an approved realization is not injected as a fake Moment object yet",
+  "approved but unattached production stays out of 2.5D",
 );
+assert(
+  composeExperienceProjection({
+    canonical_layers: intelligence.holographic,
+    realizations: [{ layer_id: "awaiting", scene_master_id: POWERHOUSE, still_url: "https://example", approved: false, attached: true }],
+  }).layers.length === 1,
+  "unapproved production stays out of 2.5D",
+);
+
+const attached = composeExperienceProjection({
+  canonical_layers: intelligence.holographic,
+  realizations: productionLayersFromResults([
+    {
+      asset_id: "11111111-1111-4111-8111-111111111111",
+      scene_master_id: POWERHOUSE,
+      title: "Powerhouse production",
+      still_url: "https://image.mux.com/playbackNewAsset/thumbnail.jpg",
+      approval: "approved",
+      attached: true,
+    },
+  ]),
+});
+assert(attached.layers.length === 2 && attached.production_count === 1, "approved attached production becomes a 2.5D layer");
+assert(attached.layers[1].kind === "production", "production layer is explicit and is not a Creative Moment");
+assert(attached.layers[0].kind === "scene", "canonical Scene layer remains");
+assert(attached.redefines_timing === false, "attached production does not rewrite Scene windows");
 
 console.log("Production orchestration tests: all passed");

@@ -9,8 +9,10 @@ import { creativeSuiteNavItems } from "@/lib/assemble/suite";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
 import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
 import { loadUniverseReferences } from "@/lib/assemble/load-references";
+import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
 import { deriveProductionPath, productionPathInputFrom } from "@/lib/assemble/workflow";
 import { deriveSceneProductionBriefs } from "@/lib/production/plan";
+import { productionLayersFromResults } from "@/lib/production/projection";
 import { creativeSuiteHref, creativeSuiteIdentityHref, curateHubHref, mediaInspectHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
@@ -35,10 +37,11 @@ export default async function UniverseCurationPage({
 
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();
-  const [intelligence, source, references] = await Promise.all([
+  const [intelligence, source, references, productionResults] = await Promise.all([
     loadSentinelIntelligence(data),
     loadSuiteSourcePreview(data),
     loadUniverseReferences(data.master_id),
+    loadUniverseProductionResults(data.master_id),
   ]);
   const inspectAssetId = data.murals.flatMap((mural) => mural.scenes).find((scene) => scene.asset_id)?.asset_id ?? null;
 
@@ -46,7 +49,8 @@ export default async function UniverseCurationPage({
   const fromCurate = query.from === "curate";
   const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
   const productionPath = deriveProductionPath(productionPathInputFrom(data, intelligence, suiteHref));
-  const productionBriefs = deriveSceneProductionBriefs(data, intelligence, references);
+  const productionBriefs = deriveSceneProductionBriefs(data, intelligence, references, productionResults);
+  const productionLayers = productionLayersFromResults(productionResults);
 
   return (
     <div className="space-y-10">
@@ -122,6 +126,7 @@ export default async function UniverseCurationPage({
         source={source}
         productionPath={productionPath}
         productionBriefs={productionBriefs}
+        productionLayers={productionLayers}
         muralEmptyAction={
           <RegisterMural
             universeId={data.master_id}

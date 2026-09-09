@@ -16,7 +16,7 @@ import { SentinelIntelligencePanel } from "./sentinel-intelligence";
 import { SourcePreview } from "./source-preview";
 import { StudioPreview } from "./studio-preview";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
-import { composeExperienceProjection } from "@/lib/production/projection";
+import { composeExperienceProjection, type ApprovedProductionLayer } from "@/lib/production/projection";
 import type { SceneProductionBrief } from "@/lib/production/plan";
 
 export type UniverseAssemblyProps = {
@@ -36,6 +36,7 @@ export type UniverseAssemblyProps = {
   source?: SuiteSourcePreview | null;
   productionPath?: ProductionPathStep[];
   productionBriefs?: SceneProductionBrief[];
+  productionLayers?: ApprovedProductionLayer[];
 };
 
 function untitled(kind: string) {
@@ -59,6 +60,7 @@ export default function UniverseAssemblyView({
   source = null,
   productionPath = [],
   productionBriefs = [],
+  productionLayers = [],
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -167,9 +169,10 @@ export default function UniverseAssemblyView({
             <p className="suite-section-note">
               Scene-centric instruction layer. A production plan is not a Scene, not a generated video, and not canonical truth.
               Keep Sentinel stills as references to attach them here. External AI/MCP tools are not connected.
+              Mux remains the video infrastructure for a future production result.
             </p>
           </div>
-          <ProductionBriefs briefs={productionBriefs} />
+        <ProductionBriefs universeId={data.master_id} briefs={productionBriefs} />
         </section>
 
         {intelligence && experienceHref && holographicHref ? (
@@ -185,7 +188,7 @@ export default function UniverseAssemblyView({
             <StudioPreview
               universeTitle={data.title ?? "this Universe"}
               scenes={scenes}
-              layers={composeExperienceProjection({ canonical_layers: intelligence.holographic, realizations: [] }).layers}
+              layers={composeExperienceProjection({ canonical_layers: intelligence.holographic, realizations: productionLayers }).layers}
               experienceHref={experienceHref}
               holographicHref={holographicHref}
             />

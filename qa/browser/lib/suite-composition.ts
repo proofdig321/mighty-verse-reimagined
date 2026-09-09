@@ -42,6 +42,8 @@ export async function expectCreativeSuiteComposition(page: Page) {
   const production = page.locator("section[aria-labelledby='universe-production']");
   await expect(production.getByRole("heading", { name: "Production" })).toBeVisible();
   await expect(production.locator("[data-production-scene]")).toHaveCount(4);
+  await expect(production.locator("[data-production-execution='not_connected']")).toHaveCount(4);
+  await expect(production.getByRole("button", { name: /Execute production/i }).first()).toBeVisible();
   await expect(production.getByText("No production realization yet").first()).toBeVisible();
   await expect(production.getByText(/Powerhouse/i).first()).toBeVisible();
   await expect(production.getByText("Proverb").first()).toBeVisible();
@@ -71,6 +73,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(preview.getByRole("button", { name: "2.5D Studio Preview" })).toBeVisible();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(preview.locator("[data-holographic-kind='production']")).toHaveCount(0);
   await expect(preview.getByRole("link", { name: "Open public 2.5D" })).toHaveAttribute("href", ROUTES.universeHolographic);
 
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");

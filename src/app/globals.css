@@ -1354,6 +1354,13 @@
     z-index: 3;
   }
 
+  .holographic-layer-production {
+    width: min(12rem, 54vw);
+    z-index: 2;
+    outline: 1px solid color-mix(in oklch, var(--accent-mv) 45%, transparent);
+    outline-offset: 0.35rem;
+  }
+
   .holographic-kicker {
     margin: 0.4rem 0 0;
     font-size: 0.58rem;
@@ -1457,6 +1464,10 @@
 
     .holographic-layer-moment {
       width: min(6.5rem, 38vw);
+    }
+
+    .holographic-layer-production {
+      width: min(9rem, 48vw);
     }
   }
 

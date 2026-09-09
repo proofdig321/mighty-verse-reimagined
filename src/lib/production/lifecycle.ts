@@ -12,6 +12,8 @@
 
 export const CURATED_REFERENCE_PROVIDER = "curated-reference";
 export const PRODUCTION_PROVIDER = "production";
+export const VIDEO_INFRASTRUCTURE = "mux";
+export const PRODUCTION_HASH_PREFIX = "production:";
 
 export const REFERENCE_ROLES = [
   "still",
@@ -59,13 +61,19 @@ export function isCuratedReferenceProvider(provider: string | null | undefined):
  * Gallery catalogue role for a media_asset row.
  * Frame observations, storyboard beats, and inspection sessions are not media_asset rows.
  */
+export function isProductionIntegrityHash(value: string | null | undefined): boolean {
+  return typeof value === "string" && value.startsWith(PRODUCTION_HASH_PREFIX);
+}
+
 export function classifyGalleryAssetRole(asset: {
   provider?: string | null;
   asset_type?: string | null;
   storage_ref?: string | null;
+  integrity_hash?: string | null;
 }): GalleryAssetRole {
   if (asset.provider === CURATED_REFERENCE_PROVIDER) return "reference";
   if (asset.provider === PRODUCTION_PROVIDER) return "production";
+  if (isProductionIntegrityHash(asset.integrity_hash)) return "production";
   if (asset.storage_ref?.startsWith("seed:placeholder:")) return "other";
   if (isSourceAssetType(asset.asset_type)) return "source";
   return "other";
@@ -124,4 +132,12 @@ export function curatedReferenceIntegrityHash(input: {
   role: ReferenceRole;
 }): string {
   return `curated-reference:${input.universe_id}:${input.source_asset_id}:${input.time_ms}:${input.role}`;
+}
+
+export function productionResultIntegrityHash(input: {
+  universe_id: string;
+  scene_master_id: string;
+  mux_asset_id: string;
+}): string {
+  return `${PRODUCTION_HASH_PREFIX}${input.universe_id}:${input.scene_master_id}:${input.mux_asset_id}`;
 }

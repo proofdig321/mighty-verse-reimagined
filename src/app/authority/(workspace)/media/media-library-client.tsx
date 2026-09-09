@@ -142,6 +142,11 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
           {item.format && item.production_role === "reference" && (
             <span className="text-[10px] text-muted-foreground/60">{item.format}</span>
           )}
+          {item.production_role === "production" && (
+            <span className="text-[10px] text-muted-foreground/60">
+              Mux{item.production_approval ? ` · ${item.production_approval}` : ""}
+            </span>
+          )}
           {item.duration_ms && item.production_role !== "reference" && (
             <span className="text-[10px] text-muted-foreground/60">
               {formatDuration(item.duration_ms / 1000)}

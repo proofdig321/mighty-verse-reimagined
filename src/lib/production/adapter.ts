@@ -4,13 +4,18 @@
  * Mighty Verse owns canonical context, the production plan, authority, provenance,
  * result registration, and publication.
  *
- * An external provider owns execution, generation, rendering, and tool operations.
- * No provider is connected in this increment. Do not fake job completion.
+ * An external creative executor owns generation/rendering.
+ * Mux is the Mighty Verse video ingest/playback/delivery infrastructure.
+ * Mux is not the AI generation engine.
+ *
+ * No creative executor is connected in this increment. Do not fake job completion.
  */
 
 import type { SceneProductionBrief } from "./plan";
+import { VIDEO_INFRASTRUCTURE } from "./lifecycle";
 
 export const PRODUCTION_ADAPTER_CONNECTED = false;
+export const PRODUCTION_VIDEO_INFRASTRUCTURE = VIDEO_INFRASTRUCTURE;
 
 export type ProductionProviderKind = "image" | "video" | "dcc" | "render" | "compositor" | "ffmpeg";
 
@@ -61,7 +66,7 @@ export function decideProductionDispatch(input: {
   return {
     ok: false,
     code: "not_connected",
-    message: "No production provider is connected. Mighty Verse records plans; external tools execute later.",
+    message: "No creative production executor is connected. Mux remains the video infrastructure and will ingest a result when an executor returns one.",
     creates_canonical: false,
     populates_media_realization: false,
   };

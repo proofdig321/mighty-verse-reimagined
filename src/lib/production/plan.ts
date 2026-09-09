@@ -12,6 +12,7 @@ import type { SentinelIntelligence } from "../media/sentinel-intelligence";
 import { suiteScenes, type SuiteScene } from "../assemble/suite";
 import type { UniverseAssembly } from "../assemble/types";
 import type { ReferenceRole } from "./lifecycle";
+import type { ProductionApproval } from "./result";
 
 export type CuratedReference = {
   asset_id: string;
@@ -23,6 +24,17 @@ export type CuratedReference = {
   moment_master_id: string | null;
   source_asset_id: string;
   panel_id: string | null;
+};
+
+export type SceneProductionResultCard = {
+  asset_id: string;
+  scene_master_id: string;
+  mux_asset_id: string;
+  playback_id: string;
+  still_url: string | null;
+  approval: ProductionApproval;
+  attached: boolean;
+  executor: string | null;
 };
 
 export type SceneProductionBrief = {
@@ -39,8 +51,12 @@ export type SceneProductionBrief = {
   transition: string;
   output_target: string;
   provider_target: "unassigned";
+  execution: "not_connected";
+  result: SceneProductionResultCard | null;
+  approval: ProductionApproval | null;
+  projects: boolean;
   realization: null;
-  status: "planning";
+  status: "planning" | "awaiting_approval" | "approved" | "rejected";
   window_label: string;
 };
 
@@ -80,10 +96,18 @@ function motionLanguage(motion: string | undefined): { visual: string; motion: s
   };
 }
 
+function briefStatus(result: SceneProductionResultCard | null): SceneProductionBrief["status"] {
+  if (!result) return "planning";
+  if (result.approval === "approved") return "approved";
+  if (result.approval === "rejected") return "rejected";
+  return "awaiting_approval";
+}
+
 export function deriveSceneProductionBriefs(
   assembly: UniverseAssembly,
   intelligence: SentinelIntelligence | null,
   references: CuratedReference[] = [],
+  results: SceneProductionResultCard[] = [],
 ): SceneProductionBrief[] {
   const scenes = suiteScenes(assembly);
   return scenes.map((scene: SuiteScene) => {
@@ -93,6 +117,7 @@ export function deriveSceneProductionBriefs(
       (panel) => panel.scene_master_id === scene.master_id,
     );
     const sceneRefs = references.filter((reference) => reference.scene_master_id === scene.master_id);
+    const result = results.find((entry) => entry.scene_master_id === scene.master_id) ?? null;
     return {
       scene_master_id: scene.master_id,
       title: scene.title,
@@ -107,8 +132,12 @@ export function deriveSceneProductionBriefs(
       transition: language.transition,
       output_target: "2.5D Scene plane / public Experience",
       provider_target: "unassigned",
+      execution: "not_connected",
+      result,
+      approval: result?.approval ?? null,
+      projects: result?.attached === true && result.approval === "approved",
       realization: null,
-      status: "planning",
+      status: briefStatus(result),
       window_label:
         scene.start_ms != null && scene.end_ms != null
           ? `${formatTimelineMs(scene.start_ms)} → ${formatTimelineMs(scene.end_ms)}`

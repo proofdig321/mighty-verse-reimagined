@@ -126,6 +126,23 @@ export class MuxAdapter implements MediaProvider {
     }
   }
 
+  /**
+   * Ingest a production video URL into Mux. Mux is delivery infrastructure,
+   * not the creative executor. Do not call this until an executor returns a result.
+   */
+  async createAssetFromUrl(params: {
+    url: string;
+    passthrough?: string;
+  }): Promise<ProviderAsset> {
+    const mux = getMuxClient();
+    const asset = await mux.video.assets.create({
+      inputs: [{ url: params.url }],
+      playback_policies: ["public"],
+      passthrough: params.passthrough,
+    });
+    return mapMuxAsset(asset);
+  }
+
   buildPlaybackSource(playbackId: string, mediaClass: MediaClass): MediaPlaybackSource {
     return {
       provider: "mux",

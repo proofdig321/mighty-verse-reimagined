@@ -86,7 +86,7 @@ export type AnimationBeat = {
 
 export type HolographicLayer = {
   layer_id: string;
-  kind: "mural" | "scene" | "moment";
+  kind: "mural" | "scene" | "moment" | "production";
   master_id: string;
   title: string | null;
   still_url: string | null;

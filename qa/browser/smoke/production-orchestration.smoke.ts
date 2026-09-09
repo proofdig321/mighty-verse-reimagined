@@ -35,7 +35,7 @@ function serviceClient() {
 }
 
 async function snapshotCanon(svc: ReturnType<typeof serviceClient>) {
-  const [{ data: scenes }, { data: bindings }, { data: muralBinding }, { count: realizationCount }, { data: presence }, { count: referenceCount }] =
+  const [{ data: scenes }, { data: bindings }, { data: muralBinding }, { count: realizationCount }, { data: presence }, { count: referenceCount }, { count: productionCount }] =
     await Promise.all([
       svc.from("master").select("master_id, parent_master_id, sort_order").in("master_id", SCENE_IDS),
       svc.from("projection_media_binding").select("binding_id, asset_id, start_ms, end_ms").in("binding_id", BINDING_IDS),
@@ -47,6 +47,7 @@ async function snapshotCanon(svc: ReturnType<typeof serviceClient>) {
       svc.from("media_realization").select("*", { count: "exact", head: true }),
       svc.from("scene_moment").select("scene_master_id, moment_master_id").in("scene_master_id", SCENE_IDS),
       svc.from("media_asset").select("*", { count: "exact", head: true }).eq("provider", "curated-reference"),
+      svc.from("media_asset").select("*", { count: "exact", head: true }).like("integrity_hash", "production:%"),
     ]);
   return {
     scenes: (scenes ?? []).slice().sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0)),
@@ -55,8 +56,34 @@ async function snapshotCanon(svc: ReturnType<typeof serviceClient>) {
     realizationCount: realizationCount ?? 0,
     presence: (presence ?? []).slice().sort((a, b) => `${a.scene_master_id}:${a.moment_master_id}`.localeCompare(`${b.scene_master_id}:${b.moment_master_id}`)),
     referenceCount: referenceCount ?? 0,
+    productionCount: productionCount ?? 0,
   };
 }
+
+test("unauthenticated production execute and register remain rejected", async ({ page }, testInfo) => {
+  const baseURL = testInfo.project.use.baseURL ?? "http://localhost:3000";
+  const execute = await fetch(`${baseURL}/api/authority/production/execute`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      universe_id: CANON.universeId,
+      scene_master_id: SCENE_MOMENTS.powerhouse.sceneMasterId,
+    }),
+  });
+  expect(execute.status).toBe(401);
+
+  const register = await fetch(`${baseURL}/api/authority/production/register`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      universe_id: CANON.universeId,
+      scene_master_id: SCENE_MOMENTS.powerhouse.sceneMasterId,
+      mux_asset_id: CANON.muxAssetId,
+      playback_id: CANON.muxPlaybackId,
+    }),
+  });
+  expect(register.status).toBe(401);
+});
 
 test("unauthenticated reference retain remains rejected", async ({ page }, testInfo) => {
   const baseURL = testInfo.project.use.baseURL ?? "http://localhost:3000";
@@ -96,6 +123,7 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
 
   await page.getByRole("tab", { name: "Productions" }).click();
   await expect(page.getByText(/No production realizations yet/i)).toBeVisible();
+  await expect(page.locator("[data-gallery-role='production']")).toHaveCount(0);
 
   await page.getByRole("tab", { name: "Sources" }).click();
   await muxCard.click();
@@ -106,6 +134,33 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
 
   await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
   await expectCreativeSuiteComposition(page);
+
+  const executeRes = await page.request.post(`${baseURL}/api/authority/production/execute`, {
+    data: {
+      universe_id: CANON.universeId,
+      scene_master_id: SCENE_MOMENTS.powerhouse.sceneMasterId,
+    },
+  });
+  expect(executeRes.status()).toBe(409);
+  expect((await executeRes.json()).code).toBe("not_connected");
+  notes.push("Powerhouse execute stays not_connected and does not fabricate a production job");
+
+  const { data: sourceAsset } = await svc
+    .from("media_asset")
+    .select("provider_asset_id, storage_ref")
+    .eq("asset_id", CANON.muxAssetId)
+    .maybeSingle();
+  const registerRes = await page.request.post(`${baseURL}/api/authority/production/register`, {
+    data: {
+      universe_id: CANON.universeId,
+      scene_master_id: SCENE_MOMENTS.powerhouse.sceneMasterId,
+      mux_asset_id: sourceAsset?.provider_asset_id ?? CANON.muxAssetId,
+      playback_id: sourceAsset?.storage_ref ?? CANON.muxPlaybackId,
+    },
+  });
+  expect(registerRes.status()).toBe(400);
+  expect((await registerRes.json()).code).toBe("canonical_source");
+  notes.push("Canonical SHE Mux source cannot be registered as a production result");
 
   const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
   const powerhousePanel = sentinel.locator(`li[data-scene-id='${SCENE_MOMENTS.powerhouse.sceneMasterId}']`).first();
@@ -127,6 +182,8 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
   await page.goto(ROUTES.universeHolographic, { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(page.locator("[data-holographic-kind='production']")).toHaveCount(0);
+  notes.push("2.5D stays canonical-only because no approved production result exists");
 
   await page.goto(ROUTES.universeLive, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true }).first()).toBeVisible();
@@ -137,6 +194,8 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
   expect(after.muralBinding).toEqual(before.muralBinding);
   expect(after.presence).toEqual(before.presence);
   expect(after.realizationCount).toBe(0);
+  expect(after.productionCount).toBe(before.productionCount);
+  expect(after.productionCount).toBe(0);
   expect(after.scenes).toHaveLength(4);
   expect(
     after.bindings
@@ -159,5 +218,6 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
     `SHE scenes remain ${after.scenes.length}`,
     `media_realization rows ${after.realizationCount}`,
     `curated references ${after.referenceCount}`,
+    `production results ${after.productionCount}`,
   ], observe);
 });

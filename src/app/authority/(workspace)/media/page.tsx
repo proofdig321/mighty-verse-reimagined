@@ -12,6 +12,7 @@ import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import { classifyGalleryAssetRole, type GalleryAssetRole } from "@/lib/production/lifecycle";
 import { parseReferenceProvenance } from "@/lib/production/reference";
+import { parseProductionProvenance, type ProductionApproval } from "@/lib/production/result";
 import MediaLibraryClient from "./media-library-client";
 
 export type MediaLibraryItem = {
@@ -42,6 +43,8 @@ export type MediaLibraryItem = {
   readiness_blockers: string[];
   production_role: GalleryAssetRole;
   bound: boolean;
+  production_approval: ProductionApproval | null;
+  video_infrastructure: "mux" | null;
 };
 
 async function getData() {
@@ -50,7 +53,7 @@ async function getData() {
   const [{ data: assets }, { data: intakes }] = await Promise.all([
     svc
       .from("media_asset")
-      .select("asset_id, asset_type, storage_ref, provider, format, duration_ms, rights_holder_ref, rights_basis, created_at")
+      .select("asset_id, asset_type, storage_ref, provider, format, duration_ms, rights_holder_ref, rights_basis, created_at, integrity_hash")
       .order("created_at", { ascending: false }),
     svc
       .from("media_intake")
@@ -116,9 +119,12 @@ async function getData() {
   const intakeMasterIds = [...new Set((intakes ?? []).map((i) => i.master_id).filter(Boolean) as string[])];
   const provenanceSceneIds: string[] = [];
   for (const intake of intakes ?? []) {
-    const provenance = parseReferenceProvenance(intake.provenance_notes);
+    const provenance = parseReferenceProvenance(intake?.provenance_notes);
+    const productionProvenance = parseProductionProvenance(intake?.provenance_notes);
     if (provenance?.scene_master_id) provenanceSceneIds.push(provenance.scene_master_id);
     if (provenance?.universe_id) intakeMasterIds.push(provenance.universe_id);
+    if (productionProvenance?.scene_master_id) provenanceSceneIds.push(productionProvenance.scene_master_id);
+    if (productionProvenance?.universe_id) intakeMasterIds.push(productionProvenance.universe_id);
   }
 
   const allMasterIds = [
@@ -182,6 +188,7 @@ async function getData() {
     const intake = intakeByAsset.get(a.asset_id);
     const context = assetContext.get(a.asset_id);
     const provenance = parseReferenceProvenance(intake?.provenance_notes);
+    const productionProvenance = parseProductionProvenance(intake?.provenance_notes);
     const production_role = classifyGalleryAssetRole(a);
     const isPlaceholder = a.storage_ref.startsWith("seed:placeholder:");
     const isThumbnail = a.storage_ref.startsWith("thumbnail:") || a.storage_ref.startsWith("http");
@@ -202,6 +209,8 @@ async function getData() {
         timeSec: Math.max(0, Math.floor((provenance?.time_ms ?? a.duration_ms ?? 0) / 1000)),
         width: 320,
       });
+    } else if (production_role === "production") {
+      thumbnail_url = providerThumbnailUrl(a.provider, a.storage_ref, { timeSec: 0, width: 320 });
     } else if (isThumbnail) {
       thumbnail_url = a.storage_ref.startsWith("thumbnail:") ? null : a.storage_ref;
     } else if (!isPlaceholder && a.asset_type !== "thumbnail" && a.asset_type !== "metadata") {
@@ -209,7 +218,9 @@ async function getData() {
     }
 
     const universe_title = context?.universe_title ?? (intake?.master_id ? presMap.get(intake.master_id) ?? null : null);
-    const scene_title = context?.scene_title ?? (provenance?.scene_master_id ? presMap.get(provenance.scene_master_id) ?? null : null);
+    const scene_title = context?.scene_title
+      ?? (productionProvenance?.scene_master_id ? presMap.get(productionProvenance.scene_master_id) ?? null : null)
+      ?? (provenance?.scene_master_id ? presMap.get(provenance.scene_master_id) ?? null : null);
 
     return {
       asset_id: a.asset_id,
@@ -229,12 +240,15 @@ async function getData() {
       universe_title,
       mural_title: context?.mural_title ?? null,
       scene_title,
-      canonical_context_type: context?.canonical_context_type ?? (production_role === "reference" ? "reference" : null),
+      canonical_context_type: context?.canonical_context_type
+        ?? (production_role === "reference" ? "reference" : production_role === "production" ? "production" : null),
       thumbnail_url,
-      readiness_overall: production_role === "reference" ? "playable" : readiness.overall,
-      readiness_blockers: production_role === "reference" ? [] : readiness.blockers,
+      readiness_overall: production_role === "reference" || production_role === "production" ? "playable" : readiness.overall,
+      readiness_blockers: production_role === "reference" || production_role === "production" ? [] : readiness.blockers,
       production_role,
       bound: boundAssetIds.has(a.asset_id),
+      production_approval: productionProvenance?.approval ?? null,
+      video_infrastructure: production_role === "production" ? "mux" : null,
     };
   });
 
