@@ -91,7 +91,11 @@ export default async function UniverseCurationPage({
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
-          <Link href={`/worlds/${data.master_id}/holographic`} className={buttonVariants({ size: "sm" })}>
+          <Link
+            href={`/worlds/${data.master_id}/holographic`}
+            className={buttonVariants({ size: "sm" })}
+            data-experience-entry="experience"
+          >
             Enter Experience
           </Link>
           <Link href={`/worlds/${data.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>

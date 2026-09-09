@@ -157,7 +157,7 @@ export default async function UniverseScenesPage({
               Enter Experience
             </Link>
           </div>
-        <SceneDeckClient scenes={scenes} hideHeader />
+        <SceneDeckClient scenes={scenes} hideHeader faceDownUntilSelected={false} />
       </div>
     </div>
   );

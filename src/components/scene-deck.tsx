@@ -191,22 +191,11 @@ export default function SceneDeck({
   function gridCard(scene: SceneDeckItem, index: number) {
     const isRevealed = revealedIds.has(scene.id);
     const isActive = activeId === scene.id;
+    const openLabel = `Open Scene ${index + 1}: ${scene.title ?? "Scene"}`;
+    const revealLabel = `Scene ${index + 1}${isRevealed ? `: ${scene.title ?? ""}` : " — tap to reveal"}`;
 
-    return (
-      <button
-        key={scene.id}
-        type="button"
-        data-scene-id={scene.id}
-        onClick={() => reveal(scene.id)}
-        aria-label={`Scene ${index + 1}${isRevealed ? `: ${scene.title ?? ""}` : " — tap to reveal"}`}
-        aria-pressed={isActive}
-        className={[
-          "scene-deck-card",
-          `scene-deck-card-${index % 5}`,
-          isActive ? "scene-deck-card-selected" : "",
-        ].filter(Boolean).join(" ")}
-        style={{ position: "relative", cursor: "pointer" }}
-      >
+    const visual = (
+      <>
         {isRevealed && scene.playbackId ? (
           <MediaVisual
             playbackId={scene.playbackId}
@@ -244,6 +233,42 @@ export default function SceneDeck({
             Tap to reveal
           </span>
         )}
+      </>
+    );
+
+    const cardClass = [
+      "scene-deck-card",
+      `scene-deck-card-${index % 5}`,
+      isActive ? "scene-deck-card-selected" : "",
+    ].filter(Boolean).join(" ");
+
+    if (isRevealed && scene.href) {
+      return (
+        <Link
+          key={scene.id}
+          href={scene.href}
+          data-scene-id={scene.id}
+          aria-label={openLabel}
+          className={cardClass}
+          style={{ position: "relative", cursor: "pointer" }}
+        >
+          {visual}
+        </Link>
+      );
+    }
+
+    return (
+      <button
+        key={scene.id}
+        type="button"
+        data-scene-id={scene.id}
+        onClick={() => reveal(scene.id)}
+        aria-label={revealLabel}
+        aria-pressed={isActive}
+        className={cardClass}
+        style={{ position: "relative", cursor: "pointer" }}
+      >
+        {visual}
       </button>
     );
   }
@@ -323,8 +348,7 @@ export default function SceneDeck({
       </div>
     );
 
-    // After reveal, wrap with link on second click (navigate to moment)
-    if (isRevealed && isActive && scene.href) {
+    if (isRevealed && scene.href) {
       return (
         <div key={scene.id} className="shrink-0">
           <Link href={scene.href} className="block" onClick={(e) => {

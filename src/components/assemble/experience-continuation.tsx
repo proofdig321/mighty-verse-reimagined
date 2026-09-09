@@ -29,7 +29,11 @@ export function ExperienceContinuation({
         <li>Experience</li>
       </ol>
       <div className="flex flex-wrap gap-2">
-        <Link href={href} className={cn(buttonVariants({ size: "lg" }), "suite-continuation-cta")}>
+        <Link
+          href={href}
+          className={cn(buttonVariants({ size: "lg" }), "suite-continuation-cta")}
+          data-experience-entry="experience"
+        >
           Enter Experience
           <span className="sr-only">{` for ${universeTitle}`}</span>
         </Link>

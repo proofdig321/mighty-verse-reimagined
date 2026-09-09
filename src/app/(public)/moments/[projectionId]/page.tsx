@@ -271,7 +271,11 @@ export default async function MomentPage({
               {isScene && universeMasterId && universeTitle ? (
                 <p className="text-sm text-muted-foreground">
                   Universe:{" "}
-                  <Link href={`/worlds/${universeMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
+                  <Link
+                    href={`/worlds/${universeMasterId}`}
+                    className="text-foreground hover:opacity-70 transition-opacity"
+                    data-parent-surface="universe"
+                  >
                     {universeTitle}
                   </Link>
                 </p>
@@ -281,7 +285,11 @@ export default async function MomentPage({
               {isScene && muralMasterId && muralTitle && (
                 <p className="text-sm text-muted-foreground">
                   Mural:{" "}
-                  <Link href={`/worlds/${muralMasterId}`} className="text-foreground hover:opacity-70 transition-opacity">
+                  <Link
+                    href={`/worlds/${muralMasterId}`}
+                    className="text-foreground hover:opacity-70 transition-opacity"
+                    data-parent-surface="mural"
+                  >
                     {muralTitle}
                   </Link>
                 </p>

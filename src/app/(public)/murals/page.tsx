@@ -82,7 +82,7 @@ export default async function MuralsPage() {
               className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
               style={{ fontFamily: "var(--font-display, inherit)" }}
             >
-              Mural Gallery
+              Murals
             </h1>
             <p className="mt-1 text-sm text-muted-foreground">Explore all animated murals.</p>
           </div>

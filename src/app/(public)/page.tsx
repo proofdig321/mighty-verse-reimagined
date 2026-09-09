@@ -61,8 +61,8 @@ export default async function HomePage() {
           <div className="mt-16 flex flex-wrap gap-8 border-t border-border/40 pt-8">
             {[
               { n: featured.length || "—", label: "Universes" },
-              { n: "Scenes", label: "Spatial units" },
-              { n: "Moments", label: "Contributors" },
+              { n: "Scenes", label: "in the Mural" },
+              { n: "Creative Moments", label: "contributors" },
             ].map(({ n, label }) => (
               <div key={label} className="flex items-baseline gap-2">
                 <span
