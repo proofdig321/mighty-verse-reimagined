@@ -61,7 +61,7 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
     waitUntil: "domcontentloaded",
   });
   await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.untitledUniverseId}$`));
-  await expect(page.getByRole("heading", { name: /Curate Hub/i })).toBeVisible();
+  await expect(page.getByText("Curate Hub", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Associate with Universe" })).toHaveCount(0);
   notes.push("legacy universe query opens that work's hub and cannot re-associate Super Hero Ego media");
 

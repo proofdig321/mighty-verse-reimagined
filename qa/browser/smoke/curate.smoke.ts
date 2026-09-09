@@ -83,7 +83,7 @@ test("Authority dashboard opens Curate then Super Hero Ego hub, not a stacked pa
 
   await page.getByLabel("Select Universe for Curate Studio").selectOption(CANON.universeId);
   await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.universeId}$`));
-  await expect(page.getByRole("heading", { name: /Curate Hub/i })).toBeVisible();
+  await expect(page.getByText("Curate Hub", { exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Incoming \/ Media/i })).toHaveCount(0);
   await expect(page.getByRole("button", { name: /Run Inspection/i })).toHaveCount(0);
@@ -111,7 +111,7 @@ test("Authority dashboard opens Curate then Super Hero Ego hub, not a stacked pa
 
   await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Curate", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.universeId}$`));
-  await expect(page.getByRole("heading", { name: /Curate Hub/i })).toBeVisible();
+  await expect(page.getByText("Curate Hub", { exact: true })).toBeVisible();
   notes.push("Studio breadcrumb returns to this Universe's Curate Hub");
 
   assertRuntimeHealth(observe);
