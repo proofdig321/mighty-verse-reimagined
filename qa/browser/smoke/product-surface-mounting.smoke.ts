@@ -129,16 +129,14 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
   await expect(page.locator('[data-experience-entry="experience"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
   await page.getByRole("link", { name: /Back to Universe/i }).click();
-
-  await page.getByRole("link", { name: /Return to Universe/i }).click();
   await page
     .locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`)
     .getByRole("link", { name: /View Creative Moment/i })
     .click();
   await expect(page).toHaveURL(new RegExp(`/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}$`));
   await expect(page.getByText("Creative Moment", { exact: true }).first()).toBeVisible();
-  await expect(page.getByText(/Powerhouse/)).toBeVisible();
-  await expect(page.getByText(/Hand-to-Hand/)).toBeVisible();
+  await expect(page.getByRole("link", { name: "Powerhouse", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Hand-to-Hand", exact: true })).toBeVisible();
   await page.locator('[data-experience-entry="experience"]').first().click();
   await expectPublicExperience(page);
   await captureScreenshot(page, testInfo, "click-path-reveal-surfaces");

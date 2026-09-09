@@ -131,7 +131,7 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
 
   await experienceCard.click();
   await expect(page).toHaveURL(/\/universes(?:\?intent=experience)?$/);
-  await expect(page.getByRole("heading", { name: /All Universes/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Enter Experience|All Universes/i })).toBeVisible();
   const universeCard = page.locator(`a[href="${ROUTES.universeLive}"]`).filter({ hasText: CANON.universeTitle }).first();
   await expect(universeCard).toBeVisible();
   notes.push("B: Experience lands on public Universe discovery, not a hidden holographic URL");

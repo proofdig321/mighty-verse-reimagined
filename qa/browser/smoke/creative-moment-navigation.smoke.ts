@@ -69,10 +69,7 @@ test("Super Hero Ego navigation exposes Universe, Mural, Scenes, and Creative Mo
     await expect(page.getByText("Experiential Moment")).toHaveCount(0);
     await expect(page.getByText("Moment Card")).toHaveCount(0);
     await expect(page.getByText("ERC-1155")).toHaveCount(0);
-    await expect(page.getByRole("link", { name: CANON.muralTitle, exact: true })).toHaveAttribute(
-      "href",
-      ROUTES.muralLive,
-    );
+    await expect(page.locator(`a[href="${ROUTES.muralLive}"]`).filter({ hasText: CANON.muralTitle })).toBeVisible();
 
     const cmLink = page.getByRole("link", { name: scene.creativeMomentTitle, exact: true });
     await expect(cmLink).toHaveAttribute("href", `/creative-moments/${scene.creativeMomentId}`);
