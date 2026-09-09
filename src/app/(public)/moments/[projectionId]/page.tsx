@@ -6,7 +6,7 @@ import type { MomentData } from "@/app/api/moments/[projectionId]/route";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import ArtworkFrame from "@/components/artwork-frame";
 import PageTopNav from "@/components/page-top-nav";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
@@ -338,7 +338,13 @@ export default async function MomentPage({
 
             {/* Action buttons */}
             <div className="flex gap-3">
-              <Button variant="outline" disabled>View in 2.5D</Button>
+              {worldMasterId ? (
+                <Link href={`/worlds/${worldMasterId}/holographic`} className={buttonVariants({ variant: "outline" })}>
+                  View in 2.5D
+                </Link>
+              ) : (
+                <Button variant="outline" disabled>View in 2.5D</Button>
+              )}
               <Button disabled style={{ background: "var(--accent-mv)" }} className="text-white">
                 Add to Timeline
               </Button>

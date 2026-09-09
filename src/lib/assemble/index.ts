@@ -3,6 +3,7 @@ export type { UniverseIdentity, UniverseIdentityResult } from "./identity";
 export type { CreativeSuiteNavItem, CreativeSuiteSectionId, SuiteScene } from "./suite";
 export { buildUniverseAssembly } from "./build-universe";
 export { loadUniverseAssembly } from "./load-universe";
+export { loadSentinelIntelligence } from "./load-sentinel-intelligence";
 export { validateUniverseIdentity, mergeWorkPresentationIdentity } from "./identity";
 export { CREATIVE_SUITE_SECTIONS, creativeSuiteNavItems, suiteScenes } from "./suite";
 export {
@@ -18,6 +19,7 @@ export {
   associateAssetWithCanonicalWork,
   creativeSuiteHref,
   creativeSuiteIdentityHref,
+  creativeSuiteSentinelHref,
   curateStudioHref,
   mediaInspectHref,
   mediaIsCanonicalUniverse,

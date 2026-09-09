@@ -19,6 +19,7 @@ export type UniverseAssemblyScene = {
   end_ms: number | null;
   binding_id: string | null;
   projection_id: string | null;
+  asset_id: string | null;
   creative_moments: UniverseAssemblySceneMoment[];
   creative_moment_id: string | null;
   creative_moment_title: string | null;

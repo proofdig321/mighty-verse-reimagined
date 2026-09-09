@@ -8,6 +8,8 @@ import { CreativeMomentObject } from "./creative-moment-object";
 import { ExperienceContinuation } from "./experience-continuation";
 import { CanonicalIdentifiers, MuralEmpty, MuralPresence } from "./mural-presence";
 import { SceneObject } from "./scene-object";
+import { SentinelIntelligencePanel } from "./sentinel-intelligence";
+import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 
 export type UniverseAssemblyProps = {
   data: UniverseAssembly;
@@ -19,6 +21,10 @@ export type UniverseAssemblyProps = {
   canAuthorIdentity?: boolean;
   canAuthorTiming?: boolean;
   canAuthorOrder?: boolean;
+  canAuthoriseSentinel?: boolean;
+  intelligence?: SentinelIntelligence | null;
+  inspectHref?: string | null;
+  holographicHref?: string | null;
 };
 
 function untitled(kind: string) {
@@ -35,6 +41,10 @@ export default function UniverseAssemblyView({
   canAuthorIdentity = false,
   canAuthorTiming = false,
   canAuthorOrder = false,
+  canAuthoriseSentinel = false,
+  intelligence = null,
+  inspectHref = null,
+  holographicHref = null,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -99,13 +109,35 @@ export default function UniverseAssemblyView({
           )}
         </section>
 
+        {intelligence ? (
+          <section className="suite-section" aria-labelledby="universe-sentinel">
+            <div className="suite-section-head">
+              <h2 id="universe-sentinel" className="suite-section-title">
+                Sentinel
+              </h2>
+              <p className="suite-section-note">
+                Observational evidence becomes storyboard, animation plan, 2.5D, and Scene-boundary proposals.
+                The curator still authorises canonical meaning. Sentinel does not create Scenes.
+              </p>
+            </div>
+            <SentinelIntelligencePanel
+              universeId={data.master_id}
+              universeTitle={data.title ?? "this Universe"}
+              intelligence={intelligence}
+              canAuthorise={canAuthoriseSentinel}
+              inspectHref={inspectHref}
+              holographicHref={holographicHref}
+            />
+          </section>
+        ) : null}
+
         <section className="suite-section" aria-labelledby="universe-scenes">
           <div className="suite-section-head">
             <h2 id="universe-scenes" className="suite-section-title">
               Scenes
             </h2>
             <p className="suite-section-note">
-              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Identity, timing, canonical order, and presence can be authored here. Sentinel still creates Scenes.
+              Face-up canonical visual units on the Mural. Shared Creative Moments stay shared. Identity, timing, canonical order, and presence can be authored here. Sentinel proposes windows; it does not create Scenes.
             </p>
           </div>
           {scenes.length === 0 ? (

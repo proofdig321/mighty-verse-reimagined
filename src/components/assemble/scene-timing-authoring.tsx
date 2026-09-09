@@ -183,7 +183,7 @@ export function SceneTiming({
           autoComplete="off"
         />
         <p id={`${startId}-hint`} className="text-xs text-muted-foreground">
-          Use 0:36.000, 0:36, or milliseconds. This shapes the existing window. Sentinel still creates Scenes.
+          Use 0:36.000, 0:36, or milliseconds. This shapes the existing window. Sentinel does not create Scenes.
         </p>
         {fieldError ? (
           <p id={`${startId}-error`} role="alert" className="text-xs text-destructive">

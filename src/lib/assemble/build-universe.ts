@@ -65,6 +65,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       creative_moments: creativeMoments,
       creative_moment_id: creativeMomentId,
       creative_moment_title: creativeMomentId ? titleFor(creativeMomentId) : null,
+      asset_id: binding?.asset_id ?? null,
       provider: media.provider,
       storage_ref: media.storage_ref,
     };

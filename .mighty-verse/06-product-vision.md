@@ -399,5 +399,17 @@ Stage 3.0 connected Creative Suite to Experience. Stage 3.1 found the next creat
 
 Stage 3.2 gives Creative Suite Add presence / Remove presence for existing Scenes and Creative Moments through `scene_moment`. Universe-scoped. No new ontology, no migration, no playback fabrication, no Scene Deck redesign. Proverb remains identity-only and shared across Powerhouse and Hand-to-Hand.
 
-**Do not automatically begin** a Scene editor, Creative Moment editor, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, 2.5D, AI, or commerce.
+**Do not automatically begin** a Scene editor, Creative Moment editor, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, Three.js holographic engines, AI classification, or commerce.
+
+---
+
+## Checkpoint evaluation (Stage 3.9)
+
+`CANONICAL` (2026-09-09)
+
+Sentinel now remembers. Creative Suite derives storyboard, animation plan, Scene-boundary proposals, and CSS 2.5D holographic presentation from persisted observations against Super Hero Ego. Extra candidates become beats, never Scenes. The curator authorises proposed windows onto existing Scene bindings. Public Experience presents 2.5D from canonical stills. No migration. No Three.js. No `media_realization`. Scene Deck shuffle stays presentation-only.
+
+Pipeline: MEDIA → SENTINEL EVIDENCE → DERIVED INTELLIGENCE → HUMAN AUTHORISATION → CANONICAL TRUTH
+
+**Do not automatically begin** a Scene creator, Mural editor, publish ontology, media realization, rights/ISRC, Scene Deck rewrite, Three.js engines, AI classification, or commerce.
 

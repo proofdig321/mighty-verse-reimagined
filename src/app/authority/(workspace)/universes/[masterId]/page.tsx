@@ -6,7 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseAssembly } from "@/lib/assemble";
 import { creativeSuiteNavItems } from "@/lib/assemble/suite";
-import { CURATE_STUDIO_HREF, creativeSuiteHref, creativeSuiteIdentityHref } from "@/lib/assemble/studio";
+import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
+import { CURATE_STUDIO_HREF, creativeSuiteHref, creativeSuiteIdentityHref, mediaInspectHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
 import UniverseAssemblyView from "@/components/assemble/universe-assembly";
@@ -30,6 +31,8 @@ export default async function UniverseCurationPage({
 
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();
+  const intelligence = await loadSentinelIntelligence(data);
+  const inspectAssetId = data.murals.flatMap((mural) => mural.scenes).find((scene) => scene.asset_id)?.asset_id ?? null;
 
   const title = data.title ?? "Untitled universe";
   const fromCurate = query.from === "curate";
@@ -69,8 +72,8 @@ export default async function UniverseCurationPage({
           ) : null}
           <p className="text-sm text-muted-foreground max-w-3xl">
             Inside this Universe: its Mural, Scenes, and Creative Moments as a composition surface.
-            Universe identity, Scene identity, Scene timing, canonical Scene order, Creative Moment identity, and Scene ↔ Creative Moment presence can be authored here.
-            Sentinel still creates Scenes. Scene Deck shuffle stays presentation-only.
+            Universe identity, Sentinel intelligence, Scene identity, Scene timing, canonical Scene order, Creative Moment identity, and Scene ↔ Creative Moment presence can be authored here.
+            Sentinel remembers observations. The curator authorises Sentinel windows. Sentinel does not create Scenes. Scene Deck shuffle stays presentation-only.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
@@ -103,6 +106,10 @@ export default async function UniverseCurationPage({
         canAuthorIdentity
         canAuthorTiming
         canAuthorOrder
+        canAuthoriseSentinel
+        intelligence={intelligence}
+        inspectHref={inspectAssetId ? mediaInspectHref(inspectAssetId) : null}
+        holographicHref={`/worlds/${data.master_id}/holographic`}
         muralEmptyAction={
           <RegisterMural
             universeId={data.master_id}

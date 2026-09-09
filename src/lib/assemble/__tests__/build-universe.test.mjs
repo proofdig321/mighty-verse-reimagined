@@ -78,6 +78,7 @@ assert(scenes[POWERHOUSE].creative_moment_id === PROVERB, "Powerhouse → Prover
 assert(scenes[POWERHOUSE].description?.includes("warrior manifestation"), "Powerhouse identity description is assembled");
 assert(scenes[POWERHOUSE].creative_moments.length === 1, "Powerhouse currently has one related Creative Moment");
 assert(scenes[POWERHOUSE].storage_ref === MUX_PLAYBACK, "Powerhouse still maps Mux asset");
+assert(scenes[POWERHOUSE].asset_id === MUX_ASSET, "Powerhouse carries bound asset for Sentinel");
 assert(scenes[HAND_TO_HAND].creative_moment_id === PROVERB, "Hand-to-Hand shares Proverb");
 assert(scenes[DARK_KNIGHT].creative_moment_title === "Mothipa", "Dark Knight → Mothipa");
 assert(scenes[SWORD_MASTER].creative_moment_title === "Reason", "Sword Master → Reason");

@@ -1,22 +1,44 @@
 "use client";
 
-export default function ExperienceToggle() {
+import Link from "next/link";
+
+export default function ExperienceToggle({
+  twoDHref,
+  holographicHref,
+  current,
+}: {
+  twoDHref: string;
+  holographicHref: string;
+  current: "2d" | "2.5d";
+}) {
   return (
     <div className="flex items-center gap-3">
       <span className="text-xs uppercase tracking-widest text-muted-foreground">Experience</span>
       <div className="flex items-center gap-1 rounded-full border border-border p-0.5">
-        <span
+        <Link
+          href={twoDHref}
+          aria-current={current === "2d" ? "page" : undefined}
           className="px-3 py-1 rounded-full text-xs font-medium"
-          style={{ background: "var(--accent-mv)", color: "#000" }}
+          style={
+            current === "2d"
+              ? { background: "var(--accent-mv)", color: "#000" }
+              : { color: "var(--muted-foreground)" }
+          }
         >
           2D
-        </span>
-        <span
-          className="px-3 py-1 rounded-full text-xs font-medium text-muted-foreground cursor-not-allowed select-none"
-          title="2.5D experience — coming soon"
+        </Link>
+        <Link
+          href={holographicHref}
+          aria-current={current === "2.5d" ? "page" : undefined}
+          className="px-3 py-1 rounded-full text-xs font-medium"
+          style={
+            current === "2.5d"
+              ? { background: "var(--accent-mv)", color: "#000" }
+              : { color: "var(--muted-foreground)" }
+          }
         >
           2.5D
-        </span>
+        </Link>
       </div>
     </div>
   );

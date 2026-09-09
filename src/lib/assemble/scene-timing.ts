@@ -2,7 +2,7 @@
  * Creative Suite — shape an existing Scene window.
  *
  * Timing lives on projection_media_binding (start_ms / end_ms).
- * Does not create Scenes, projections, or media. Sentinel still creates Scenes.
+ * Does not create Scenes, projections, or media. Sentinel does not create Scenes.
  */
 
 import { parseTimelineMs } from "../media/timing";

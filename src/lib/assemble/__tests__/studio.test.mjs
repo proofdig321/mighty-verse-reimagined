@@ -1,4 +1,4 @@
-import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, curateStudioHref } from "../studio";
+import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, curateStudioHref } from "../studio";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -78,6 +78,7 @@ assert(sceneOnly.bound_as === "scene", "scene-only binding is not mural ownershi
 
 assert(mediaInspectHref(ASSET) === `/authority/media/inspect?assetId=${ASSET}`, "inspect reuses the existing media inspect route");
 assert(creativeSuiteHref(UNIVERSE, "curate") === `/authority/universes/${UNIVERSE}?from=curate`, "suite href preserves Curate origin");
+assert(creativeSuiteSentinelHref(UNIVERSE) === `/authority/universes/${UNIVERSE}#universe-sentinel`, "inspect continues into Suite Sentinel without merging the surfaces");
 assert(curateStudioHref(UNIVERSE) === `/authority/curate?universe=${UNIVERSE}`, "studio inspects mural-bound media via existing universe query");
 assert(curateStudioHref(null, ASSET) === `/authority/curate?asset=${ASSET}`, "Gallery / Inspect context is carried as an existing asset query");
 assert(

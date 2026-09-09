@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import { buttonVariants } from "@/components/ui/button";
+import ExperienceToggle from "@/components/experience-toggle";
 import {
   contributorPresence,
   sceneOrdinal,
@@ -86,6 +87,11 @@ export function UniverseWorldExperience({
               View Mural
             </Link>
           ) : null}
+          <ExperienceToggle
+            twoDHref={`/worlds/${universeId}`}
+            holographicHref={`/worlds/${universeId}/holographic`}
+            current="2d"
+          />
         </div>
       </section>
 

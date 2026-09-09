@@ -157,15 +157,17 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 ### Public Frontend
 - `/` — home with Mux preview thumbnails
 - `/universes` — provider-correct media
-- `/worlds/[masterId]` — Universe landing is the public world encounter (identity, Mural as stage, Scene introductions, contributor presence). Mural pages keep the existing player + scene sidebar.
+- `/worlds/[masterId]` — Universe landing is the public world encounter (identity, Mural as stage, Scene introductions, contributor presence, 2D / 2.5D toggle). Mural pages keep the existing player + scene sidebar.
 - `/worlds/[masterId]/scenes` — Scene Deck with provider=mux for all four scenes (facedown, reveal, shuffle preserved). Revealed stills use each Scene's `start_ms` (Mux `time=` seconds).
-- `/moments/[projectionId]` — Moment playback via MuxPlayer with canonical timing
+- `/worlds/[masterId]/holographic` — public 2.5D holographic stage. Creative Moments are spatial objects; Scenes are visual planes; the Mural is the back plane. Canonical stills only. Not a new ontology.
+- `/moments/[projectionId]` — Moment playback via MuxPlayer with canonical timing. Scene Moments continue into Universe 2.5D.
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
 - `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, register a Mural for a Universe that has none, bridge into Creative Suite
 - `/authority/universes` — Authority Universe listing (auth-gated)
-- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Assemble → Experience continuation, Mural stage presence, face-up Scenes with identity + timing + canonical order + presence authoring, contributor Creative Moments with identity authoring. Not a second Experience player. Enter Experience navigates to `/worlds/{id}`. Sentinel still creates Scenes. Scene Deck shuffle is not imported.
+- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Assemble → Experience continuation, Mural stage presence, Sentinel storyboard / animation plan / 2.5D / Scene-boundary proposals, face-up Scenes with identity + timing + canonical order + presence authoring, contributor Creative Moments with identity authoring. Not a second Experience player. Enter Experience navigates to `/worlds/{id}`. Sentinel does not create Scenes. Scene Deck shuffle is not imported.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
-- `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
+- `POST /api/authority/sentinel/authorise` — curator authorises Sentinel-proposed windows onto existing Scene bindings. Writes `start_ms`/`end_ms` only. Does not create Scenes.
+- `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, Sentinel intelligence load, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
 
 ### Sentinel Evidence Layer (Phase 1, 2026-09-10)
 - `inspection_session` table — one row per inspection run against a media_asset
@@ -173,6 +175,13 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `src/lib/media/sentinel.ts` — persistence adapter (decoupled from analyser)
 - `/api/authority/media/inspect` — authority-gated POST/GET; `asset_id` required, `master_id` optional. Source-media persist uses platform-scoped `authorise-projection`. Unauthenticated requests are rejected.
 - Historical inspection runs against Mux `795c057e` remain intact. New runs append sessions; they do not overwrite.
+
+### Sentinel Intelligence (Stage 3.9)
+- `src/lib/media/sentinel-intelligence.ts` — derive storyboard, animation plan, 2.5D layers, and Scene-boundary proposals from evidence + existing Universe assembly
+- Extra Sentinel candidates become storyboard beats, never new Scenes
+- Authorise writes existing `projection_media_binding.start_ms/end_ms` via `decideSceneTiming`
+- Public 2.5D uses canonical stills. Suite uses the latest completed inspection session when present
+- CSS 3D holographic presentation. No Three.js. No new tables.
 
 ### Media Intelligence (browser-side, ephemeral)
 - `src/lib/media/intelligence.ts` — sampleFrames, computeFrameDeltas, detectBoundaryTimestamps
@@ -184,12 +193,10 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 ## 7. INTENTIONALLY DEFERRED (do not implement without explicit decision)
 
 - `media_realization` population (requires ISRC/rights product decision)
-- Storyboard / animation / AI Scene-boundary proposals from Sentinel evidence
 - AI classification / object detection / embeddings
-- Storyboard / composition layers
-- 2.5D / holographic rendering
 - Full Creative Studio expansion
 - Sentinel dashboard UI
+- Auto-creating Scenes from Sentinel candidates
 - `inspection_session` entity in canonical ontology (it is evidence, not canonical)
 
 ---
@@ -242,10 +249,11 @@ applied migration.
 - Stage 3.2: Creative Suite authors Scene ↔ Creative Moment presence via existing `scene_moment` and `POST/DELETE /api/authority/scene-moment`. Relates existing objects only. Does not create Scenes, Creative Moments, projections, or media. Proverb remains identity-only and shared across Powerhouse and Hand-to-Hand.
 - Stage 3.3: Creative Suite authors Scene identity (title + description) on the Scene object via existing `POST /api/authority/presentation`. Identity-only upsert preserves artwork and editorial markdown. Does not change timing, order, presence, projections, or media. Does not create Scenes.
 - Stage 3.4: Scene Deck revealed cards use each Scene binding's `start_ms` (Mux `time=36/80/149/193` on Super Hero Ego). Facedown, reveal, shuffle, and playback stay in Experience. Studio stills were already correct.
-- Stage 3.5: Creative Suite authors Scene timing on the Scene object via existing `PATCH /api/authority/media/timeline`. Compact start/end fields; canonical unit is ms; accepts `0:36.000`, `0:36`, and integer ms. Does not create Scenes. Sentinel still creates Scenes. Not a timeline dashboard.
+- Stage 3.5: Creative Suite authors Scene timing on the Scene object via existing `PATCH /api/authority/media/timeline`. Compact start/end fields; canonical unit is ms; accepts `0:36.000`, `0:36`, and integer ms. Does not create Scenes. Not a timeline dashboard.
 - Stage 3.6: Creative Suite authors Creative Moment identity with the same presentation primitive. Creative Moments stay Universe-parented. Does not create projections or media.
 - Stage 3.7: Creative Suite authors canonical Scene order via existing `PATCH /api/authority/masters/sort-order` as Move earlier / Move later. Catalogue drag-order remains. Scene Deck shuffle is not imported.
-- Stage 3.8: Asset-level Inspect persists Sentinel evidence against `media_asset` without requiring a canonical master. Re-runs create a new `inspection_session`. Does not create Universe/Mural/Scene/Creative Moment/projection/binding/realization. Storyboard, animation, and AI Scene proposals remain deferred.
+- Stage 3.8: Asset-level Inspect persists Sentinel evidence against `media_asset` without requiring a canonical master. Re-runs create a new `inspection_session`. Does not create Universe/Mural/Scene/Creative Moment/projection/binding/realization.
+- Stage 3.9: Sentinel evidence becomes storyboard, animation plan, Scene-boundary proposals, and CSS 2.5D holographic presentation on Super Hero Ego. Extra candidates stay beats. Authorise writes existing Scene windows only. Sentinel does not create Scenes. Scene Deck shuffle stays in Experience. No migration. No Three.js.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---
@@ -266,7 +274,7 @@ Priority:
 Inspect existing code, data, routes, APIs, tests, and UI first.
 Reuse before duplicating. No speculative migrations, frameworks, AI platforms, or 2.5D engines.
 
-No-go unless specifically selected: full Mural/Scene/Creative Moment editors, public-user curation, publication redesign, rights system, AI generation, timeline/Experience redesign, 2.5D/holographic, commerce/NFT, unrelated refactors.
+No-go unless specifically selected: full Mural/Scene/Creative Moment editors, public-user curation, publication redesign, rights system, AI generation, timeline/Experience redesign, Three.js holographic engines, commerce/NFT, unrelated refactors.
 
 ---
 

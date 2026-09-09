@@ -82,6 +82,10 @@ export function creativeSuiteHref(universeId: string, from?: StudioFrom | null):
   return from === "curate" ? `${path}?from=curate` : path;
 }
 
+export function creativeSuiteSentinelHref(universeId: string, from?: StudioFrom | null): string {
+  return `${creativeSuiteHref(universeId, from)}#universe-sentinel`;
+}
+
 export function creativeSuiteIdentityHref(universeId: string, from?: StudioFrom | null): string {
   const path = `/authority/universes/${universeId}/identity`;
   return from === "curate" ? `${path}?from=curate` : path;

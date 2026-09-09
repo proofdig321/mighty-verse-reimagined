@@ -29,6 +29,18 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await revealCanonicalIdentifiers(mural);
   await expect(mural.getByText(CANON.muralId)).toBeVisible();
 
+  const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
+  await expect(sentinel.getByRole("heading", { name: "Sentinel" })).toBeVisible();
+  await expect(sentinel.getByRole("heading", { name: "Storyboard" })).toBeVisible();
+  await expect(sentinel.getByRole("heading", { name: "Animation plan" })).toBeVisible();
+  await expect(sentinel.getByRole("heading", { name: "2.5D holographic" })).toBeVisible();
+  await expect(sentinel.getByRole("heading", { name: "Scene-boundary proposals" })).toBeVisible();
+  await expect(sentinel.locator("[data-holographic-kind='scene']")).toHaveCount(4);
+  await expect(sentinel.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(sentinel.locator("[data-proposal-scene]")).toHaveCount(4);
+  await expect(sentinel.getByRole("link", { name: "Enter 2.5D" })).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(sentinel.getByRole("button", { name: /Authorise Sentinel windows/i })).toBeVisible();
+
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");
   const moments = page.locator("section[aria-labelledby='universe-moments']");
   await expect(scenes.locator("table")).toHaveCount(0);
