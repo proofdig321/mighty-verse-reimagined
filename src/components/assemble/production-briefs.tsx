@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import Link from "next/link";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Button } from "@/components/ui/button";
 import { formatTimelineMs } from "@/lib/media/timing";
@@ -87,10 +88,11 @@ export function ProductionBriefs({
               >
                 <p className="suite-kicker">Production plan</p>
                 <h3 className="text-base font-medium text-foreground">
-                  {sceneShortTitle(brief.title) ?? brief.title ?? "Untitled Scene"}
+                  <Link href={`/authority/universes/${universeId}/scenes/${brief.scene_master_id}`} className="hover:underline">
+                    {sceneShortTitle(brief.title) ?? brief.title ?? "Untitled Scene"}
+                  </Link>
                 </h3>
                 <p className="font-mono text-xs text-muted-foreground">{brief.window_label}</p>
-                <p className="font-mono text-[10px] text-muted-foreground/80">{brief.plan_id}</p>
                 <p className="suite-proposal-badge">
                   {brief.status === "planning" ? "Planning" : brief.status.replace("_", " ")}
                 </p>
@@ -147,19 +149,40 @@ export function ProductionBriefs({
                     <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">Realization</dt>
                     <dd className="text-muted-foreground">
                       {brief.realization
-                        ? `${brief.realization.realization_id} · ${brief.result?.approval ?? "awaiting"}${brief.projects ? " · attached to 2.5D" : ""}`
+                        ? `${brief.result?.approval ?? "awaiting"}${brief.projects ? " · attached to 2.5D" : ""}`
                         : "No production realization yet. External AI/MCP execution is not connected."}
                     </dd>
                   </div>
                   {brief.result ? (
                     <div>
-                      <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">Mux delivery</dt>
-                      <dd className="font-mono text-[11px] text-muted-foreground break-all">
-                        {brief.result.playback_id}
+                      <dt className="text-[10px] uppercase tracking-widest text-muted-foreground">Production result</dt>
+                      <dd className="text-muted-foreground">
+                        {brief.projects ? "Playable on 2.5D" : "Mux ingested the result."}
                       </dd>
                     </div>
                   ) : null}
                 </dl>
+                <details className="suite-identifiers">
+                  <summary>Technical details</summary>
+                  <dl>
+                    <div>
+                      <dt>Plan</dt>
+                      <dd className="font-mono break-all">{brief.plan_id}</dd>
+                    </div>
+                    {brief.realization ? (
+                      <div>
+                        <dt>Realization</dt>
+                        <dd className="font-mono break-all">{brief.realization.realization_id}</dd>
+                      </div>
+                    ) : null}
+                    {brief.result ? (
+                      <div>
+                        <dt>Mux playback</dt>
+                        <dd className="font-mono break-all">{brief.result.playback_id}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </details>
                 {brief.references.length > 0 ? (
                   <ul className="flex flex-wrap gap-2">
                     {brief.references.map((reference) => (

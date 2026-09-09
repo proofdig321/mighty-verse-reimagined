@@ -417,6 +417,168 @@
     gap: 0.75rem;
   }
 
+  .studio-command-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .studio-command-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+
+  @media (min-width: 1100px) {
+    .studio-command-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  .studio-command-card {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--card) 70%, transparent);
+    padding: 0.9rem 1rem;
+  }
+
+  .studio-command-card a {
+    display: grid;
+    gap: 0.35rem;
+    text-decoration: none;
+  }
+
+  .studio-scene-deck {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  @media (min-width: 900px) {
+    .studio-scene-deck {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+  }
+
+  .studio-scene-card {
+    display: grid;
+    gap: 0.5rem;
+    text-decoration: none;
+  }
+
+  .studio-scene-card-still {
+    position: relative;
+  }
+
+  .studio-inspector > summary {
+    cursor: pointer;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .studio-inspector-body {
+    display: grid;
+    gap: 1.5rem;
+    margin-top: 1rem;
+  }
+
+  .suite-intelligence-block summary {
+    cursor: pointer;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .studio-material-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .studio-material-tab {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+  }
+
+  .studio-material-tab-current {
+    border-bottom: 2px solid var(--foreground);
+    color: var(--foreground);
+  }
+
+  .storyboard-workspace {
+    display: grid;
+    gap: 2rem;
+  }
+
+  .storyboard-panel-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
+    gap: 0.75rem;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .storyboard-panel {
+    display: grid;
+    gap: 0.35rem;
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--card) 55%, transparent);
+    padding: 0.6rem;
+  }
+
+  .storyboard-panel img,
+  .storyboard-panel-empty {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    border-radius: 0.3rem;
+    background: color-mix(in oklch, var(--muted) 50%, transparent);
+  }
+
+  .storyboard-panel-current {
+    border-color: color-mix(in oklch, var(--accent-mv-gold) 55%, var(--border));
+  }
+
+  .studio-inspector {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem;
+    background: color-mix(in oklch, var(--card) 70%, transparent);
+  }
+
+  .holographic-layer-media {
+    position: relative;
+    pointer-events: auto;
+  }
+
+  .holographic-play {
+    position: absolute;
+    right: 0.4rem;
+    bottom: 0.4rem;
+    pointer-events: auto;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, white 30%, transparent);
+    background: color-mix(in oklch, black 55%, transparent);
+    color: white;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 0.25rem 0.55rem;
+  }
+
   .suite-identity {
     border-left: 2px solid var(--accent-mv-gold);
     padding: 0.25rem 0 0.25rem 1.25rem;
@@ -1335,6 +1497,7 @@
   }
 
   .holographic-layer img,
+  .holographic-layer video,
   .holographic-placeholder {
     display: block;
     width: 100%;

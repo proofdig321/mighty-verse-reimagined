@@ -38,7 +38,7 @@ test("Creative Suite authors Scene identity without leaving Super Hero Ego mutat
   notes.push("A: unauthenticated Scene identity mutation is rejected");
 
   await applyAuthoritySession(context, baseURL);
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" });
   await restorePowerhouseIdentity(page);
   await page.reload({ waitUntil: "domcontentloaded" });
 
@@ -73,7 +73,7 @@ test("Creative Suite authors Scene identity without leaving Super Hero Ego mutat
     await expect(page.locator(`#world-scene-${POWERHOUSE.sceneMasterId}`)).not.toContainText("Golden Shovel — Powerhouse");
     notes.push("E: Experience encounter shows the authored cinematic Scene name");
 
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+    await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" });
     await page.setViewportSize({ width: 390, height: 844 });
     const narrow = page.locator(`#universe-scene-${POWERHOUSE.sceneMasterId}`);
     await expect(narrow.getByRole("button", { name: "Edit identity" })).toBeVisible();
@@ -81,7 +81,7 @@ test("Creative Suite authors Scene identity without leaving Super Hero Ego mutat
     expect(overflowX, `narrow viewport horizontal overflow ${overflowX}px`).toBeLessThan(24);
     notes.push("F: 390px keeps Scene identity authoring usable without horizontal overflow");
   } finally {
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" }).catch(() => null);
+    await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" }).catch(() => null);
     await restorePowerhouseIdentity(page);
   }
 

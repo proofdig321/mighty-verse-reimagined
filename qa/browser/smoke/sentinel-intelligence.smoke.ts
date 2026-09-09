@@ -93,15 +93,17 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
 
     await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
     await expectCreativeSuiteComposition(page);
+    await page.goto(ROUTES.authorityUniverseSentinel, { waitUntil: "domcontentloaded" });
     const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
     await expect(sentinel.getByText("Golden Shovel — Powerhouse").first()).toBeVisible();
-    await expect(sentinel.locator("[data-panel-kind='scene']")).toHaveCount(4);
+    await expect(page.locator(".storyboard-panel-strip [data-panel-kind='scene']")).toHaveCount(4);
+    await sentinel.locator("summary").filter({ hasText: "Animation plan" }).click();
     await expect(sentinel.locator("[data-animation-scene]")).toHaveCount(4);
     await expect(sentinel.getByRole("link", { name: "Open Inspect" })).toHaveAttribute("href", ROUTES.authorityMuxInspect);
-    notes.push("C: Creative Suite Sentinel shows evidence, storyboard, animation plan, and four Scene proposals");
+    notes.push("C: Creative Suite Sentinel shows evidence, observed panels, animation plan, and four Scene proposals");
 
     await page.setViewportSize({ width: 390, height: 844 });
-    await expect(sentinel.getByRole("heading", { name: "Storyboard" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Storyboard", exact: true })).toBeVisible();
     await expect(sentinel.getByRole("button", { name: /Authorise Sentinel windows/i })).toBeVisible();
     const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflowX, `narrow Suite overflow ${overflowX}px`).toBeLessThan(24);
@@ -113,7 +115,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     await expect(page.getByRole("link", { name: "Universe", exact: true })).toHaveAttribute("href", ROUTES.universeLive);
     await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
     await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-    await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+    await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(2);
     for (const scene of Object.values(SCENE_MOMENTS)) {
       const timeSec = Math.floor(scene.startMs / 1000);
       await expect(page.locator(`[data-holographic-kind='scene'][data-master-id='${scene.sceneMasterId}'] img`)).toHaveAttribute(
@@ -148,7 +150,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     await page.goto(ROUTES.authorityMuxInspect, { waitUntil: "domcontentloaded" });
     await expect(page.getByRole("link", { name: "Open Sentinel in Suite" })).toHaveAttribute(
       "href",
-      `${ROUTES.authorityUniverseWorkspace}#universe-sentinel`,
+      ROUTES.authorityUniverseSentinel,
     );
     notes.push("I: Mux Inspect links into Suite Sentinel without merging the surfaces");
   } finally {

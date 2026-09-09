@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
+import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
 import { composeExperienceProjection, productionLayersFromResults } from "@/lib/production/projection";
 import { HolographicStage } from "@/components/experience/holographic-stage";
@@ -31,9 +32,10 @@ export default async function HolographicWorldPage({
   const { masterId } = await params;
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();
-  const [intelligence, productionResults] = await Promise.all([
+  const [intelligence, productionResults, source] = await Promise.all([
     loadSentinelIntelligence(data, { includeObservations: false }),
     loadUniverseProductionResults(data.master_id),
+    loadSuiteSourcePreview(data),
   ]);
   const title = data.title ?? "Universe";
   const projection = composeExperienceProjection({
@@ -69,7 +71,21 @@ export default async function HolographicWorldPage({
         </div>
 
         {intelligence ? (
-          <HolographicStage title={title} layers={projection.layers} />
+          <HolographicStage
+            title={title}
+            layers={projection.layers}
+            playback={
+              source
+                ? {
+                    playback_id: source.playback_id,
+                    endpoint_ref: source.endpoint_ref,
+                    projection_id: source.mural_projection_id,
+                    master_id: source.mural_id,
+                    canonical_state_id: source.mural_canonical_state_id ?? source.mural_id,
+                  }
+                : null
+            }
+          />
         ) : (
           <p className="text-sm text-muted-foreground">This Universe has no spatial stage yet.</p>
         )}

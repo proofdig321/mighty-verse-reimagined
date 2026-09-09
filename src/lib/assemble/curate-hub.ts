@@ -9,6 +9,7 @@ import { classifyProcessingPhase } from "../media/processing-state";
 import {
   CURATE_STUDIO_HREF,
   creativeSuiteHref,
+  creativeSuiteScenesHref,
   curateHubHref,
   curateIncomingHref,
   curateMomentHref,
@@ -205,7 +206,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
           label: "Scenes",
           tone: "complete",
           summary: `${sceneCount} canonical Scene${sceneCount === 1 ? "" : "s"} established.`,
-          href: `${studioHref(universeId)}#universe-scenes`,
+          href: creativeSuiteScenesHref(universeId, "curate"),
           actionLabel: "Review timing",
         }
       : {
@@ -230,7 +231,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
             presenceCount > 0
               ? `${momentCount} Creative Moment${momentCount === 1 ? "" : "s"}, ${presenceCount} Scene presence${presenceCount === 1 ? "" : "s"}.`
               : `${momentCount} Creative Moment${momentCount === 1 ? "" : "s"} exist, but none are present in a Scene yet.`,
-          href: `${studioHref(universeId)}#universe-moments`,
+          href: creativeSuiteScenesHref(universeId, "curate"),
           actionLabel: presenceCount > 0 ? "Review presence" : "Place in Scenes",
         }
       : {

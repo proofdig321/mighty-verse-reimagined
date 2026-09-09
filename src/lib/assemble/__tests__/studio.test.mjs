@@ -1,4 +1,5 @@
-import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref } from "../studio";
+import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref } from "../studio";
+import { creativeSuiteNavItems, resolveStudioHash, suiteChildHref } from "../suite";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -78,7 +79,7 @@ assert(sceneOnly.bound_as === "scene", "scene-only binding is not mural ownershi
 
 assert(mediaInspectHref(ASSET) === `/authority/media/inspect?assetId=${ASSET}`, "inspect reuses the existing media inspect route");
 assert(creativeSuiteHref(UNIVERSE, "curate") === `/authority/universes/${UNIVERSE}?from=curate`, "suite href preserves Curate origin");
-assert(creativeSuiteSentinelHref(UNIVERSE) === `/authority/universes/${UNIVERSE}#universe-sentinel`, "inspect continues into Suite Sentinel without merging the surfaces");
+assert(creativeSuiteSentinelHref(UNIVERSE) === `/authority/universes/${UNIVERSE}/storyboard?source=sentinel`, "inspect continues into Suite Sentinel without merging the surfaces");
 assert(curateHubHref(UNIVERSE) === `/authority/curate/${UNIVERSE}`, "occupied work opens a Curate Hub child route");
 assert(curateSentinelHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/sentinel`, "Sentinel is a child page, not a stacked section");
 assert(curateMuralHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/mural`, "Mural registration is a child page");
@@ -91,5 +92,15 @@ assert(
 );
 assert(curateIncomingHref(ASSET) === `/authority/curate?asset=${ASSET}`, "incoming attach stays on the catalogue");
 assert(curateStudioHref() === "/authority/curate", "Curate without context stays on the incoming catalogue");
+
+const suite = `/authority/universes/${UNIVERSE}`;
+const nav = creativeSuiteNavItems(suite);
+assert(nav.map((item) => item.id).join(",") === "overview,storyboard,scenes,production,preview,experience", "Studio nav is workspaces, not a stacked ontology dump");
+assert(nav.find((item) => item.id === "storyboard")?.href === `${suite}/storyboard`, "Storyboard is a child route");
+assert(nav.find((item) => item.id === "preview")?.href === `${suite}/preview`, "2.5D is a child route");
+assert(suiteChildHref(`${suite}?from=curate`, "scenes") === `${suite}/scenes?from=curate`, "child routes preserve Curate origin");
+assert(creativeSuiteWorkspaceHref(UNIVERSE, "sentinel") === `${suite}/storyboard?source=sentinel`, "Sentinel evidence lives on Storyboard");
+assert(resolveStudioHash("universe-sentinel")?.path === "storyboard", "legacy Sentinel hash maps to Storyboard");
+assert(resolveStudioHash("universe-scene-4790c7cf-bb19-4a01-a243-e5c3eb680555")?.path === "scenes/4790c7cf-bb19-4a01-a243-e5c3eb680555", "legacy Scene hash maps to the Scene workspace");
 
 console.log("Assemble Curate Studio tests: all passed");

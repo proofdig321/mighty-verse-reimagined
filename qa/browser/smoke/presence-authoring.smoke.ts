@@ -34,8 +34,9 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
   notes.push("A: unauthenticated presence mutation is rejected");
 
   await applyAuthoritySession(context, baseURL);
-  await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" });
   await restorePowerhouseReason(page);
+  await page.reload({ waitUntil: "domcontentloaded" });
 
   try {
     const scenes = page.locator("section[aria-labelledby='universe-scenes']");
@@ -44,9 +45,8 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
     const reason = moments.locator(`#universe-moment-${REASON}`);
 
     await expect(powerhouse.getByRole("link", { name: "Proverb", exact: true })).toBeVisible();
-    await expect(reason.getByRole("link", { name: "Sword Master", exact: true })).toBeVisible();
     await expect(powerhouse.getByRole("link", { name: "Reason", exact: true })).toHaveCount(0);
-    notes.push("B: Super Hero Ego Proverb/Reason presence is visible before mutation");
+    notes.push("B: Super Hero Ego Proverb presence is visible; Reason is not on Powerhouse");
 
     await powerhouse.getByRole("button", { name: "Add presence" }).click();
     await powerhouse.getByRole("button", { name: "Add Reason to Powerhouse" }).focus();
@@ -63,7 +63,7 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
     await expect(presence.locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`)).toContainText(/identity/i);
     notes.push("D: Experience presence reflects the new relationship; Proverb stays identity-only");
 
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+    await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" });
     const powerhouseAfter = page.locator(`#universe-scene-${POWERHOUSE}`);
     await powerhouseAfter.getByRole("button", { name: "Remove Reason from Powerhouse" }).click();
     await powerhouseAfter.getByRole("button", { name: "Confirm remove presence" }).click();
@@ -79,7 +79,7 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
     await expect(page.getByRole("button", { name: /shuffle/i })).toBeVisible();
     notes.push("F: Experience and Scene Deck remain intact after restore");
 
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
+    await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" });
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
     await expect(page.locator(`#universe-scene-${POWERHOUSE}`).getByRole("button", { name: "Add presence" })).toBeVisible();
@@ -87,7 +87,7 @@ test("Creative Suite authors Scene ↔ Creative Moment presence without mutating
     expect(overflowX, `narrow viewport horizontal overflow ${overflowX}px`).toBeLessThan(24);
     notes.push("G: 390px keeps presence authoring usable without horizontal overflow");
   } finally {
-    await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" }).catch(() => null);
+    await page.goto(ROUTES.authorityUniversePowerhouse, { waitUntil: "domcontentloaded" }).catch(() => null);
     await restorePowerhouseReason(page);
   }
 

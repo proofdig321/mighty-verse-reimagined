@@ -23,9 +23,9 @@ const sheReady = deriveProductionPath({
 assert(sheReady.length === 7, "production path has seven stages");
 assert(sheReady[0].id === "source" && sheReady[0].status === "ready", "source is ready when Mux media is bound");
 assert(sheReady[1].id === "sentinel" && sheReady[1].status === "ready", "Sentinel is ready when observations exist");
-assert(sheReady[2].href === `${SUITE}#sentinel-storyboard`, "storyboard jumps in-suite, not to a public route");
+assert(sheReady[2].href === `${SUITE}/storyboard`, "storyboard jumps to its Studio workspace, not a public route");
 assert(sheReady[3].status === "attention" && sheReady[4].status === "attention", "adjust proposals need curator authorisation");
-assert(sheReady[5].id === "preview" && sheReady[5].fragment === "universe-preview", "2.5D preview stays in Studio");
+assert(sheReady[5].id === "preview" && sheReady[5].href === `${SUITE}/preview`, "2.5D preview stays in Studio");
 assert(sheReady[6].id === "experience" && sheReady[6].status === "ready", "Experience is the final continuation");
 assert(productionStepStatusLabel("attention") === "Needs authorisation", "attention is curator work, not autonomous canon");
 

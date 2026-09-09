@@ -140,7 +140,7 @@ export function MomentPresence({
           <ul className="suite-presence-list">
             {related.map((scene) => (
               <li key={scene.master_id} className="suite-presence-item">
-                <Link href={`#universe-scene-${scene.master_id}`} className="suite-relation-link">
+                <Link href={`/authority/universes/${universeId}/scenes/${scene.master_id}`} className="suite-relation-link">
                   {optionLabel(scene, "scene")}
                 </Link>
                 {canAuthor ? (

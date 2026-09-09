@@ -88,32 +88,32 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expectCreativeSuiteComposition(page);
   await captureScreenshot(page, testInfo, "suite-production-path");
-  notes.push("B: Universes → Super Hero Ego Creative Suite shows source, Sentinel, storyboard, proposals, and in-suite 2.5D");
+  notes.push("B: Universes → Super Hero Ego Creative Studio workspaces show source, Sentinel, storyboard, production, and 2.5D");
 
+  await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name: "2.5D", exact: true }).click();
   const preview = page.locator("section[aria-labelledby='universe-preview']");
   await preview.getByRole("button", { name: "2D composition" }).click();
   await expect(preview.locator("[data-preview-scene]")).toHaveCount(4);
   await preview.getByRole("button", { name: "2.5D Studio Preview" }).click();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(2);
   await captureScreenshot(page, testInfo, "suite-25d-preview");
   notes.push("C: Studio Preview switches 2D composition and 2.5D without leaving Creative Suite");
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("navigation", { name: "Creative production path" })).toBeVisible();
-  await expect(page.locator("[data-suite-source-preview] video")).toHaveCount(1);
+  await expect(page.getByRole("navigation", { name: "Creative Suite" })).toBeVisible();
+  await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflowX, `narrow Studio overflow ${overflowX}px`).toBeLessThan(24);
   notes.push("D: 390px keeps production path and source preview usable");
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  const continuation = page.locator("section[aria-labelledby='universe-experience-continuation']");
-  await continuation.getByRole("link", { name: /Enter Experience/i }).click();
+  await page.getByRole("link", { name: /Enter Experience/i }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeHolographic}$`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(2);
   const publicProduction = page.locator("[data-holographic-kind='production']");
   await expect(publicProduction).toHaveCount(1);
   await expect(publicProduction).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);

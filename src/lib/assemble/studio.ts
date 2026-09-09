@@ -95,18 +95,57 @@ export function curateStudioHref(
   return curateIncomingHref(assetId);
 }
 
+function withStudioQuery(path: string, from?: StudioFrom | null, extra?: Record<string, string>): string {
+  const search = new URLSearchParams();
+  if (from === "curate") search.set("from", "curate");
+  if (extra) {
+    for (const [key, value] of Object.entries(extra)) {
+      if (value) search.set(key, value);
+    }
+  }
+  const qs = search.toString();
+  return qs ? `${path}?${qs}` : path;
+}
+
 export function creativeSuiteHref(universeId: string, from?: StudioFrom | null): string {
-  const path = `/authority/universes/${universeId}`;
-  return from === "curate" ? `${path}?from=curate` : path;
+  return withStudioQuery(`/authority/universes/${universeId}`, from);
+}
+
+export function creativeSuiteWorkspaceHref(
+  universeId: string,
+  workspace:
+    | "overview"
+    | "identity"
+    | "storyboard"
+    | "sentinel"
+    | "scenes"
+    | "production"
+    | "preview"
+    | "experience",
+  from?: StudioFrom | null,
+  sceneId?: string,
+): string {
+  if (workspace === "sentinel") {
+    return withStudioQuery(`/authority/universes/${universeId}/storyboard`, from, { source: "sentinel" });
+  }
+  if (workspace === "overview") return creativeSuiteHref(universeId, from);
+  if (workspace === "scenes" && sceneId) {
+    return withStudioQuery(`/authority/universes/${universeId}/scenes/${sceneId}`, from);
+  }
+  const path = `/authority/universes/${universeId}/${workspace}`;
+  return withStudioQuery(path, from);
 }
 
 export function creativeSuiteSentinelHref(universeId: string, from?: StudioFrom | null): string {
-  return `${creativeSuiteHref(universeId, from)}#universe-sentinel`;
+  return creativeSuiteWorkspaceHref(universeId, "sentinel", from);
 }
 
 export function creativeSuiteIdentityHref(universeId: string, from?: StudioFrom | null): string {
-  const path = `/authority/universes/${universeId}/identity`;
-  return from === "curate" ? `${path}?from=curate` : path;
+  return creativeSuiteWorkspaceHref(universeId, "identity", from);
+}
+
+export function creativeSuiteScenesHref(universeId: string, from?: StudioFrom | null, sceneId?: string): string {
+  return creativeSuiteWorkspaceHref(universeId, "scenes", from, sceneId);
 }
 
 export function studioReadinessLabel(overall: MediaReadiness["overall"]): string {

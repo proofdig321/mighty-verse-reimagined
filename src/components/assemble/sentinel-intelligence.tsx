@@ -159,11 +159,11 @@ export function SentinelIntelligencePanel({
 
       <section aria-labelledby="sentinel-storyboard" className="suite-intelligence-block mt-8">
         <h3 id="sentinel-storyboard" className="suite-section-title">
-          Storyboard
+          Observed panels
         </h3>
         <p className="suite-section-note">
-          Sequence through time. A canonical Scene is authorised meaning. A storyboard beat is Sentinel evidence and is not a Scene.
-          Keeping a still as a reference curates it for production. It does not create a Scene or Creative Moment.
+          Sentinel evidence for the storyboard. A canonical Scene is authorised meaning. A storyboard beat is not a Scene.
+          Keeping a still as a reference curates it for production.
         </p>
         {retainNote ? (
           <p role="status" className="suite-section-note mt-2">
@@ -217,26 +217,26 @@ export function SentinelIntelligencePanel({
         </ol>
       </section>
 
-      <section aria-labelledby="sentinel-animation" className="suite-intelligence-block mt-8">
-        <h3 id="sentinel-animation" className="suite-section-title">
-          Animation plan
-        </h3>
-        <p className="suite-section-note">
-          Derived planning language from change intensity. This is not a render and not canonical geometry until a later realisation.
-        </p>
-        <ol className="suite-animation-plan">
-          {intelligence.animation.map((beat, index) => (
-            <li key={beat.scene_master_id} data-animation-scene={beat.scene_master_id}>
-              <p className="suite-kicker">Beat {String(index + 1).padStart(2, "0")}</p>
-              <p className="text-sm text-foreground">{beat.title}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatTimelineMs(beat.start_ms)} → {formatTimelineMs(beat.end_ms)} · {beat.enter} in / {beat.exit} out · {beat.motion}
-              </p>
-              <p className="suite-proposal-badge mt-2">Planning</p>
-            </li>
-          ))}
-        </ol>
-      </section>
+      <details className="suite-intelligence-block mt-8">
+        <summary className="suite-section-title">Animation plan</summary>
+        <div className="mt-3">
+          <p className="suite-section-note">
+            Derived planning language from change intensity. This is not a render.
+          </p>
+          <ol className="suite-animation-plan">
+            {intelligence.animation.map((beat, index) => (
+              <li key={beat.scene_master_id} data-animation-scene={beat.scene_master_id}>
+                <p className="suite-kicker">Beat {String(index + 1).padStart(2, "0")}</p>
+                <p className="text-sm text-foreground">{beat.title}</p>
+                <p className="text-xs text-muted-foreground">
+                  {formatTimelineMs(beat.start_ms)} → {formatTimelineMs(beat.end_ms)} · {beat.enter} in / {beat.exit} out · {beat.motion}
+                </p>
+                <p className="suite-proposal-badge mt-2">Planning</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </details>
 
       <section aria-labelledby="sentinel-proposals" className="suite-intelligence-block mt-8">
         <h3 id="sentinel-proposals" className="suite-section-title">
