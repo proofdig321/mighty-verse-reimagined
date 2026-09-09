@@ -403,11 +403,11 @@ Stage 3.2 gives Creative Suite Add presence / Remove presence for existing Scene
 
 ---
 
-## Checkpoint evaluation (Stage 3.9)
+## Checkpoint evaluation (Stage 4.0)
 
 `CANONICAL` (2026-09-09)
 
-Sentinel now remembers. Creative Suite derives storyboard, animation plan, Scene-boundary proposals, and CSS 2.5D holographic presentation from persisted observations against Super Hero Ego. Extra candidates become beats, never Scenes. The curator authorises proposed windows onto existing Scene bindings. Public Experience presents 2.5D from canonical stills. No migration. No Three.js. No `media_realization`. Scene Deck shuffle stays presentation-only.
+Creative Suite is a followable Studio production path. A curator can enter the dashboard, open Super Hero Ego, and see source media, Sentinel evidence, storyboard, animation planning, Scene proposals, authorisation, 2.5D Studio Preview, and Experience without knowing hidden routes. 2.5D remains a realization/preview of canonical composition. Public `/worlds/{id}/holographic` remains the audience Experience. No workflow-state table. No migration. No `media_realization`. Super Hero Ego stays four Scenes.
 
 Pipeline: MEDIA → SENTINEL EVIDENCE → DERIVED INTELLIGENCE → HUMAN AUTHORISATION → CANONICAL TRUTH
 

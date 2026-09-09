@@ -3,12 +3,17 @@ import { sceneCreativeMomentIds, sceneShortTitle, sharedCreativeMomentIds } from
 import { availablePresenceOptions } from "@/lib/assemble/presence";
 import { suiteScenes } from "@/lib/assemble/suite";
 import type { UniverseAssembly } from "@/lib/assemble";
+import type { ProductionPathStep } from "@/lib/assemble/workflow";
+import type { SuiteSourcePreview } from "@/lib/assemble/load-source-preview";
 import { CompositionSurface } from "./composition-surface";
 import { CreativeMomentObject } from "./creative-moment-object";
 import { ExperienceContinuation } from "./experience-continuation";
 import { CanonicalIdentifiers, MuralEmpty, MuralPresence } from "./mural-presence";
+import { ProductionPath } from "./production-path";
 import { SceneObject } from "./scene-object";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
+import { SourcePreview } from "./source-preview";
+import { StudioPreview } from "./studio-preview";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 
 export type UniverseAssemblyProps = {
@@ -25,6 +30,8 @@ export type UniverseAssemblyProps = {
   intelligence?: SentinelIntelligence | null;
   inspectHref?: string | null;
   holographicHref?: string | null;
+  source?: SuiteSourcePreview | null;
+  productionPath?: ProductionPathStep[];
 };
 
 function untitled(kind: string) {
@@ -45,6 +52,8 @@ export default function UniverseAssemblyView({
   intelligence = null,
   inspectHref = null,
   holographicHref = null,
+  source = null,
+  productionPath = [],
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -80,9 +89,23 @@ export default function UniverseAssemblyView({
           </div>
         </section>
 
-        {experienceHref ? (
-          <ExperienceContinuation href={experienceHref} universeTitle={data.title ?? "this Universe"} />
-        ) : null}
+        {productionPath.length > 0 ? <ProductionPath steps={productionPath} /> : null}
+
+        <section className="suite-section" aria-labelledby="universe-source">
+          <div className="suite-section-head">
+            <h2 id="universe-source" className="suite-section-title">
+              Source
+            </h2>
+            <p className="suite-section-note">
+              The bound audiovisual media for this Universe. Preview is observational. It does not rewrite Scene windows.
+            </p>
+          </div>
+          {source ? (
+            <SourcePreview source={source} inspectHref={inspectHref} />
+          ) : (
+            <p className="suite-empty">No source media is bound to this Universe yet.</p>
+          )}
+        </section>
 
         <section className="suite-section" aria-labelledby="universe-mural">
           <div className="suite-section-head">
@@ -90,7 +113,7 @@ export default function UniverseAssemblyView({
               Mural
             </h2>
             <p className="suite-section-note">
-              The stage for this Universe. Registering a Mural establishes the container. Mural editing is a later increment.
+              The stage for this Universe. Registering a Mural establishes the container. Source playback lives in Studio preview above. Public mural playback remains Experience.
             </p>
           </div>
           {data.murals.length === 0 ? (
@@ -116,16 +139,35 @@ export default function UniverseAssemblyView({
                 Sentinel
               </h2>
               <p className="suite-section-note">
-                Observational evidence becomes storyboard, animation plan, 2.5D, and Scene-boundary proposals.
+                Observational evidence becomes storyboard, animation plan, and Scene-boundary proposals.
                 The curator still authorises canonical meaning. Sentinel does not create Scenes.
               </p>
             </div>
             <SentinelIntelligencePanel
               universeId={data.master_id}
-              universeTitle={data.title ?? "this Universe"}
               intelligence={intelligence}
               canAuthorise={canAuthoriseSentinel}
               inspectHref={inspectHref}
+              previewHref="#universe-preview"
+            />
+          </section>
+        ) : null}
+
+        {intelligence && experienceHref && holographicHref ? (
+          <section className="suite-section" aria-labelledby="universe-preview">
+            <div className="suite-section-head">
+              <h2 id="universe-preview" className="suite-section-title">
+                2.5D Preview
+              </h2>
+              <p className="suite-section-note">
+                Studio Preview of the canonical composition. Switch 2D and 2.5D without leaving authoring.
+              </p>
+            </div>
+            <StudioPreview
+              universeTitle={data.title ?? "this Universe"}
+              scenes={scenes}
+              layers={intelligence.holographic}
+              experienceHref={experienceHref}
               holographicHref={holographicHref}
             />
           </section>
@@ -195,6 +237,14 @@ export default function UniverseAssemblyView({
             </ul>
           )}
         </section>
+
+        {experienceHref ? (
+          <ExperienceContinuation
+            href={experienceHref}
+            holographicHref={holographicHref}
+            universeTitle={data.title ?? "this Universe"}
+          />
+        ) : null}
       </div>
     </CompositionSurface>
   );

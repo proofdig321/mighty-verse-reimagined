@@ -7,6 +7,8 @@ import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseAssembly } from "@/lib/assemble";
 import { creativeSuiteNavItems } from "@/lib/assemble/suite";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
+import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
+import { deriveProductionPath, productionPathInputFrom } from "@/lib/assemble/workflow";
 import { CURATE_STUDIO_HREF, creativeSuiteHref, creativeSuiteIdentityHref, mediaInspectHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import { CreativeSuiteNav } from "@/components/assemble/creative-suite-nav";
@@ -31,12 +33,16 @@ export default async function UniverseCurationPage({
 
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();
-  const intelligence = await loadSentinelIntelligence(data);
+  const [intelligence, source] = await Promise.all([
+    loadSentinelIntelligence(data),
+    loadSuiteSourcePreview(data),
+  ]);
   const inspectAssetId = data.murals.flatMap((mural) => mural.scenes).find((scene) => scene.asset_id)?.asset_id ?? null;
 
   const title = data.title ?? "Untitled universe";
   const fromCurate = query.from === "curate";
   const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
+  const productionPath = deriveProductionPath(productionPathInputFrom(data, intelligence, suiteHref));
 
   return (
     <div className="space-y-10">
@@ -71,9 +77,8 @@ export default async function UniverseCurationPage({
             <p className="text-base text-foreground/80 max-w-3xl">{data.description}</p>
           ) : null}
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Inside this Universe: its Mural, Scenes, and Creative Moments as a composition surface.
-            Universe identity, Sentinel intelligence, Scene identity, Scene timing, canonical Scene order, Creative Moment identity, and Scene ↔ Creative Moment presence can be authored here.
-            Sentinel remembers observations. The curator authorises Sentinel windows. Sentinel does not create Scenes. Scene Deck shuffle stays presentation-only.
+            Follow the production path: Source → Sentinel → Storyboard → Scene proposals → Authorise → 2.5D Preview → Experience.
+            This is Studio navigation, not a wizard. Sentinel remembers observations. The curator authorises meaning. Sentinel does not create Scenes. Scene Deck shuffle stays presentation-only.
           </p>
         </div>
         <div className="flex flex-wrap gap-2 shrink-0">
@@ -110,6 +115,8 @@ export default async function UniverseCurationPage({
         intelligence={intelligence}
         inspectHref={inspectAssetId ? mediaInspectHref(inspectAssetId) : null}
         holographicHref={`/worlds/${data.master_id}/holographic`}
+        source={source}
+        productionPath={productionPath}
         muralEmptyAction={
           <RegisterMural
             universeId={data.master_id}

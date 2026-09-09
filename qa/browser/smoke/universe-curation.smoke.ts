@@ -52,10 +52,14 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await expect(page.getByText("Creative Suite").first()).toBeVisible();
   const suiteNav = page.getByRole("navigation", { name: "Creative Suite" });
   await expect(suiteNav.getByRole("link", { name: "Identity", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Source", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Mural", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Sentinel", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Storyboard", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "2.5D Preview", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Creative Moments", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Experience", exact: true })).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Universes", exact: true })).toHaveAttribute(
     "href",
     ROUTES.authorityUniverses,

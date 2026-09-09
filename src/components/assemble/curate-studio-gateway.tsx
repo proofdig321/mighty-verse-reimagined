@@ -45,7 +45,7 @@ function CurateAssetContextBanner({ focusedAsset }: { focusedAsset: CurateAssetF
         <p className="text-sm text-foreground">
           This selected media is already associated with {work}
           {focusedAsset.mural_title ? ` · Mural ${focusedAsset.mural_title}` : ""}. Continue in
-          Creative Suite rather than associating it again.
+          Creative Suite to inspect source, Sentinel, storyboard, and 2.5D Preview rather than associating it again.
         </p>
         <Link
           href={creativeSuiteHref(focusedAsset.universe_id, "curate")}

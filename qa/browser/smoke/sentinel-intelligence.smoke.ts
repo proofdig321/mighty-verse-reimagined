@@ -98,7 +98,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     await expect(sentinel.locator("[data-panel-kind='scene']")).toHaveCount(4);
     await expect(sentinel.locator("[data-animation-scene]")).toHaveCount(4);
     await expect(sentinel.getByRole("link", { name: "Open Inspect" })).toHaveAttribute("href", ROUTES.authorityMuxInspect);
-    notes.push("C: Creative Suite Sentinel shows storyboard, animation plan, 2.5D, and four Scene proposals");
+    notes.push("C: Creative Suite Sentinel shows evidence, storyboard, animation plan, and four Scene proposals");
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(sentinel.getByRole("heading", { name: "Storyboard" })).toBeVisible();

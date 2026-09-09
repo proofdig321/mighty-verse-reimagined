@@ -4,6 +4,20 @@ export type { CreativeSuiteNavItem, CreativeSuiteSectionId, SuiteScene } from ".
 export { buildUniverseAssembly } from "./build-universe";
 export { loadUniverseAssembly } from "./load-universe";
 export { loadSentinelIntelligence } from "./load-sentinel-intelligence";
+export { loadSuiteSourcePreview } from "./load-source-preview";
+export type { SuiteSourcePreview, SuiteSourceWindow } from "./load-source-preview";
+export {
+  PRODUCTION_PATH_STEPS,
+  deriveProductionPath,
+  productionPathInputFrom,
+  productionStepStatusLabel,
+} from "./workflow";
+export type {
+  ProductionPathInput,
+  ProductionPathStep,
+  ProductionStepId,
+  ProductionStepStatus,
+} from "./workflow";
 export { validateUniverseIdentity, mergeWorkPresentationIdentity } from "./identity";
 export { CREATIVE_SUITE_SECTIONS, creativeSuiteNavItems, suiteScenes } from "./suite";
 export {

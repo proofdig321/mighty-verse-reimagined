@@ -46,7 +46,7 @@ export default async function UniversesPage() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Canonical</p>
         <h1 className="text-3xl font-semibold tracking-tight">Universes</h1>
         <p className="text-sm text-muted-foreground">
-          Top-level canonical containers. Open a Universe to enter its Creative Suite.
+          Top-level canonical containers. Open a Universe to enter Creative Suite and follow Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience.
           {universes.length > 0 && <span className="ml-2 text-muted-foreground/60">{universes.length} universe{universes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>

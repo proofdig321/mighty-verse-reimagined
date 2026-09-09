@@ -302,7 +302,7 @@ export default function AuthorityClient() {
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Authority Console</h1>
         <p className="text-sm text-muted-foreground">
-          Operational overview. Curate is the doorway into assembling a canonical work.
+          Operational overview. Curate is the doorway into assembling a canonical work. Creative Suite is the Studio production path.
         </p>
       </div>
 
@@ -310,21 +310,31 @@ export default function AuthorityClient() {
         <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Curate</p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Inspect incoming media. Sentinel verifies it. Creative Suite assembles Identity, Mural, Scenes, and Creative Moments. Media does not become a Universe.
+            Inspect incoming media. Sentinel verifies it. Creative Suite is the Studio: Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience. Media does not become a Universe.
           </p>
         </div>
-        <Link
-          href="/authority/curate"
-          className="group flex items-center justify-between rounded-lg border border-border bg-card px-5 py-4 transition-colors hover:bg-accent/30"
-        >
-          <div>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
+          <Link
+            href="/authority/curate"
+            className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30"
+          >
             <p className="text-sm font-medium text-foreground">Curate Studio</p>
-            <p className="mt-0.5 text-xs text-muted-foreground/70">Intake → Sentinel → Creative Suite → Publish → Experience</p>
-          </div>
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
-            Open Curate <ArrowRight size={12} />
-          </span>
-        </Link>
+            <p className="mt-0.5 text-xs text-muted-foreground/70">Intake → Sentinel → Creative Suite</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
+              Open Curate <ArrowRight size={12} />
+            </span>
+          </Link>
+          <Link
+            href="/authority/universes"
+            className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30"
+          >
+            <p className="text-sm font-medium text-foreground">Creative Suite</p>
+            <p className="mt-0.5 text-xs text-muted-foreground/70">Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience</p>
+            <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
+              Open Universes <ArrowRight size={12} />
+            </span>
+          </Link>
+        </div>
       </section>
 
       {/* ── State summary ────────────────────────────────────────────────────── */}

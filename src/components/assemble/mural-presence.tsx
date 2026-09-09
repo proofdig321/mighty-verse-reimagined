@@ -66,7 +66,7 @@ export function MuralPresence({
           {startMs != null && endMs != null ? ` · ${formatTimelineMs(startMs)} → ${formatTimelineMs(endMs)}` : ""}
         </p>
         {mural.has_media ? (
-          <p>Canonical media is bound to this Mural. Playback lives on the public Experience, not in the Suite.</p>
+          <p>Canonical media is bound to this Mural. Studio source preview is the authoring player. Public mural playback remains Experience.</p>
         ) : (
           <p>Mural container is registered. No audiovisual media is bound yet.</p>
         )}

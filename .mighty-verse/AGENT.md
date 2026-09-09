@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 3.7 canonical Scene order; 3.4–3.6 landed)
+STATUS: current as of 2026-09-09 (Stage 4.0 Creative Suite production path)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -164,7 +164,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
 - `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, register a Mural for a Universe that has none, bridge into Creative Suite
 - `/authority/universes` — Authority Universe listing (auth-gated)
-- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Assemble → Experience continuation, Mural stage presence, Sentinel storyboard / animation plan / 2.5D / Scene-boundary proposals, face-up Scenes with identity + timing + canonical order + presence authoring, contributor Creative Moments with identity authoring. Not a second Experience player. Enter Experience navigates to `/worlds/{id}`. Sentinel does not create Scenes. Scene Deck shuffle is not imported.
+- `/authority/universes/[masterId]` — Creative Suite Studio: production path Source → Sentinel → Storyboard → Scene proposals → Authorise → 2.5D Preview → Experience. Source Mux preview of bound media. Sentinel evidence, storyboard (beat ≠ Scene), animation plan, Scene-boundary proposals, curator authorise of existing windows. In-suite 2D / 2.5D Studio Preview reuses CSS holographic primitives. Public `/worlds/{id}` and `/worlds/{id}/holographic` remain Experience destinations. Sentinel does not create Scenes. Scene Deck shuffle is not imported. Preview does not rewrite timing.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
 - `POST /api/authority/sentinel/authorise` — curator authorises Sentinel-proposed windows onto existing Scene bindings. Writes `start_ms`/`end_ms` only. Does not create Scenes.
 - `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, Sentinel intelligence load, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
@@ -180,7 +180,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `src/lib/media/sentinel-intelligence.ts` — derive storyboard, animation plan, 2.5D layers, and Scene-boundary proposals from evidence + existing Universe assembly
 - Extra Sentinel candidates become storyboard beats, never new Scenes
 - Authorise writes existing `projection_media_binding.start_ms/end_ms` via `decideSceneTiming`
-- Public 2.5D uses canonical stills. Suite uses the latest completed inspection session when present
+- Public 2.5D uses canonical stills. Suite uses the latest completed inspection session when present. Stage 4.0 exposes the same 2.5D as Studio Preview inside Creative Suite; `/worlds/{id}/holographic` remains the audience Experience.
 - CSS 3D holographic presentation. No Three.js. No new tables.
 
 ### Media Intelligence (browser-side, ephemeral)
@@ -254,6 +254,7 @@ applied migration.
 - Stage 3.7: Creative Suite authors canonical Scene order via existing `PATCH /api/authority/masters/sort-order` as Move earlier / Move later. Catalogue drag-order remains. Scene Deck shuffle is not imported.
 - Stage 3.8: Asset-level Inspect persists Sentinel evidence against `media_asset` without requiring a canonical master. Re-runs create a new `inspection_session`. Does not create Universe/Mural/Scene/Creative Moment/projection/binding/realization.
 - Stage 3.9: Sentinel evidence becomes storyboard, animation plan, Scene-boundary proposals, and CSS 2.5D holographic presentation on Super Hero Ego. Extra candidates stay beats. Authorise writes existing Scene windows only. Sentinel does not create Scenes. Scene Deck shuffle stays in Experience. No migration. No Three.js.
+- Stage 4.0: Creative Suite is a followable Studio production path. Source media preview, Sentinel, storyboard, animation plan, Scene proposals, authorise, and 2.5D Studio Preview are visible from the dashboard/Universes entry without hidden routes. 2.5D remains a realization/preview. No workflow-state table. No migration. No media_realization. Super Hero Ego stays four Scenes at 36/80/149/193.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---

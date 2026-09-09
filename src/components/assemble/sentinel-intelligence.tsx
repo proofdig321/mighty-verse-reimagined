@@ -7,23 +7,20 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { formatTimelineMs } from "@/lib/media/timing";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 import { decideAuthoriseWindows } from "@/lib/media/sentinel-intelligence";
-import { HolographicStage } from "@/components/experience/holographic-stage";
 import { cn } from "@/lib/utils";
 
 export function SentinelIntelligencePanel({
   universeId,
-  universeTitle,
   intelligence,
   canAuthorise,
   inspectHref,
-  holographicHref,
+  previewHref,
 }: {
   universeId: string;
-  universeTitle: string;
   intelligence: SentinelIntelligence;
   canAuthorise: boolean;
   inspectHref?: string | null;
-  holographicHref?: string | null;
+  previewHref?: string | null;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(
@@ -32,6 +29,7 @@ export function SentinelIntelligencePanel({
   const [busy, setBusy] = useState(false);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openBeat, setOpenBeat] = useState<string | null>(null);
 
   const decision = useMemo(
     () =>
@@ -77,100 +75,135 @@ export function SentinelIntelligencePanel({
     setSelected((current) => (current.includes(id) ? current.filter((value) => value !== id) : [...current, id]));
   }
 
+  const adjustCount = intelligence.proposals.filter((proposal) => proposal.status === "adjust").length;
+
   return (
     <div className="suite-intelligence">
-      <div className="flex flex-wrap gap-2 mb-4">
-        {inspectHref ? (
-          <Link href={inspectHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Open Inspect
-          </Link>
-        ) : null}
-        {holographicHref ? (
-          <Link href={holographicHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Enter 2.5D
-          </Link>
-        ) : null}
-      </div>
+      <section aria-labelledby="sentinel-evidence" className="suite-intelligence-block">
+        <h3 id="sentinel-evidence" className="suite-relation-kicker">
+          Evidence
+        </h3>
+        <p className="suite-section-note">
+          Sentinel observed this media. Observation is not canonical authority.
+          Derived intelligence follows as storyboard and animation plan until a curator authorises meaning.
+        </p>
+        <dl className="suite-evidence-facts">
+          <div>
+            <dt>Observations</dt>
+            <dd>{intelligence.observation_count}</dd>
+          </div>
+          <div>
+            <dt>Boundary candidates</dt>
+            <dd>{intelligence.candidate_count}</dd>
+          </div>
+          <div>
+            <dt>Unaligned beats</dt>
+            <dd>{intelligence.unaligned_beats.length}</dd>
+          </div>
+        </dl>
+        <div className="flex flex-wrap gap-2 mt-3">
+          {inspectHref ? (
+            <Link href={inspectHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              Open Inspect
+            </Link>
+          ) : null}
+          {previewHref ? (
+            <Link href={previewHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              Open 2.5D Studio Preview
+            </Link>
+          ) : null}
+        </div>
+      </section>
 
-      <div className="suite-intelligence-grid">
-        <section aria-labelledby="sentinel-storyboard" className="suite-intelligence-block">
-          <h3 id="sentinel-storyboard" className="suite-relation-kicker">
-            Storyboard
-          </h3>
-          <p className="suite-section-note">
-            Generated from Sentinel observations against Super Hero Ego Scenes. Beats are evidence, not new Scenes.
-          </p>
-          <ol className="sentinel-storyboard">
-            {intelligence.storyboard.map((panel) => (
-              <li key={panel.panel_id} className={panel.kind === "scene" ? "sentinel-panel-scene" : "sentinel-panel-beat"} data-panel-kind={panel.kind} data-scene-id={panel.scene_master_id ?? undefined}>
+      <section aria-labelledby="sentinel-storyboard" className="suite-intelligence-block mt-8">
+        <h3 id="sentinel-storyboard" className="suite-section-title">
+          Storyboard
+        </h3>
+        <p className="suite-section-note">
+          Sequence through time. A canonical Scene is authorised meaning. A storyboard beat is Sentinel evidence and is not a Scene.
+        </p>
+        <ol className="sentinel-storyboard">
+          {intelligence.storyboard.map((panel) => (
+            <li
+              key={panel.panel_id}
+              className={panel.kind === "scene" ? "sentinel-panel-scene" : "sentinel-panel-beat"}
+              data-panel-kind={panel.kind}
+              data-scene-id={panel.scene_master_id ?? undefined}
+            >
+              <button type="button" className="sentinel-panel-open" onClick={() => setOpenBeat(openBeat === panel.panel_id ? null : panel.panel_id)}>
                 {panel.still_url ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={panel.still_url} alt="" />
                 ) : (
                   <div className="sentinel-panel-empty" />
                 )}
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {panel.kind}
+                <p className={panel.kind === "scene" ? "suite-canon-badge" : "suite-proposal-badge"}>
+                  {panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat"}
                 </p>
-                <p className="text-xs text-foreground">{panel.title}</p>
+                <p className="text-sm text-foreground">{panel.title}</p>
                 <p className="font-mono text-[10px] text-muted-foreground">{formatTimelineMs(panel.time_ms)}</p>
-              </li>
-            ))}
-          </ol>
-        </section>
-
-        <section aria-labelledby="sentinel-animation" className="suite-intelligence-block">
-          <h3 id="sentinel-animation" className="suite-relation-kicker">
-            Animation plan
-          </h3>
-          <p className="suite-section-note">
-            Enter, hold, and exit language from change intensity. Planning only — no render is generated.
-          </p>
-          <ol className="space-y-2">
-            {intelligence.animation.map((beat) => (
-              <li key={beat.scene_master_id} className="rounded-md border border-border px-3 py-2" data-animation-scene={beat.scene_master_id}>
-                <p className="text-sm text-foreground">{beat.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {formatTimelineMs(beat.start_ms)} → {formatTimelineMs(beat.end_ms)} · {beat.enter} in / {beat.exit} out · {beat.motion} · intensity {beat.intensity.toFixed(2)}
+              </button>
+              {openBeat === panel.panel_id ? (
+                <p className="suite-section-note mt-2">
+                  {panel.kind === "scene"
+                    ? "This panel is an existing authorised Scene. Sentinel did not create it."
+                    : `This beat exists because Sentinel observed a change${panel.change_score != null ? ` (score ${panel.change_score.toFixed(2)})` : ""}. It is not a canonical Scene.`}
                 </p>
-              </li>
-            ))}
-          </ol>
-        </section>
-      </div>
-
-      <section aria-labelledby="sentinel-holographic" className="suite-intelligence-block mt-6">
-        <h3 id="sentinel-holographic" className="suite-relation-kicker">
-          2.5D holographic
-        </h3>
-        <p className="suite-section-note">
-          Creative Moments become spatial objects in front of their Scenes. The Mural remains the back plane. This is presentation, not canonical geometry.
-        </p>
-        <HolographicStage title={universeTitle} layers={intelligence.holographic} compact />
+              ) : null}
+            </li>
+          ))}
+        </ol>
       </section>
 
-      <section aria-labelledby="sentinel-proposals" className="suite-intelligence-block mt-6">
-        <h3 id="sentinel-proposals" className="suite-relation-kicker">
+      <section aria-labelledby="sentinel-animation" className="suite-intelligence-block mt-8">
+        <h3 id="sentinel-animation" className="suite-section-title">
+          Animation plan
+        </h3>
+        <p className="suite-section-note">
+          Derived planning language from change intensity. This is not a render and not canonical geometry until a later realisation.
+        </p>
+        <ol className="suite-animation-plan">
+          {intelligence.animation.map((beat, index) => (
+            <li key={beat.scene_master_id} data-animation-scene={beat.scene_master_id}>
+              <p className="suite-kicker">Beat {String(index + 1).padStart(2, "0")}</p>
+              <p className="text-sm text-foreground">{beat.title}</p>
+              <p className="text-xs text-muted-foreground">
+                {formatTimelineMs(beat.start_ms)} → {formatTimelineMs(beat.end_ms)} · {beat.enter} in / {beat.exit} out · {beat.motion}
+              </p>
+              <p className="suite-proposal-badge mt-2">Planning</p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <section aria-labelledby="sentinel-proposals" className="suite-intelligence-block mt-8">
+        <h3 id="sentinel-proposals" className="suite-section-title">
           Scene-boundary proposals
         </h3>
         <p className="suite-section-note">
-          Sentinel remembers what it observed. Authorising writes existing Scene windows only. Super Hero Ego keeps four Scenes.
+          System proposal is Sentinel-derived. Canonical is already authorised. Authorising writes existing Scene windows only. It does not create Scenes.
         </p>
         <ul className="space-y-2">
           {intelligence.proposals.map((proposal) => (
-            <li key={proposal.scene_master_id} className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border px-3 py-2" data-proposal-scene={proposal.scene_master_id} data-proposal-status={proposal.status}>
+            <li
+              key={proposal.scene_master_id}
+              className="flex flex-wrap items-start justify-between gap-3 rounded-md border border-border px-3 py-2"
+              data-proposal-scene={proposal.scene_master_id}
+              data-proposal-status={proposal.status}
+            >
               <div>
-                <p className="text-sm text-foreground">{proposal.title}</p>
+                <p className={proposal.status === "adjust" ? "suite-proposal-badge" : "suite-canon-badge"}>
+                  {proposal.status === "adjust" ? "System proposal" : "Canonical"}
+                </p>
+                <p className="text-sm text-foreground mt-1">{proposal.title}</p>
                 <p className="font-mono text-xs text-muted-foreground">
-                  {formatTimelineMs(proposal.canonical_start_ms)} → {formatTimelineMs(proposal.canonical_end_ms)}
+                  Canonical {formatTimelineMs(proposal.canonical_start_ms)} → {formatTimelineMs(proposal.canonical_end_ms)}
                   {proposal.status === "adjust" ? (
                     <>
                       {" "}
                       · proposed {formatTimelineMs(proposal.proposed_start_ms)} → {formatTimelineMs(proposal.proposed_end_ms)}
                     </>
-                  ) : (
-                    " · aligned"
-                  )}
+                  ) : null}
                 </p>
               </div>
               {proposal.status === "adjust" && canAuthorise ? (
@@ -182,11 +215,7 @@ export function SentinelIntelligencePanel({
                   />
                   Include
                 </label>
-              ) : (
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {proposal.status}
-                </span>
-              )}
+              ) : null}
             </li>
           ))}
         </ul>
@@ -195,28 +224,35 @@ export function SentinelIntelligencePanel({
             {intelligence.unaligned_beats.length} unaligned beat{intelligence.unaligned_beats.length === 1 ? "" : "s"} stay on the storyboard and are not turned into Scenes.
           </p>
         ) : null}
-        {canAuthorise ? (
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Button
-              type="button"
-              size="sm"
-              disabled={busy || !decision.ok}
-              onClick={() => void authorise()}
-            >
-              {busy ? "Authorising…" : "Authorise Sentinel windows"}
-            </Button>
-            {status ? (
-              <p role="status" className="text-sm text-foreground">
-                {status}
+        <div id="sentinel-authorise" className="mt-4">
+          {canAuthorise ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                type="button"
+                size="sm"
+                disabled={busy || !decision.ok}
+                onClick={() => void authorise()}
+              >
+                {busy ? "Authorising…" : "Authorise Sentinel windows"}
+              </Button>
+              <p className="suite-section-note">
+                {adjustCount > 0
+                  ? `${adjustCount} window${adjustCount === 1 ? "" : "s"} need curator authorisation.`
+                  : "Canonical windows already match Sentinel."}
               </p>
-            ) : null}
-            {error ? (
-              <p role="alert" className="text-sm text-destructive">
-                {error}
-              </p>
-            ) : null}
-          </div>
-        ) : null}
+              {status ? (
+                <p role="status" className="text-sm text-foreground">
+                  {status}
+                </p>
+              ) : null}
+              {error ? (
+                <p role="alert" className="text-sm text-destructive">
+                  {error}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
       </section>
     </div>
   );

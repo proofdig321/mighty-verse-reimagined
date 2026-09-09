@@ -1,7 +1,7 @@
 # Browser QA foundation
 
 CANONICAL for browser verification workflow: yes
-STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.5 ASSEMBLE Curate Studio + Stage 3.4–3.9 Suite/Experience/Sentinel
+STATUS: Stage 1 smoke + Stage 1.1–1.5 public EXPERIENCE + Stage 2.1–2.5 ASSEMBLE Curate Studio + Stage 3.4–4.0 Suite/Experience/Sentinel/Studio workflow
 
 This directory is the browser QA layer for Mighty Verse. It is independent of
 application and domain logic. Do not import these helpers from `src/`.
@@ -76,7 +76,7 @@ The config reuses an existing dev server when one is already listening.
 | Super Hero Ego sibling Moments | Powerhouse / Dark Knight / Hand-to-Hand | Universe → View Mural → sidebar `/moments/{projectionId}`; same shared player; Scene windows 36–79s / 80–124s / 149–192s; Play; end reset-to-start; no Livepeer |
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Auth gate or Curate Studio gateway; incoming media; Sentinel; Open Creative Suite |
-| Super Hero Ego Creative Suite | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → suite; Identity / Mural / Sentinel / Scenes / Creative Moments boundaries |
+| Super Hero Ego Creative Suite | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → suite; Source / Sentinel / Storyboard / 2.5D Preview / Scenes / Creative Moments / Experience; Mux source preview; in-suite 2.5D |
 | Super Hero Ego 2.5D | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/holographic` | Mural + four Scene planes + Creative Moments; canonical Mux stills |
 | Super Hero Ego Universe identity | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/identity` | Auth gate; title/description form; validation; idempotent save; return to suite |
 | Unbound Livepeer inspect | `/authority/media/inspect?assetId=bda79051-6bc9-497f-b0aa-12d95130290c` | Persist Sentinel evidence without a master; saved inspections remain after reload |

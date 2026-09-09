@@ -227,6 +227,7 @@ export default async function CuratePage({
         <h1 className="text-3xl font-semibold tracking-tight">Curate</h1>
         <p className="text-sm text-muted-foreground max-w-3xl">
           Inspect incoming media, then assemble the canonical work in Creative Suite.
+          Creative Suite is the Studio production path: Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience.
           Uploading media does not create a Universe. Sentinel verifies technical usability.
           Creative meaning, publication, and Experience remain separate steps.
         </p>

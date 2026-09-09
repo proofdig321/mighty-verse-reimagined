@@ -371,6 +371,7 @@
 
   .suite-section {
     min-width: 0;
+    scroll-margin-top: 5.5rem;
   }
 
   .suite-kicker,
@@ -830,6 +831,241 @@
     justify-self: start;
   }
 
+  .suite-production-path {
+    display: grid;
+    gap: 0.75rem;
+    min-width: 0;
+    padding: 1.25rem 0 0.25rem;
+  }
+
+  .suite-production-steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0.5rem 0.65rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .suite-production-steps li {
+    display: flex;
+    align-items: stretch;
+    gap: 0.5rem;
+    min-width: 0;
+  }
+
+  .suite-production-arrow {
+    align-self: center;
+    color: var(--accent-mv);
+    font-size: 0.85rem;
+  }
+
+  .suite-production-step {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 7.5rem;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .suite-production-step:hover {
+    border-color: color-mix(in oklch, var(--accent-mv) 50%, var(--border));
+  }
+
+  .suite-production-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .suite-production-status {
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .suite-production-step-attention {
+    border-color: color-mix(in oklch, var(--accent-mv) 55%, var(--border));
+  }
+
+  .suite-production-step-canonical .suite-production-status {
+    color: color-mix(in oklch, var(--accent-mv) 80%, var(--foreground));
+  }
+
+  .suite-source {
+    display: grid;
+    gap: 1.1rem;
+    min-width: 0;
+  }
+
+  .suite-source-meta,
+  .suite-source-windows {
+    display: grid;
+    gap: 0.45rem;
+    min-width: 0;
+  }
+
+  .suite-window-track {
+    position: relative;
+    height: 0.7rem;
+    overflow: hidden;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--muted) 80%, var(--background));
+  }
+
+  .suite-window-mark {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--accent-mv) 70%, var(--foreground));
+  }
+
+  .suite-window-list {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
+
+  .suite-window-seek {
+    display: grid;
+    gap: 0.2rem;
+    width: 100%;
+    min-width: 0;
+    padding: 0.7rem 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    text-align: left;
+    cursor: pointer;
+  }
+
+  .suite-window-seek:hover {
+    border-color: color-mix(in oklch, var(--accent-mv) 45%, var(--border));
+  }
+
+  .suite-canon-badge,
+  .suite-proposal-badge {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.12rem 0.4rem;
+    border-radius: 999px;
+    font-size: 0.58rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  .suite-canon-badge {
+    color: color-mix(in oklch, var(--accent-mv) 85%, var(--foreground));
+    background: color-mix(in oklch, var(--accent-mv) 14%, transparent);
+  }
+
+  .suite-proposal-badge {
+    color: var(--muted-foreground);
+    background: color-mix(in oklch, var(--muted) 70%, transparent);
+  }
+
+  .suite-animation-plan {
+    display: grid;
+    gap: 0.85rem;
+    margin: 0.85rem 0 0;
+    padding: 0;
+    list-style: none;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
+  }
+
+  .suite-animation-plan li {
+    min-width: 0;
+    padding: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+  }
+
+  .suite-studio-preview {
+    display: grid;
+    gap: 1rem;
+    min-width: 0;
+  }
+
+  .suite-preview-toggle {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .suite-preview-mode {
+    padding: 0.55rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+    cursor: pointer;
+  }
+
+  .suite-preview-mode-current {
+    border-color: color-mix(in oklch, var(--accent-mv) 55%, var(--border));
+    color: var(--foreground);
+    background: color-mix(in oklch, var(--accent-mv) 10%, var(--card));
+  }
+
+  .suite-preview-2d {
+    display: grid;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  }
+
+  .suite-preview-2d li {
+    min-width: 0;
+  }
+
+  .sentinel-panel-open {
+    display: grid;
+    gap: 0.35rem;
+    width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    color: inherit;
+  }
+
+  .suite-evidence-facts {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0.75rem 0 0;
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
+
+  .suite-evidence-facts dt {
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .suite-evidence-facts dd {
+    margin: 0.15rem 0 0;
+    font-family: var(--font-display, inherit);
+    font-size: 1.35rem;
+    font-weight: 600;
+  }
+
   /* Public Universe Experience — encounter language, not Studio objects */
   .world-experience {
     display: grid;
@@ -1146,20 +1382,23 @@
     min-width: 0;
   }
 
-  .suite-intelligence-block {
-    min-width: 0;
+  .suite-intelligence-block h3,
+  #sentinel-storyboard,
+  #sentinel-proposals,
+  #sentinel-authorise,
+  #universe-source,
+  #universe-preview,
+  #universe-experience-continuation {
+    scroll-margin-top: 5.5rem;
   }
 
   .sentinel-storyboard {
     display: grid;
-    grid-auto-flow: column;
-    grid-auto-columns: minmax(8.5rem, 10rem);
-    gap: 0.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(9.25rem, 1fr));
+    gap: 0.85rem;
     margin: 0.85rem 0 0;
-    padding: 0 0 0.5rem;
+    padding: 0;
     list-style: none;
-    overflow-x: auto;
-    overscroll-behavior-x: contain;
   }
 
   .sentinel-storyboard img,

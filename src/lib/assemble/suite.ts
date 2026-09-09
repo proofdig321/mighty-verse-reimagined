@@ -10,10 +10,14 @@ import type { UniverseAssembly, UniverseAssemblyScene } from "./types";
  */
 export const CREATIVE_SUITE_SECTIONS = [
   { id: "identity", label: "Identity", fragment: "universe-identity" },
+  { id: "source", label: "Source", fragment: "universe-source" },
   { id: "mural", label: "Mural", fragment: "universe-mural" },
   { id: "intelligence", label: "Sentinel", fragment: "universe-sentinel" },
+  { id: "storyboard", label: "Storyboard", fragment: "sentinel-storyboard" },
+  { id: "preview", label: "2.5D Preview", fragment: "universe-preview" },
   { id: "scenes", label: "Scenes", fragment: "universe-scenes" },
   { id: "moments", label: "Creative Moments", fragment: "universe-moments" },
+  { id: "experience", label: "Experience", fragment: "universe-experience-continuation" },
 ] as const;
 
 export type CreativeSuiteSectionId = (typeof CREATIVE_SUITE_SECTIONS)[number]["id"];

@@ -2,17 +2,21 @@
 
 Product: ASSEMBLE / CURATE — the Creative Suite for assembling a complete Universe.
 Expressions: Authority now; public-user curation later.
-Not EXPERIENCE: do not put playback, Mux, Scene Deck, or public timeline here.
+Not EXPERIENCE: Scene Deck shuffle, public holographic, and public mural/Moment playback stay on `/worlds` and `/moments`. Studio may preview bound Mux source media observationally.
 
 ```
 CURATE STUDIO  (/authority/curate)
   ├── Incoming media (intake / Sentinel inspect)
   └── Creative Suite  (/authority/universes/{id})
+        ├── Production path (derived UI state)
         ├── Identity
+        ├── Source (Mux preview of bound media)
         ├── Mural
-        ├── Sentinel
+        ├── Sentinel (evidence, storyboard, animation plan, proposals, authorise)
+        ├── 2.5D Studio Preview
         ├── Scenes
-        └── Creative Moments
+        ├── Creative Moments
+        └── Experience continuation
 ```
 
 MEDIA ≠ UNIVERSE. Sentinel inspects and remembers; the curator assembles and authorises; Authority authorizes; Experience presents.
@@ -22,7 +26,7 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Capability | Location | Data contract | Mutation | Reusable? | Authority? | Experience? | Modularised now? | Reason |
 |---|---|---|---|---|---|---|---|---|
 | Universe assembly read-model | `src/lib/assemble/load-universe.ts` | `UniverseAssembly` | none (read) | yes | route auth | no | yes | Shared hierarchy |
-| Creative Suite sections/nav | `src/lib/assemble/suite.ts` + `creative-suite-nav.tsx` | Identity / Mural / Sentinel / Scenes / Creative Moments | none | yes | hrefs injected | no | yes | Hosts future editors without being an editor |
+| Creative Suite sections/nav | `src/lib/assemble/suite.ts` + `creative-suite-nav.tsx` | Identity / Source / Mural / Sentinel / Storyboard / 2.5D Preview / Scenes / Creative Moments / Experience | none | yes | hrefs injected | no | yes | Hosts future editors without being an editor |
 | Universe assembly presentation | `src/components/assemble/universe-assembly.tsx` + Scene/CM/Mural objects | same read-model | none | yes | `openHref` | no | yes | Composition surface: objects not catalogue tables |
 | Creative Suite composition helpers | `src/lib/assemble/composition.ts` | ordinals, short titles, shared CM ids, still params | none | yes | no | no | yes | Studio language; not Experience deck |
 | Scene object | `scene-object.tsx` | SuiteScene | identity + timing + order + presence | yes | open record | consumes title + still + window | yes | Face-up, numbered, known. Not facedown. Not a timeline dashboard. |
@@ -30,7 +34,10 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Scene timing | `scene-timing.ts` + `scene-timing-authoring.tsx` + `PATCH /api/authority/media/timeline` | binding `start_ms`/`end_ms` | shapes existing window only | yes | yes | stills + playback windows | yes | Stage 3.5. Compact start/end on the Scene object. Sentinel does not create Scenes. |
 | Canonical Scene order | `scene-order.ts` + `scene-order-authoring.tsx` + `PATCH /api/authority/masters/sort-order` | `master.sort_order` 1..n | Move earlier / Move later | yes | yes | Suite + catalogue order | yes | Stage 3.7. Does not import Scene Deck shuffle. |
 | Creative Moment object | `creative-moment-object.tsx` | UniverseAssemblyMoment | identity + presence | yes | open record | no | yes | Contributor-centred; Proverb sharing is live data |
-| Mural presence | `mural-presence.tsx` | UniverseAssemblyMural | none | yes | open record + public mural link | stills only | yes | Stage presence; not a second player |
+| Mural presence | `mural-presence.tsx` | UniverseAssemblyMural | none | yes | open record + public mural link | stills only | yes | Stage presence; Studio source preview is the authoring player |
+| Production path | `workflow.ts` + `production-path.tsx` | derived from assembly + intelligence | none | yes | in-suite hashes | no | yes | Stage 4.0 navigation/context. Not a workflow-state table. Not a wizard. |
+| Source preview | `load-source-preview.ts` + `source-preview.tsx` | existing Mux binding + Scene windows | none (seek only) | yes | Inspect link | observational | yes | Stage 4.0. Reuses ProjectionMediaPlayer. Does not rebind or rewrite timing. |
+| Studio 2.5D Preview | `studio-preview.tsx` | existing holographic layers + Scene stills | none | yes | in-suite toggle | preview only | yes | Stage 4.0. Reuses HolographicStage. Public `/holographic` remains Experience. |
 | Relationship focus | `composition-surface.tsx` | hover/focus related ids | none | yes | no | no | yes | Makes shared Proverb visible without a graph |
 | Hierarchy breadcrumbs | `src/components/assemble/breadcrumb.tsx` | labels + hrefs | none | yes | chrome | no | yes | Ontology chrome |
 | Universe identity model/form | `identity.ts` + `universe-identity-form.tsx` | title + description | via injected save | yes | no | no | yes | Stage 2.3 |
@@ -44,7 +51,7 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Register Mural for existing Universe | `mural-registration.ts` + `register-mural.tsx` + `POST /api/authority/murals` `{ universe_id, title? }` | compose existing `registerMaster` + `createCanonicalState` + `createProjection` | mural master + state + experiential projection | yes (decision) | yes | later playback | yes | Stage 2.7. No media attach. No second Mural when one exists. Not a Mural editor. Create Work remains the broader optional path. |
 | `/authority/curate` Sentinel inspect | `curate-client.tsx` | mural-bound HLS, frames, candidates | bind / accept scene (existing) | inspect UI Authority-hosted | yes | no | inspect kept | Evidence only; not Creative Suite |
 | Media inspect | `/authority/media/inspect` | asset identity + frames + saved sessions | persist `inspection_session` + `frame_observation` | yes | yes | no | existing | Stage 3.8. Source-media persist; `master_id` optional. Not a Universe. Links into Suite Sentinel when the asset is bound. |
-| Sentinel intelligence | `sentinel-intelligence.ts` + `load-sentinel-intelligence.ts` + `sentinel-intelligence.tsx` + `POST /api/authority/sentinel/authorise` | storyboard, animation plan, 2.5D layers, boundary proposals | existing Scene windows only | yes | yes | 2.5D consumes stills | yes | Stage 3.9. Evidence → proposals. Curator authorises. Extra candidates stay beats. Does not create Scenes. |
+| Sentinel intelligence | `sentinel-intelligence.ts` + `load-sentinel-intelligence.ts` + `sentinel-intelligence.tsx` + `POST /api/authority/sentinel/authorise` | storyboard, animation plan, 2.5D layers, boundary proposals | existing Scene windows only | yes | yes | 2.5D consumes stills | yes | Stage 3.9. Evidence → proposals. Curator authorises. Extra candidates stay beats. Does not create Scenes. Stage 4.0 surfaces this as a Studio stage. |
 | Public `/worlds` holographic | `(public)/worlds/[masterId]/holographic` + `holographic-stage.tsx` | canonical stills as CSS 3D layers | none | yes | no | **yes** | yes | Stage 3.9 2.5D. Creative Moments are spatial objects; Mural is the back plane. Not a Three.js engine. |
 | Media intake | `/authority/media/intake` | `media_intake` | create intake | later | yes | no | existing | MEDIA ≠ UNIVERSE |
 | Media readiness | `src/lib/media/readiness.ts` | intake / processing / playable / ready | none | yes | no | no | yes | Existing states; no invented workflow table |
@@ -61,13 +68,14 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 3.9
+## Product questions after Stage 4.0
 
-- Creative Suite now names Scenes and Creative Moments, shapes existing Scene windows, writes canonical Scene order, and hosts Sentinel-derived storyboard / animation / 2.5D / window proposals on Super Hero Ego. This is not a timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
+- Creative Suite now makes the production path visible: source media, Sentinel evidence, storyboard, animation plan, Scene proposals, authorise, 2.5D Studio Preview, then Experience. This is not a wizard, timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
 - Gallery / Inspect still continue into Curate Studio with selected media identity. Bound Inspect continues into Suite Sentinel. Create Work remains independent and still completes on the publishing record.
 - **Governance vs Experience.** `/authority/{id}` still carries a rights/realization checklist while authorised public Experience already plays. Solving that through a publish ontology is outside this stage.
-- **Sentinel now remembers.** Schema is live (`inspection_session`, `frame_observation`). Stage 3.8 persists source-media inspection. Stage 3.9 derives intelligence and lets the curator authorise existing Scene windows. Curate Studio Sentinel remains universe-scoped evidence UI, not the persist surface. Sentinel must not auto-create Scenes.
+- **Sentinel now remembers.** Schema is live (`inspection_session`, `frame_observation`). Stage 3.8 persists source-media inspection. Stage 3.9 derives intelligence and lets the curator authorise existing Scene windows. Stage 4.0 makes those surfaces discoverable. Curate Studio Sentinel remains universe-scoped evidence UI, not the persist surface. Sentinel must not auto-create Scenes.
 - Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
 - **Still deferred:** Mural editor, Scene creation in Suite, publish/realize, `media_realization`, facedown authoring in Studio, Three.js engines, collectibles, AI classification / embeddings.
 - Scene Deck revealed thumbnails now use each Scene's `start_ms`. Shuffle remains presentation-only.
-- Public 2.5D is CSS holographic presentation of canonical stills. It does not rewrite canonical geometry.
+- Public 2.5D is CSS holographic presentation of canonical stills. Studio 2.5D Preview reuses the same primitives. Neither rewrites canonical geometry.
+- **No Supabase migration required.**
