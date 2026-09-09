@@ -5,6 +5,7 @@ import { formatTimelineMs } from "@/lib/media/timing";
 import type { PresenceOption } from "@/lib/assemble/presence";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { CreativeStill } from "./creative-still";
+import { SceneIdentity } from "./scene-identity-authoring";
 import { ScenePresence } from "./presence-authoring";
 
 export function SceneObject({
@@ -14,6 +15,7 @@ export function SceneObject({
   candidates,
   universeId,
   canAuthorPresence,
+  canAuthorIdentity,
   openHref,
   openLabel,
 }: {
@@ -23,6 +25,7 @@ export function SceneObject({
   candidates: PresenceOption[];
   universeId: string;
   canAuthorPresence: boolean;
+  canAuthorIdentity: boolean;
   openHref: string;
   openLabel: string;
 }) {
@@ -65,9 +68,21 @@ export function SceneObject({
           {shortTitle}
         </h3>
         {showFullTitle ? <p className="suite-scene-full-title">{fullTitle}</p> : null}
+        {scene.description?.trim() ? (
+          <p className="suite-scene-description">{scene.description.trim()}</p>
+        ) : null}
         <p className="suite-scene-timing">
           {timing ?? <span className="italic text-muted-foreground/70">Timing not set</span>}
         </p>
+        <SceneIdentity
+          universeId={universeId}
+          sceneId={scene.master_id}
+          sceneLabel={shortTitle}
+          title={fullTitle ?? ""}
+          description={scene.description ?? ""}
+          muralId={scene.mural_id}
+          canAuthor={canAuthorIdentity}
+        />
         <ScenePresence
           universeId={universeId}
           sceneId={scene.master_id}

@@ -9,6 +9,7 @@ export type SceneMomentCanon = {
   key: "powerhouse" | "darkKnight" | "handToHand" | "swordMaster";
   shortName: string;
   sceneTitle: string;
+  sceneDescription: string;
   sceneMasterId: string;
   projectionId: string;
   startMs: number;
@@ -23,6 +24,8 @@ export const SCENE_MOMENTS = {
     key: "powerhouse",
     shortName: "Powerhouse",
     sceneTitle: "Golden Shovel — Powerhouse",
+    sceneDescription:
+      "Golden Shovel's warrior manifestation within the Super Hero Ego Mural. Central city/skyline focal manifestation; powerhouse with spirit-avatar presence.",
     sceneMasterId: "4790c7cf-bb19-4a01-a243-e5c3eb680555",
     projectionId: "3039ca84-7e11-4eb6-8895-d16d13a899c3",
     startMs: 36000,
@@ -35,6 +38,8 @@ export const SCENE_MOMENTS = {
     key: "darkKnight",
     shortName: "Dark Knight",
     sceneTitle: "Mothipa — Dark Knight",
+    sceneDescription:
+      "Mothipa's warrior manifestation within the Super Hero Ego Mural. Elevated/gargoyle rooftop manifestation; Dark Knight/aura presence.",
     sceneMasterId: "bebb65d2-21ed-4bc9-9fa0-a4857df30a43",
     projectionId: "bb802400-b385-4025-9bb8-63df53abd9be",
     startMs: 80000,
@@ -47,6 +52,8 @@ export const SCENE_MOMENTS = {
     key: "handToHand",
     shortName: "Hand-to-Hand",
     sceneTitle: "ProVerb — Hand-to-Hand",
+    sceneDescription:
+      "ProVerb's warrior manifestation within the Super Hero Ego Mural. Ground-level urban combat manifestation; hand-to-hand fighter.",
     sceneMasterId: "df15ec76-6bd8-4956-bbaa-755f72b2b8f8",
     projectionId: "9c045ea3-ab09-4a6f-b89c-02dce076b8da",
     startMs: 149000,
@@ -59,6 +66,8 @@ export const SCENE_MOMENTS = {
     key: "swordMaster",
     shortName: "Sword Master",
     sceneTitle: "Reason — Sword Master",
+    sceneDescription:
+      "Reason's warrior manifestation within the Super Hero Ego Mural. Elevated urban/rooftop combat manifestation; sword-master.",
     sceneMasterId: "65490a92-8faf-42ea-a391-0e6473360f5c",
     projectionId: "8100033e-4c7e-448f-8b9c-b9ff97fdc3fd",
     startMs: 193000,

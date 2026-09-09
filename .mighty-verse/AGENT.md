@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-08 (Stage 3.2 Scene ↔ Creative Moment presence)
+STATUS: current as of 2026-09-08 (Stage 3.3 Scene identity authoring)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -163,7 +163,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
 - `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, register a Mural for a Universe that has none, bridge into Creative Suite
 - `/authority/universes` — Authority Universe listing (auth-gated)
-- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Assemble → Experience continuation, Mural stage presence, face-up Scenes, contributor Creative Moments, visible Scene ↔ Creative Moment relationships. Not a second Experience player. Enter Experience navigates to `/worlds/{id}`.
+- `/authority/universes/[masterId]` — Creative Suite composition surface: world identity, Assemble → Experience continuation, Mural stage presence, face-up Scenes with identity + presence authoring, contributor Creative Moments. Not a second Experience player. Enter Experience navigates to `/worlds/{id}`.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
 - `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
 
@@ -240,6 +240,7 @@ applied migration.
 - Stage 2.9: Creative Suite is a Studio composition surface on `/authority/universes/{id}`. Scenes are face-up cinematic objects; Creative Moments are contributor objects; Proverb remains a single shared Creative Moment related to Powerhouse and Hand-to-Hand. Experience facedown/shuffle/reorder is not imported. No Scene/CM/Mural editor. No migration.
 - Stage 3.0: Assemble → Experience continuity. Creative Suite surfaces Enter Experience as navigation into `/worlds/{universeId}`. The public Universe landing presents the composed world (identity, Mural as audiovisual stage, Scene encounters leading to the existing Scene Deck, contributor presence). Proverb remains identity-only. Dashboard residue (empty Collectibles/Holders/Base Network/Participants/Activity, Scenes tab showing the Mural) is removed from primary Experience. No publish/realize ontology. No migration. No canonical mutation. Scene Deck facedown/shuffle and Mural/Moment playback stay intact.
 - Stage 3.2: Creative Suite authors Scene ↔ Creative Moment presence via existing `scene_moment` and `POST/DELETE /api/authority/scene-moment`. Relates existing objects only. Does not create Scenes, Creative Moments, projections, or media. Proverb remains identity-only and shared across Powerhouse and Hand-to-Hand. Scene Deck thumbnail defect remains a separate Experience polish issue.
+- Stage 3.3: Creative Suite authors Scene identity (title + description) on the Scene object via existing `POST /api/authority/presentation`. Identity-only upsert preserves artwork and editorial markdown. Does not change timing, order, presence, projections, or media. Does not create Scenes. Scene Deck thumbnail defect remains a separate Experience polish issue.
 - Sentinel UI inspection remains ephemeral in the browser; `POST /api/authority/media/inspect` persistence exists but is not wired from Curate Studio (persist currently requires a `master_id`; unbound media has none). Deferred.
 
 ---

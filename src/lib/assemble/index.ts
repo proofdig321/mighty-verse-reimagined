@@ -64,3 +64,8 @@ export type {
   PresenceMaster,
   PresenceOption,
 } from "./presence";
+export { decideSceneIdentity } from "./scene-identity";
+export type {
+  SceneIdentityDecision,
+  SceneIdentityMaster,
+} from "./scene-identity";

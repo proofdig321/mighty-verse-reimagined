@@ -28,6 +28,8 @@ function assetFor(
  */
 export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssembly {
   const titleFor = (id: string) => rows.presentations.find((row) => row.master_id === id)?.title ?? null;
+  const descriptionFor = (id: string) =>
+    rows.presentations.find((row) => row.master_id === id)?.description ?? null;
 
   const momentsByScene = new Map<string, string[]>();
   for (const relation of rows.relations) {
@@ -54,6 +56,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
     const entry: UniverseAssemblyScene = {
       master_id: scene.master_id,
       title: titleFor(scene.master_id),
+      description: descriptionFor(scene.master_id),
       sort_order: scene.sort_order ?? null,
       start_ms: binding?.start_ms ?? null,
       end_ms: binding?.end_ms ?? null,

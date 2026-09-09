@@ -13,6 +13,7 @@ export type UniverseAssemblySceneMoment = {
 export type UniverseAssemblyScene = {
   master_id: string;
   title: string | null;
+  description: string | null;
   sort_order: number | null;
   start_ms: number | null;
   end_ms: number | null;
@@ -56,7 +57,7 @@ export type UniverseAssemblyRows = {
   muralMasters: { master_id: string }[];
   momentMasters: { master_id: string }[];
   sceneMasters: { master_id: string; parent_master_id: string | null; sort_order: number | null }[];
-  presentations: { master_id: string; title: string | null }[];
+  presentations: { master_id: string; title: string | null; description?: string | null }[];
   sceneProjections: { projection_id: string; master_id: string }[];
   muralProjections: { projection_id: string; master_id: string }[];
   momentProjections: { projection_id: string; master_id: string }[];

@@ -50,7 +50,7 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
   const [{ data: presentations }, { data: sceneProjections }, { data: muralProjections }, { data: momentProjections }, { data: relations }] =
     await Promise.all([
       presentationIds.length
-        ? svc.from("work_presentation").select("master_id, title").in("master_id", presentationIds)
+        ? svc.from("work_presentation").select("master_id, title, description").in("master_id", presentationIds)
         : Promise.resolve({ data: [] }),
       sceneIds.length
         ? svc.from("projection").select("projection_id, master_id").in("master_id", sceneIds)

@@ -190,5 +190,9 @@ authenticated path uses the environment Supabase service role to create a
 session for the existing Authority test account. It does not start `next dev`
 for production and is not part of `test:qa:browser:production`.
 
+Stage 3.3 Chrome: Creative Suite Scene objects expose **Edit identity**. Super Hero
+Ego Powerhouse can be named in place via `POST /api/authority/presentation`, then
+restored. Timing, presence, and artwork are not part of that write.
+
 Next.js RSC prefetch `net::ERR_ABORTED` on neighbouring routes (`/_rsc=`) is
 production navigation prefetch cancellation. It is not a Mux playback failure.
