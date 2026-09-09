@@ -37,6 +37,7 @@ export type UniverseAssemblyProps = {
   productionPath?: ProductionPathStep[];
   productionBriefs?: SceneProductionBrief[];
   productionLayers?: ApprovedProductionLayer[];
+  proofExecutorAvailable?: boolean;
 };
 
 function untitled(kind: string) {
@@ -61,6 +62,7 @@ export default function UniverseAssemblyView({
   productionPath = [],
   productionBriefs = [],
   productionLayers = [],
+  proofExecutorAvailable = false,
 }: UniverseAssemblyProps) {
   const scenes = suiteScenes(data);
   const sharedMoments = sharedCreativeMomentIds(scenes);
@@ -172,7 +174,7 @@ export default function UniverseAssemblyView({
               Mux remains the video infrastructure for a future production result.
             </p>
           </div>
-        <ProductionBriefs universeId={data.master_id} briefs={productionBriefs} />
+          <ProductionBriefs universeId={data.master_id} briefs={productionBriefs} proofExecutorAvailable={proofExecutorAvailable} />
         </section>
 
         {intelligence && experienceHref && holographicHref ? (

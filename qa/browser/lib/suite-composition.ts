@@ -42,9 +42,11 @@ export async function expectCreativeSuiteComposition(page: Page) {
   const production = page.locator("section[aria-labelledby='universe-production']");
   await expect(production.getByRole("heading", { name: "Production" })).toBeVisible();
   await expect(production.locator("[data-production-scene]")).toHaveCount(4);
-  await expect(production.locator("[data-production-execution='not_connected']")).toHaveCount(4);
+  await expect(production.locator("[data-production-execution='not_connected']")).toHaveCount(
+    (await production.locator("[data-production-execution='completed']").count()) > 0 ? 3 : 4,
+  );
   await expect(production.getByRole("button", { name: /Execute production/i }).first()).toBeVisible();
-  await expect(production.getByText("No production realization yet").first()).toBeVisible();
+  await expect(production.getByText("No production realization yet").or(production.getByText(/attached to 2\.5D/i)).first()).toBeVisible();
   await expect(production.getByText(/Powerhouse/i).first()).toBeVisible();
   await expect(production.getByText("Proverb").first()).toBeVisible();
 
@@ -73,7 +75,12 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(preview.getByRole("button", { name: "2.5D Studio Preview" })).toBeVisible();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
-  await expect(preview.locator("[data-holographic-kind='production']")).toHaveCount(0);
+  const productionLayers = preview.locator("[data-holographic-kind='production']");
+  const productionLayerCount = await productionLayers.count();
+  expect(productionLayerCount === 0 || productionLayerCount === 1).toBeTruthy();
+  if (productionLayerCount === 1) {
+    await expect(productionLayers).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);
+  }
   await expect(preview.getByRole("link", { name: "Open public 2.5D" })).toHaveAttribute("href", ROUTES.universeHolographic);
 
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");

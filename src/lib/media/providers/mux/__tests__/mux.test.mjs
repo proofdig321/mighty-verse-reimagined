@@ -136,9 +136,11 @@ test("No rights inheritance through source_realization_id", () => {
   assert.notEqual(derived.rights_holder_ref, source.rights_holder_ref);
 });
 
-test("createAssetFromUrl is the Mux ingest boundary for production results", () => {
+test("createAssetFromUrl and ingestLocalFile are Mux ingest boundaries", () => {
   const adapter = new MuxAdapter();
   assert.equal(typeof adapter.createAssetFromUrl, "function");
+  assert.equal(typeof adapter.ingestLocalFile, "function");
+  assert.equal(typeof adapter.waitForPlayback, "function");
 });
 
 // Webhook authority boundary: webhook must not create realization

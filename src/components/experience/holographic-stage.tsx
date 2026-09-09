@@ -48,6 +48,7 @@ export function HolographicStage({
             className={`holographic-layer holographic-layer-${layer.kind}`}
             data-holographic-kind={layer.kind}
             data-master-id={layer.master_id}
+            data-production-layer={layer.kind === "production" ? "true" : undefined}
             style={{
               transform: `translate(-50%, -50%) translate3d(${layer.offset_x}px, ${layer.offset_y}px, ${layer.depth}px)`,
             }}
@@ -58,7 +59,7 @@ export function HolographicStage({
             ) : (
               <div className="holographic-placeholder" />
             )}
-            <p className="holographic-kicker">{layer.kind}</p>
+            <p className="holographic-kicker">{layer.kind === "production" ? "production layer" : layer.kind}</p>
             <p className="holographic-title">{layer.title ?? "Untitled"}</p>
           </article>
         ))}

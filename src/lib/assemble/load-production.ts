@@ -27,7 +27,7 @@ export async function loadUniverseProductionResults(universeId: string): Promise
 
   const { data: assets } = await svc
     .from("media_asset")
-    .select("asset_id, storage_ref, duration_ms, provider, provider_asset_id, integrity_hash")
+    .select("asset_id, storage_ref, duration_ms, provider, provider_asset_id, integrity_hash, realization_id")
     .in("asset_id", assetIds)
     .eq("provider", "mux");
 
@@ -55,6 +55,8 @@ export async function loadUniverseProductionResults(universeId: string): Promise
       executor_job_id: provenance.executor_job_id,
       duration_ms: asset.duration_ms,
       source_asset_id: provenance.source_asset_id,
+      realization_id: asset.realization_id ?? provenance.realization_id,
+      plan_id: provenance.plan_id,
     });
   }
   return results;

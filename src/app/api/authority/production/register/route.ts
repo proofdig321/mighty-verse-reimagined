@@ -5,15 +5,16 @@ import { getServiceClient, logOperation, validateAuthority } from "@/lib/authori
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { suiteScenes } from "@/lib/assemble/suite";
 import { muxAdapter } from "@/lib/media/providers/mux/adapter";
-import { loadCanonicalMuxBlocklist, persistProductionMuxAsset } from "@/lib/production/persist";
+import { productionPlanId } from "@/lib/production/adapter";
+import { loadCanonicalMuxBlocklist, persistProductionMuxAsset, persistProductionRealization } from "@/lib/production/persist";
 import { decideRegisterProductionResult } from "@/lib/production/result";
 
 /**
  * POST /api/authority/production/register
  *
- * Register a Mux-ready production result as media_asset + intake provenance.
- * Mux is queried for authoritative playback. Canonical source Mux assets are rejected.
- * Does not bind projections or populate media_realization.
+ * Register a Mux-ready production result as media_asset + intake provenance
+ * and a Scene-scoped media_realization. Mux is queried for authoritative playback.
+ * Canonical source Mux assets are rejected. Does not bind canonical projections.
  */
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
     }, { status: 409 });
   }
 
+  const muralId = assembly.murals[0]?.master_id ?? null;
   const decision = decideRegisterProductionResult({
     universe_id: universeId,
     scene_master_id: sceneId,
@@ -90,6 +92,8 @@ export async function POST(request: Request) {
     source_asset_id: body.source_asset_id,
     canonical_start_ms: scene.start_ms,
     canonical_end_ms: scene.end_ms,
+    plan_id: productionPlanId(universeId, sceneId),
+    mural_id: muralId,
     blocked_mux_asset_ids: blocklist.muxAssetIds,
     blocked_playback_ids: blocklist.playbackIds,
   });
@@ -109,9 +113,17 @@ export async function POST(request: Request) {
       mediaClass: muxAsset.mediaClass,
       format: muxAsset.format,
     });
+    const realization = await persistProductionRealization({
+      svc,
+      participantId,
+      assetId: persisted.asset_id,
+      intakeId: persisted.intake_id ?? "",
+      decision,
+    });
     await logOperation(auth.authority_id, "register-production-result", persisted.asset_id, "media_asset", "accepted");
     return NextResponse.json({
       asset_id: persisted.asset_id,
+      realization_id: realization.realization_id,
       created: persisted.created,
       mux_asset_id: decision.mux_asset_id,
       playback_id: decision.playback_id,
@@ -119,7 +131,7 @@ export async function POST(request: Request) {
       attached: false,
       creates_canonical: false,
       binds_projection: false,
-      populates_media_realization: false,
+      populates_media_realization: true,
       video_infrastructure: "mux",
     }, { status: persisted.created ? 201 : 200 });
   } catch (caught) {

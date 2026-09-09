@@ -84,6 +84,7 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
       href={`/authority/media/${item.asset_id}`}
       data-gallery-role={item.production_role}
       data-gallery-bound={item.bound ? "bound" : "unbound"}
+      data-gallery-approval={item.production_approval ?? "none"}
       className="group flex flex-col rounded-lg border border-border bg-card/50 overflow-hidden hover:border-border/80 hover:bg-card/80 transition-colors"
     >
       {/* Thumbnail / media representation */}

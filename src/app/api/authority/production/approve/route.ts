@@ -10,6 +10,7 @@ import {
   productionProvenanceNotes,
 } from "@/lib/production/result";
 import { isProductionIntegrityHash } from "@/lib/production/lifecycle";
+import { updateProductionRealizationNotes } from "@/lib/production/persist";
 
 /**
  * POST /api/authority/production/approve
@@ -33,7 +34,7 @@ export async function POST(request: Request) {
   const { data: asset } = assetId
     ? await svc
         .from("media_asset")
-        .select("asset_id, intake_id, integrity_hash, provider")
+        .select("asset_id, intake_id, integrity_hash, provider, realization_id")
         .eq("asset_id", assetId)
         .maybeSingle()
     : { data: null };
@@ -98,6 +99,9 @@ export async function POST(request: Request) {
       source_asset_id: provenance.source_asset_id,
       canonical_start_ms: provenance.canonical_start_ms,
       canonical_end_ms: provenance.canonical_end_ms,
+      plan_id: provenance.plan_id,
+      mural_id: provenance.mural_id,
+      realization_id: provenance.realization_id ?? asset.realization_id,
       creates_universe: false,
       creates_mural: false,
       creates_scene: false,
@@ -121,6 +125,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: updateError.message }, { status: 500 });
   }
 
+  const realizationId = provenance.realization_id ?? asset.realization_id;
+  if (realizationId) {
+    await updateProductionRealizationNotes({
+      svc,
+      realizationId,
+      approval: nextApproval,
+      attached,
+    });
+  }
+
   await logOperation(
     auth.authority_id,
     attached ? "attach-production-layer" : "approve-production-result",
@@ -131,11 +145,12 @@ export async function POST(request: Request) {
 
   return NextResponse.json({
     asset_id: asset.asset_id,
+    realization_id: realizationId ?? null,
     approval: nextApproval,
     attached,
     creates_canonical: false,
     binds_canonical_mux: false,
-    populates_media_realization: false,
+    populates_media_realization: Boolean(realizationId),
     video_infrastructure: "mux",
   });
 }

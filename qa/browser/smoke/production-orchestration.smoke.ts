@@ -122,8 +122,14 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
   notes.push("Authority Gallery Sources tab shows the Mux source and does not dump Sentinel frames");
 
   await page.getByRole("tab", { name: "Productions" }).click();
-  await expect(page.getByText(/No production realizations yet/i)).toBeVisible();
-  await expect(page.locator("[data-gallery-role='production']")).toHaveCount(0);
+  const productionCards = page.locator("[data-gallery-role='production']");
+  if (await productionCards.count()) {
+    await expect(productionCards.first()).toBeVisible();
+    notes.push("Authority Gallery Productions tab shows the real Mux production result");
+  } else {
+    await expect(page.getByText(/No production realizations yet/i)).toBeVisible();
+    notes.push("Authority Gallery Productions tab stays honestly empty");
+  }
 
   await page.getByRole("tab", { name: "Sources" }).click();
   await muxCard.click();
@@ -182,8 +188,14 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
   await page.goto(ROUTES.universeHolographic, { waitUntil: "domcontentloaded" });
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
-  await expect(page.locator("[data-holographic-kind='production']")).toHaveCount(0);
-  notes.push("2.5D stays canonical-only because no approved production result exists");
+  const publicProduction = page.locator("[data-holographic-kind='production']");
+  const publicProductionCount = await publicProduction.count();
+  expect(publicProductionCount === 0 || publicProductionCount === 1).toBeTruthy();
+  notes.push(
+    publicProductionCount === 1
+      ? "2.5D shows the approved Powerhouse production layer without replacing canonical Scenes"
+      : "2.5D stays canonical-only because no approved attached production result exists",
+  );
 
   await page.goto(ROUTES.universeLive, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true }).first()).toBeVisible();
@@ -193,9 +205,10 @@ test("Authority Gallery roles, Sentinel retain, Studio production, and SHE 2.5D 
   expect(after.bindings).toEqual(before.bindings);
   expect(after.muralBinding).toEqual(before.muralBinding);
   expect(after.presence).toEqual(before.presence);
-  expect(after.realizationCount).toBe(0);
+  expect(after.realizationCount).toBe(before.realizationCount);
+  expect(after.realizationCount).toBeLessThanOrEqual(1);
   expect(after.productionCount).toBe(before.productionCount);
-  expect(after.productionCount).toBe(0);
+  expect(after.productionCount).toBeLessThanOrEqual(1);
   expect(after.scenes).toHaveLength(4);
   expect(
     after.bindings

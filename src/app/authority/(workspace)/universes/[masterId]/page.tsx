@@ -12,6 +12,7 @@ import { loadUniverseReferences } from "@/lib/assemble/load-references";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
 import { deriveProductionPath, productionPathInputFrom } from "@/lib/assemble/workflow";
 import { deriveSceneProductionBriefs } from "@/lib/production/plan";
+import { isFfmpegProofExecutor } from "@/lib/production/adapter";
 import { productionLayersFromResults } from "@/lib/production/projection";
 import { creativeSuiteHref, creativeSuiteIdentityHref, curateHubHref, mediaInspectHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
@@ -127,6 +128,7 @@ export default async function UniverseCurationPage({
         productionPath={productionPath}
         productionBriefs={productionBriefs}
         productionLayers={productionLayers}
+        proofExecutorAvailable={isFfmpegProofExecutor(process.env.MV_PRODUCTION_PROOF_EXECUTOR)}
         muralEmptyAction={
           <RegisterMural
             universeId={data.master_id}

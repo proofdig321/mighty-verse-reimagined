@@ -13,6 +13,7 @@ import { suiteScenes, type SuiteScene } from "../assemble/suite";
 import type { UniverseAssembly } from "../assemble/types";
 import type { ReferenceRole } from "./lifecycle";
 import type { ProductionApproval } from "./result";
+import { productionPlanId } from "./adapter";
 
 export type CuratedReference = {
   asset_id: string;
@@ -35,9 +36,12 @@ export type SceneProductionResultCard = {
   approval: ProductionApproval;
   attached: boolean;
   executor: string | null;
+  realization_id: string | null;
+  plan_id: string | null;
 };
 
 export type SceneProductionBrief = {
+  plan_id: string;
   scene_master_id: string;
   title: string | null;
   start_ms: number | null;
@@ -51,11 +55,11 @@ export type SceneProductionBrief = {
   transition: string;
   output_target: string;
   provider_target: "unassigned";
-  execution: "not_connected";
+  execution: "not_connected" | "completed";
   result: SceneProductionResultCard | null;
   approval: ProductionApproval | null;
   projects: boolean;
-  realization: null;
+  realization: { realization_id: string } | null;
   status: "planning" | "awaiting_approval" | "approved" | "rejected";
   window_label: string;
 };
@@ -119,6 +123,7 @@ export function deriveSceneProductionBriefs(
     const sceneRefs = references.filter((reference) => reference.scene_master_id === scene.master_id);
     const result = results.find((entry) => entry.scene_master_id === scene.master_id) ?? null;
     return {
+      plan_id: productionPlanId(assembly.master_id, scene.master_id),
       scene_master_id: scene.master_id,
       title: scene.title,
       start_ms: scene.start_ms,
@@ -132,11 +137,11 @@ export function deriveSceneProductionBriefs(
       transition: language.transition,
       output_target: "2.5D Scene plane / public Experience",
       provider_target: "unassigned",
-      execution: "not_connected",
+      execution: result ? "completed" : "not_connected",
       result,
       approval: result?.approval ?? null,
       projects: result?.attached === true && result.approval === "approved",
-      realization: null,
+      realization: result?.realization_id ? { realization_id: result.realization_id } : null,
       status: briefStatus(result),
       window_label:
         scene.start_ms != null && scene.end_ms != null

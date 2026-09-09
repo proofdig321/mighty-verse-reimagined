@@ -1,6 +1,7 @@
 /**
- * Persist a Mux-ready production result as media_asset + intake provenance.
- * Does not bind projections, create Scenes, or populate media_realization.
+ * Persist a Mux-ready production result as media_asset + intake provenance
+ * and a Scene-scoped media_realization. Does not bind canonical projections
+ * or create Scenes.
  */
 
 import { muxAdapter } from "@/lib/media/providers/mux/adapter";
@@ -19,7 +20,7 @@ export async function persistProductionMuxAsset(input: {
   resolution: string | null;
   mediaClass: "audio" | "video" | "image" | "other";
   format: string | null;
-}): Promise<{ asset_id: string; created: boolean }> {
+}): Promise<{ asset_id: string; created: boolean; intake_id: string | null }> {
   const svc = input.svc;
 
   const { data: existingHash } = await svc
@@ -27,7 +28,14 @@ export async function persistProductionMuxAsset(input: {
     .select("asset_id")
     .eq("integrity_hash", input.decision.integrity_hash)
     .maybeSingle();
-  if (existingHash) return { asset_id: existingHash.asset_id, created: false };
+  if (existingHash) {
+    const { data: hashed } = await svc
+      .from("media_asset")
+      .select("asset_id, intake_id")
+      .eq("asset_id", existingHash.asset_id)
+      .maybeSingle();
+    return { asset_id: existingHash.asset_id, created: false, intake_id: hashed?.intake_id ?? null };
+  }
 
   const { data: existingMux } = await svc
     .from("media_asset")
@@ -36,7 +44,12 @@ export async function persistProductionMuxAsset(input: {
     .eq("provider_asset_id", input.decision.mux_asset_id)
     .maybeSingle();
   if (existingMux?.integrity_hash?.startsWith("production:")) {
-    return { asset_id: existingMux.asset_id, created: false };
+    const { data: existingIntake } = await svc
+      .from("media_intake")
+      .select("intake_id")
+      .eq("asset_id", existingMux.asset_id)
+      .maybeSingle();
+    return { asset_id: existingMux.asset_id, created: false, intake_id: existingIntake?.intake_id ?? null };
   }
   if (existingMux) {
     throw new Error("canonical_source");
@@ -70,7 +83,14 @@ export async function persistProductionMuxAsset(input: {
         .select("asset_id")
         .eq("integrity_hash", input.decision.integrity_hash)
         .maybeSingle();
-      if (raced) return { asset_id: raced.asset_id, created: false };
+      if (raced) {
+        const { data: racedIntake } = await svc
+          .from("media_intake")
+          .select("intake_id")
+          .eq("asset_id", raced.asset_id)
+          .maybeSingle();
+        return { asset_id: raced.asset_id, created: false, intake_id: racedIntake?.intake_id ?? null };
+      }
     }
     throw new Error(assetError?.message ?? "Failed to register production media.");
   }
@@ -108,7 +128,7 @@ export async function persistProductionMuxAsset(input: {
     endpoint_ref: playback.endpoint,
   });
 
-  return { asset_id: asset.asset_id, created: true };
+  return { asset_id: asset.asset_id, created: true, intake_id: intake.intake_id };
 }
 
 /** Mux source assets (integrity_hash mux:*) must never be re-registered as production results. */
@@ -130,4 +150,108 @@ export async function loadCanonicalMuxBlocklist(svc: ServiceClient): Promise<{
     if (asset.storage_ref) playbackIds.add(asset.storage_ref);
   }
   return { muxAssetIds: [...muxAssetIds], playbackIds: [...playbackIds] };
+}
+
+export async function persistProductionRealization(input: {
+  svc: ServiceClient;
+  participantId: string;
+  assetId: string;
+  intakeId: string;
+  decision: RegisterProductionDecisionOk;
+  approval?: "awaiting" | "approved" | "rejected";
+  attached?: boolean;
+}): Promise<{ realization_id: string; created: boolean }> {
+  const { data: asset } = await input.svc
+    .from("media_asset")
+    .select("asset_id, realization_id")
+    .eq("asset_id", input.assetId)
+    .maybeSingle();
+  if (asset?.realization_id) {
+    return { realization_id: asset.realization_id, created: false };
+  }
+
+  let intakeId = input.intakeId;
+  if (!intakeId) {
+    const { data: existingIntake } = await input.svc
+      .from("media_intake")
+      .select("intake_id")
+      .eq("asset_id", input.assetId)
+      .maybeSingle();
+    intakeId = existingIntake?.intake_id ?? "";
+  }
+
+  const notes = JSON.stringify({
+    kind: "production-realization",
+    plan_id: input.decision.plan_id,
+    universe_id: input.decision.universe_id,
+    scene_master_id: input.decision.scene_master_id,
+    mural_id: input.decision.mural_id,
+    mux_asset_id: input.decision.mux_asset_id,
+    playback_id: input.decision.playback_id,
+    media_asset_id: input.assetId,
+    executor: input.decision.executor,
+    executor_job_id: input.decision.executor_job_id,
+    video_infrastructure: "mux",
+    approval: input.approval ?? "awaiting",
+    attached: input.attached === true,
+    creates_canonical: false,
+    replaces_canonical_mux: false,
+  });
+
+  const { data: realization, error } = await input.svc
+    .from("media_realization")
+    .insert({
+      master_id: input.decision.scene_master_id,
+      realization_type: "visualisation",
+      rights_basis: "experimental production proof — rights not conferred",
+      production_notes: notes,
+      created_by: input.participantId,
+      version_label: "Powerhouse production proof",
+      isrc_status: "not-applicable",
+    })
+    .select("realization_id")
+    .single();
+
+  if (error || !realization) {
+    throw new Error(error?.message ?? "Failed to record production realization.");
+  }
+
+  await input.svc.from("media_asset").update({ realization_id: realization.realization_id }).eq("asset_id", input.assetId);
+  await input.svc
+    .from("media_intake")
+    .update({
+      provenance_notes: productionProvenanceNotes(
+        { ...input.decision, realization_id: realization.realization_id },
+        input.approval ?? "awaiting",
+        input.attached === true,
+      ),
+    })
+    .eq("intake_id", intakeId);
+
+  return { realization_id: realization.realization_id, created: true };
+}
+
+export async function updateProductionRealizationNotes(input: {
+  svc: ServiceClient;
+  realizationId: string;
+  approval: "awaiting" | "approved" | "rejected";
+  attached: boolean;
+}): Promise<void> {
+  const { data: row } = await input.svc
+    .from("media_realization")
+    .select("production_notes")
+    .eq("realization_id", input.realizationId)
+    .maybeSingle();
+  let notes: Record<string, unknown> = {};
+  try {
+    notes = row?.production_notes ? JSON.parse(row.production_notes) as Record<string, unknown> : {};
+  } catch {
+    notes = { kind: "production-realization" };
+  }
+  notes.approval = input.approval;
+  notes.attached = input.attached;
+  await input.svc
+    .from("media_realization")
+    .update({ production_notes: JSON.stringify(notes) })
+    .eq("realization_id", input.realizationId);
 }

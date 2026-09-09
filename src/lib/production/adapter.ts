@@ -8,14 +8,23 @@
  * Mux is the Mighty Verse video ingest/playback/delivery infrastructure.
  * Mux is not the AI generation engine.
  *
- * No creative executor is connected in this increment. Do not fake job completion.
+ * The default adapter remains disconnected. Stage 4.6 may opt into a replaceable
+ * proof executor without making that executor the product AI provider.
  */
 
 import type { SceneProductionBrief } from "./plan";
 import { VIDEO_INFRASTRUCTURE } from "./lifecycle";
 
-export const PRODUCTION_ADAPTER_CONNECTED = false;
+export function productionPlanId(universeId: string, sceneMasterId: string): string {
+  return `production-plan:${universeId}:${sceneMasterId}`;
+}
 export const PRODUCTION_VIDEO_INFRASTRUCTURE = VIDEO_INFRASTRUCTURE;
+export const PRODUCTION_ADAPTER_CONNECTED = false;
+export const PRODUCTION_PROOF_SCENE_MASTER_ID = "4790c7cf-bb19-4a01-a243-e5c3eb680555";
+
+export function isFfmpegProofExecutor(value: string | null | undefined): boolean {
+  return value === "ffmpeg" || value === "ffmpeg-proof";
+}
 
 export type ProductionProviderKind = "image" | "video" | "dcc" | "render" | "compositor" | "ffmpeg";
 
@@ -39,7 +48,7 @@ export type ProductionJobResult = {
 export type ProductionDispatchDecision =
   | {
       ok: false;
-      code: "not_connected" | "missing_plan";
+      code: "not_connected" | "missing_plan" | "proof_locked";
       message: string;
       creates_canonical: false;
       populates_media_realization: false;
@@ -48,11 +57,14 @@ export type ProductionDispatchDecision =
       ok: true;
       action: "dispatch_production";
       request: ProductionJobRequest;
+      executor: string;
     };
 
 export function decideProductionDispatch(input: {
   universe_id?: string | null;
   brief?: SceneProductionBrief | null;
+  proof?: boolean;
+  proof_executor?: string | null;
 }): ProductionDispatchDecision {
   if (!input.brief || !input.universe_id) {
     return {
@@ -61,6 +73,30 @@ export function decideProductionDispatch(input: {
       message: "A Scene production brief is required before dispatch.",
       creates_canonical: false,
       populates_media_realization: false,
+    };
+  }
+  const proofExecutor = input.proof === true ? (input.proof_executor ?? "").trim() : "";
+  if (input.proof === true && (proofExecutor === "ffmpeg" || proofExecutor === "ffmpeg-proof")) {
+    if (input.brief.scene_master_id !== PRODUCTION_PROOF_SCENE_MASTER_ID) {
+      return {
+        ok: false,
+        code: "proof_locked",
+        message: "Stage 4.6 proof execution is locked to Powerhouse only.",
+        creates_canonical: false,
+        populates_media_realization: false,
+      };
+    }
+    return {
+      ok: true,
+      action: "dispatch_production",
+      executor: "ffmpeg-proof",
+      request: {
+        universe_id: input.universe_id,
+        scene_master_id: input.brief.scene_master_id,
+        brief: input.brief,
+        provider_kind: "ffmpeg",
+        provider: "ffmpeg-proof",
+      },
     };
   }
   return {

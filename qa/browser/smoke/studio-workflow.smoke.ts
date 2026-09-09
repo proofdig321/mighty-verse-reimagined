@@ -140,7 +140,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   expect(after.presence).toEqual(before.presence);
   expect(after.scenes).toHaveLength(4);
   expect(after.presence.filter((row) => row.moment_master_id === CREATIVE_MOMENTS.proverb.masterId)).toHaveLength(2);
-  notes.push("H: Super Hero Ego remains four Scenes, Proverb shared, Mux binding intact, no media_realization");
+  notes.push("H: Super Hero Ego remains four Scenes, Proverb shared, Mux binding intact");
 
   assertRuntimeHealth(observe, {
     allowFailedUrl: (url, status) =>

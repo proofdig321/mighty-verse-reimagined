@@ -31,8 +31,11 @@ export { deriveSceneProductionBriefs } from "./plan";
 export type { CuratedReference, SceneProductionBrief, SceneProductionResultCard } from "./plan";
 export {
   PRODUCTION_ADAPTER_CONNECTED,
+  PRODUCTION_PROOF_SCENE_MASTER_ID,
   PRODUCTION_VIDEO_INFRASTRUCTURE,
   decideProductionDispatch,
+  isFfmpegProofExecutor,
+  productionPlanId,
 } from "./adapter";
 export type { ProductionDispatchDecision, ProductionJobRequest, ProductionJobResult } from "./adapter";
 export { composeExperienceProjection, productionLayersFromResults } from "./projection";

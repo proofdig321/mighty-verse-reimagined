@@ -179,6 +179,7 @@ assert(briefs.length === 2, "one brief per canonical Scene");
 assert(briefs[0].scene_master_id === POWERHOUSE, "Powerhouse is first");
 assert(briefs[0].moments[0].title === "Proverb", "Proverb remains present in Powerhouse");
 assert(briefs[0].references.length === 1, "retained still is attached to Powerhouse");
+assert(briefs[0].plan_id === `production-plan:${UNIVERSE}:${POWERHOUSE}`, "derived plan id is Scene-scoped");
 assert(briefs[0].realization === null && briefs[0].status === "planning", "no fake realization");
 assert(briefs[0].execution === "not_connected", "executor stays not_connected");
 assert(briefs[0].result === null && briefs[0].projects === false, "no fabricated production result");
@@ -192,6 +193,38 @@ assert(dispatch.creates_canonical === false && dispatch.populates_media_realizat
 assert(PRODUCTION_ADAPTER_CONNECTED === false, "no MCP provider is connected");
 assert(PRODUCTION_VIDEO_INFRASTRUCTURE === "mux", "Mux remains the video infrastructure");
 assert(decideProductionDispatch({}).code === "missing_plan", "empty dispatch is rejected");
+
+const proofLocked = decideProductionDispatch({
+  universe_id: UNIVERSE,
+  brief: briefs[1],
+  proof: true,
+  proof_executor: "ffmpeg",
+});
+assert(!proofLocked.ok && proofLocked.code === "proof_locked", "proof executor cannot run non-Powerhouse Scenes");
+
+const proofDispatch = decideProductionDispatch({
+  universe_id: UNIVERSE,
+  brief: briefs[0],
+  proof: true,
+  proof_executor: "ffmpeg",
+});
+assert(proofDispatch.ok && proofDispatch.executor === "ffmpeg-proof", "Powerhouse proof dispatch is allowed when the replaceable executor is named");
+assert(proofDispatch.request.provider === "ffmpeg-proof", "executor remains replaceable and is not Mux");
+
+const proofWithoutFlag = decideProductionDispatch({
+  universe_id: UNIVERSE,
+  brief: briefs[0],
+  proof: false,
+  proof_executor: "ffmpeg",
+});
+assert(!proofWithoutFlag.ok && proofWithoutFlag.code === "not_connected", "proof executor stays dormant unless proof=true");
+
+const proofWithoutEnv = decideProductionDispatch({
+  universe_id: UNIVERSE,
+  brief: briefs[0],
+  proof: true,
+});
+assert(!proofWithoutEnv.ok && proofWithoutEnv.code === "not_connected", "proof without a named executor stays not_connected");
 
 const blockedRegister = decideRegisterProductionResult({
   universe_id: UNIVERSE,

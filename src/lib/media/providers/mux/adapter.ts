@@ -143,6 +143,71 @@ export class MuxAdapter implements MediaProvider {
     return mapMuxAsset(asset);
   }
 
+  /**
+   * Ingest a local production file through Mux Direct Upload.
+   * Used when the executor returns a file rather than a public URL.
+   * Mux still owns processing/playback; Mighty Verse does not invent IDs.
+   */
+  async ingestLocalFile(params: {
+    filePath: string;
+    passthrough: string;
+    corsOrigin: string;
+    contentType?: string;
+  }): Promise<ProviderAsset> {
+    const { readFile } = await import("node:fs/promises");
+    const upload = await this.createDirectUpload({
+      name: "production-proof.mp4",
+      passthrough: params.passthrough,
+      corsOrigin: params.corsOrigin,
+    });
+    if (!upload.uploadUrl) {
+      throw new Error("Mux direct upload URL was not created.");
+    }
+    const body = await readFile(params.filePath);
+    const put = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      headers: { "Content-Type": params.contentType ?? "video/mp4" },
+      body: new Uint8Array(body),
+    });
+    if (!put.ok) {
+      throw new Error(`Mux direct upload failed (${put.status}).`);
+    }
+
+    let assetId: string | null = null;
+    for (let attempt = 0; attempt < 45; attempt += 1) {
+      const status = await this.retrieveDirectUpload(upload.providerUploadId);
+      if (status?.assetId) {
+        assetId = status.assetId;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    if (!assetId) {
+      throw new Error("Mux did not return an asset ID after upload. Mighty Verse will not invent one.");
+    }
+
+    return this.waitForPlayback(assetId);
+  }
+
+  async waitForPlayback(providerAssetId: string): Promise<ProviderAsset> {
+    const mux = getMuxClient();
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      try {
+        const raw = await mux.video.assets.retrieve(providerAssetId);
+        const asset = mapMuxAsset(raw);
+        const status = typeof raw.status === "string" ? raw.status : "";
+        if (status === "errored") {
+          throw new Error("Mux asset processing failed. Mighty Verse will not invent playback.");
+        }
+        if (asset.playbackId && status === "ready") return asset;
+      } catch (caught) {
+        if (caught instanceof Error && caught.message.includes("processing failed")) throw caught;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    throw new Error("Mux playback is not ready. Mighty Verse will not invent a playback ID.");
+  }
+
   buildPlaybackSource(playbackId: string, mediaClass: MediaClass): MediaPlaybackSource {
     return {
       provider: "mux",

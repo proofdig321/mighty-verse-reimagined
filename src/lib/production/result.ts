@@ -42,6 +42,9 @@ export type ProductionResultProvenance = {
   source_asset_id: string | null;
   canonical_start_ms: number | null;
   canonical_end_ms: number | null;
+  plan_id: string | null;
+  mural_id: string | null;
+  realization_id: string | null;
 };
 
 export type RegisterProductionDecisionOk = {
@@ -57,6 +60,9 @@ export type RegisterProductionDecisionOk = {
   source_asset_id: string | null;
   canonical_start_ms: number | null;
   canonical_end_ms: number | null;
+  plan_id: string | null;
+  mural_id: string | null;
+  realization_id: string | null;
   creates_universe: false;
   creates_mural: false;
   creates_scene: false;
@@ -117,6 +123,9 @@ export function parseProductionProvenance(value: string | null | undefined): Pro
       source_asset_id: isId(parsed.source_asset_id) ? parsed.source_asset_id : null,
       canonical_start_ms: typeof parsed.canonical_start_ms === "number" ? parsed.canonical_start_ms : null,
       canonical_end_ms: typeof parsed.canonical_end_ms === "number" ? parsed.canonical_end_ms : null,
+      plan_id: typeof parsed.plan_id === "string" ? parsed.plan_id : null,
+      mural_id: isId(parsed.mural_id) ? parsed.mural_id : null,
+      realization_id: isId(parsed.realization_id) ? parsed.realization_id : null,
     };
   } catch {
     return null;
@@ -142,6 +151,9 @@ export function productionProvenanceNotes(
     source_asset_id: decision.source_asset_id,
     canonical_start_ms: decision.canonical_start_ms,
     canonical_end_ms: decision.canonical_end_ms,
+    plan_id: decision.plan_id,
+    mural_id: decision.mural_id,
+    realization_id: decision.realization_id,
   };
   return JSON.stringify(provenance);
 }
@@ -156,6 +168,9 @@ export function decideRegisterProductionResult(input: {
   source_asset_id?: unknown;
   canonical_start_ms?: unknown;
   canonical_end_ms?: unknown;
+  plan_id?: unknown;
+  mural_id?: unknown;
+  realization_id?: unknown;
   blocked_mux_asset_ids?: string[] | null;
   blocked_playback_ids?: string[] | null;
 }): RegisterProductionDecision {
@@ -204,6 +219,9 @@ export function decideRegisterProductionResult(input: {
     source_asset_id: sourceAssetId,
     canonical_start_ms: startMs,
     canonical_end_ms: endMs,
+    plan_id: typeof input.plan_id === "string" && input.plan_id.trim() ? input.plan_id.trim() : null,
+    mural_id: optionalId(input.mural_id),
+    realization_id: optionalId(input.realization_id),
     creates_universe: false,
     creates_mural: false,
     creates_scene: false,
