@@ -31,7 +31,7 @@ export function productionLayersFromResults(
   return results.map((result) => ({
     layer_id: `production-${result.asset_id}`,
     scene_master_id: result.scene_master_id,
-    title: result.title ?? "Production",
+    title: (result.title ?? "Production").replace(/ production · .*$/i, " production"),
     still_url: result.still_url,
     approved: result.approval === "approved",
     attached: result.attached,
@@ -61,9 +61,9 @@ export function composeExperienceProjection(input: {
     master_id: layer.scene_master_id,
     title: layer.title ?? "Production",
     still_url: layer.still_url,
-    depth: 36 + index * 24,
-    offset_x: (index - (approved.length - 1) / 2) * 96,
-    offset_y: 56,
+    depth: 24 + index * 24,
+    offset_x: -176 + index * 36,
+    offset_y: 96,
     related_scene_ids: [layer.scene_master_id],
   }));
   return {

@@ -331,6 +331,7 @@ const attached = composeExperienceProjection({
 assert(attached.layers.length === 2 && attached.production_count === 1, "approved attached production becomes a 2.5D layer");
 assert(attached.layers[1].kind === "production", "production layer is explicit and is not a Creative Moment");
 assert(attached.layers[0].kind === "scene", "canonical Scene layer remains");
+assert(attached.layers[1].offset_y !== attached.layers[0].offset_y, "production layer is spatially distinct from the canonical Scene");
 assert(attached.redefines_timing === false, "attached production does not rewrite Scene windows");
 
 console.log("Production orchestration tests: all passed");
