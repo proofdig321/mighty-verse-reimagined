@@ -93,7 +93,7 @@ test("unassociated media can associate to an existing Universe without creating 
   await expectCreativeSuiteComposition(page);
   notes.push("Creative Suite Identity / Mural / Scenes / Creative Moments remain intact");
 
-  await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Curate", exact: true }).click();
+  await page.getByRole("navigation", { name: "Authority" }).getByRole("link", { name: "Curate", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.curate}$`));
   await expect(page.locator("tr").filter({ has: muxInspect }).getByText(CANON.universeTitle, { exact: true })).toBeVisible();
   notes.push("returning to Curate Studio still shows Super Hero Ego association");
