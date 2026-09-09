@@ -49,7 +49,7 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await workspaceLink.click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
-  await expect(page.getByText("Creative Suite").first()).toBeVisible();
+  await expect(page.getByText("Creative Studio").first()).toBeVisible();
   const suiteNav = page.getByRole("navigation", { name: "Creative Suite" });
   await expect(suiteNav.getByRole("link", { name: "Identity", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Source", exact: true })).toBeVisible();

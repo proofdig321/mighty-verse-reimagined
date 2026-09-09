@@ -54,7 +54,7 @@ export default async function UniverseIdentityPage({
 
       <div className="space-y-1 min-w-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Creative Suite
+          Creative Studio
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">{title}</h1>
         <p className="text-sm text-muted-foreground max-w-3xl">

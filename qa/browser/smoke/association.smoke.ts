@@ -24,7 +24,7 @@ test("unassociated media can associate to an existing Universe without creating 
   const muxInspect = page.locator(`a[href="/authority/media/inspect?assetId=${CANON.muxAssetId}"]`);
   const muxRow = page.locator("tr").filter({ has: muxInspect });
   await expect(muxRow.getByText(CANON.universeTitle, { exact: true })).toBeVisible();
-  await expect(muxRow.getByRole("link", { name: "Open Creative Suite", exact: true })).toBeVisible();
+  await expect(muxRow.getByRole("link", { name: "Open Creative Studio", exact: true })).toBeVisible();
   notes.push("Super Hero Ego Mux asset is already associated; Associate is not the primary action");
 
   const duplicate = await page.request.post("/api/authority/media", {
@@ -88,7 +88,7 @@ test("unassociated media can associate to an existing Universe without creating 
     notes.push("untitled Universe already has a Mural; association smoke does not bind unbound Livepeer");
   }
 
-  await muxRow.getByRole("link", { name: "Open Creative Suite", exact: true }).click();
+  await muxRow.getByRole("link", { name: "Open Creative Studio", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}\\?from=curate`));
   await expectCreativeSuiteComposition(page);
   notes.push("Creative Suite Identity / Mural / Scenes / Creative Moments remain intact");

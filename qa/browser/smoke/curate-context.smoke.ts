@@ -37,7 +37,7 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   await expect(page.getByRole("heading", { name: /^Curate$/ })).toBeVisible();
   const muxFocus = page.locator("tr[aria-current='true']");
   await expect(muxFocus).toContainText(CANON.universeTitle);
-  await expect(muxFocus.getByRole("link", { name: "Open Creative Suite", exact: true })).toBeVisible();
+  await expect(muxFocus.getByRole("link", { name: "Open Creative Studio", exact: true })).toBeVisible();
   await expect(muxFocus.getByRole("button", { name: "Associate with Universe" })).toHaveCount(0);
   await expect(page.getByRole("status").filter({ hasText: /already associated/i })).toBeVisible();
   notes.push("Path A: Curate Studio focuses Super Hero Ego Mux asset and offers Creative Suite, not association");
@@ -54,7 +54,7 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   await expect(continueFromInspect).toHaveAttribute("href", ROUTES.authorityCurateMuxAsset);
   await continueFromInspect.click();
   await expect(page).toHaveURL(new RegExp(`/authority/curate\\?asset=${CANON.muxAssetId}`));
-  await expect(page.locator("tr[aria-current='true']").getByRole("link", { name: "Open Creative Suite", exact: true })).toBeVisible();
+  await expect(page.locator("tr[aria-current='true']").getByRole("link", { name: "Open Creative Studio", exact: true })).toBeVisible();
   notes.push("Path B: Inspect Continue in Curate retains the same Mux asset context");
 
   await page.goto(`${ROUTES.curate}?asset=${CANON.muxAssetId}&universe=${CANON.untitledUniverseId}`, {
@@ -81,7 +81,7 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   await page.goto(ROUTES.authorityCurateMuxAsset, { waitUntil: "domcontentloaded" });
   await expect(page.getByLabel("Select Universe for Curate Studio")).toHaveValue(CANON.universeId);
   await expect(page.getByRole("heading", { name: /Inspect \/ Sentinel/i })).toBeVisible();
-  await page.locator("tr[aria-current='true']").getByRole("link", { name: "Open Creative Suite", exact: true }).click();
+  await page.locator("tr[aria-current='true']").getByRole("link", { name: "Open Creative Studio", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}\\?from=curate`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   notes.push("Path D: bound Super Hero Ego context continues to Creative Suite");

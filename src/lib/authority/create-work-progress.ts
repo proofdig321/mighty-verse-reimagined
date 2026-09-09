@@ -92,11 +92,14 @@ export function createWorkContinuations(input: {
 
   if (universeId) {
     actions.push({
-      href: `/authority/universes/${universeId}`,
-      label: "Open Creative Suite",
+      href: `/authority/curate?universe=${universeId}`,
+      label: "Continue in Curate",
       primary: true,
     });
-    actions.push({ href: `/authority/curate?universe=${universeId}`, label: "Continue in Curate" });
+    actions.push({
+      href: `/authority/universes/${universeId}`,
+      label: "Open Creative Studio",
+    });
   }
 
   actions.push({

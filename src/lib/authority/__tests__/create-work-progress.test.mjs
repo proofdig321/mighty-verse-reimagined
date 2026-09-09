@@ -62,9 +62,9 @@ const done = createWorkContinuations({
   assetId: "new-asset",
   mediaAttached: true,
 });
-assert(done[0].label === "Open Creative Suite", "completed universe offers Creative Suite");
-assert(done[0].href === `/authority/universes/${afterMaster.masterId}`, "suite is the created universe, not Super Hero Ego");
-assert(done.some((action) => action.label === "Continue in Curate"), "completed universe offers Curate");
+assert(done[0].label === "Continue in Curate", "completed universe continues in Curate");
+assert(done[0].href === `/authority/curate?universe=${afterMaster.masterId}`, "Curate is the created universe, not Super Hero Ego");
+assert(done.some((action) => action.label === "Open Creative Studio"), "completed universe offers Creative Studio");
 assert(done.some((action) => action.label === "Inspect media"), "attached media offers Inspect");
 
 console.log("create-work-progress.test.mjs: ok");

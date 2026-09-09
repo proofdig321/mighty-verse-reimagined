@@ -92,7 +92,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
   notes.push("Super Hero Ego Creative Suite still shows the canonical Mural and does not offer a second registration");
 
   await page.goto(ROUTES.authorityUntitledUniverseWorkspace, { waitUntil: "domcontentloaded" });
-  await expect(page.getByText("Creative Suite").first()).toBeVisible();
+  await expect(page.getByText("Creative Studio").first()).toBeVisible();
   const untitledMural = page.locator("section[aria-labelledby='universe-mural']");
   await expect(untitledMural.getByText(/No mural assembled/i)).toHaveCount(0);
   await revealCanonicalIdentifiers(untitledMural);
@@ -105,7 +105,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
   await expect(page).toHaveURL(new RegExp(`universe=${CANON.untitledUniverseId}`));
   const contextSection = page.locator("section[aria-labelledby='curate-context']");
   await expect(contextSection.getByText(/no Mural yet/i)).toHaveCount(0);
-  await expect(contextSection.getByRole("link", { name: "Open Creative Suite" })).toBeVisible();
+  await expect(contextSection.getByRole("link", { name: "Open Creative Studio" })).toBeVisible();
   notes.push("Curate Studio curation context no longer treats the registered Universe as mural-less");
 
   assertRuntimeHealth(observe);

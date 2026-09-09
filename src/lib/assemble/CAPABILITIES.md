@@ -5,9 +5,12 @@ Expressions: Authority now; public-user curation later.
 Not EXPERIENCE: Scene Deck shuffle, public holographic, and public mural/Moment playback stay on `/worlds` and `/moments`. Studio may preview bound Mux source media observationally.
 
 ```
-CURATE STUDIO  (/authority/curate)
-  ├── Incoming media (intake / Sentinel inspect)
-  └── Creative Suite  (/authority/universes/{id})
+CREATE WORK     (/authority/create)     — establish the work
+CURATE HUB      (/authority/curate?universe=) — shape from live state
+  ├── Incoming media (intake / associate)
+  ├── Register Mural / Add Creative Moment (existing APIs)
+  └── Sentinel / Establish Scenes
+CREATIVE STUDIO (/authority/universes/{id})  — compose
         ├── Production path (derived UI state)
         ├── Identity
         ├── Source (Mux preview of bound media)
@@ -17,6 +20,7 @@ CURATE STUDIO  (/authority/curate)
         ├── Scenes
         ├── Creative Moments
         └── Experience continuation
+PUBLIC EXPERIENCE (/worlds/{id}) — present; not Studio preview
 ```
 
 MEDIA ≠ UNIVERSE. Sentinel inspects and remembers; the curator assembles and authorises; Authority authorizes; Experience presents.
@@ -46,7 +50,9 @@ Creative Moments are related to Scenes via `scene_moment`. They are not owned by
 | Universe create | `POST /api/authority/masters` | `registerMaster` | create master | later | yes | no | no | Later increment |
 | Canonical presentation panel | `PresentationPanel` | title, description, MD, artwork | same presentation API | no | yes | no | no | Publishing record, not suite identity |
 | Mural identity / expression | suite Mural section; listing `/authority/murals` | mural master + presentation | none in suite | later | listing yes | no | shell only | No Mural editor in 2.4 |
-| Curate Studio gateway | `/authority/curate` + `studio.ts` / `load-studio.ts` / `curate-context.ts` / `curate-studio-gateway.tsx` | incoming media + optional `?asset=` / `?universe=` query context | none | yes (hrefs injected) | route auth | no | yes | Doorway: Gallery / Inspect → Curate → Creative Suite. Context is navigation state, not a new entity. |
+| Curate Hub | `curate-hub.ts` + `curate-hub.tsx` + `/authority/curate?universe=` | derived rows from assembly + upload session + inspection_session | none (read) | yes | route auth | no | yes | Stage 4.2. Presentation model only. Not a workflow-state table. Not a second Create Work wizard. Never says mint. |
+| Curate Studio gateway | `/authority/curate` + `studio.ts` / `load-studio.ts` / `curate-context.ts` / `curate-studio-gateway.tsx` | incoming media + optional `?asset=` / `?universe=` query context | none | yes (hrefs injected) | route auth | no | yes | Doorway: Gallery / Inspect → Curate Hub → Creative Studio. Context is navigation state, not a new entity. |
+| Register Creative Moment from Curate | `register-creative-moment.tsx` | existing `POST /api/authority/masters` + states + projections | create CM parented to Universe | yes | yes | titles later | yes | Stage 4.2 contextual path. Same primitives as Create Work. Presence stays in Studio. |
 | Associate media with existing Universe | `association.ts` + `associate-with-universe.tsx` + `POST /api/authority/media` `{ asset_id, universe_id }` | bind to existing Mural projection | `projection_media_binding` only | yes (decision/eligibility) | yes | playback consumes | yes | Stage 2.6. No Universe/Mural create. No `media_realization`. Occupied Mural is rejected. |
 | Register Mural for existing Universe | `mural-registration.ts` + `register-mural.tsx` + `POST /api/authority/murals` `{ universe_id, title? }` | compose existing `registerMaster` + `createCanonicalState` + `createProjection` | mural master + state + experiential projection | yes (decision) | yes | later playback | yes | Stage 2.7. No media attach. No second Mural when one exists. Not a Mural editor. Create Work remains the broader optional path. |
 | `/authority/curate` Sentinel inspect | `curate-client.tsx` | mural-bound HLS, frames, candidates | bind / accept scene (existing) | inspect UI Authority-hosted | yes | no | inspect kept | Evidence only; not Creative Suite |
@@ -69,15 +75,14 @@ Future public curator: same suite primitives and identity form; different auth, 
 
 Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`, `scene_moment`, `media_asset`, `media_intake`, `inspection_session` already express the required structure. **NO MIGRATION REQUIRED.**
 
-## Product questions after Stage 4.1
+## Product questions after Stage 4.2
 
-- Create Work registers canonical master/state/projection before media finishes. Failed or slow Mux processing must not duplicate Universes on retry. Poll `media_upload_session` against Mux; webhooks are optional. Browser timeout ≠ provider failure.
-- Creative Suite still makes the production path visible: source media, Sentinel evidence, storyboard, animation plan, Scene proposals, authorise, 2.5D Studio Preview, then Experience. This is not a wizard, timeline dashboard, Scene creator, Mural editor, or publish/realize workflow.
-- Gallery / Inspect still continue into Curate Studio with selected media identity. Bound Inspect continues into Suite Sentinel. After associate/register, Curate names Inspect → Sentinel → Creative Suite. Create Work completion offers Suite / Curate / work record from the resulting state.
+- Create Work still registers canonical master/state/projection before media finishes. Stage 4.1 polling remains the processing path. A brand-new browser file upload is still **not proven** end-to-end.
+- Curate Hub is a derived view of live records. Do not add `UniverseProjectState` persistence or Zustand to drive it.
+- Creative Studio is the existing Creative Suite at `/authority/universes/{id}`. Product language is Studio; routes are unchanged. This is not an NLE / multi-track editor.
+- Create Work completion now continues primarily in Curate. Studio remains available.
 - **Governance vs Experience.** `/authority/{id}` still carries a rights/realization checklist while authorised public Experience already plays. Solving that through a publish ontology is outside this stage.
-- **Sentinel now remembers.** Schema is live (`inspection_session`, `frame_observation`). Stage 3.8 persists source-media inspection. Stage 3.9 derives intelligence and lets the curator authorise existing Scene windows. Stage 4.0 makes those surfaces discoverable. Curate Studio Sentinel remains universe-scoped evidence UI, not the persist surface. Sentinel must not auto-create Scenes.
-- Occupied Mural: association does not replace existing Super Hero Ego Mural media. Rebind remains the existing Sentinel mural-media control.
-- **Still deferred:** Mural editor, Scene creation in Suite, publish/realize, `media_realization`, facedown authoring in Studio, Three.js engines, collectibles, AI classification / embeddings.
-- Scene Deck revealed thumbnails now use each Scene's `start_ms`. Shuffle remains presentation-only.
-- Public 2.5D is CSS holographic presentation of canonical stills. Studio 2.5D Preview reuses the same primitives. Neither rewrites canonical geometry.
+- Sentinel must not auto-create Scenes or bulk-apply candidates into canonical objects.
+- Occupied Mural: association does not replace existing Super Hero Ego Mural media.
+- **Still deferred:** Mural editor, Scene creation in Suite, NLE timeline tracks, minting/wallet, publish/realize, `media_realization`, facedown authoring in Studio, Three.js engines, collectibles, AI classification / embeddings, fresh Create Work browser-upload proof.
 - **No Supabase migration required.**

@@ -93,8 +93,8 @@ export default function CurateStudioGateway({
               Incoming / Media
             </h2>
             <p className="text-sm text-muted-foreground max-w-3xl">
-              What has arrived. These are media assets — not Universes. Sentinel inspects them.
-              Creative meaning is assembled in Creative Suite.
+              What has arrived. These are media assets — not Universes. Uploading media does not create a Universe.
+              Sentinel inspects them. Creative meaning is assembled in Creative Studio.
             </p>
           </div>
           <Link href={MEDIA_INTAKE_HREF} className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -183,7 +183,7 @@ export default function CurateStudioGateway({
                               href={suiteHref}
                               className="text-xs text-foreground hover:underline"
                             >
-                              Open Creative Suite
+                              Open Creative Studio
                             </Link>
                           ) : (
                             <AssociateWithUniverse
@@ -209,8 +209,8 @@ export default function CurateStudioGateway({
             Curation context
           </h2>
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Choose an existing Universe to inspect its mural-bound media and enter Creative Suite.
-            Creating a new canonical work remains a separate Authority operation.
+            Choose an existing Universe to shape it here. Creative Studio is for precision composition.
+            Creating a new canonical work remains a separate Create Work operation.
           </p>
         </div>
 
@@ -220,7 +220,7 @@ export default function CurateStudioGateway({
           {selected ? (
             <div className="space-y-3">
               <p className="text-sm text-foreground">
-                {selected.title ?? untitled("universe")} is the canonical work. Media bound to its Mural or Scenes can be inspected here. Identity, Mural, Scenes, and Creative Moments are assembled in Creative Suite.
+                {selected.title ?? untitled("universe")} is the canonical work. Use the hub above for what is true and what needs you. Precision composition lives in Creative Studio.
               </p>
               {selectedMedia.length > 0 && (
                 <p className="text-xs text-muted-foreground">
@@ -232,7 +232,7 @@ export default function CurateStudioGateway({
                 <div className="space-y-2 rounded-md border border-border bg-background px-4 py-3">
                   <p className="text-sm text-foreground">
                     {selected.target.blocked_reason === "no_mural"
-                      ? "This Universe has no Mural yet. Register the Mural to establish the audiovisual container. This does not attach media."
+                      ? "This Universe has no Mural yet. Register the Mural to establish the audiovisual container. This is not minting and does not attach media."
                       : "This Universe's Mural has no presentation yet. Register the Mural presentation. This does not attach media."}
                   </p>
                   <RegisterMural
@@ -244,7 +244,7 @@ export default function CurateStudioGateway({
               )}
               <div className="flex flex-wrap gap-2">
                 <Link href={creativeSuiteHref(selected.master_id, "curate")} className={buttonVariants({ size: "sm" })}>
-                  Open Creative Suite
+                  Open Creative Studio
                 </Link>
                 <Link href={`/authority/${selected.master_id}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
                   Canonical record

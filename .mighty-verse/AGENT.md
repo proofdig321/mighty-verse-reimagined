@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-09 (Stage 4.1 Create Work reliability & Curate continuation)
+STATUS: current as of 2026-09-09 (Stage 4.2 CREATE → CURATE → CREATIVE STUDIO journey)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -162,9 +162,9 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/worlds/[masterId]/holographic` — public 2.5D holographic stage. Creative Moments are spatial objects; Scenes are visual planes; the Mural is the back plane. Canonical stills only. Not a new ontology.
 - `/moments/[projectionId]` — Moment playback via MuxPlayer with canonical timing. Scene Moments continue into Universe 2.5D.
 - `/editor` — Experience Editor with Mux thumbnails and HLS playback
-- `/authority/curate` — Curate Studio gateway: incoming media, Sentinel inspect, associate with existing Universe, register a Mural for a Universe that has none, bridge into Creative Suite
-- `/authority/universes` — Authority Universe listing (auth-gated)
-- `/authority/universes/[masterId]` — Creative Suite Studio: production path Source → Sentinel → Storyboard → Scene proposals → Authorise → 2.5D Preview → Experience. Source Mux preview of bound media. Sentinel evidence, storyboard (beat ≠ Scene), animation plan, Scene-boundary proposals, curator authorise of existing windows. In-suite 2D / 2.5D Studio Preview reuses CSS holographic primitives. Public `/worlds/{id}` and `/worlds/{id}/holographic` remain Experience destinations. Sentinel does not create Scenes. Scene Deck shuffle is not imported. Preview does not rewrite timing.
+- `/authority/curate` — Curate Hub for an existing Universe (derived live state) plus incoming media gateway. Contextual Register Mural / Add Creative Moment / Sentinel Scene establishment. Not a second Create Work wizard. MEDIA ≠ UNIVERSE.
+- `/authority/universes` — Creative Studio entry (existing Universe catalogue)
+- `/authority/universes/[masterId]` — Creative Studio: production path Source → Sentinel → Storyboard → Scene proposals → Authorise → 2.5D Preview → Experience. Source Mux preview of bound media. Sentinel evidence, storyboard (beat ≠ Scene), animation plan, Scene-boundary proposals, curator authorise of existing windows. In-suite 2D / 2.5D Studio Preview reuses CSS holographic primitives. Public `/worlds/{id}` and `/worlds/{id}/holographic` remain Experience destinations. Sentinel does not create Scenes. Scene Deck shuffle is not imported. Preview does not rewrite timing.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
 - `POST /api/authority/sentinel/authorise` — curator authorises Sentinel-proposed windows onto existing Scene bindings. Writes `start_ms`/`end_ms` only. Does not create Scenes.
 - `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, Sentinel intelligence load, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
@@ -256,6 +256,7 @@ applied migration.
 - Stage 3.9: Sentinel evidence becomes storyboard, animation plan, Scene-boundary proposals, and CSS 2.5D holographic presentation on Super Hero Ego. Extra candidates stay beats. Authorise writes existing Scene windows only. Sentinel does not create Scenes. Scene Deck shuffle stays in Experience. No migration. No Three.js.
 - Stage 4.0: Creative Suite is a followable Studio production path. Source media preview, Sentinel, storyboard, animation plan, Scene proposals, authorise, and 2.5D Studio Preview are visible from the dashboard/Universes entry without hidden routes. 2.5D remains a realization/preview. No workflow-state table. No migration. No media_realization. Super Hero Ego stays four Scenes at 36/80/149/193.
 - Stage 4.1: Create Work processing no longer depends on Mux webhooks or a single open browser request. Polling advances `media_upload_session` from live Mux state. A request timeout is not a processing failure. Retry resumes the existing master/session. Curate associate/register expose Inspect → Sentinel → Creative Suite continuation. No migration. No job table. No Three.js. Super Hero Ego remains the regression reference.
+- Stage 4.2: Product-facing journey is CREATE → CURATE → CREATIVE STUDIO → EXPERIENCE. Curate Hub is derived from live canonical records (no `UniverseProjectState` table, no Zustand). Create Work completion continues in Curate. Creative Studio is presentation language for the existing `/authority/universes/{id}` Suite. No new routes, no minting, no NLE timeline, no Three.js, no migration. Fresh browser Create Work upload remains **not proven**.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---

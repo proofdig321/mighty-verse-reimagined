@@ -5,39 +5,41 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Clapperboard, Film, Globe, LayoutDashboard, Layers,
-  Menu, Plus, ShieldCheck, Sparkles, Upload, Users, X, Wand2,
+  Menu, MonitorPlay, Plus, ShieldCheck, Sparkles, Upload, Users, X, Wand2,
 } from "lucide-react";
+import { WorkspaceJourney } from "@/components/assemble/workspace-journey";
 
 const NAV_GROUPS = [
   {
     label: "Workspace",
     links: [
-      { label: "Dashboard",  href: "/authority",        icon: LayoutDashboard },
-      { label: "Create Work", href: "/authority/create", icon: Plus },
-      { label: "Curate",     href: "/authority/curate", icon: Wand2 },
+      { label: "Dashboard",  href: "/authority",        icon: LayoutDashboard, match: "prefix" as const },
+      { label: "Create Work", href: "/authority/create", icon: Plus, match: "prefix" as const },
+      { label: "Curate",     href: "/authority/curate", icon: Wand2, match: "prefix" as const },
+      { label: "Creative Studio", href: "/authority/universes", icon: MonitorPlay, match: "prefix" as const },
     ],
   },
   {
     label: "Canonical",
     links: [
-      { label: "Universes",        href: "/authority/universes",        icon: Globe },
-      { label: "Murals",           href: "/authority/murals",           icon: Layers },
-      { label: "Scenes",           href: "/authority/scenes",           icon: Clapperboard },
-      { label: "Creative Moments", href: "/authority/creative-moments", icon: Sparkles },
+      { label: "Universes",        href: "/authority/universes",        icon: Globe, match: "exact" as const },
+      { label: "Murals",           href: "/authority/murals",           icon: Layers, match: "prefix" as const },
+      { label: "Scenes",           href: "/authority/scenes",           icon: Clapperboard, match: "prefix" as const },
+      { label: "Creative Moments", href: "/authority/creative-moments", icon: Sparkles, match: "prefix" as const },
     ],
   },
   {
     label: "Media",
     links: [
-      { label: "Gallery",   href: "/authority/media",        icon: Film },
-      { label: "Add Media", href: "/authority/media/intake", icon: Upload },
+      { label: "Gallery",   href: "/authority/media",        icon: Film, match: "prefix" as const },
+      { label: "Add Media", href: "/authority/media/intake", icon: Upload, match: "prefix" as const },
     ],
   },
   {
     label: "Rights",
     links: [
-      { label: "Participants",    href: "/authority/participants",    icon: Users },
-      { label: "Proof of Rights", href: "/authority/proof-of-rights", icon: ShieldCheck },
+      { label: "Participants",    href: "/authority/participants",    icon: Users, match: "prefix" as const },
+      { label: "Proof of Rights", href: "/authority/proof-of-rights", icon: ShieldCheck, match: "prefix" as const },
     ],
   },
 ] as const;
@@ -46,8 +48,9 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
   const [mobileNav, setMobileNav] = useState(false);
   const pathname = usePathname();
 
-  function isActive(href: string) {
+  function isActive(href: string, match: "prefix" | "exact" = "prefix") {
     if (href === "/authority") return pathname === "/authority";
+    if (match === "exact") return pathname === href;
     return pathname === href || pathname.startsWith(href + "/");
   }
 
@@ -117,8 +120,8 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
                 {group.label}
               </p>
               <div className="space-y-0.5">
-                {group.links.map(({ label, href, icon: Icon }) => {
-                  const active = isActive(href);
+                {group.links.map(({ label, href, icon: Icon, match }) => {
+                  const active = isActive(href, match);
                   return (
                     <Link
                       key={label}
@@ -147,13 +150,17 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
           ))}
         </nav>
 
+        <div className="px-2 pb-2">
+          <WorkspaceJourney compact />
+        </div>
+
         {/* Footer */}
         <div className="px-5 py-4 border-t border-border">
           <Link
             href="/"
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Public site
+            ← Public site / Experience
           </Link>
         </div>
       </aside>

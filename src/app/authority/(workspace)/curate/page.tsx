@@ -10,8 +10,10 @@ import {
   resolveCurateUniverseSelection,
 } from "@/lib/assemble/curate-context";
 import { loadCurateStudioMedia } from "@/lib/assemble/load-studio";
-import { CURATE_LIFECYCLE, curateStudioHref } from "@/lib/assemble/studio";
+import { curateStudioHref } from "@/lib/assemble/studio";
+import { loadCurateHub } from "@/lib/assemble/load-curate-hub";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
+import { CurateHub } from "@/components/assemble/curate-hub";
 import CurateStudioGateway from "@/components/assemble/curate-studio-gateway";
 import CurateClient from "./curate-client";
 
@@ -203,6 +205,7 @@ export default async function CuratePage({
     selectedUniverseId,
     universes.map((item) => item.master_id),
   );
+  const hub = selectedUniverseId ? await loadCurateHub(selectedUniverseId) : null;
   const curateHref = curateStudioHref(null, focusedAsset?.asset_id ?? null);
 
   const breadcrumb = selected
@@ -222,19 +225,20 @@ export default async function CuratePage({
 
       <div className="space-y-2">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Curate Studio
+          Shape the work
         </p>
         <h1 className="text-3xl font-semibold tracking-tight">Curate</h1>
         <p className="text-sm text-muted-foreground max-w-3xl">
-          Inspect incoming media, then assemble the canonical work in Creative Suite.
-          Creative Suite is the Studio production path: Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience.
-          Uploading media does not create a Universe. Sentinel verifies technical usability.
-          Creative meaning, publication, and Experience remain separate steps.
+          Create establishes the work. Curate shows what is already true and what still needs you.
+          Creative Studio is for precision composition. Experience is public. Sentinel observes —
+          it does not decide canonical meaning.
         </p>
         <p className="text-xs text-muted-foreground">
-          {CURATE_LIFECYCLE.join(" → ")}
+          CREATE → CURATE → CREATIVE STUDIO → EXPERIENCE
         </p>
       </div>
+
+      {hub ? <CurateHub snapshot={hub} /> : null}
 
       <CurateStudioGateway
         media={incomingMedia}
@@ -244,13 +248,14 @@ export default async function CuratePage({
       />
 
       {selectedUniverseId && (
-        <section className="space-y-4" aria-labelledby="curate-sentinel">
+        <section id="establish-scene" className="space-y-4" aria-labelledby="curate-sentinel">
           <div className="space-y-1">
             <h2 id="curate-sentinel" className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-              Inspect / Sentinel
+              Sentinel / Establish Scenes
             </h2>
             <p className="text-sm text-muted-foreground max-w-3xl">
-              Evidence only. Sentinel does not decide Universe, Mural, Scene, contributor, or publication.
+              Evidence only. Candidate beats are not canonical Scenes until you authorise them.
+              Sentinel does not decide Universe, Mural, Scene, contributor, or publication.
             </p>
           </div>
           <CurateClient

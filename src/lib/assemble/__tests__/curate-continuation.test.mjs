@@ -19,8 +19,8 @@ const associated = curateContinuation({
 });
 assert(associated.actions.some((a) => a.label === "Inspect"), "associated media offers Inspect");
 assert(associated.actions.some((a) => a.label === "Sentinel"), "associated media offers Sentinel");
-assert(associated.actions.some((a) => a.label === "Open Creative Suite"), "associated media offers Creative Suite");
-assert(associated.copy.includes("Creative Suite"), "associated copy names the Suite continuation");
+assert(associated.actions.some((a) => a.label === "Open Creative Studio"), "associated media offers Creative Studio");
+assert(associated.copy.includes("Creative Studio"), "associated copy names the Studio continuation");
 assert(
   associated.actions.every((a) => !a.href.includes("/worlds/")),
   "Curate continuation does not dump the curator into public Experience",
@@ -32,7 +32,7 @@ const registered = curateContinuation({
   mediaAttached: false,
 });
 assert(registered.actions.some((a) => a.label === "Incoming media"), "registered mural without media points back to incoming media");
-assert(registered.actions.some((a) => a.label === "Open Creative Suite"), "registered mural still offers Creative Suite");
+assert(registered.actions.some((a) => a.label === "Open Creative Studio"), "registered mural still offers Creative Studio");
 assert(registered.copy.includes("Media is not attached"), "registered mural does not pretend media is bound");
 
 console.log("curate-continuation.test.mjs: ok");

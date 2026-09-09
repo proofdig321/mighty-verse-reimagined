@@ -65,7 +65,7 @@ export default async function UniverseCurationPage({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-2 min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Creative Suite
+            Creative Studio
           </p>
           <h1
             className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl"
@@ -77,7 +77,7 @@ export default async function UniverseCurationPage({
             <p className="text-base text-foreground/80 max-w-3xl">{data.description}</p>
           ) : null}
           <p className="text-sm text-muted-foreground max-w-3xl">
-            Follow the production path: Source → Sentinel → Storyboard → Scene proposals → Authorise → 2.5D Preview → Experience.
+            Compose this work: Source → Sentinel → Storyboard → Scene proposals → Authorise → 2.5D Preview → Experience.
             This is Studio navigation, not a wizard. Sentinel remembers observations. The curator authorises meaning. Sentinel does not create Scenes. Scene Deck shuffle stays presentation-only.
           </p>
         </div>

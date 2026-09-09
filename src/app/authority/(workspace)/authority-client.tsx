@@ -302,38 +302,33 @@ export default function AuthorityClient() {
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Authority Console</h1>
         <p className="text-sm text-muted-foreground">
-          Operational overview. Curate is the doorway into assembling a canonical work. Creative Suite is the Studio production path.
+          Establish the work in Create. Shape it in Curate. Compose it in Creative Studio. Experience it in public.
         </p>
       </div>
 
       <section className="space-y-4">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Curate</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Creative journey</p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Inspect incoming media. Sentinel verifies it. Creative Suite is the Studio: Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience. Media does not become a Universe.
+            CREATE → CURATE → CREATIVE STUDIO → EXPERIENCE. Sentinel observes throughout. It does not decide canonical meaning.
           </p>
         </div>
-        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2">
-          <Link
-            href="/authority/curate"
-            className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30"
-          >
-            <p className="text-sm font-medium text-foreground">Curate Studio</p>
-            <p className="mt-0.5 text-xs text-muted-foreground/70">Intake → Sentinel → Creative Suite</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
-              Open Curate <ArrowRight size={12} />
-            </span>
-          </Link>
-          <Link
-            href="/authority/universes"
-            className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30"
-          >
-            <p className="text-sm font-medium text-foreground">Creative Suite</p>
-            <p className="mt-0.5 text-xs text-muted-foreground/70">Source → Sentinel → Storyboard → Authorise → 2.5D Preview → Experience</p>
-            <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
-              Open Universes <ArrowRight size={12} />
-            </span>
-          </Link>
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-2 xl:grid-cols-4">
+          {[
+            { step: "01", label: "Create Work", sub: "Establish the work. Source media can keep processing after you leave.", href: "/authority/create" },
+            { step: "02", label: "Curate", sub: "Shape an existing Universe from live state. Not a second Create wizard.", href: "/authority/curate" },
+            { step: "03", label: "Creative Studio", sub: "Compose Scenes, presence, timing, and the 2.5D Preview.", href: "/authority/universes" },
+            { step: "04", label: "Experience", sub: "Public presentation. Distinct from Studio preview.", href: "/universes" },
+          ].map(item => (
+            <Link key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
+              <span className="text-[10px] font-semibold tracking-[0.18em] text-muted-foreground">{item.step}</span>
+              <p className="mt-2 text-sm font-medium text-foreground">{item.label}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground/70">{item.sub}</p>
+              <span className="mt-3 inline-flex items-center gap-1 text-xs text-muted-foreground group-hover:text-foreground">
+                Continue <ArrowRight size={12} />
+              </span>
+            </Link>
+          ))}
         </div>
       </section>
 
@@ -413,8 +408,8 @@ export default function AuthorityClient() {
         </div>
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
           {[
-            { step: "01", label: "Create Work", sub: "Register a work. Video processing continues on the work record if you leave.", href: "/authority/create" },
-            { step: "02", label: "Media intake", sub: "Identify work and metadata", href: "/authority/media/intake" },
+            { step: "01", label: "Create Work", sub: "Establish a Universe. Video processing continues on the work record if you leave.", href: "/authority/create" },
+            { step: "02", label: "Media intake", sub: "Identify work and metadata without creating a Universe.", href: "/authority/media/intake" },
             { step: "03", label: "Rights review", sub: "Confirm provenance", href: "/authority/proof-of-rights" },
           ].map(item => (
             <Link key={item.label} href={item.href} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">

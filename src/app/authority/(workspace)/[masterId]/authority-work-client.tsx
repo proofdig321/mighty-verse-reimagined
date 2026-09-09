@@ -393,7 +393,7 @@ export default function AuthorityWorkClient({
         <p className="text-sm text-muted-foreground">{status.ready ? "Ready to publish" : status.needs}</p>
         {workspaceHref && (
           <Link href={workspaceHref} className="inline-flex text-xs text-muted-foreground hover:text-foreground transition-colors">
-            Open Creative Suite →
+            Open Creative Studio →
           </Link>
         )}
       </div>

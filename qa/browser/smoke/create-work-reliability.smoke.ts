@@ -31,7 +31,7 @@ test("Create Work and Curate expose processing and continuation without hidden U
 
   await page.goto(ROUTES.authorityCurateMuxAsset, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("link", { name: /^Inspect$/i }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Open Creative Suite/i }).first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Open Creative Studio/i }).first()).toBeVisible();
   await page.screenshot({ path: "/opt/cursor/artifacts/curate_inspect_sentinel_suite_continuation.png", fullPage: true });
   notes.push("C: Bound Curate media offers Inspect and Creative Suite continuation");
 

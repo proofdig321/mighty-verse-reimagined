@@ -534,10 +534,11 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
       {/* Header */}
       <div className="space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Authority</p>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Establish the work</p>
         <h1 className="text-3xl font-semibold tracking-tight">Create Work</h1>
         <p className="text-sm text-muted-foreground">
-          Register a new creative work in the Mighty Verse canonical hierarchy.
+          What is this work? Create establishes the canonical Universe and can start source-media intake.
+          Shape it in Curate. Compose it in Creative Studio. Later creative decisions do not belong in this wizard.
         </p>
       </div>
 
