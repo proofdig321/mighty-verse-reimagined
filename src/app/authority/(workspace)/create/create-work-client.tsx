@@ -618,10 +618,11 @@ export default function CreateWorkClient({ universes, murals, participants, curr
         <div className="space-y-5">
           <div className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-foreground">
+              <label htmlFor="create-work-title" className="text-sm font-medium text-foreground">
                 Title <span className="text-muted-foreground font-normal">(required)</span>
               </label>
               <input
+                id="create-work-title"
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
