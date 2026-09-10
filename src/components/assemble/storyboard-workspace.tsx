@@ -7,34 +7,26 @@ import { formatTimelineMs } from "@/lib/media/timing";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import type { SentinelIntelligence, StoryboardPanel } from "@/lib/media/sentinel-intelligence";
+import { composeStoryboardBody, type StoryboardScriptPanel } from "@/lib/storyboard/script";
+import { chromePromptAvailability, promptWithChrome, STORYBOARD_SYSTEM } from "@/lib/ai/chrome";
+import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
 import { cn } from "@/lib/utils";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references";
+type GenerationState = { status: "idle" | "generating" | "ready" | "failed" | "unavailable"; message: string };
 
-type ScriptPanel = {
-  panel_id: string;
+type StoryboardArtifactCard = {
   title: string;
-  description: string;
-  source: "script";
+  output_type: string;
+  still_url: string | null;
+  status: string;
 };
-
-function panelsFromScript(script: string): ScriptPanel[] {
-  return script
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .map((line, index) => ({
-      panel_id: `script-${index + 1}`,
-      title: line.slice(0, 72),
-      description: line,
-      source: "script" as const,
-    }));
-}
 
 export function StoryboardWorkspace({
   universeId,
+  universeTitle,
   scenes,
   intelligence,
   canAuthoriseSentinel,
@@ -42,8 +34,12 @@ export function StoryboardWorkspace({
   previewHref,
   references,
   initialTab = "script",
+  initialBody = "",
+  artifacts = [],
+  assistConfigured = false,
 }: {
   universeId: string;
+  universeTitle?: string | null;
   scenes: SuiteScene[];
   intelligence: SentinelIntelligence | null;
   canAuthoriseSentinel: boolean;
@@ -51,11 +47,21 @@ export function StoryboardWorkspace({
   previewHref: string;
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
   initialTab?: MaterialTab;
+  initialBody?: string;
+  artifacts?: StoryboardArtifactCard[];
+  assistConfigured?: boolean;
 }) {
   const [tab, setTab] = useState<MaterialTab>(initialTab);
-  const [script, setScript] = useState("");
-  const [scriptPanels, setScriptPanels] = useState<ScriptPanel[]>([]);
+  const [script, setScript] = useState(initialBody);
+  const [scriptPanels, setScriptPanels] = useState<StoryboardScriptPanel[]>(
+    initialBody ? composeStoryboardBody(initialBody).panels : [],
+  );
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [instruction, setInstruction] = useState("");
+  const [assistState, setAssistState] = useState<GenerationState>({ status: "idle", message: "" });
+  const [saveState, setSaveState] = useState<GenerationState>({ status: "idle", message: "" });
+  const [mediaState, setMediaState] = useState<GenerationState>({ status: "idle", message: "" });
+  const [generated, setGenerated] = useState<StoryboardArtifactCard[]>(artifacts);
 
   const sentinelPanels = intelligence?.storyboard ?? [];
   const selectedSentinel = sentinelPanels.find((panel) => panel.panel_id === selectedId) ?? null;
@@ -70,6 +76,9 @@ export function StoryboardWorkspace({
         time: null as string | null,
         kind: "Script beat",
         still: null as string | null,
+        camera: selectedScript.camera,
+        movement: selectedScript.movement,
+        transition: selectedScript.transition,
       };
     }
     if (selectedSentinel) {
@@ -82,6 +91,9 @@ export function StoryboardWorkspace({
         time: formatTimelineMs(selectedSentinel.time_ms),
         kind: selectedSentinel.kind === "scene" ? "Canonical Scene" : "Sentinel beat",
         still: selectedSentinel.still_url,
+        camera: null,
+        movement: null,
+        transition: null,
       };
     }
     if (selectedScene) {
@@ -94,15 +106,117 @@ export function StoryboardWorkspace({
             : null,
         kind: "Canonical Scene",
         still: null,
+        camera: null,
+        movement: null,
+        transition: null,
       };
     }
     return null;
   }, [selectedScript, selectedSentinel, selectedScene]);
 
-  function generate() {
-    const next = panelsFromScript(script);
-    setScriptPanels(next);
-    setSelectedId(next[0]?.panel_id ?? sentinelPanels[0]?.panel_id ?? scenes[0]?.master_id ?? null);
+  function generatePanels() {
+    const composed = composeStoryboardBody(script);
+    setScriptPanels(composed.panels);
+    setSelectedId(composed.panels[0]?.panel_id ?? sentinelPanels[0]?.panel_id ?? scenes[0]?.master_id ?? null);
+    setSaveState({ status: "idle", message: "" });
+  }
+
+  async function saveBody(nextBody = script) {
+    setSaveState({ status: "generating", message: "Saving story body…" });
+    const response = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ universe_id: universeId, action: "save", body: nextBody }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setSaveState({ status: "failed", message: payload.error ?? "Could not save the story body." });
+      return false;
+    }
+    setSaveState({ status: "ready", message: "Story body saved as a creative artifact. It is not a Scene." });
+    return true;
+  }
+
+  async function assist() {
+    setAssistState({ status: "generating", message: "Asking the configured Google/Chrome AI…" });
+    const chrome = await chromePromptAvailability();
+    if (chrome.text) {
+      const result = await promptWithChrome({
+        system: STORYBOARD_SYSTEM,
+        prompt: [
+          `Universe: ${universeTitle ?? "Untitled"}`,
+          script ? `Current story body:\n${script}` : "No current story body.",
+          instruction || "Write a cinematic storyboard story body.",
+        ].join("\n\n"),
+      });
+      if (result.ok) {
+        setScript(result.text);
+        setScriptPanels(composeStoryboardBody(result.text).panels);
+        setAssistState({ status: "ready", message: "Chrome built-in AI refined the story body. It did not create Scenes." });
+        await saveBody(result.text);
+        return;
+      }
+    }
+    if (!assistConfigured && !chrome.text) {
+      setAssistState({
+        status: "unavailable",
+        message: "Chrome Prompt API is not available here, and Gemini is not configured on the server.",
+      });
+      return;
+    }
+    const response = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        universe_id: universeId,
+        action: "assist",
+        body: script,
+        instruction,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setAssistState({
+        status: payload.status === "unavailable" ? "unavailable" : "failed",
+        message: payload.error ?? "AI assist could not complete.",
+      });
+      return;
+    }
+    setScript(payload.body ?? "");
+    setScriptPanels(payload.panels ?? []);
+    setAssistState({ status: "ready", message: "Gemini refined the story body. It did not create Scenes." });
+  }
+
+  async function generateMedia(outputType: StoryboardOutputType) {
+    const still = selected?.still ?? references[0]?.still_url ?? sentinelPanels.find((panel) => panel.still_url)?.still_url ?? null;
+    const stillUrls = sentinelPanels.map((panel) => panel.still_url).filter(Boolean) as string[];
+    setMediaState({ status: "generating", message: `Generating ${outputType}…` });
+    const response = await fetch("/api/authority/storyboard/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        universe_id: universeId,
+        output_type: outputType,
+        prompt: selected?.description ?? script,
+        title: selected?.title ?? "Storyboard artifact",
+        panel_id: selectedId,
+        still_url: still,
+        still_urls: outputType === "reel" ? stillUrls : still ? [still] : [],
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setMediaState({
+        status: payload.status === "unavailable" ? "unavailable" : "failed",
+        message: payload.error ?? "Generation did not complete.",
+      });
+      return;
+    }
+    setGenerated((current) => [
+      { title: selected?.title ?? "Storyboard artifact", output_type: outputType, still_url: payload.still_url ?? still, status: "ready" },
+      ...current,
+    ]);
+    setMediaState({ status: "ready", message: `${outputType} is on Mux. It is an artifact, not a Scene.` });
   }
 
   const tabs: { id: MaterialTab; label: string }[] = [
@@ -137,18 +251,24 @@ export function StoryboardWorkspace({
         {tab === "script" ? (
           <div className="mt-4 space-y-3">
             <label className="block space-y-2">
-              <span className="suite-kicker">Script</span>
+              <span className="suite-kicker">Story body</span>
               <textarea
                 value={script}
                 onChange={(event) => setScript(event.target.value)}
                 rows={8}
                 className="w-full rounded-lg border border-border bg-card/40 px-3 py-2 text-sm text-foreground"
-                placeholder="Scene 1: Golden Shovel walks through a futuristic Johannesburg skyline.&#10;The city transforms around him.&#10;Camera rises.&#10;Spirit avatar appears."
+                placeholder="Golden Shovel walks a futuristic Johannesburg skyline.&#10;Camera: rise through the mural&#10;The city transforms around him.&#10;Spirit avatar appears."
               />
             </label>
-            <Button type="button" size="sm" onClick={generate}>
-              Generate storyboard
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" size="sm" onClick={generatePanels}>
+                Generate storyboard
+              </Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => void saveBody()}>
+                Save story body
+              </Button>
+            </div>
+            <StatusLine state={saveState} />
             <p className="suite-section-note">
               Script is a creative input. Generating panels does not create Scenes or change canonical timing.
             </p>
@@ -157,8 +277,23 @@ export function StoryboardWorkspace({
 
         {tab === "assist" ? (
           <div className="mt-4 space-y-3">
+            <label className="block space-y-2">
+              <span className="suite-kicker">Instruction</span>
+              <textarea
+                value={instruction}
+                onChange={(event) => setInstruction(event.target.value)}
+                rows={4}
+                className="w-full rounded-lg border border-border bg-card/40 px-3 py-2 text-sm text-foreground"
+                placeholder="Tighten the Powerhouse opening. Keep the four existing Scenes as the destination, not as generated objects."
+              />
+            </label>
+            <Button type="button" size="sm" onClick={() => void assist()}>
+              Generate / refine story
+            </Button>
+            <StatusLine state={assistState} />
             <p className="suite-section-note">
-              AI script assist is not connected. Write a script, or use Sentinel evidence as materials. Sentinel observes; it does not author the work.
+              Uses Chrome built-in Prompt API when the browser can, otherwise the configured Gemini API.
+              AI output remains a proposal until you curate it.
             </p>
           </div>
         ) : null}
@@ -192,10 +327,22 @@ export function StoryboardWorkspace({
 
         {tab === "references" ? (
           <div className="mt-4">
-            {references.length === 0 ? (
+            {references.length === 0 && generated.length === 0 ? (
               <p className="suite-empty">No curated references yet. Keep a Sentinel still as a reference from the Sentinel materials.</p>
             ) : (
               <ul className="flex flex-wrap gap-3">
+                {generated.map((artifact, index) => (
+                  <li key={`${artifact.title}-${index}`} className="w-36">
+                    {artifact.still_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={artifact.still_url} alt="" className="aspect-video w-full rounded object-cover" />
+                    ) : (
+                      <div className="aspect-video rounded bg-muted/40" />
+                    )}
+                    <p className="mt-1 text-xs text-foreground">{artifact.title}</p>
+                    <p className="text-[10px] text-muted-foreground">{artifact.output_type} · {artifact.status}</p>
+                  </li>
+                ))}
                 {references.map((reference) => (
                   <li key={reference.asset_id} className="w-36">
                     {reference.still_url ? (
@@ -281,7 +428,28 @@ export function StoryboardWorkspace({
           <h3 className="text-lg font-medium text-foreground">{selected.title}</h3>
           {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
           <p className="mt-2 text-sm text-muted-foreground">{selected.description}</p>
+          {selected.camera ? <p className="mt-2 text-xs text-muted-foreground">Camera · {selected.camera}</p> : null}
+          {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
+          {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
           <div className="mt-4 flex flex-wrap gap-2">
+            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("panel")}>
+              Generate panel
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("variation")}>
+              Generate variation
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
+              Animate
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
+              Generate clip
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
+              Generate GIF
+            </Button>
+            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
+              Generate reel
+            </Button>
             <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
               Add to production
             </Link>
@@ -289,9 +457,24 @@ export function StoryboardWorkspace({
               Open 2.5D
             </Link>
           </div>
+          <StatusLine state={mediaState} />
         </aside>
       ) : null}
     </div>
+  );
+}
+
+function StatusLine({ state }: { state: GenerationState }) {
+  if (state.status === "idle") return null;
+  const label =
+    state.status === "generating" ? "Generating" :
+    state.status === "ready" ? "Generated" :
+    state.status === "unavailable" ? "Unavailable" :
+    "Failed";
+  return (
+    <p className="text-xs text-muted-foreground" data-generation-status={state.status}>
+      {label}. {state.message}
+    </p>
   );
 }
 
