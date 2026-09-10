@@ -41,8 +41,12 @@ function createChunks(key: string, value: string): { name: string; value: string
  */
 export async function applyAuthoritySession(context: BrowserContext, origin: string): Promise<void> {
   const localEnv = readLocalEnv();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? localEnv.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? localEnv.SUPABASE_SERVICE_ROLE_KEY;
+  const supabaseUrl = [localEnv.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_URL]
+    .map((value) => value?.trim())
+    .find((value) => value && /^https?:\/\//i.test(value));
+  const serviceKey = [localEnv.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_SERVICE_ROLE_KEY]
+    .map((value) => value?.trim())
+    .find((value) => value && value.length > 20);
   const email = process.env.QA_AUTHORITY_EMAIL ?? localEnv.QA_AUTHORITY_EMAIL ?? "info@unamifoundation.org";
 
   if (!supabaseUrl || !serviceKey) {

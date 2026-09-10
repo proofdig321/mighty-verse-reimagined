@@ -32,8 +32,10 @@ function readLocalEnv(): Record<string, string> {
 
 function serviceClient() {
   const localEnv = readLocalEnv();
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL ?? localEnv.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY ?? localEnv.SUPABASE_SERVICE_ROLE_KEY;
+  const urlCandidates = [localEnv.NEXT_PUBLIC_SUPABASE_URL, process.env.NEXT_PUBLIC_SUPABASE_URL];
+  const keyCandidates = [localEnv.SUPABASE_SERVICE_ROLE_KEY, process.env.SUPABASE_SERVICE_ROLE_KEY];
+  const url = urlCandidates.find((value) => value && /^https?:\/\//i.test(value.trim()))?.trim();
+  const key = keyCandidates.find((value) => value && value.trim().length > 20)?.trim();
   if (!url || !key) throw new Error("Product surface QA needs Supabase URL and service role.");
   return createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } });
 }
