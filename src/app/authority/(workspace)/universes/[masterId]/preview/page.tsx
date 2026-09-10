@@ -46,6 +46,7 @@ export default async function UniversePreviewPage({
           universeHref={`/worlds/${workspace.data.master_id}`}
           source={workspace.source}
           universeId={workspace.data.master_id}
+          moments={workspace.data.creative_moments}
         />
       </section>
     </StudioWorkspaceShell>

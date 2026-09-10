@@ -72,6 +72,7 @@ export default async function StudioHomePage() {
               <li key={project.master_id}>
                 <Link
                   href={`/authority/universes/${project.master_id}`}
+                  aria-label={project.title}
                   className="block rounded-lg border border-border bg-card/40 p-4 transition-colors hover:bg-card"
                 >
                   <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Universe</p>

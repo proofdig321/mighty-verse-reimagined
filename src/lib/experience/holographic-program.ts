@@ -105,6 +105,7 @@ export function composeHolographicProgram(input: {
   layers: HolographicLayer[];
   realizations?: ApprovedProductionLayer[] | null;
   source?: SuiteSourcePreview | null;
+  moments?: { master_id: string; title: string | null; scene_ids: string[] }[] | null;
 }): HolographicProgram {
   const projection = composeExperienceProjection({
     canonical_layers: input.layers,
@@ -154,6 +155,26 @@ export function composeHolographicProgram(input: {
     }
     return layer;
   });
+
+  const presentMoments = new Set(layers.filter((layer) => layer.kind === "moment").map((layer) => layer.master_id));
+  for (const moment of input.moments ?? []) {
+    if (presentMoments.has(moment.master_id)) continue;
+    const related = layers.filter((layer) => layer.kind === "scene" && moment.scene_ids.includes(layer.master_id));
+    layers.push({
+      layer_id: `moment-${moment.master_id}`,
+      kind: "moment",
+      master_id: moment.master_id,
+      title: moment.title,
+      still_url: related[0]?.still_url ?? null,
+      depth: 108,
+      offset_x: 0,
+      offset_y: -72,
+      related_scene_ids: moment.scene_ids,
+      start_ms: related[0]?.start_ms ?? null,
+      end_ms: related[related.length - 1]?.end_ms ?? null,
+      playback_endpoint: null,
+    });
+  }
 
   return {
     title: audienceLabel(input.title, "Experience"),

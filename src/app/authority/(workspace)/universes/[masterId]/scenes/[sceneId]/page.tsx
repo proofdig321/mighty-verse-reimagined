@@ -80,6 +80,7 @@ export default async function UniverseSceneWorkspacePage({
             universeHref={`/worlds/${workspace.data.master_id}`}
             source={workspace.source}
             universeId={workspace.data.master_id}
+            moments={workspace.data.creative_moments}
           />
         </section>
       </div>

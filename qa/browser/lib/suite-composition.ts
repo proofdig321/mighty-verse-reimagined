@@ -111,7 +111,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(preview.getByText("3:13.000")).toBeVisible();
   await preview.getByRole("button", { name: "2.5D Studio Preview" }).click();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(2);
+  await expect(preview.locator("[data-holographic-kind='moment']")).toHaveCount(3);
   const productionLayers = preview.locator("[data-holographic-kind='production']");
   const productionLayerCount = await productionLayers.count();
   expect(productionLayerCount === 0 || productionLayerCount === 1).toBeTruthy();

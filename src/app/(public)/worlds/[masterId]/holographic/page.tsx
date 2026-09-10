@@ -44,6 +44,7 @@ export default async function HolographicWorldPage({
     layers: intelligence?.holographic ?? [],
     realizations: productionLayersFromResults(productionResults),
     source,
+    moments: data.creative_moments,
   });
   const mural = data.murals[0] ?? null;
   const scenes = mural?.scenes ?? [];

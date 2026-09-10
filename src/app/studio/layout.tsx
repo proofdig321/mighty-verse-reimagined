@@ -24,6 +24,9 @@ export default async function StudioLayout({ children }: { children: ReactNode }
             <Link href="/studio/work" className={cn(buttonVariants({ size: "sm" }))}>
               New creative work
             </Link>
+            <Link href="/authority" className={cn(buttonVariants({ variant: "ghost", size: "sm" }))}>
+              Dashboard
+            </Link>
           </nav>
         </div>
       </div>

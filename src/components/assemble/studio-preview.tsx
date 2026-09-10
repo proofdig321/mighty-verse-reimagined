@@ -22,6 +22,7 @@ export function StudioPreview({
   universeHref,
   source = null,
   universeId,
+  moments = [],
 }: {
   universeTitle: string;
   scenes: SuiteScene[];
@@ -30,12 +31,14 @@ export function StudioPreview({
   universeHref: string;
   source?: SuiteSourcePreview | null;
   universeId?: string;
+  moments?: { master_id: string; title: string | null; scene_ids: string[] }[];
 }) {
   const [mode, setMode] = useState<"2d" | "2.5d">("2.5d");
   const program = composeHolographicProgram({
     title: universeTitle,
     layers,
     source,
+    moments,
   });
   const links: ExperienceSurfaceLinks | undefined = universeId
     ? {

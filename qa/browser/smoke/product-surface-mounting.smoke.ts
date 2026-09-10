@@ -202,7 +202,7 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   await page.locator('[data-dashboard-surface="studio"]').first().click();
   await page.locator(`a[href="${ROUTES.authorityUniverseWorkspace}"]`).filter({ hasText: CANON.universeTitle }).first().click();
-  await page.locator("section[aria-labelledby='universe-experience-continuation']").getByRole("link", { name: /Enter Experience/i }).click();
+  await page.locator('[data-experience-entry="experience"]').first().click();
   await expectPublicExperience(page);
   await captureScreenshot(page, testInfo, "click-path-studio-experience");
   notes.push("Dashboard → Creative Studio → Super Hero Ego → Enter Experience");
