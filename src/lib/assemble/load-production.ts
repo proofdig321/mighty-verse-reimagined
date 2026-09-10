@@ -9,6 +9,8 @@ export type LoadedProductionResult = SceneProductionResultCard & {
   duration_ms: number | null;
   executor_job_id: string | null;
   source_asset_id: string | null;
+  canonical_start_ms: number | null;
+  canonical_end_ms: number | null;
 };
 
 /**
@@ -57,6 +59,8 @@ export async function loadUniverseProductionResults(universeId: string): Promise
       source_asset_id: provenance.source_asset_id,
       realization_id: asset.realization_id ?? provenance.realization_id,
       plan_id: provenance.plan_id,
+      canonical_start_ms: provenance.canonical_start_ms,
+      canonical_end_ms: provenance.canonical_end_ms,
     });
   }
   return results;

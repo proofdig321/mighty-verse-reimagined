@@ -5,7 +5,8 @@ import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
 import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
-import { composeExperienceProjection, productionLayersFromResults } from "@/lib/production/projection";
+import { productionLayersFromResults } from "@/lib/production/projection";
+import { composeHolographicProgram } from "@/lib/experience/holographic-program";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import ExperienceToggle from "@/components/experience-toggle";
 import PageTopNav from "@/components/page-top-nav";
@@ -38,9 +39,11 @@ export default async function HolographicWorldPage({
     loadSuiteSourcePreview(data),
   ]);
   const title = data.title ?? "Universe";
-  const projection = composeExperienceProjection({
-    canonical_layers: intelligence?.holographic ?? [],
+  const program = composeHolographicProgram({
+    title,
+    layers: intelligence?.holographic ?? [],
     realizations: productionLayersFromResults(productionResults),
+    source,
   });
   const mural = data.murals[0] ?? null;
 
@@ -55,12 +58,11 @@ export default async function HolographicWorldPage({
               {title}
             </h1>
             <p className="text-sm text-muted-foreground max-w-3xl">
-              The Mural is the audiovisual foundation. Scenes are spatial units. Creative Moments stand in front of
-              their Scenes. Approved production realizations appear on the Scenes they realize. They do not replace
-              canonical Scenes.
-              {projection.production_count > 0
-                ? ` ${projection.production_count} approved production layer${projection.production_count === 1 ? "" : "s"} attached.`
-                : " No approved production layers are attached yet."}
+              Play the mural. Scenes move through the composition in time. Creative Moments stand with the
+              Scenes they belong to.
+              {program.production_count > 0
+                ? ` ${program.production_count} approved realization${program.production_count === 1 ? "" : "s"} join the stage.`
+                : ""}
             </p>
           </div>
           <ExperienceToggle
@@ -71,21 +73,7 @@ export default async function HolographicWorldPage({
         </div>
 
         {intelligence ? (
-          <HolographicStage
-            title={title}
-            layers={projection.layers}
-            playback={
-              source
-                ? {
-                    playback_id: source.playback_id,
-                    endpoint_ref: source.endpoint_ref,
-                    projection_id: source.mural_projection_id,
-                    master_id: source.mural_id,
-                    canonical_state_id: source.mural_canonical_state_id ?? source.mural_id,
-                  }
-                : null
-            }
-          />
+          <HolographicStage program={program} mode="public" />
         ) : (
           <p className="text-sm text-muted-foreground">This Universe has no spatial stage yet.</p>
         )}

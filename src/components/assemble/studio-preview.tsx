@@ -7,12 +7,12 @@ import { sceneShortTitle, sceneStillUrl } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
+import { composeHolographicProgram } from "@/lib/experience/holographic-program";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import { CreativeStill } from "./creative-still";
 import { SourcePreview } from "./source-preview";
 import { cn } from "@/lib/utils";
 import type { SuiteSourcePreview } from "@/lib/assemble/load-source-preview";
-import type { HolographicPlayback } from "@/components/experience/holographic-layer-media";
 
 export function StudioPreview({
   universeTitle,
@@ -30,15 +30,11 @@ export function StudioPreview({
   source?: SuiteSourcePreview | null;
 }) {
   const [mode, setMode] = useState<"2d" | "2.5d">("2.5d");
-  const playback: HolographicPlayback | null = source
-    ? {
-        playback_id: source.playback_id,
-        endpoint_ref: source.endpoint_ref,
-        projection_id: source.mural_projection_id,
-        master_id: source.mural_id,
-        canonical_state_id: source.mural_canonical_state_id ?? source.mural_id,
-      }
-    : null;
+  const program = composeHolographicProgram({
+    title: universeTitle,
+    layers,
+    source,
+  });
 
   return (
     <div className="suite-studio-preview" data-suite-studio-preview="">
@@ -62,7 +58,7 @@ export function StudioPreview({
       </div>
 
       {mode === "2.5d" ? (
-        <HolographicStage title={universeTitle} layers={layers} playback={playback} />
+        <HolographicStage program={program} mode="studio" />
       ) : source ? (
         <div className="space-y-4">
           <SourcePreview source={source} />

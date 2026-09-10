@@ -116,7 +116,8 @@ assert(plan.holographic.some((layer) => layer.kind === "mural"), "2.5D includes 
 assert(plan.holographic.filter((layer) => layer.kind === "scene").length === 4, "2.5D includes four Scene planes");
 assert(plan.holographic.filter((layer) => layer.kind === "moment").length === 3, "2.5D includes Creative Moments as spatial objects");
 assert(plan.holographic.find((layer) => layer.master_id === PROVERB)?.related_scene_ids.length === 2, "Proverb remains shared in 2.5D");
-assert(plan.holographic.find((layer) => layer.master_id === POWERHOUSE)?.offset_x !== plan.holographic.find((layer) => layer.master_id === SWORD_MASTER)?.offset_x, "Scene planes are spatially separated");
+assert(plan.holographic.find((layer) => layer.master_id === POWERHOUSE)?.start_ms === 36000, "Powerhouse plane keeps canonical 0:36 start");
+assert(plan.holographic.find((layer) => layer.master_id === POWERHOUSE)?.end_ms === 79000, "Powerhouse plane keeps canonical 1:19 end");
 
 const authorised = decideAuthoriseWindows({ universe_id: UNIVERSE, proposals: plan.proposals });
 assert(authorised.ok && authorised.action === "authorise_windows", "curator can authorise Sentinel windows");

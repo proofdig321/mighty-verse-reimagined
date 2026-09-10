@@ -1,41 +1,70 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 
-export type HolographicPlayback = {
-  playback_id: string;
+export type HolographicMediaClock = {
   endpoint_ref: string;
-  projection_id: string;
-  master_id: string;
-  canonical_state_id: string;
+  projection_id?: string;
+  master_id?: string;
+  canonical_state_id?: string;
   start_ms?: number | null;
   end_ms?: number | null;
 };
 
+/**
+ * Mux HLS surface for the holographic stage.
+ *
+ * One instance is the Experience clock (mural). Additional instances play
+ * approved production layers when their Scene window is active.
+ * Provider identifiers stay off the visible surface.
+ */
 export function HolographicLayerMedia({
-  playback,
+  clock,
   posterUrl,
   title,
+  playing,
+  muted = true,
+  loop = false,
+  onTimeMs,
+  onReady,
+  onEnded,
 }: {
-  playback: HolographicPlayback;
+  clock: HolographicMediaClock;
   posterUrl?: string | null;
   title: string;
+  playing: boolean;
+  muted?: boolean;
+  loop?: boolean;
+  onTimeMs?: (ms: number) => void;
+  onReady?: () => void;
+  onEnded?: () => void;
 }) {
   const mediaRef = useRef<HTMLVideoElement>(null);
-  const [playing, setPlaying] = useState(false);
-  const [ready, setReady] = useState(false);
+  const onTimeRef = useRef(onTimeMs);
+  const onReadyRef = useRef(onReady);
+  const onEndedRef = useRef(onEnded);
+  const playingRef = useRef(playing);
+
+  useEffect(() => {
+    onTimeRef.current = onTimeMs;
+    onReadyRef.current = onReady;
+    onEndedRef.current = onEnded;
+    playingRef.current = playing;
+  }, [onTimeMs, onReady, onEnded, playing]);
 
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
-    const startSec = playback.start_ms != null ? playback.start_ms / 1000 : null;
-    const endSec = playback.end_ms != null ? playback.end_ms / 1000 : null;
+    const startSec = clock.start_ms != null ? clock.start_ms / 1000 : 0;
+    const endSec = clock.end_ms != null ? clock.end_ms / 1000 : null;
     let hls: { destroy: () => void } | undefined;
     let cancelled = false;
 
     function attachRange() {
       if (!media) return;
-      if (startSec != null) media.currentTime = startSec;
+      media.currentTime = startSec;
+      onReadyRef.current?.();
+      if (playingRef.current) media.play().catch(() => null);
     }
 
     async function loadHls() {
@@ -45,70 +74,94 @@ export function HolographicLayerMedia({
       if (Hls.isSupported()) {
         const instance = new Hls({ enableWorker: false });
         hls = instance;
-        instance.loadSource(playback.endpoint_ref);
+        instance.loadSource(clock.endpoint_ref);
         instance.attachMedia(media);
         instance.on(Hls.Events.MANIFEST_PARSED, () => {
-          if (cancelled) return;
-          attachRange();
-          setReady(true);
+          if (!cancelled) attachRange();
         });
       } else if (media.canPlayType("application/vnd.apple.mpegurl")) {
-        media.src = playback.endpoint_ref;
-        media.addEventListener("loadedmetadata", () => {
-          attachRange();
-          setReady(true);
-        }, { once: true });
+        media.src = clock.endpoint_ref;
+        media.addEventListener("loadedmetadata", attachRange, { once: true });
       }
     }
 
     function onTime() {
-      if (!media || endSec == null) return;
-      if (media.currentTime >= endSec) {
+      if (!media) return;
+      const ms = Math.round(media.currentTime * 1000);
+      onTimeRef.current?.(ms);
+      if (endSec != null && media.currentTime >= endSec) {
         media.pause();
-        media.currentTime = startSec ?? 0;
-        setPlaying(false);
+        media.currentTime = startSec;
+        onEndedRef.current?.();
       }
     }
 
+    function onPlay() {
+      if (!clock.projection_id || !clock.master_id || !clock.canonical_state_id) return;
+      fetch("/api/signals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          projectionId: clock.projection_id,
+          masterId: clock.master_id,
+          canonicalStateId: clock.canonical_state_id,
+          signalType: "play",
+          sessionRef: "experience",
+        }),
+      }).catch(() => null);
+    }
+
+    function onNativeEnded() {
+      if (endSec != null) return;
+      onEndedRef.current?.();
+    }
+
     media.addEventListener("timeupdate", onTime);
+    media.addEventListener("play", onPlay);
+    media.addEventListener("ended", onNativeEnded);
     loadHls().catch(() => null);
 
     return () => {
       cancelled = true;
       media.removeEventListener("timeupdate", onTime);
+      media.removeEventListener("play", onPlay);
+      media.removeEventListener("ended", onNativeEnded);
       hls?.destroy();
     };
-  }, [playback.endpoint_ref, playback.start_ms, playback.end_ms]);
+  }, [clock.endpoint_ref, clock.start_ms, clock.end_ms, clock.projection_id, clock.master_id, clock.canonical_state_id]);
 
-  async function toggle() {
+  useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
-    if (media.paused) {
-      try {
-        await media.play();
-        setPlaying(true);
-      } catch {
-        setPlaying(false);
-      }
+    if (playing) {
+      media.play().catch(() => null);
     } else {
       media.pause();
-      setPlaying(false);
     }
+  }, [playing]);
+
+  function restart() {
+    const media = mediaRef.current;
+    if (!media) return;
+    media.currentTime = clock.start_ms != null ? clock.start_ms / 1000 : 0;
   }
 
   return (
-    <div className="holographic-layer-media">
+    <div className="holographic-layer-media" data-holographic-media="">
       <video
         ref={mediaRef}
         poster={posterUrl ?? undefined}
         playsInline
-        muted
-        loop={playback.end_ms == null}
+        muted={muted}
+        loop={loop && clock.end_ms == null}
         aria-label={`${title} playback`}
+        onLoadedData={restart}
       />
-      <button type="button" className="holographic-play" onClick={() => void toggle()} aria-pressed={playing}>
-        {playing ? "Pause" : ready ? "Play" : "Load"}
-      </button>
     </div>
   );
+}
+
+export function seekHolographicMedia(root: HTMLElement | null, ms: number) {
+  const media = root?.querySelector("video");
+  if (media) media.currentTime = Math.max(0, ms / 1000);
 }

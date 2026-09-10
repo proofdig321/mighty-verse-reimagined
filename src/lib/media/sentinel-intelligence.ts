@@ -94,6 +94,9 @@ export type HolographicLayer = {
   offset_x: number;
   offset_y: number;
   related_scene_ids: string[];
+  start_ms: number | null;
+  end_ms: number | null;
+  playback_endpoint: string | null;
 };
 
 export type SentinelIntelligence = {
@@ -318,6 +321,8 @@ export function composeSentinelIntelligence(input: {
       : null;
 
   const holographic: HolographicLayer[] = [];
+  const muralEnd = windows[windows.length - 1]?.end_ms ?? null;
+
   if (input.mural) {
     holographic.push({
       layer_id: `mural-${input.mural.master_id}`,
@@ -329,6 +334,9 @@ export function composeSentinelIntelligence(input: {
       offset_x: 0,
       offset_y: 28,
       related_scene_ids: windows.map((scene) => scene.master_id),
+      start_ms: 0,
+      end_ms: muralEnd,
+      playback_endpoint: null,
     });
   }
   windows.forEach((scene, index) => {
@@ -342,6 +350,9 @@ export function composeSentinelIntelligence(input: {
       offset_x: (index - (windows.length - 1) / 2) * 108,
       offset_y: index % 2 === 0 ? -8 : 22,
       related_scene_ids: [scene.master_id],
+      start_ms: scene.start_ms as number,
+      end_ms: scene.end_ms as number,
+      playback_endpoint: null,
     });
   });
   const momentIndex = new Map<string, IntelligenceMoment>();
@@ -353,6 +364,7 @@ export function composeSentinelIntelligence(input: {
       seenMoments.add(related.master_id);
       const moment = momentIndex.get(related.master_id);
       const sceneIds = moment?.scene_ids?.length ? moment.scene_ids : [scene.master_id];
+      const relatedWindows = windows.filter((entry) => sceneIds.includes(entry.master_id));
       holographic.push({
         layer_id: `moment-${related.master_id}`,
         kind: "moment",
@@ -363,6 +375,9 @@ export function composeSentinelIntelligence(input: {
         offset_x: sceneIds.length > 1 ? 0 : (index - (windows.length - 1) / 2) * 124,
         offset_y: -72,
         related_scene_ids: sceneIds,
+        start_ms: relatedWindows[0]?.start_ms ?? (scene.start_ms as number),
+        end_ms: relatedWindows[relatedWindows.length - 1]?.end_ms ?? (scene.end_ms as number),
+        playback_endpoint: null,
       });
     }
   });

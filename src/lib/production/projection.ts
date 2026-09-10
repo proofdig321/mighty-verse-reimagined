@@ -14,6 +14,9 @@ export type ApprovedProductionLayer = {
   scene_master_id: string;
   title?: string | null;
   still_url: string | null;
+  playback_endpoint: string | null;
+  start_ms: number | null;
+  end_ms: number | null;
   approved: boolean;
   attached: boolean;
 };
@@ -24,6 +27,10 @@ export function productionLayersFromResults(
     scene_master_id: string;
     title?: string | null;
     still_url: string | null;
+    playback_id?: string | null;
+    playback_endpoint?: string | null;
+    canonical_start_ms?: number | null;
+    canonical_end_ms?: number | null;
     approval: "awaiting" | "approved" | "rejected";
     attached: boolean;
   }>,
@@ -33,6 +40,11 @@ export function productionLayersFromResults(
     scene_master_id: result.scene_master_id,
     title: (result.title ?? "Production").replace(/ production · .*$/i, " production"),
     still_url: result.still_url,
+    playback_endpoint:
+      result.playback_endpoint ??
+      (result.playback_id ? `https://stream.mux.com/${result.playback_id}.m3u8` : null),
+    start_ms: result.canonical_start_ms ?? null,
+    end_ms: result.canonical_end_ms ?? null,
     approved: result.approval === "approved",
     attached: result.attached,
   }));
@@ -53,7 +65,7 @@ export function composeExperienceProjection(input: {
   redefines_timing: false;
 } {
   const approved = (input.realizations ?? []).filter(
-    (layer) => layer.approved && layer.attached && Boolean(layer.still_url),
+    (layer) => layer.approved && layer.attached && Boolean(layer.still_url || layer.playback_endpoint),
   );
   const productionLayers: HolographicLayer[] = approved.map((layer, index) => ({
     layer_id: layer.layer_id,
@@ -65,6 +77,9 @@ export function composeExperienceProjection(input: {
     offset_x: -176 + index * 36,
     offset_y: 96,
     related_scene_ids: [layer.scene_master_id],
+    start_ms: layer.start_ms,
+    end_ms: layer.end_ms,
+    playback_endpoint: layer.playback_endpoint,
   }));
   return {
     layers: [...input.canonical_layers, ...productionLayers],

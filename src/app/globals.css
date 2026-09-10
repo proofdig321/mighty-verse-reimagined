@@ -579,6 +579,89 @@
     padding: 0.25rem 0.55rem;
   }
 
+  .holographic-transport {
+    position: relative;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: auto auto auto minmax(0, 1fr);
+    gap: 0.65rem 0.85rem;
+    align-items: center;
+    padding: 0.85rem 1rem 0.35rem;
+    pointer-events: auto;
+  }
+
+  .holographic-transport-play,
+  .holographic-transport-restart {
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--accent-mv-gold) 40%, var(--border));
+    background: color-mix(in oklch, var(--card) 70%, black);
+    color: var(--foreground);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 0.4rem 0.85rem;
+  }
+
+  .holographic-transport-time,
+  .holographic-transport-scene {
+    margin: 0;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+
+  .holographic-transport-scene {
+    font-family: var(--font-display, inherit);
+    color: var(--foreground);
+    grid-column: 4;
+    justify-self: end;
+  }
+
+  .holographic-progress {
+    grid-column: 1 / -1;
+    position: relative;
+    height: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--muted) 70%, transparent);
+    overflow: hidden;
+  }
+
+  .holographic-progress > span {
+    display: block;
+    height: 100%;
+    background: var(--accent-mv-gold);
+  }
+
+  .holographic-progress-mark {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: color-mix(in oklch, white 70%, transparent);
+  }
+
+  .holographic-layer-active {
+    opacity: 1;
+    filter: none;
+  }
+
+  .holographic-layer-inactive {
+    opacity: 0.42;
+    filter: saturate(0.65);
+  }
+
+  .holographic-layer-mural.holographic-layer-active {
+    opacity: 0.92;
+    width: min(28rem, 92vw);
+  }
+
+  .holographic-window {
+    margin: 0.15rem 0 0;
+    font-family: ui-monospace, monospace;
+    font-size: 0.58rem;
+    color: var(--muted-foreground);
+  }
+
   .suite-identity {
     border-left: 2px solid var(--accent-mv-gold);
     padding: 0.25rem 0 0.25rem 1.25rem;
@@ -1512,8 +1595,8 @@
   }
 
   .holographic-layer-mural {
-    width: min(22rem, 86vw);
-    opacity: 0.72;
+    width: min(26rem, 90vw);
+    opacity: 0.88;
     z-index: 1;
   }
 
