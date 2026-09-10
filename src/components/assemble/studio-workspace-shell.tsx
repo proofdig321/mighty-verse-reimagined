@@ -40,8 +40,7 @@ export function StudioWorkspaceShell({
         { label: title, href: current === "overview" ? undefined : suiteHref },
       ]
     : [
-        { label: "Authority", href: "/authority" },
-        { label: "Universes", href: "/authority/universes" },
+        { label: "Creative Studio", href: "/studio" },
         { label: title, href: current === "overview" ? undefined : suiteHref },
       ];
   const items = workspaceLabel ? [...overviewItems, { label: workspaceLabel }] : overviewItems;

@@ -56,7 +56,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
             <Link
-              href="/auth/sign-in?next=/authority"
+              href="/auth/sign-in?next=/studio"
               className="hidden sm:block px-3 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-85"
               style={{ background: "var(--accent-mv)" }}
             >
@@ -108,7 +108,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
               })}
               <div className="pt-2 pb-1 border-t border-border mt-1">
                 <Link
-                  href="/auth/sign-in?next=/authority"
+                  href="/auth/sign-in?next=/studio"
                   onClick={() => setMobileOpen(false)}
                   className="block w-full text-center px-3 py-2 rounded-md text-sm font-semibold text-white"
                   style={{ background: "var(--accent-mv)" }}

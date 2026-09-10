@@ -79,11 +79,11 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await expect(page.getByRole("heading", { name: /Authority Console/i })).toBeVisible();
   const suiteCta = page.locator('[data-dashboard-surface="studio"]').first();
   await expect(suiteCta).toBeVisible();
-  await expect(suiteCta).toHaveAttribute("href", ROUTES.authorityUniverses);
-  notes.push("A: dashboard exposes Creative Suite production path without a hidden holographic route");
+  await expect(suiteCta).toHaveAttribute("href", ROUTES.studio);
+  notes.push("A: dashboard exposes Creative Studio without requiring Authority → Universes as the only entry");
 
   await suiteCta.click();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverses}$`));
+  await expect(page).toHaveURL(new RegExp(`${ROUTES.studio}$`));
   await page.locator(`a[href="${ROUTES.authorityUniverseWorkspace}"]`).filter({ hasText: CANON.universeTitle }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expectCreativeSuiteComposition(page);

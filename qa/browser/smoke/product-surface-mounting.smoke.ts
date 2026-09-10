@@ -177,9 +177,9 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
 
   await page.goto(ROUTES.home, { waitUntil: "domcontentloaded" });
   await page.locator('[data-product-nav="studio"]').first().click();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverses}$`));
+  await expect(page).toHaveURL(new RegExp(`${ROUTES.studio}$`));
   await expect(page.getByText("Creative Studio").first()).toBeVisible();
-  notes.push("Home header Creative Studio → Studio universe list");
+  notes.push("Home header Creative Studio → Studio home");
 
   await page.getByRole("link", { name: CANON.universeTitle, exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));

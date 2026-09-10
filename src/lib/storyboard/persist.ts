@@ -6,20 +6,25 @@ type ServiceClient = ReturnType<typeof import("../authority/validate").getServic
 
 export async function persistStoryboardBody(input: {
   svc: ServiceClient;
-  universeId: string;
+  universeId: string | null;
   participantId: string;
   body: string;
   panelCount: number;
 }): Promise<{ intake_id: string }> {
   const notes = storyboardBodyNotes({
-    universe_id: input.universeId,
+    universe_id: input.universeId ?? "",
     body: input.body,
     panel_count: input.panelCount,
   });
-  const { data: existing } = await input.svc
+  let existingQuery = input.svc
     .from("media_intake")
     .select("intake_id, provenance_notes")
-    .eq("master_id", input.universeId);
+    .eq("supplied_by", input.participantId);
+  existingQuery = input.universeId
+    ? existingQuery.eq("master_id", input.universeId)
+    : existingQuery.is("master_id", null);
+
+  const { data: existing } = await existingQuery;
 
   const current = (existing ?? []).find((row) => {
     try {
@@ -56,7 +61,7 @@ export async function persistStoryboardBody(input: {
 
 export async function persistStoryboardArtifact(input: {
   svc: ServiceClient;
-  universeId: string;
+  universeId: string | null;
   participantId: string;
   outputType: StoryboardOutputType;
   panelId: string | null;
@@ -70,6 +75,7 @@ export async function persistStoryboardArtifact(input: {
   format: string | null;
   resolution: string | null;
 }): Promise<{ asset_id: string; intake_id: string; still_url: string; endpoint_ref: string }> {
+  const scope = input.universeId ?? "standalone";
   const playback = muxAdapter.buildPlaybackSource(input.playbackId, input.mediaClass === "image" ? "video" : input.mediaClass);
   const stillUrl = muxThumbnailUrl(input.playbackId, 0, 640);
   const { data: asset, error: assetError } = await input.svc
@@ -77,7 +83,7 @@ export async function persistStoryboardArtifact(input: {
     .insert({
       asset_type: "preview",
       storage_ref: input.playbackId,
-      integrity_hash: `storyboard:${input.universeId}:${input.muxAssetId}`,
+      integrity_hash: `storyboard:${scope}:${input.muxAssetId}`,
       format: input.format,
       resolution: input.resolution,
       duration_ms: input.durationMs,
@@ -102,7 +108,7 @@ export async function persistStoryboardArtifact(input: {
       supplied_by: input.participantId,
       isrc_status: "not-applicable",
       provenance_notes: storyboardArtifactNotes({
-        universe_id: input.universeId,
+        universe_id: input.universeId ?? "",
         output_type: input.outputType,
         panel_id: input.panelId,
         title: input.title,
@@ -125,4 +131,40 @@ export async function persistStoryboardArtifact(input: {
   });
 
   return { asset_id: asset.asset_id, intake_id: intake.intake_id, still_url: stillUrl, endpoint_ref: playback.endpoint };
+}
+
+export async function associateStoryboardWork(input: {
+  svc: ServiceClient;
+  participantId: string;
+  universeId: string;
+}): Promise<{ moved: number }> {
+  const { data: rows } = await input.svc
+    .from("media_intake")
+    .select("intake_id, provenance_notes")
+    .eq("supplied_by", input.participantId)
+    .is("master_id", null);
+
+  let moved = 0;
+  for (const row of rows ?? []) {
+    let notes = row.provenance_notes;
+    try {
+      const parsed = JSON.parse(notes ?? "{}") as { kind?: string; universe_id?: string };
+      if (parsed.kind === "storyboard-body" || parsed.kind === "storyboard-artifact") {
+        parsed.universe_id = input.universeId;
+        notes = JSON.stringify(parsed);
+      }
+    } catch {
+      notes = row.provenance_notes;
+    }
+    const { error } = await input.svc
+      .from("media_intake")
+      .update({
+        master_id: input.universeId,
+        provenance_notes: notes,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("intake_id", row.intake_id);
+    if (!error) moved += 1;
+  }
+  return { moved };
 }

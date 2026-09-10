@@ -44,6 +44,15 @@ export type HolographicProgram = {
   creates_scene: false;
 };
 
+/** Public continuation links. Never shown as raw identifiers. */
+export type ExperienceSurfaceLinks = {
+  universeHref: string;
+  muralHref: string | null;
+  sceneDeckHref: string;
+  sceneHref: Record<string, string>;
+  momentHref: Record<string, string>;
+};
+
 export function audienceLabel(value: string | null | undefined, fallback: string): string {
   const trimmed = value?.trim() ?? "";
   if (!trimmed || UUID_RE.test(trimmed)) return fallback;

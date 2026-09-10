@@ -13,6 +13,10 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Restart" })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Mute|Unmute/ })).toBeVisible();
+  await expect(page.getByRole("slider", { name: "Experience progress" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Scenes" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Creative Moments" })).toBeVisible();
   await expect(page.locator("[data-holographic-cinema]")).toHaveCount(1);
   await expect(page.locator("text=/production-plan:/i")).toHaveCount(0);
   await expect(page.locator(".holographic-transport")).not.toContainText(CANON.universeId);
@@ -43,7 +47,18 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
     }, { timeout: 25000 })
     .toBeTruthy();
   await expect(page.locator("[data-holographic-playing='true']")).toHaveCount(1);
-  notes.push("B: Play starts decoded Mux mural video, not a still collage");
+  notes.push("B: Play starts decoded Mux mural video with audio unlocked");
+  await expect(page.locator("[data-holographic-muted='false']")).toHaveCount(1);
+
+  const powerhouse = page.locator(`[data-holographic-kind='scene'][data-master-id='${SCENE_MOMENTS.powerhouse.sceneMasterId}']`);
+  await powerhouse.click();
+  await expect
+    .poll(async () => {
+      const snapshot = await readVideoSnapshot(player);
+      return snapshot.currentTime >= 35;
+    }, { timeout: 15000 })
+    .toBeTruthy();
+  notes.push("B2: Scene selection seeks the mural without changing canonical timing");
 
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.locator("[data-holographic-playing='false']")).toHaveCount(1);

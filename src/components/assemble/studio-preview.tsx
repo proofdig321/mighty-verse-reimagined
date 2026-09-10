@@ -7,7 +7,7 @@ import { sceneShortTitle, sceneStillUrl } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
-import { composeHolographicProgram } from "@/lib/experience/holographic-program";
+import { composeHolographicProgram, type ExperienceSurfaceLinks } from "@/lib/experience/holographic-program";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import { CreativeStill } from "./creative-still";
 import { SourcePreview } from "./source-preview";
@@ -21,6 +21,7 @@ export function StudioPreview({
   experienceHref,
   universeHref,
   source = null,
+  universeId,
 }: {
   universeTitle: string;
   scenes: SuiteScene[];
@@ -28,6 +29,7 @@ export function StudioPreview({
   experienceHref: string;
   universeHref: string;
   source?: SuiteSourcePreview | null;
+  universeId?: string;
 }) {
   const [mode, setMode] = useState<"2d" | "2.5d">("2.5d");
   const program = composeHolographicProgram({
@@ -35,6 +37,15 @@ export function StudioPreview({
     layers,
     source,
   });
+  const links: ExperienceSurfaceLinks | undefined = universeId
+    ? {
+        universeHref,
+        muralHref: null,
+        sceneDeckHref: `/worlds/${universeId}/scenes`,
+        sceneHref: Object.fromEntries(scenes.map((scene) => [scene.master_id, experienceHref])),
+        momentHref: {},
+      }
+    : undefined;
 
   return (
     <div className="suite-studio-preview" data-suite-studio-preview="">
@@ -58,7 +69,7 @@ export function StudioPreview({
       </div>
 
       {mode === "2.5d" ? (
-        <HolographicStage program={program} mode="studio" />
+        <HolographicStage program={program} mode="studio" compact links={links} />
       ) : source ? (
         <div className="space-y-4">
           <SourcePreview source={source} />

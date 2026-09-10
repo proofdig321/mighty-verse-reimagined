@@ -45,6 +45,7 @@ export default async function UniversePreviewPage({
           experienceHref={`/worlds/${workspace.data.master_id}/holographic`}
           universeHref={`/worlds/${workspace.data.master_id}`}
           source={workspace.source}
+          universeId={workspace.data.master_id}
         />
       </section>
     </StudioWorkspaceShell>

@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const JOURNEY = [
   { n: "01", label: "Create", verb: "Establish", href: "/authority/create" },
   { n: "02", label: "Curate", verb: "Shape", href: "/authority/curate" },
-  { n: "03", label: "Studio", verb: "Compose", href: "/authority/universes" },
+  { n: "03", label: "Studio", verb: "Compose", href: "/studio" },
 ] as const;
 
 export function WorkspaceJourney({ compact = false }: { compact?: boolean }) {
@@ -20,8 +20,8 @@ export function WorkspaceJourney({ compact = false }: { compact?: boolean }) {
       <ol className="space-y-0.5">
         {JOURNEY.map((step, index) => {
           const active =
-            step.href === "/authority/universes"
-              ? pathname === step.href || pathname.startsWith("/authority/universes/")
+            step.href === "/studio"
+              ? pathname === step.href || pathname.startsWith("/studio") || pathname.startsWith("/authority/universes/")
               : pathname === step.href || pathname.startsWith(`${step.href}?`);
           return (
             <li key={step.href}>

@@ -48,10 +48,10 @@ export function parseStoryboardBody(value: string | null | undefined): Storyboar
   try {
     const parsed = JSON.parse(value) as Partial<StoryboardBodyProvenance>;
     if (parsed.kind !== STORYBOARD_BODY_KIND) return null;
-    if (typeof parsed.universe_id !== "string" || typeof parsed.body !== "string") return null;
+    if (typeof parsed.body !== "string") return null;
     return {
       kind: STORYBOARD_BODY_KIND,
-      universe_id: parsed.universe_id,
+      universe_id: typeof parsed.universe_id === "string" ? parsed.universe_id : "",
       body: parsed.body,
       panel_count: typeof parsed.panel_count === "number" ? parsed.panel_count : 0,
       creates_scene: false,
@@ -67,10 +67,9 @@ export function parseStoryboardArtifact(value: string | null | undefined): Story
   try {
     const parsed = JSON.parse(value) as Partial<StoryboardArtifactProvenance>;
     if (parsed.kind !== STORYBOARD_ARTIFACT_KIND) return null;
-    if (typeof parsed.universe_id !== "string") return null;
     return {
       kind: STORYBOARD_ARTIFACT_KIND,
-      universe_id: parsed.universe_id,
+      universe_id: typeof parsed.universe_id === "string" ? parsed.universe_id : "",
       output_type: parsed.output_type ?? "panel",
       panel_id: typeof parsed.panel_id === "string" ? parsed.panel_id : null,
       title: typeof parsed.title === "string" ? parsed.title : "Storyboard artifact",

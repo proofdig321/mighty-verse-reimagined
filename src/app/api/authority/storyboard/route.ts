@@ -4,7 +4,7 @@ import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { composeStoryboardBody } from "@/lib/storyboard/script";
-import { persistStoryboardBody } from "@/lib/storyboard/persist";
+import { persistStoryboardBody, associateStoryboardWork } from "@/lib/storyboard/persist";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
 import { promptWithGemini, serverAiCapability, STORYBOARD_SYSTEM } from "@/lib/ai/provider";
 
@@ -21,14 +21,14 @@ export async function GET(request: Request) {
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
   const universeId = new URL(request.url).searchParams.get("universe_id")?.trim() ?? "";
-  if (!universeId) return NextResponse.json({ error: "Universe is required." }, { status: 400 });
-  const assembly = await loadUniverseAssembly(universeId);
-  if (!assembly) return NextResponse.json({ error: "Universe was not found." }, { status: 404 });
+  if (universeId) {
+    const assembly = await loadUniverseAssembly(universeId);
+    if (!assembly) return NextResponse.json({ error: "Universe was not found." }, { status: 404 });
+    const auth = await validateAuthority(participantId, "authorise-projection", universeId);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  }
 
-  const auth = await validateAuthority(participantId, "authorise-projection", universeId);
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
-
-  const materials = await loadStoryboardMaterials(universeId);
+  const materials = await loadStoryboardMaterials(universeId || null, participantId);
   return NextResponse.json({
     body: materials.body?.body ?? "",
     panel_count: materials.body?.panel_count ?? 0,
@@ -56,11 +56,31 @@ export async function POST(request: Request) {
   const script = typeof body.body === "string" ? body.body : "";
   const instruction = typeof body.instruction === "string" ? body.instruction : "";
 
-  const assembly = await loadUniverseAssembly(universeId);
-  if (!assembly) return NextResponse.json({ error: "Universe was not found." }, { status: 404 });
+  const assembly = universeId ? await loadUniverseAssembly(universeId) : null;
+  if (universeId && !assembly) return NextResponse.json({ error: "Universe was not found." }, { status: 404 });
 
-  const auth = await validateAuthority(participantId, "authorise-projection", universeId);
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  if (universeId) {
+    const auth = await validateAuthority(participantId, "authorise-projection", universeId);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  }
+
+  if (action === "associate") {
+    if (!universeId || !assembly) {
+      return NextResponse.json({ error: "Select a Universe to associate this work with.", creates_scene: false }, { status: 400 });
+    }
+    const moved = await associateStoryboardWork({
+      svc: getServiceClient(),
+      participantId,
+      universeId,
+    });
+    return NextResponse.json({
+      universe_id: universeId,
+      moved: moved.moved,
+      status: "ready",
+      creates_scene: false,
+      creates_canonical: false,
+    });
+  }
 
   let nextBody = script;
   let provider: "chrome-prompt" | "gemini" | "local" = "local";
@@ -69,8 +89,8 @@ export async function POST(request: Request) {
     const result = await promptWithGemini({
       system: STORYBOARD_SYSTEM,
       prompt: [
-        `Universe: ${assembly.title ?? "Untitled"}`,
-        assembly.description ? `Identity: ${assembly.description}` : "",
+        `Universe: ${assembly?.title ?? "Standalone storyboard"}`,
+        assembly?.description ? `Identity: ${assembly.description}` : "",
         script ? `Current story body:\n${script}` : "No current story body.",
         instruction ? `Curator instruction:\n${instruction}` : "Write a cinematic storyboard story body.",
       ].filter(Boolean).join("\n\n"),
@@ -90,7 +110,7 @@ export async function POST(request: Request) {
   const composed = composeStoryboardBody(nextBody);
   const saved = await persistStoryboardBody({
     svc: getServiceClient(),
-    universeId,
+    universeId: universeId || null,
     participantId,
     body: composed.body,
     panelCount: composed.panels.length,

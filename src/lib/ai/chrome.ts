@@ -72,7 +72,7 @@ export async function promptWithChrome(input: {
 }
 
 export const STORYBOARD_SYSTEM = `You are assisting a curator inside Mighty Verse Creative Studio.
-Write or refine a storyboard story body for an existing Universe.
+Write or refine a storyboard story body.
 Do not invent canonical Scenes. Do not assign database identifiers.
 Keep Scene relationships as creative proposals only.
 Return plain story body text with one visual beat per line.

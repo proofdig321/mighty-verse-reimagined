@@ -11,6 +11,7 @@ import { composeStoryboardBody, type StoryboardScriptPanel } from "@/lib/storybo
 import { chromePromptAvailability, promptWithChrome, STORYBOARD_SYSTEM } from "@/lib/ai/chrome";
 import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
+import { AssociateStoryboard } from "./associate-storyboard";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
 import { cn } from "@/lib/utils";
 
@@ -37,8 +38,9 @@ export function StoryboardWorkspace({
   initialBody = "",
   artifacts = [],
   assistConfigured = false,
+  universes = [],
 }: {
-  universeId: string;
+  universeId: string | null;
   universeTitle?: string | null;
   scenes: SuiteScene[];
   intelligence: SentinelIntelligence | null;
@@ -50,6 +52,7 @@ export function StoryboardWorkspace({
   initialBody?: string;
   artifacts?: StoryboardArtifactCard[];
   assistConfigured?: boolean;
+  universes?: { master_id: string; title: string }[];
 }) {
   const [tab, setTab] = useState<MaterialTab>(initialTab);
   const [script, setScript] = useState(initialBody);
@@ -300,7 +303,7 @@ export function StoryboardWorkspace({
 
         {tab === "sentinel" ? (
           <div className="mt-4">
-            {intelligence ? (
+            {intelligence && universeId ? (
               <section className="suite-section" aria-labelledby="universe-sentinel">
                 <div className="suite-section-head">
                   <h2 id="universe-sentinel" className="suite-section-title">
@@ -380,7 +383,8 @@ export function StoryboardWorkspace({
                 className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}
                 onClick={() => setSelectedId(panel.panel_id)}
               >
-                <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
+                <div className="storyboard-panel-empty" aria-hidden="true" />
+                <p className="suite-kicker">Panel {String(index + 1).padStart(2, "0")}</p>
                 <p className="text-sm text-foreground">{panel.title}</p>
                 <p className="suite-proposal-badge">Script</p>
               </button>
@@ -450,12 +454,18 @@ export function StoryboardWorkspace({
             <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
               Generate reel
             </Button>
-            <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-              Add to production
-            </Link>
-            <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-              Open 2.5D
-            </Link>
+            {universeId ? (
+              <>
+                <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                  Add to production
+                </Link>
+                <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                  Open 2.5D
+                </Link>
+              </>
+            ) : (
+              <AssociateStoryboard universes={universes} />
+            )}
           </div>
           <StatusLine state={mediaState} />
         </aside>

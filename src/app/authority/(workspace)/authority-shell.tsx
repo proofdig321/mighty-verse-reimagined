@@ -16,7 +16,7 @@ const NAV_GROUPS = [
       { label: "Dashboard",  href: "/authority",        icon: LayoutDashboard, match: "prefix" as const },
       { label: "Create Work", href: "/authority/create", icon: Plus, match: "prefix" as const },
       { label: "Curate",     href: "/authority/curate", icon: Wand2, match: "prefix" as const },
-      { label: "Creative Studio", href: "/authority/universes", icon: MonitorPlay, match: "prefix" as const },
+      { label: "Creative Studio", href: "/studio", icon: MonitorPlay, match: "prefix" as const },
     ],
   },
   {

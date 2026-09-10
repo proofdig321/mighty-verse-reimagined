@@ -17,16 +17,21 @@ export type LoadedStoryboardArtifact = StoryboardArtifactProvenance & {
   endpoint_ref: string | null;
 };
 
-export async function loadStoryboardMaterials(universeId: string): Promise<{
+export async function loadStoryboardMaterials(
+  universeId: string | null,
+  participantId?: string,
+): Promise<{
   body: LoadedStoryboardBody | null;
   artifacts: LoadedStoryboardArtifact[];
 }> {
   const svc = getServiceClient();
-  const { data: intakes } = await svc
+  let query = svc
     .from("media_intake")
     .select("intake_id, asset_id, title, provenance_notes")
-    .eq("master_id", universeId)
     .order("updated_at", { ascending: false });
+  query = universeId ? query.eq("master_id", universeId) : query.is("master_id", null);
+  if (!universeId && participantId) query = query.eq("supplied_by", participantId);
+  const { data: intakes } = await query;
 
   let body: LoadedStoryboardBody | null = null;
   const artifacts: LoadedStoryboardArtifact[] = [];

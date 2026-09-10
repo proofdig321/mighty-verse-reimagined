@@ -24,35 +24,47 @@ export function HolographicLayerMedia({
   title,
   playing,
   muted = true,
+  volume = 1,
   loop = false,
   seekNonce = 0,
+  seekToMs = null,
   onTimeMs,
   onReady,
   onEnded,
+  onPlayingChange,
+  onError,
 }: {
   clock: HolographicMediaClock;
   posterUrl?: string | null;
   title: string;
   playing: boolean;
   muted?: boolean;
+  volume?: number;
   loop?: boolean;
   seekNonce?: number;
+  seekToMs?: number | null;
   onTimeMs?: (ms: number) => void;
   onReady?: () => void;
   onEnded?: () => void;
+  onPlayingChange?: (playing: boolean) => void;
+  onError?: () => void;
 }) {
   const mediaRef = useRef<HTMLVideoElement>(null);
   const onTimeRef = useRef(onTimeMs);
   const onReadyRef = useRef(onReady);
   const onEndedRef = useRef(onEnded);
+  const onPlayingRef = useRef(onPlayingChange);
+  const onErrorRef = useRef(onError);
   const playingRef = useRef(playing);
 
   useEffect(() => {
     onTimeRef.current = onTimeMs;
     onReadyRef.current = onReady;
     onEndedRef.current = onEnded;
+    onPlayingRef.current = onPlayingChange;
+    onErrorRef.current = onError;
     playingRef.current = playing;
-  }, [onTimeMs, onReady, onEnded, playing]);
+  }, [onTimeMs, onReady, onEnded, onPlayingChange, onError, playing]);
 
   useEffect(() => {
     const media = mediaRef.current;
@@ -81,9 +93,15 @@ export function HolographicLayerMedia({
         instance.on(Hls.Events.MANIFEST_PARSED, () => {
           if (!cancelled) attachRange();
         });
+        instance.on(Hls.Events.ERROR, (_event, data) => {
+          if (data.fatal) onErrorRef.current?.();
+        });
       } else if (media.canPlayType("application/vnd.apple.mpegurl")) {
         media.src = clock.endpoint_ref;
         media.addEventListener("loadedmetadata", attachRange, { once: true });
+        media.addEventListener("error", () => onErrorRef.current?.(), { once: true });
+      } else {
+        onErrorRef.current?.();
       }
     }
 
@@ -99,6 +117,7 @@ export function HolographicLayerMedia({
     }
 
     function onPlay() {
+      onPlayingRef.current?.(true);
       if (!clock.projection_id || !clock.master_id || !clock.canonical_state_id) return;
       fetch("/api/signals", {
         method: "POST",
@@ -113,6 +132,10 @@ export function HolographicLayerMedia({
       }).catch(() => null);
     }
 
+    function onPause() {
+      onPlayingRef.current?.(false);
+    }
+
     function onNativeEnded() {
       if (endSec != null) return;
       onEndedRef.current?.();
@@ -120,13 +143,15 @@ export function HolographicLayerMedia({
 
     media.addEventListener("timeupdate", onTime);
     media.addEventListener("play", onPlay);
+    media.addEventListener("pause", onPause);
     media.addEventListener("ended", onNativeEnded);
-    loadHls().catch(() => null);
+    loadHls().catch(() => onErrorRef.current?.());
 
     return () => {
       cancelled = true;
       media.removeEventListener("timeupdate", onTime);
       media.removeEventListener("play", onPlay);
+      media.removeEventListener("pause", onPause);
       media.removeEventListener("ended", onNativeEnded);
       hls?.destroy();
     };
@@ -136,17 +161,31 @@ export function HolographicLayerMedia({
     const media = mediaRef.current;
     if (!media) return;
     if (playing) {
+      media.muted = muted;
       media.play().catch(() => null);
     } else {
       media.pause();
     }
-  }, [playing]);
+  }, [playing, muted]);
+
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (!media) return;
+    media.muted = muted;
+    media.volume = Math.min(1, Math.max(0, volume));
+  }, [muted, volume]);
 
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
     media.currentTime = clock.start_ms != null ? clock.start_ms / 1000 : 0;
   }, [seekNonce, clock.start_ms]);
+
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (!media || seekToMs == null) return;
+    media.currentTime = Math.max(0, seekToMs / 1000);
+  }, [seekToMs]);
 
   return (
     <div className="holographic-layer-media" data-holographic-media="">

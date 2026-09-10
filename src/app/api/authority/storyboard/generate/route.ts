@@ -41,11 +41,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ status: "unavailable", error: "Unknown storyboard output type.", creates_scene: false }, { status: 400 });
   }
 
-  const assembly = await loadUniverseAssembly(universeId);
-  if (!assembly) return NextResponse.json({ error: "Universe was not found." }, { status: 404 });
-
-  const auth = await validateAuthority(participantId, "authorise-projection", universeId);
-  if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+  let authorityId: string | null = null;
+  if (universeId) {
+    const assembly = await loadUniverseAssembly(universeId);
+    if (!assembly) return NextResponse.json({ error: "Universe was not found." }, { status: 404 });
+    const auth = await validateAuthority(participantId, "authorise-projection", universeId);
+    if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
+    authorityId = auth.authority_id;
+  }
 
   const generated = await generateStoryboardMedia({
     output_type: outputType,
@@ -67,7 +70,7 @@ export async function POST(request: Request) {
     const ingested = await ingestGeneratedMedia({
       file_path: generated.file_path,
       mime: generated.mime,
-      passthrough: `storyboard:${universeId}:${outputType}`,
+      passthrough: `storyboard:${universeId || "standalone"}:${outputType}`,
       cors_origin: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     });
 
@@ -78,7 +81,7 @@ export async function POST(request: Request) {
 
     const persisted = await persistStoryboardArtifact({
       svc: getServiceClient(),
-      universeId,
+      universeId: universeId || null,
       participantId,
       outputType,
       panelId,
@@ -92,7 +95,9 @@ export async function POST(request: Request) {
       format: ingested.format,
       resolution: ingested.resolution,
     });
-    await logOperation(auth.authority_id, "register-storyboard-artifact", persisted.asset_id, "media_asset", "accepted");
+    if (authorityId) {
+      await logOperation(authorityId, "register-storyboard-artifact", persisted.asset_id, "media_asset", "accepted");
+    }
     return NextResponse.json({
       status: "ready",
       output_type: outputType,

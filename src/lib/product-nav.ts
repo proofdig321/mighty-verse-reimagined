@@ -17,9 +17,9 @@ export const PUBLIC_PRODUCT_NAV: ProductNavLink[] = [
   { href: "/murals", label: "Murals", surface: "murals" },
   { href: "/scenes", label: "Scenes", surface: "scenes" },
   { href: "/moments", label: "Creative Moments", surface: "moments" },
-  { href: "/authority/universes", label: "Creative Studio", surface: "studio" },
+  { href: "/studio", label: "Creative Studio", surface: "studio" },
 ];
 
 export const EXPERIENCE_JOURNEY_HREF = "/universes?intent=experience";
-export const CREATIVE_STUDIO_HREF = "/authority/universes";
+export const CREATIVE_STUDIO_HREF = "/studio";
 export const DASHBOARD_HREF = "/authority";

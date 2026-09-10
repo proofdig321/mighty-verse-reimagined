@@ -20,3 +20,14 @@ export async function requireStudioWorkspace(
   if (!workspace) notFound();
   return workspace;
 }
+
+export async function requireStudioUser(next = "/studio"): Promise<{ participantId: string }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect(`/auth/sign-in?next=${next}`);
+  const participantId = await getParticipantId(supabase);
+  if (!participantId) redirect(`/auth/sign-in?next=${next}`);
+  return { participantId };
+}

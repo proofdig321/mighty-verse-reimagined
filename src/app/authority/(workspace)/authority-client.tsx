@@ -343,7 +343,7 @@ export default function AuthorityClient() {
         <div className="grid grid-cols-1 gap-px overflow-hidden rounded-lg border border-border bg-border sm:grid-cols-3">
           {[
             { label: "Discover", sub: "Public Universes catalog.", href: "/universes", surface: "discover" },
-            { label: "Creative Studio", sub: "Assemble an established Universe.", href: CREATIVE_STUDIO_HREF, surface: "studio-entry" },
+            { label: "Creative Studio", sub: "Start from an idea, or open an existing Universe.", href: CREATIVE_STUDIO_HREF, surface: "studio-entry" },
             { label: "Public Experience", sub: "Choose a Universe, then enter Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "public-experience" },
           ].map((item) => (
             <Link key={item.label} href={item.href} data-dashboard-surface={item.surface} className="group bg-card px-5 py-4 transition-colors hover:bg-accent/30">
@@ -511,7 +511,7 @@ export default function AuthorityClient() {
       {/* ── Canonical entities ───────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-px sm:grid-cols-4 rounded-lg overflow-hidden border border-border bg-border">
         {[
-          { label: "Universes",        sub: "Top-level canonical containers", href: CREATIVE_STUDIO_HREF },
+          { label: "Universes",        sub: "Top-level canonical containers", href: "/authority/universes" },
           { label: "Murals",           sub: "Canonical Murals",               href: "/authority/murals" },
           { label: "Scenes",           sub: "Canonical Scenes",               href: "/authority/scenes" },
           { label: "Creative Moments", sub: "Canonical Creative Moments",     href: "/authority/creative-moments" },

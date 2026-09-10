@@ -105,3 +105,26 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
     relations: relations ?? [],
   });
 }
+
+export async function loadUniverseProjectCards() {
+  const svc = getServiceClient();
+  const { data: masters } = await svc
+    .from("master")
+    .select("master_id, created_at")
+    .eq("canonical_type", "universe")
+    .order("created_at", { ascending: false });
+  if (!masters?.length) return [];
+  const ids = masters.map((row) => row.master_id);
+  const { data: presentations } = await svc
+    .from("work_presentation")
+    .select("master_id, title, description")
+    .in("master_id", ids);
+  return masters.map((row) => {
+    const presentation = (presentations ?? []).find((item) => item.master_id === row.master_id);
+    return {
+      master_id: row.master_id,
+      title: presentation?.title ?? "Untitled universe",
+      description: presentation?.description ?? null,
+    };
+  });
+}

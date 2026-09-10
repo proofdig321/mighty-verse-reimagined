@@ -155,6 +155,8 @@ export const ROUTES = {
   authorityCurateMural: `/authority/curate/${CANON.universeId}/mural`,
   authorityCurateMoment: `/authority/curate/${CANON.universeId}/moment`,
   authority: "/authority",
+  studio: "/studio",
+  studioWork: "/studio/work",
   authorityUniverses: "/authority/universes",
   authorityUniverseWorkspace: `/authority/universes/${CANON.universeId}`,
   authorityUniverseStoryboard: `/authority/universes/${CANON.universeId}/storyboard`,

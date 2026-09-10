@@ -518,6 +518,20 @@
     gap: 2rem;
   }
 
+  @media (min-width: 1024px) {
+    .storyboard-workspace {
+      grid-template-columns: minmax(0, 1fr) minmax(16rem, 20rem);
+      align-items: start;
+    }
+
+    .storyboard-workspace > .studio-inspector {
+      grid-column: 2;
+      grid-row: 1 / span 3;
+      position: sticky;
+      top: 5.5rem;
+    }
+  }
+
   .storyboard-panel-strip {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr));
@@ -579,15 +593,68 @@
     padding: 0.25rem 0.55rem;
   }
 
+  .holographic-transport-bar {
+    border-bottom: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 30%, transparent);
+  }
+
   .holographic-transport {
     position: relative;
     z-index: 4;
     display: grid;
-    grid-template-columns: auto auto auto minmax(0, 1fr);
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto auto;
     gap: 0.65rem 0.85rem;
     align-items: center;
-    padding: 0.85rem 1rem 0.35rem;
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding: 1rem clamp(1.25rem, 4vw, 1.5rem);
     pointer-events: auto;
+  }
+
+  .holographic-volume,
+  .holographic-fullscreen,
+  .holographic-mute {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    color: var(--foreground);
+    pointer-events: auto;
+  }
+
+  .holographic-volume input[type="range"] {
+    width: 5.5rem;
+  }
+
+  .holographic-mute,
+  .holographic-fullscreen {
+    border: 0;
+    background: transparent;
+    padding: 0.25rem;
+  }
+
+  .holographic-media-status {
+    position: absolute;
+    inset: auto 1rem 4.5rem auto;
+    margin: 0;
+    font-size: 0.75rem;
+    color: white;
+  }
+
+  .holographic-media-error {
+    color: color-mix(in oklch, var(--destructive) 80%, white);
+  }
+
+  .holographic-region {
+    display: grid;
+    gap: 0.85rem;
+  }
+
+  .holographic-region-title {
+    margin: 0;
+    font-family: var(--font-display, inherit);
+    font-size: 1.35rem;
+    font-weight: 600;
   }
 
   .holographic-transport-play,
@@ -613,8 +680,7 @@
   .holographic-transport-scene {
     font-family: var(--font-display, inherit);
     color: var(--foreground);
-    grid-column: 4;
-    justify-self: end;
+    justify-self: start;
   }
 
   .holographic-progress {
@@ -624,6 +690,7 @@
     border-radius: 999px;
     background: color-mix(in oklch, var(--muted) 70%, transparent);
     overflow: hidden;
+    cursor: pointer;
   }
 
   .holographic-progress > span {
@@ -650,6 +717,20 @@
     opacity: 0.38;
     filter: saturate(0.7) brightness(0.85);
     transform: translateZ(0);
+  }
+
+  .world-encounter .holographic-layer-inactive,
+  .world-presence.holographic-layer-inactive {
+    opacity: 1;
+    filter: none;
+    transform: none;
+  }
+
+  .world-encounter .holographic-layer-active,
+  .world-presence.holographic-layer-active {
+    outline: 1px solid color-mix(in oklch, var(--accent-mv-gold) 70%, transparent);
+    outline-offset: 6px;
+    transform: none;
   }
 
   .holographic-layer-mural.holographic-layer-active {
@@ -1544,31 +1625,21 @@
     position: relative;
     min-width: 0;
     width: 100%;
-    overflow: hidden;
-    border: 1px solid color-mix(in oklch, var(--accent-mv-gold) 35%, var(--border));
-    border-radius: var(--radius);
-    background: color-mix(in oklch, var(--card) 78%, var(--background));
-    perspective: 1400px;
-  }
-
-  .holographic-stage:not(.holographic-stage-compact) {
-    overflow: hidden;
+    overflow: visible;
+    background: transparent;
   }
 
   .holographic-stage-compact .holographic-cinema video {
     max-height: 16rem;
   }
 
-  .holographic-space {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    width: 100%;
-    padding: 0 1rem 1.15rem;
-    transform-style: preserve-3d;
-    transform: rotateX(var(--hy)) rotateY(var(--hx));
-    transition: transform 180ms ease-out;
+  .holographic-stage-compact .holographic-composition.world-experience {
+    padding-block: 1.25rem 2rem;
+    gap: 1.75rem;
+  }
+
+  .holographic-composition.world-experience {
+    padding-top: clamp(2rem, 5vw, 3.5rem);
   }
 
   .holographic-cinema {
@@ -1576,6 +1647,45 @@
     width: 100%;
     min-width: 0;
     z-index: 1;
+    overflow: hidden;
+    background: #050505;
+    perspective: 1400px;
+  }
+
+  .holographic-depth {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    transform-style: preserve-3d;
+    transform: rotateX(var(--hy)) rotateY(var(--hx));
+    transition: transform 180ms ease-out;
+  }
+
+  .holographic-depth-plane {
+    position: absolute;
+    right: 5%;
+    bottom: 12%;
+    width: min(22%, 11.5rem);
+    overflow: hidden;
+    border-radius: 0.4rem;
+    box-shadow: 0 18px 40px rgb(0 0 0 / 0.45);
+    transform: translateZ(72px);
+  }
+
+  .holographic-depth-plane img {
+    display: block;
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+
+  .holographic-depth-plane p {
+    margin: 0;
+    padding: 0.35rem 0.5rem 0.45rem;
+    background: color-mix(in oklch, black 70%, transparent);
+    color: white;
+    font-family: var(--font-display, inherit);
+    font-size: 0.72rem;
   }
 
   .holographic-orbit {
@@ -1607,7 +1717,37 @@
     min-width: 0;
     transform-style: preserve-3d;
     pointer-events: none;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    padding: 0;
     transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
+  }
+
+  .holographic-orbit-scenes .holographic-layer,
+  button.world-encounter-link {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  button.world-encounter-link {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    text-align: left;
+    color: inherit;
+  }
+
+  button.world-encounter-link:focus-visible,
+  .holographic-transport-play:focus-visible,
+  .holographic-transport-restart:focus-visible,
+  .holographic-mute:focus-visible,
+  .holographic-fullscreen:focus-visible,
+  .holographic-progress:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 3px;
   }
 
   .holographic-layer img,
@@ -1635,7 +1775,10 @@
   .holographic-layer-mural video,
   .holographic-layer-mural .holographic-layer-media video {
     aspect-ratio: 16 / 9;
-    max-height: 28rem;
+    width: 100%;
+    max-width: 80rem;
+    max-height: min(70vh, 40rem);
+    margin-inline: auto;
     object-fit: cover;
   }
 
@@ -1748,6 +1891,18 @@
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .holographic-transport {
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+    }
+
+    .holographic-volume input[type="range"] {
+      width: 3.5rem;
+    }
+
+    .holographic-depth-plane {
+      width: min(34%, 8.5rem);
+    }
+
     .holographic-layer-mural video,
     .holographic-layer-mural .holographic-layer-media video {
       max-height: 16rem;
@@ -1758,11 +1913,8 @@
     .world-mural-stage,
     .world-presence-link,
     .world-action-primary,
-    .holographic-space {
+    .holographic-depth {
       transition: none;
-    }
-
-    .holographic-space {
       transform: none;
     }
   }
