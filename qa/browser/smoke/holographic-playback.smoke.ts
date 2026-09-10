@@ -1,6 +1,6 @@
 import { CANON, ROUTES, SCENE_MOMENTS } from "../lib/canon";
 import { test, expect } from "../lib/fixtures";
-import { readVideoSnapshot, tryStartNativeVideoPlayback } from "../lib/playback";
+import { readVideoSnapshot, samplePaintedFrame, tryStartNativeVideoPlayback } from "../lib/playback";
 import { captureScreenshot, muxMediaRequests, reportEvidence } from "../lib/observe";
 
 test("Super Hero Ego holographic Experience plays Mux mural through canonical Scenes", async ({ page, observe }, testInfo) => {
@@ -11,8 +11,9 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
   await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
-  await expect(page.getByRole("button", { name: /Play|Load/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Restart" })).toBeVisible();
+  await expect(page.locator("[data-holographic-cinema]")).toHaveCount(1);
   await expect(page.locator("text=/production-plan:/i")).toHaveCount(0);
   await expect(page.locator(".holographic-transport")).not.toContainText(CANON.universeId);
   notes.push("A: Experience presents Super Hero Ego without internal identifiers in the transport");
@@ -27,21 +28,27 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
     )
     .toBeTruthy();
 
-  await page.getByRole("button", { name: /Play|Load/ }).click();
+  const muralBox = await player.boundingBox();
+  const sceneBox = await page.locator("[data-holographic-kind='scene'] img").first().boundingBox();
+  expect(muralBox?.width ?? 0, "mural video is the cinematic surface").toBeGreaterThan(480);
+  expect((muralBox?.width ?? 0) > (sceneBox?.width ?? 0), "mural is larger than Scene stills").toBeTruthy();
+
+  await page.getByRole("button", { name: "Play" }).click();
   await expect
     .poll(async () => {
       await tryStartNativeVideoPlayback(player);
       const snapshot = await readVideoSnapshot(player);
-      return !snapshot.paused && snapshot.currentTime > 0.15;
-    }, { timeout: 20000 })
+      const painted = await samplePaintedFrame(player);
+      return !snapshot.paused && snapshot.currentTime > 0.15 && snapshot.videoWidth > 16 && painted.painted;
+    }, { timeout: 25000 })
     .toBeTruthy();
   await expect(page.locator("[data-holographic-playing='true']")).toHaveCount(1);
-  notes.push("B: Play starts decoded Mux mural playback");
+  notes.push("B: Play starts decoded Mux mural video, not a still collage");
 
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.locator("[data-holographic-playing='false']")).toHaveCount(1);
   await page.getByRole("button", { name: "Restart" }).click();
-  await expect(page.getByRole("button", { name: /Play|Load/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
   notes.push("C: Pause and Restart return the Experience to a stopped clock");
 
   for (const scene of Object.values(SCENE_MOMENTS)) {

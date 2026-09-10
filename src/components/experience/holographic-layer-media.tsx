@@ -25,6 +25,7 @@ export function HolographicLayerMedia({
   playing,
   muted = true,
   loop = false,
+  seekNonce = 0,
   onTimeMs,
   onReady,
   onEnded,
@@ -35,6 +36,7 @@ export function HolographicLayerMedia({
   playing: boolean;
   muted?: boolean;
   loop?: boolean;
+  seekNonce?: number;
   onTimeMs?: (ms: number) => void;
   onReady?: () => void;
   onEnded?: () => void;
@@ -140,11 +142,11 @@ export function HolographicLayerMedia({
     }
   }, [playing]);
 
-  function restart() {
+  useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
     media.currentTime = clock.start_ms != null ? clock.start_ms / 1000 : 0;
-  }
+  }, [seekNonce, clock.start_ms]);
 
   return (
     <div className="holographic-layer-media" data-holographic-media="">
@@ -152,16 +154,11 @@ export function HolographicLayerMedia({
         ref={mediaRef}
         poster={posterUrl ?? undefined}
         playsInline
+        preload="auto"
         muted={muted}
         loop={loop && clock.end_ms == null}
         aria-label={`${title} playback`}
-        onLoadedData={restart}
       />
     </div>
   );
-}
-
-export function seekHolographicMedia(root: HTMLElement | null, ms: number) {
-  const media = root?.querySelector("video");
-  if (media) media.currentTime = Math.max(0, ms / 1000);
 }

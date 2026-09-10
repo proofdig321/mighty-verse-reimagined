@@ -1,19 +1,54 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, type PointerEvent } from "react";
+import { useEffect, useId, useState, type PointerEvent, type ReactNode } from "react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import { formatTimelineMs } from "@/lib/media/timing";
 import {
   activeWindow,
-  audienceLabel,
+  audienceLayerTitle,
   formatClock,
   layerIsActive,
   layerKicker,
-  stillAtTime,
   type HolographicProgram,
 } from "@/lib/experience/holographic-program";
 import { cn } from "@/lib/utils";
 import { HolographicLayerMedia } from "./holographic-layer-media";
+
+function LayerCard({
+  layer,
+  active,
+  title,
+  mode,
+  children,
+}: {
+  layer: HolographicLayer;
+  active: boolean;
+  title: string;
+  mode: "public" | "studio";
+  children: ReactNode;
+}) {
+  return (
+    <article
+      className={cn(
+        "holographic-layer",
+        `holographic-layer-${layer.kind}`,
+        active && "holographic-layer-active",
+        !active && "holographic-layer-inactive",
+      )}
+      data-holographic-kind={layer.kind}
+      data-master-id={layer.master_id}
+      data-layer-active={active ? "true" : "false"}
+      data-production-layer={layer.kind === "production" ? "true" : undefined}
+    >
+      {children}
+      <p className="holographic-kicker">{layerKicker(layer.kind, mode)}</p>
+      <p className="holographic-title">{title}</p>
+      {mode === "studio" && layer.start_ms != null && layer.end_ms != null && layer.kind === "scene" ? (
+        <p className="holographic-window">{`${formatTimelineMs(layer.start_ms)} → ${formatTimelineMs(layer.end_ms)}`}</p>
+      ) : null}
+    </article>
+  );
+}
 
 export function HolographicStage({
   program,
@@ -28,10 +63,14 @@ export function HolographicStage({
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(!program.clock);
   const [timeMs, setTimeMs] = useState(0);
-  const [restartKey, setRestartKey] = useState(0);
+  const [seekNonce, setSeekNonce] = useState(0);
   const durationMs = program.duration_ms || 1;
   const current = activeWindow(program.windows, timeMs);
   const progress = Math.min(1, timeMs / durationMs);
+  const mural = program.layers.find((layer) => layer.kind === "mural") ?? null;
+  const scenes = program.layers.filter((layer) => layer.kind === "scene");
+  const moments = program.layers.filter((layer) => layer.kind === "moment");
+  const productions = program.layers.filter((layer) => layer.kind === "production");
 
   useEffect(() => {
     if (!playing || program.clock) return;
@@ -46,20 +85,15 @@ export function HolographicStage({
       setTimeMs(next);
     }, 200);
     return () => window.clearInterval(timer);
-  }, [playing, program.clock, durationMs, restartKey]);
-
-  const liveStills = useMemo(() => {
-    if (!playing || !program.clock?.thumbnail_ref) return null;
-    return program.clock.thumbnail_ref;
-  }, [playing, program.clock?.thumbnail_ref]);
+  }, [playing, program.clock, durationMs, seekNonce]);
 
   function onMove(event: PointerEvent<HTMLDivElement>) {
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width - 0.5) * 18;
-    const y = ((event.clientY - rect.top) / rect.height - 0.5) * -10;
+    const x = ((event.clientX - rect.left) / rect.width - 0.5) * 10;
+    const y = ((event.clientY - rect.top) / rect.height - 0.5) * -6;
     event.currentTarget.style.setProperty("--hx", `${x}deg`);
     event.currentTarget.style.setProperty("--hy", `${y}deg`);
   }
@@ -72,15 +106,29 @@ export function HolographicStage({
   function restart() {
     setTimeMs(0);
     setPlaying(false);
-    setRestartKey((value) => value + 1);
+    setSeekNonce((value) => value + 1);
   }
 
   function toggle() {
     if (timeMs >= durationMs) {
       setTimeMs(0);
-      setRestartKey((value) => value + 1);
+      setSeekNonce((value) => value + 1);
     }
     setPlaying((value) => !value);
+  }
+
+  function layerTitle(layer: HolographicLayer) {
+    return audienceLayerTitle(layer.title, layerKicker(layer.kind, mode));
+  }
+
+  function stillSurface(layer: HolographicLayer, title: string) {
+    if (layer.still_url) {
+      return (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={layer.still_url} alt="" />
+      );
+    }
+    return <div className="holographic-placeholder" aria-hidden="true" title={title} />;
   }
 
   return (
@@ -88,6 +136,7 @@ export function HolographicStage({
       className={cn("holographic-stage", compact && "holographic-stage-compact")}
       aria-labelledby={stageId}
       data-holographic-playing={playing ? "true" : "false"}
+      data-holographic-ready={ready ? "true" : "false"}
       data-holographic-mode={mode}
       data-holographic-active-scene={current?.scene_master_id ?? ""}
       onPointerMove={onMove}
@@ -104,7 +153,7 @@ export function HolographicStage({
           aria-pressed={playing}
           onClick={toggle}
         >
-          {playing ? "Pause" : ready || !program.clock ? "Play" : "Load"}
+          {playing ? "Pause" : "Play"}
         </button>
         <button type="button" className="holographic-transport-restart" onClick={restart}>
           Restart
@@ -113,7 +162,7 @@ export function HolographicStage({
           {formatClock(timeMs)} / {formatClock(durationMs)}
         </p>
         <p className="holographic-transport-scene">
-          {current ? audienceLabel(current.title, "Scene") : playing ? "Opening" : "Ready"}
+          {current ? audienceLayerTitle(current.title, "Scene") : playing ? "Opening" : "Ready"}
         </p>
         <div
           className="holographic-progress"
@@ -136,35 +185,11 @@ export function HolographicStage({
       </div>
 
       <div className="holographic-space" aria-hidden={false}>
-        {program.layers.map((layer) => {
-          const active = layerIsActive(layer, timeMs);
-          const title = audienceLabel(layer.title, layerKicker(layer.kind, mode));
-          const still =
-            liveStills && active && (layer.kind === "scene" || layer.kind === "moment")
-              ? stillAtTime(liveStills, timeMs) ?? layer.still_url
-              : layer.still_url;
-          const showProductionVideo = layer.kind === "production" && Boolean(layer.playback_endpoint) && active;
-          const showMuralVideo = layer.kind === "mural" && Boolean(program.clock);
-          return (
-            <article
-              key={`${layer.layer_id}-${layer.kind === "mural" ? restartKey : 0}`}
-              className={cn(
-                "holographic-layer",
-                `holographic-layer-${layer.kind}`,
-                active && "holographic-layer-active",
-                !active && "holographic-layer-inactive",
-              )}
-              data-holographic-kind={layer.kind}
-              data-master-id={layer.master_id}
-              data-layer-active={active ? "true" : "false"}
-              data-production-layer={layer.kind === "production" ? "true" : undefined}
-              style={{
-                transform: `translate(-50%, -50%) translate3d(${layer.offset_x}px, ${layer.offset_y}px, ${layer.depth}px)`,
-              }}
-            >
-              {showMuralVideo && program.clock ? (
+        {mural ? (
+          <div className="holographic-cinema" data-holographic-cinema="">
+            <LayerCard layer={mural} active title={layerTitle(mural)} mode={mode}>
+              {program.clock ? (
                 <HolographicLayerMedia
-                  key={restartKey}
                   clock={{
                     endpoint_ref: program.clock.endpoint_ref,
                     projection_id: program.clock.projection_id,
@@ -173,10 +198,11 @@ export function HolographicStage({
                     start_ms: 0,
                     end_ms: program.duration_ms || null,
                   }}
-                  posterUrl={layer.still_url}
-                  title={title}
+                  posterUrl={mural.still_url}
+                  title={layerTitle(mural)}
                   playing={playing}
                   muted={mode === "studio"}
+                  seekNonce={seekNonce}
                   onTimeMs={setTimeMs}
                   onReady={() => setReady(true)}
                   onEnded={() => {
@@ -184,33 +210,71 @@ export function HolographicStage({
                     setTimeMs(program.duration_ms);
                   }}
                 />
-              ) : showProductionVideo && layer.playback_endpoint ? (
-                <HolographicLayerMedia
-                  clock={{
-                    endpoint_ref: layer.playback_endpoint,
-                    start_ms: 0,
-                    end_ms: null,
-                  }}
-                  posterUrl={layer.still_url}
-                  title={title}
-                  playing={playing && active}
-                  muted
-                  loop
-                />
-              ) : still ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={still} alt="" />
               ) : (
-                <div className="holographic-placeholder" />
+                stillSurface(mural, layerTitle(mural))
               )}
-              <p className="holographic-kicker">{layerKicker(layer.kind, mode)}</p>
-              <p className="holographic-title">{title}</p>
-              {mode === "studio" && layer.start_ms != null && layer.end_ms != null && layer.kind === "scene" ? (
-                <p className="holographic-window">{`${formatTimelineMs(layer.start_ms)} → ${formatTimelineMs(layer.end_ms)}`}</p>
-              ) : null}
-            </article>
-          );
-        })}
+            </LayerCard>
+          </div>
+        ) : null}
+
+        {scenes.length > 0 ? (
+          <div className="holographic-orbit holographic-orbit-scenes" data-holographic-orbit="scenes">
+            {scenes.map((layer) => {
+              const active = layerIsActive(layer, timeMs);
+              const title = layerTitle(layer);
+              return (
+                <LayerCard key={layer.layer_id} layer={layer} active={active} title={title} mode={mode}>
+                  {stillSurface(layer, title)}
+                </LayerCard>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {moments.length > 0 ? (
+          <div className="holographic-orbit holographic-orbit-moments" data-holographic-orbit="moments">
+            {moments.map((layer) => {
+              const active = layerIsActive(layer, timeMs);
+              const title = layerTitle(layer);
+              return (
+                <LayerCard key={layer.layer_id} layer={layer} active={active} title={title} mode={mode}>
+                  {stillSurface(layer, title)}
+                </LayerCard>
+              );
+            })}
+          </div>
+        ) : null}
+
+        {productions.length > 0 ? (
+          <div className="holographic-orbit holographic-orbit-production" data-holographic-orbit="production">
+            {productions.map((layer) => {
+              const active = layerIsActive(layer, timeMs);
+              const title = layerTitle(layer);
+              const playVideo = Boolean(layer.playback_endpoint) && active;
+              return (
+                <LayerCard key={layer.layer_id} layer={layer} active={active} title={title} mode={mode}>
+                  {playVideo && layer.playback_endpoint ? (
+                    <HolographicLayerMedia
+                      clock={{
+                        endpoint_ref: layer.playback_endpoint,
+                        start_ms: 0,
+                        end_ms: null,
+                      }}
+                      posterUrl={layer.still_url}
+                      title={title}
+                      playing={playing && active}
+                      muted
+                      loop
+                      seekNonce={seekNonce}
+                    />
+                  ) : (
+                    stillSurface(layer, title)
+                  )}
+                </LayerCard>
+              );
+            })}
+          </div>
+        ) : null}
       </div>
     </div>
   );

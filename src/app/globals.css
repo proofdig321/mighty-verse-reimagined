@@ -643,16 +643,19 @@
   .holographic-layer-active {
     opacity: 1;
     filter: none;
+    transform: translateZ(28px);
   }
 
   .holographic-layer-inactive {
-    opacity: 0.42;
-    filter: saturate(0.65);
+    opacity: 0.38;
+    filter: saturate(0.7) brightness(0.85);
+    transform: translateZ(0);
   }
 
   .holographic-layer-mural.holographic-layer-active {
-    opacity: 0.92;
-    width: min(28rem, 92vw);
+    opacity: 1;
+    width: 100%;
+    transform: none;
   }
 
   .holographic-window {
@@ -1545,38 +1548,66 @@
     border: 1px solid color-mix(in oklch, var(--accent-mv-gold) 35%, var(--border));
     border-radius: var(--radius);
     background: color-mix(in oklch, var(--card) 78%, var(--background));
-    perspective: 1200px;
-    min-height: 28rem;
+    perspective: 1400px;
   }
 
   .holographic-stage:not(.holographic-stage-compact) {
-    overflow: visible;
-    min-height: 36rem;
+    overflow: hidden;
   }
 
-  .holographic-stage-compact {
-    min-height: 22rem;
+  .holographic-stage-compact .holographic-cinema video {
+    max-height: 16rem;
   }
 
   .holographic-space {
     position: relative;
-    display: grid;
-    place-items: center;
-    min-height: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
     width: 100%;
+    padding: 0 1rem 1.15rem;
     transform-style: preserve-3d;
     transform: rotateX(var(--hy)) rotateY(var(--hx));
     transition: transform 180ms ease-out;
   }
 
+  .holographic-cinema {
+    position: relative;
+    width: 100%;
+    min-width: 0;
+    z-index: 1;
+  }
+
+  .holographic-orbit {
+    display: grid;
+    gap: 0.75rem;
+    width: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .holographic-orbit-scenes {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .holographic-orbit-moments {
+    grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr));
+  }
+
+  .holographic-orbit-production {
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 14rem));
+    justify-content: start;
+  }
+
   .holographic-layer {
-    position: absolute;
-    left: 50%;
-    top: 50%;
-    width: min(16rem, 72vw);
+    position: relative;
+    left: auto;
+    top: auto;
+    width: 100%;
     margin: 0;
+    min-width: 0;
     transform-style: preserve-3d;
     pointer-events: none;
+    transition: opacity 220ms ease, transform 220ms ease, filter 220ms ease;
   }
 
   .holographic-layer img,
@@ -1587,6 +1618,7 @@
     aspect-ratio: 16 / 10;
     object-fit: cover;
     border-radius: 0.4rem;
+    background: #050505;
     box-shadow: 0 18px 40px color-mix(in oklch, var(--background) 70%, transparent);
   }
 
@@ -1595,23 +1627,30 @@
   }
 
   .holographic-layer-mural {
-    width: min(26rem, 90vw);
-    opacity: 0.88;
+    width: 100%;
+    opacity: 1;
     z-index: 1;
   }
 
+  .holographic-layer-mural video,
+  .holographic-layer-mural .holographic-layer-media video {
+    aspect-ratio: 16 / 9;
+    max-height: 28rem;
+    object-fit: cover;
+  }
+
   .holographic-layer-scene {
-    width: min(14.5rem, 64vw);
+    width: 100%;
     z-index: 2;
   }
 
   .holographic-layer-moment {
-    width: min(8.5rem, 42vw);
+    width: 100%;
     z-index: 3;
   }
 
   .holographic-layer-production {
-    width: min(12rem, 54vw);
+    width: 100%;
     z-index: 2;
     outline: 1px solid color-mix(in oklch, var(--accent-mv) 45%, transparent);
     outline-offset: 0.35rem;
@@ -1705,25 +1744,13 @@
       grid-template-columns: 1fr;
     }
 
-    .holographic-stage,
-    .holographic-stage-compact {
-      min-height: 18rem;
+    .holographic-orbit-scenes {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .holographic-layer-mural {
-      width: min(16rem, 82vw);
-    }
-
-    .holographic-layer-scene {
-      width: min(11rem, 58vw);
-    }
-
-    .holographic-layer-moment {
-      width: min(6.5rem, 38vw);
-    }
-
-    .holographic-layer-production {
-      width: min(9rem, 48vw);
+    .holographic-layer-mural video,
+    .holographic-layer-mural .holographic-layer-media video {
+      max-height: 16rem;
     }
   }
 

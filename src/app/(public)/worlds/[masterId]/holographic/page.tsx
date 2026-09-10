@@ -61,7 +61,7 @@ export default async function HolographicWorldPage({
               Play the mural. Scenes move through the composition in time. Creative Moments stand with the
               Scenes they belong to.
               {program.production_count > 0
-                ? ` ${program.production_count} approved realization${program.production_count === 1 ? "" : "s"} join the stage.`
+                ? ` ${program.production_count} approved realization${program.production_count === 1 ? "" : "s"} ${program.production_count === 1 ? "joins" : "join"} the stage.`
                 : ""}
             </p>
           </div>

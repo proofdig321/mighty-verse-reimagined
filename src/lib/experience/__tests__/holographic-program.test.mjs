@@ -1,4 +1,4 @@
-import { composeHolographicProgram, audienceLabel, layerIsActive, activeWindow } from "../holographic-program";
+import { composeHolographicProgram, audienceLabel, audienceLayerTitle, layerIsActive, activeWindow } from "../holographic-program";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -86,5 +86,6 @@ assert(layerIsActive(program.layers.find((layer) => layer.master_id === POWERHOU
 assert(layerIsActive(program.layers.find((layer) => layer.master_id === POWERHOUSE), 80000) === false, "Powerhouse plane deactivates after its window");
 assert(audienceLabel(UNIVERSE, "Experience") === "Experience", "internal identifiers are not audience labels");
 assert(audienceLabel("Super Hero Ego", "Experience") === "Super Hero Ego", "the Universe title remains the audience name");
+assert(audienceLayerTitle("Golden Shovel — Powerhouse production", "Realization") === "Golden Shovel — Powerhouse", "production suffix is not an audience label");
 
 console.log("Holographic program tests: all passed");

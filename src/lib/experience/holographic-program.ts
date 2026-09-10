@@ -50,6 +50,11 @@ export function audienceLabel(value: string | null | undefined, fallback: string
   return trimmed;
 }
 
+export function audienceLayerTitle(value: string | null | undefined, fallback: string): string {
+  const label = audienceLabel(value, fallback).replace(/\s+production$/i, "").trim();
+  return label || fallback;
+}
+
 export function layerKicker(kind: HolographicLayer["kind"], mode: "public" | "studio"): string {
   if (kind === "mural") return "Mural";
   if (kind === "scene") return "Scene";
