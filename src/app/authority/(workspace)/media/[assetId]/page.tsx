@@ -398,7 +398,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
               {intake.release_date && <div><dt className="text-muted-foreground">Release date</dt><dd className="text-foreground">{intake.release_date}</dd></div>}
               {intake.source_provider && <div><dt className="text-muted-foreground">Source</dt><dd className="text-foreground">{intake.source_provider}</dd></div>}
               {intake.source_type === "external-url" && intake.source_url && (
-                <div className="sm:col-span-2"><dt className="text-muted-foreground">Source URL</dt><dd className="text-foreground font-mono text-muted-foreground/70 break-all">{intake.source_url} <span className="text-muted-foreground/40 font-sans">(reference only — not ingested)</span></dd></div>
+                <div className="sm:col-span-2"><dt className="text-muted-foreground">Source URL</dt><dd className="text-foreground font-mono text-muted-foreground/70 break-all">{intake.source_url} <span className="text-muted-foreground/40 font-sans">{intake.asset_id ? "(Mux ingest)" : "(waiting on Mux ingest)"}</span></dd></div>
               )}
             </dl>
             {intake.description && <p className="text-sm text-muted-foreground">{intake.description}</p>}

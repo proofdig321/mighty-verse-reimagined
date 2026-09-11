@@ -63,6 +63,20 @@ const recoverFailed = decideAdvanceUploadSession({
 });
 assert(recoverFailed.action === "ingest", "a ready Mux asset recovers a session previously marked failed");
 
+const youtubePull = decideAdvanceUploadSession({
+  session: { phase: "processing", provider_asset_id: "mux-yt", asset_id: null, provider_upload_id: null },
+  upload: null,
+  asset: { status: "preparing", playbackId: null, providerAssetId: "mux-yt" },
+});
+assert(youtubePull.action === "wait" && youtubePull.phase === "processing", "YouTube Mux pull waits without a direct-upload id");
+
+const youtubeReady = decideAdvanceUploadSession({
+  session: { phase: "processing", provider_asset_id: "mux-yt", asset_id: null, provider_upload_id: null },
+  upload: null,
+  asset: { status: "ready", playbackId: "pb_yt", providerAssetId: "mux-yt" },
+});
+assert(youtubeReady.action === "ingest", "ready Mux asset from a URL pull ingests");
+
 const unknown = decideAdvanceUploadSession({
   session: created,
   upload: null,

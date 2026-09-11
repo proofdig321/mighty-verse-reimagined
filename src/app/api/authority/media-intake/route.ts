@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
+import { beginMuxUrlIngest } from "@/lib/media/url-ingest";
 
 const ISRC_PATTERN = /^[A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9]{5}$/;
 const WORK_TYPES = new Set(["song", "audio", "video", "animation", "other"]);
@@ -141,7 +142,19 @@ export async function POST(request: Request) {
     })));
     if (creditError) return NextResponse.json({ error: `Media intake created, but credits could not be saved: ${creditError.message}` }, { status: 500 });
   }
-  return NextResponse.json(data, { status: 201 });
+
+  let ingest: { session_id: string } | { error: string } | null = null;
+  if (source_type === "external-url" && typeof source_url === "string") {
+    const pulled = await beginMuxUrlIngest({
+      url: source_url,
+      name: title.trim(),
+      participantId,
+      intakeId: data.intake_id,
+    });
+    ingest = pulled.ok ? { session_id: pulled.session_id } : { error: pulled.error };
+  }
+
+  return NextResponse.json({ ...data, ingest }, { status: 201 });
 }
 
 async function authorisedIntakeContext() {

@@ -17,6 +17,7 @@ import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
 import { CurateContinuationLinks } from "./curate-continuation";
+import { CurateYoutubeIngest } from "./curate-youtube-ingest";
 
 function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
@@ -87,7 +88,7 @@ export default function CurateStudioGateway({
               Incoming / Media
             </h2>
             <p className="text-sm text-muted-foreground max-w-3xl">
-              What has arrived. These are media assets — not Universes. Uploading media does not create a Universe.
+              What has arrived. These are media assets — not Universes. YouTube is the primary ingest path; Mux pulls the file. Uploading media does not create a Universe.
               Sentinel inspects them. Creative meaning is assembled in Creative Studio.
             </p>
           </div>
@@ -95,6 +96,8 @@ export default function CurateStudioGateway({
             Add media
           </Link>
         </div>
+
+        <CurateYoutubeIngest />
 
         {focusedAsset ? <CurateAssetContextBanner focusedAsset={focusedAsset} /> : null}
 

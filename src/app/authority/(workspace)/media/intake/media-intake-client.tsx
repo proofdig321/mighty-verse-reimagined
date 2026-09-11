@@ -43,7 +43,7 @@ export default function MediaIntakeClient({ participants }: { participants: Part
   const [workType, setWorkType] = useIntakeDraft("workType", "animation");
   const [versionLabel, setVersionLabel] = useIntakeDraft("versionLabel", "");
   const [edition, setEdition] = useIntakeDraft("edition", "");
-  const [sourceType, setSourceType] = useIntakeDraft("sourceType", "upload");
+  const [sourceType, setSourceType] = useIntakeDraft("sourceType", "external-url");
   const [sourceUrl, setSourceUrl] = useIntakeDraft("sourceUrl", "");
   const [sourceProvider, setSourceProvider] = useIntakeDraft("sourceProvider", "");
   const [externalIdentifier, setExternalIdentifier] = useIntakeDraft("externalIdentifier", "");
@@ -109,6 +109,11 @@ export default function MediaIntakeClient({ participants }: { participants: Part
     });
     setBusy(false);
     if (result.error) { setMessage(`Error: ${result.error}`); return; }
+    if (result.ingest && "error" in result.ingest) {
+      clearDraft();
+      setMessage(`Intake saved, but Mux could not ingest the URL: ${result.ingest.error}`);
+      return;
+    }
     clearDraft();
     router.push("/authority/media");
   }
@@ -164,12 +169,12 @@ export default function MediaIntakeClient({ participants }: { participants: Part
         <div hidden={step !== 2} className="space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Source &amp; presentation</p>
           <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} disabled={busy} className={selectCls}>
-            <option value="upload">Local upload</option>
-            <option value="external-url">Authorised external URL</option>
+            <option value="external-url">YouTube / HTTPS URL (Mux ingest)</option>
+            <option value="upload">Local file</option>
             <option value="livepeer-asset">Existing Livepeer asset</option>
           </select>
           {sourceType === "external-url" && (
-            <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://…" disabled={busy} className={inputCls} />
+            <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" disabled={busy} className={inputCls} />
           )}
           <div className="grid grid-cols-2 gap-2">
             <input value={sourceProvider} onChange={(e) => setSourceProvider(e.target.value)} placeholder="Source / platform" disabled={busy} className={inputCls} />
@@ -250,7 +255,7 @@ export default function MediaIntakeClient({ participants }: { participants: Part
             <div><dt className="font-medium text-foreground">Credits</dt><dd>{creditRows.length ? `${creditRows.length} credit${creditRows.length !== 1 ? "s" : ""}` : "None"}</dd></div>
             <div><dt className="font-medium text-foreground">Source</dt><dd>{sourceType}{sourceProvider ? ` · ${sourceProvider}` : ""}</dd></div>
           </dl>
-          <p className="text-xs text-muted-foreground">Submission creates the intake record. Video upload is a separate step from the Media Gallery.</p>
+          <p className="text-xs text-muted-foreground">Submission creates the intake record. A YouTube or HTTPS URL is sent to Mux to pull. This does not create a Universe.</p>
         </div>
 
         {message && <p role="alert" className="text-sm text-destructive">{message}</p>}

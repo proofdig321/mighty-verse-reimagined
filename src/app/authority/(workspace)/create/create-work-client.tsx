@@ -17,6 +17,7 @@ import {
   nextCreateWorkStep,
   type CreateWorkCheckpoint,
 } from "@/lib/authority/create-work-progress";
+import { parseMediaSourceUrl } from "@/lib/media/source-url";
 
 type Universe = { master_id: string; title: string | null };
 type Mural = { master_id: string; parent_master_id: string | null; title: string | null };
@@ -77,6 +78,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
   // Media
   const [hasVideo, setHasVideo] = useState(true);
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [sourceUrl, setSourceUrl] = useState("");
   const [rightsHolderRef, setRightsHolderRef] = useState(currentParticipantId);
   const [rightsBasis, setRightsBasis] = useState("owned");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,9 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
   const _needsParent = workType === "mural" || workType === "scene" || workType === "creative-moment";
   const canHaveMedia = HAS_MEDIA.includes(workType);
-  const wantsMedia = canHaveMedia && hasVideo && Boolean(videoFile || checkpoint?.uploaded || checkpoint?.sessionId);
+  const parsedSource = parseMediaSourceUrl(sourceUrl);
+  const hasSourceUrl = parsedSource.ok;
+  const wantsMedia = canHaveMedia && hasVideo && Boolean(videoFile || hasSourceUrl || checkpoint?.uploaded || checkpoint?.sessionId);
 
   function loadStoredCheckpoint(type: WorkType, workTitle: string): CreateWorkCheckpoint | null {
     if (typeof window === "undefined" || !workTitle.trim()) return null;
@@ -247,25 +251,44 @@ export default function CreateWorkClient({ universes, murals, participants, curr
       }
 
       if (wantsMedia) {
+        const source = parseMediaSourceUrl(sourceUrl);
+        const useUrlIngest = source.ok && !videoFile;
+
         if (!cp.sessionId) {
-          setStatusLine("Starting upload session…");
-          const session = await api("/api/authority/media/upload-session", {
-            name: videoFile?.name ?? "upload",
-            projection_id: cp.projectionId,
-            master_id: cp.masterId,
-            intake_id: null,
-          });
-          if (session.error || !session.session_id) {
-            throw new Error(session.error ?? "Upload session failed");
+          if (useUrlIngest) {
+            setStatusLine("Asking Mux to pull the YouTube video…");
+            const session = await api("/api/authority/media/ingest-url", {
+              url: source.url,
+              name: title.trim() || "YouTube ingest",
+              projection_id: cp.projectionId,
+              master_id: cp.masterId,
+              intake_id: null,
+            });
+            if (session.error || !session.session_id) {
+              throw new Error(session.error ?? "Mux could not ingest this URL.");
+            }
+            cp = { ...cp, sessionId: session.session_id, uploadUrl: null, uploaded: true };
+            persistCheckpoint(cp);
+          } else {
+            setStatusLine("Starting upload session…");
+            const session = await api("/api/authority/media/upload-session", {
+              name: videoFile?.name ?? "upload",
+              projection_id: cp.projectionId,
+              master_id: cp.masterId,
+              intake_id: null,
+            });
+            if (session.error || !session.session_id) {
+              throw new Error(session.error ?? "Upload session failed");
+            }
+            cp = { ...cp, sessionId: session.session_id, uploadUrl: session.upload_url ?? null };
+            persistCheckpoint(cp);
           }
-          cp = { ...cp, sessionId: session.session_id, uploadUrl: session.upload_url ?? null };
-          persistCheckpoint(cp);
         }
 
         if (!cp.uploaded) {
           const uploadUrl = cp.uploadUrl;
           if (!videoFile) {
-            throw new Error("Select the video file again to finish uploading this existing work.");
+            throw new Error("Select the video file again, or paste the YouTube URL, to finish this work.");
           }
           if (!uploadUrl) {
             throw new Error("Upload URL missing for this session. Open the work record to resume processing.");
@@ -675,7 +698,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                 id="has-video"
                 type="checkbox"
                 checked={hasVideo}
-                onChange={(e) => { setHasVideo(e.target.checked); if (!e.target.checked) setVideoFile(null); }}
+                onChange={(e) => { setHasVideo(e.target.checked); if (!e.target.checked) { setVideoFile(null); setSourceUrl(""); } }}
                 className="mt-0.5 h-4 w-4 rounded border-border"
               />
               <div>
@@ -683,7 +706,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                   Attach a video now
                 </label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  You can also attach video later from the work detail page.
+                  YouTube is the primary path — Mux pulls the file. You can also attach a local file, or add media later from the work record.
                 </p>
               </div>
             </div>
@@ -691,9 +714,30 @@ export default function CreateWorkClient({ universes, murals, participants, curr
             {hasVideo && (
               <div className="space-y-4 rounded-lg border border-border bg-card/40 px-4 py-4">
 
+                <div className="space-y-1.5">
+                  <label htmlFor="create-work-youtube" className="text-sm font-medium text-foreground">YouTube URL</label>
+                  <p className="text-xs text-muted-foreground">Paste the animation&apos;s YouTube link. Mux ingests it for Experience playback. This does not create a Universe by itself.</p>
+                  <input
+                    id="create-work-youtube"
+                    value={sourceUrl}
+                    onChange={(e) => {
+                      setSourceUrl(e.target.value);
+                      if (e.target.value.trim()) {
+                        setVideoFile(null);
+                        if (fileInputRef.current) fileInputRef.current.value = "";
+                      }
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=…"
+                    className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
+                  />
+                  {sourceUrl.trim() && !hasSourceUrl ? (
+                    <p className="text-xs text-destructive">{parsedSource.ok ? null : parsedSource.error}</p>
+                  ) : null}
+                </div>
+
                 {/* File picker */}
                 <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-foreground">Media file</label>
+                  <label className="text-sm font-medium text-foreground">Or upload a file</label>
                   <div
                     className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed px-6 py-8 text-center transition-colors cursor-pointer ${videoFile ? "border-[var(--accent-mv)]/60 bg-accent/10" : "border-border hover:border-[var(--accent-mv)]/40"}`}
                     onClick={() => fileInputRef.current?.click()}
@@ -701,7 +745,10 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                     onDrop={(e) => {
                       e.preventDefault();
                       const f = e.dataTransfer.files[0];
-                      if (f && (f.type.startsWith("video/") || f.type.startsWith("audio/") || /\.(mp4|mov|mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(f.name))) setVideoFile(f);
+                      if (f && (f.type.startsWith("video/") || f.type.startsWith("audio/") || /\.(mp4|mov|mp3|wav|flac|aiff|aif|m4a|aac|ogg|opus)$/i.test(f.name))) {
+                        setVideoFile(f);
+                        setSourceUrl("");
+                      }
                     }}
                   >
                     <input
@@ -709,7 +756,10 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                       type="file"
                       accept="video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*"
                       className="sr-only"
-                      onChange={(e) => setVideoFile(e.target.files?.[0] ?? null)}
+                      onChange={(e) => {
+                        setVideoFile(e.target.files?.[0] ?? null);
+                        if (e.target.files?.[0]) setSourceUrl("");
+                      }}
                     />
                     {videoFile ? (
                       <>
@@ -783,7 +833,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
           <div className="flex gap-3">
             <Button variant="outline" onClick={prevStep}>← Back</Button>
             <Button
-              disabled={hasVideo && (!videoFile || !rightsHolderRef || !rightsBasis)}
+              disabled={hasVideo && ((!videoFile && !hasSourceUrl) || !rightsHolderRef || !rightsBasis)}
               onClick={nextStep}
             >
               Continue →
@@ -816,10 +866,11 @@ export default function CreateWorkClient({ universes, murals, participants, curr
               <div className="px-5 py-3">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">Media</p>
                 <div className="space-y-2.5 text-sm">
-                  {hasVideo && videoFile ? (
+                  {hasVideo && (videoFile || hasSourceUrl) ? (
                     <>
-                      <Row label="Video" value={videoFile.name} />
-                      <Row label="Size" value={`${(videoFile.size / 1024 / 1024).toFixed(1)} MB`} />
+                      <Row label="Video" value={hasSourceUrl && parsedSource.ok ? parsedSource.url : videoFile?.name ?? "Selected"} />
+                      {videoFile ? <Row label="Size" value={`${(videoFile.size / 1024 / 1024).toFixed(1)} MB`} /> : null}
+                      {hasSourceUrl && parsedSource.ok ? <Row label="Ingest" value={parsedSource.kind === "youtube" ? "YouTube → Mux" : "HTTPS URL → Mux"} /> : null}
                       <Row label="Rights holder" value={participants.find((p) => p.participant_id === rightsHolderRef)?.label ?? rightsHolderRef.slice(0, 8)} />
                       <Row label="Rights basis" value={rightsBasis} />
                     </>
