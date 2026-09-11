@@ -19,7 +19,7 @@ export function StudioShell({ children }: { children: ReactNode }) {
             { href: "/studio/work", label: "New creative work", icon: Plus },
             { href: "/authority", label: "Dashboard", icon: LayoutDashboard },
             { href: "/scenes", label: "Scene Deck", icon: Clapperboard },
-            { href: "/editor", label: "Experience Editor", icon: Sparkles },
+            { href: "/editor", label: "Timeline", icon: Sparkles },
           ],
         },
       ]}

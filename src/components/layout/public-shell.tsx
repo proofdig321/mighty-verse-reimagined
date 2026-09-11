@@ -37,7 +37,7 @@ export function PublicShell({ children }: { children: ReactNode }) {
           label: "Create",
           items: [
             { href: "/studio", label: "Creative Studio", icon: MonitorPlay, surface: "studio" },
-            { href: "/editor", label: "Experience Editor", icon: Film, surface: "editor" },
+            { href: "/editor", label: "Timeline", icon: Film, surface: "editor" },
             { href: "/authority", label: "Dashboard", icon: Wand2, surface: "dashboard" },
           ],
         },

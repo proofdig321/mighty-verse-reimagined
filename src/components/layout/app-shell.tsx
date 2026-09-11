@@ -128,7 +128,6 @@ export function AppShell({
             <Menu size={18} />
           </button>
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">{brandKicker}</p>
             <p className="text-sm font-semibold">{brandTitle}</p>
           </div>
           <ThemePresetControl />

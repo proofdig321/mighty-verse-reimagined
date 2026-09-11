@@ -14,7 +14,7 @@ test("experience editor initializes Mux timeline media without Livepeer misroute
   const response = await page.goto(ROUTES.editor, { waitUntil: "domcontentloaded" });
   expect(response?.ok(), `editor HTTP ${response?.status()}`).toBeTruthy();
 
-  await expect(page.getByText("Experience Editor")).toBeVisible();
+  await expect(page.getByRole("main").getByText("Experience Editor")).toBeVisible();
   await expect(page.getByText("Scene Library")).toBeVisible();
   for (const title of CANON.sceneTitles) {
     await expect(page.getByText(title).first()).toBeVisible();
