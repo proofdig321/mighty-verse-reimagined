@@ -3,6 +3,9 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Textarea } from "@/components/ui/textarea";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
@@ -228,267 +231,290 @@ export function StoryboardWorkspace({
     { id: "sentinel", label: "Sentinel" },
     { id: "references", label: "References" },
   ];
+  const sequenceEmpty = scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0;
 
   return (
-    <div className="storyboard-workspace">
-      <div className="storyboard-target-bar">
+    <div className="storyboard-workspace" data-storyboard-layout="workspace">
+      <div className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
         {universeId ? (
           <p className="text-sm text-muted-foreground">
             Target Association · {universeTitle ?? "Canonical Universe"}
           </p>
         ) : (
-          <AssociateStoryboard universes={universes} />
+          <>
+            <div className="min-w-0 space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Standalone workspace
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Write a story, parse Sentinel tracks, and generate promotional content independently.
+              </p>
+            </div>
+            <Card className="w-full bg-card/60 lg:max-w-md" size="sm">
+              <CardContent>
+                <AssociateStoryboard universes={universes} />
+              </CardContent>
+            </Card>
+          </>
         )}
       </div>
 
-      <div className="studio-material-tabs" role="tablist" aria-label="Storyboard materials">
-        {tabs.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            role="tab"
-            aria-selected={tab === item.id}
-            className={cn("studio-material-tab", tab === item.id && "studio-material-tab-current")}
-            onClick={() => setTab(item.id)}
-          >
-            {item.label}
-          </button>
-        ))}
-      </div>
+      <div className="grid gap-6 lg:grid-cols-12">
+        <Card className="bg-card/50 lg:col-span-5">
+          <CardHeader className="border-b border-border/70">
+            <CardTitle>Script Engine</CardTitle>
+            <CardDescription>Draft the story body, run Chrome Prompt API assist, or open Sentinel evidence.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Tabs
+              value={tab}
+              onValueChange={(value) => {
+                if (value === "script" || value === "assist" || value === "sentinel" || value === "references") {
+                  setTab(value);
+                }
+              }}
+              className="w-full gap-4"
+            >
+              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4" aria-label="Storyboard materials">
+                {tabs.map((item) => (
+                  <TabsTrigger key={item.id} value={item.id}>
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
 
-      <div className="storyboard-workspace-columns">
-        <section
-          className={cn("storyboard-column", (tab === "script" || tab === "assist") && "storyboard-column-current")}
-          data-column="script"
-          aria-labelledby="storyboard-script-heading"
-        >
-          <p className="suite-kicker">Ingest</p>
-          <h2 id="storyboard-script-heading" className="suite-section-title">
-            Script
-          </h2>
-          <div className="space-y-3">
-            <label className="block space-y-2">
-              <span className="suite-kicker">Story body</span>
-              <textarea
-                value={script}
-                onChange={(event) => setScript(event.target.value)}
-                rows={10}
-                className="w-full rounded-lg border border-border bg-card/40 px-3 py-2 text-sm text-foreground"
-                placeholder="Golden Shovel walks a futuristic Johannesburg skyline.&#10;Camera: rise through the mural&#10;The city transforms around him.&#10;Spirit avatar appears."
-              />
-            </label>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" size="sm" onClick={generatePanels}>
-                Generate storyboard
-              </Button>
-              <Button type="button" size="sm" variant="outline" onClick={() => void saveBody()}>
-                Save story body
-              </Button>
-            </div>
-            <StatusLine state={saveState} />
-            <p className="suite-section-note">
-              Script is a creative input. Generating panels does not create Scenes or change canonical timing.
-            </p>
-            <label className="block space-y-2">
-              <span className="suite-kicker">AI Assist</span>
-              <textarea
-                value={instruction}
-                onChange={(event) => setInstruction(event.target.value)}
-                rows={4}
-                className="w-full rounded-lg border border-border bg-card/40 px-3 py-2 text-sm text-foreground"
-                placeholder="Tighten the Powerhouse opening. Keep the four existing Scenes as the destination, not as generated objects."
-              />
-            </label>
-            <Button type="button" size="sm" onClick={() => void assist()}>
-              Generate / refine story
-            </Button>
-            <StatusLine state={assistState} />
-            <p className="suite-section-note">
-              Uses Chrome built-in Prompt API when the browser can, otherwise the configured Gemini API.
-              AI output remains a proposal until you curate it.
-            </p>
-          </div>
-        </section>
+              <TabsContent value="script" className="space-y-4" keepMounted>
+                <section data-column="script" aria-labelledby="storyboard-script-heading" className="space-y-3">
+                  <h3 id="storyboard-script-heading" className="sr-only">
+                    Script
+                  </h3>
+                  <label className="block space-y-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Story body</span>
+                    <Textarea
+                      value={script}
+                      onChange={(event) => setScript(event.target.value)}
+                      className="min-h-[220px] font-mono text-sm leading-relaxed"
+                      placeholder="Golden Shovel walks a futuristic Johannesburg skyline.&#10;Camera: rise through the mural&#10;The city transforms around him.&#10;Spirit avatar appears."
+                    />
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" size="sm" onClick={generatePanels}>
+                      Generate storyboard
+                    </Button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => void saveBody()}>
+                      Save story body
+                    </Button>
+                  </div>
+                  <StatusLine state={saveState} />
+                  <p className="text-xs text-muted-foreground">
+                    Script is a creative input. Generating panels does not create Scenes or change canonical timing.
+                  </p>
+                </section>
+              </TabsContent>
 
-        <section
-          className={cn("storyboard-column", tab === "sentinel" && "storyboard-column-current")}
-          data-column="sentinel"
-          aria-labelledby="universe-sentinel"
-        >
-          {intelligence && universeId ? (
-            <div className="suite-section">
-              <div className="suite-section-head">
-                <h2 id="universe-sentinel" className="suite-section-title">
-                  Sentinel
-                </h2>
-                <p className="suite-section-note">
-                  Observational evidence for this source. Sentinel does not create Scenes. Authorise windows only when the curator agrees.
+              <TabsContent value="assist" className="space-y-4" keepMounted>
+                <label className="block space-y-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">AI Assist</span>
+                  <Textarea
+                    value={instruction}
+                    onChange={(event) => setInstruction(event.target.value)}
+                    className="min-h-28 text-sm"
+                    placeholder="Tighten the Powerhouse opening. Keep the four existing Scenes as the destination, not as generated objects."
+                  />
+                </label>
+                <Button type="button" size="sm" onClick={() => void assist()}>
+                  Generate / refine story
+                </Button>
+                <StatusLine state={assistState} />
+                <p className="text-xs text-muted-foreground">
+                  Chrome Prompt API is the intended path. Gemini is used only when that browser API is unavailable and a server key is configured. AI output remains a proposal until you curate it.
+                </p>
+              </TabsContent>
+
+              <TabsContent value="sentinel" keepMounted>
+                <section data-column="sentinel" aria-labelledby="universe-sentinel" className="space-y-3">
+                  {intelligence && universeId ? (
+                    <div className="suite-section">
+                      <div className="suite-section-head">
+                        <h2 id="universe-sentinel" className="suite-section-title">
+                          Sentinel
+                        </h2>
+                        <p className="suite-section-note">
+                          Observational evidence for this source. Sentinel does not create Scenes. Authorise windows only when the curator agrees.
+                        </p>
+                      </div>
+                      <SentinelIntelligencePanel
+                        universeId={universeId}
+                        intelligence={intelligence}
+                        canAuthorise={canAuthoriseSentinel}
+                        canRetainReference={canAuthoriseSentinel}
+                        inspectHref={inspectHref}
+                        previewHref={previewHref}
+                      />
+                    </div>
+                  ) : (
+                    <>
+                      <h2 id="universe-sentinel" className="suite-section-title">
+                        Sentinel
+                      </h2>
+                      <p className="suite-empty">No Sentinel evidence is available yet. Inspect the bound source to observe it.</p>
+                    </>
+                  )}
+                </section>
+              </TabsContent>
+
+              <TabsContent value="references" className="space-y-3" keepMounted>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">References</p>
+                {references.length === 0 && generated.length === 0 ? (
+                  <p className="suite-empty">No curated workspace reference assets indexed yet.</p>
+                ) : (
+                  <ul className="flex flex-wrap gap-3">
+                    {generated.map((artifact, index) => (
+                      <li key={`${artifact.title}-${index}`} className="w-36">
+                        {artifact.still_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={artifact.still_url} alt="" className="aspect-video w-full rounded object-cover" />
+                        ) : (
+                          <div className="aspect-video rounded bg-muted/40" />
+                        )}
+                        <p className="mt-1 text-xs text-foreground">{artifact.title}</p>
+                        <p className="text-[10px] text-muted-foreground">{artifact.output_type} · {artifact.status}</p>
+                      </li>
+                    ))}
+                    {references.map((reference) => (
+                      <li key={reference.asset_id} className="w-36">
+                        {reference.still_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={reference.still_url} alt="" className="aspect-video w-full rounded object-cover" />
+                        ) : (
+                          <div className="aspect-video rounded bg-muted/40" />
+                        )}
+                        <p className="mt-1 text-xs text-foreground">{reference.title}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          {reference.role} · {formatTimelineMs(reference.time_ms)}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+
+        <Card className="flex min-h-[28rem] flex-col bg-card/50 lg:col-span-7">
+          <CardHeader className="border-b border-border/70">
+            <CardTitle>
+              <h2 id="storyboard-sequence" className="text-base font-medium leading-snug">
+                Storyboard
+              </h2>
+            </CardTitle>
+            <CardDescription>
+              Workspace visual sequence — script beats, Sentinel evidence, and canonical Scenes are materials, not the same thing.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-1 flex-col gap-6 pt-4" data-column="sequence" aria-labelledby="storyboard-sequence">
+            {sequenceEmpty ? (
+              <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
+                <div className="mb-3 size-12 rounded-full border border-border bg-background" aria-hidden="true" />
+                <h3 className="text-sm font-medium text-foreground">Visual sequence container empty</h3>
+                <p className="mt-1 max-w-sm text-xs text-muted-foreground">
+                  Write a script or inspect source media to begin organizing storyboard compositions.
                 </p>
               </div>
-              <SentinelIntelligencePanel
-                universeId={universeId}
-                intelligence={intelligence}
-                canAuthorise={canAuthoriseSentinel}
-                canRetainReference={canAuthoriseSentinel}
-                inspectHref={inspectHref}
-                previewHref={previewHref}
-              />
-            </div>
-          ) : (
-            <>
-              <h2 id="universe-sentinel" className="suite-section-title">
-                Sentinel
-              </h2>
-              <p className="suite-empty">No Sentinel evidence is available yet. Inspect the bound source to observe it.</p>
-            </>
-          )}
-        </section>
-
-        <section
-          className={cn(
-            "storyboard-column",
-            (tab === "script" || tab === "assist" || tab === "references") && "storyboard-column-current",
-          )}
-          data-column="sequence"
-          aria-labelledby="storyboard-sequence"
-        >
-          <div className="suite-section-head">
-            <h2 id="storyboard-sequence" className="suite-section-title">
-              Storyboard
-            </h2>
-            <p className="suite-section-note">
-              A visual sequence for this work. Script beats, Sentinel evidence, and canonical Scenes are materials — not the same thing.
-            </p>
-          </div>
-          <ol className="storyboard-panel-strip">
-            {scriptPanels.map((panel, index) => (
-              <li key={panel.panel_id}>
-                <button
-                  type="button"
-                  className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}
-                  onClick={() => setSelectedId(panel.panel_id)}
-                >
-                  <div className="storyboard-panel-empty" aria-hidden="true" />
-                  <p className="suite-kicker">Panel {String(index + 1).padStart(2, "0")}</p>
-                  <p className="text-sm text-foreground">{panel.title}</p>
-                  <p className="suite-proposal-badge">Script</p>
-                </button>
-              </li>
-            ))}
-            {sentinelPanels.map((panel) => (
-              <li key={panel.panel_id}>
-                <StoryboardEvidencePanel
-                  panel={panel}
-                  selected={selectedId === panel.panel_id}
-                  onSelect={() => setSelectedId(panel.panel_id)}
-                />
-              </li>
-            ))}
-            {scriptPanels.length === 0 && sentinelPanels.length === 0
-              ? scenes.map((scene, index) => (
-                  <li key={scene.master_id}>
+            ) : (
+              <ol className="storyboard-panel-strip">
+                {scriptPanels.map((panel, index) => (
+                  <li key={panel.panel_id}>
                     <button
                       type="button"
-                      className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}
-                      onClick={() => setSelectedId(scene.master_id)}
+                      className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}
+                      onClick={() => setSelectedId(panel.panel_id)}
                     >
-                      <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
-                      <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
-                      <p className="suite-canon-badge">Scene</p>
+                      <div className="storyboard-panel-empty" aria-hidden="true" />
+                      <p className="suite-kicker">Panel {String(index + 1).padStart(2, "0")}</p>
+                      <p className="text-sm text-foreground">{panel.title}</p>
+                      <p className="suite-proposal-badge">Script</p>
                     </button>
                   </li>
-                ))
-              : null}
-          </ol>
-          {scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0 ? (
-            <p className="suite-empty">Write a script or inspect source media to begin a storyboard.</p>
-          ) : null}
-
-          <div className={cn("mt-6", tab !== "references" && "storyboard-references")}>
-            <p className="suite-kicker">Media compositions</p>
-            {references.length === 0 && generated.length === 0 ? (
-              <p className="suite-empty">No curated references yet. Keep a Sentinel still as a reference from the Sentinel materials.</p>
-            ) : (
-              <ul className="flex flex-wrap gap-3">
-                {generated.map((artifact, index) => (
-                  <li key={`${artifact.title}-${index}`} className="w-36">
-                    {artifact.still_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={artifact.still_url} alt="" className="aspect-video w-full rounded object-cover" />
-                    ) : (
-                      <div className="aspect-video rounded bg-muted/40" />
-                    )}
-                    <p className="mt-1 text-xs text-foreground">{artifact.title}</p>
-                    <p className="text-[10px] text-muted-foreground">{artifact.output_type} · {artifact.status}</p>
+                ))}
+                {sentinelPanels.map((panel) => (
+                  <li key={panel.panel_id}>
+                    <StoryboardEvidencePanel
+                      panel={panel}
+                      selected={selectedId === panel.panel_id}
+                      onSelect={() => setSelectedId(panel.panel_id)}
+                    />
                   </li>
                 ))}
-                {references.map((reference) => (
-                  <li key={reference.asset_id} className="w-36">
-                    {reference.still_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={reference.still_url} alt="" className="aspect-video w-full rounded object-cover" />
-                    ) : (
-                      <div className="aspect-video rounded bg-muted/40" />
-                    )}
-                    <p className="mt-1 text-xs text-foreground">{reference.title}</p>
-                    <p className="text-[10px] text-muted-foreground">
-                      {reference.role} · {formatTimelineMs(reference.time_ms)}
-                    </p>
-                  </li>
-                ))}
-              </ul>
+                {scriptPanels.length === 0 && sentinelPanels.length === 0
+                  ? scenes.map((scene, index) => (
+                      <li key={scene.master_id}>
+                        <button
+                          type="button"
+                          className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}
+                          onClick={() => setSelectedId(scene.master_id)}
+                        >
+                          <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
+                          <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
+                          <p className="suite-canon-badge">Scene</p>
+                        </button>
+                      </li>
+                    ))
+                  : null}
+              </ol>
             )}
-          </div>
 
-          {selected ? (
-            <aside className="studio-inspector mt-6" aria-label="Selected panel">
-              {selected.still ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={selected.still} alt="" className="mb-3 aspect-video w-full rounded object-cover" />
-              ) : (
-                <div className="mb-3 aspect-video rounded bg-muted/40" />
-              )}
-              <p className="suite-kicker">{selected.kind}</p>
-              <h3 className="text-lg font-medium text-foreground">{selected.title}</h3>
-              {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
-              <p className="mt-2 text-sm text-muted-foreground">{selected.description}</p>
-              {selected.camera ? <p className="mt-2 text-xs text-muted-foreground">Camera · {selected.camera}</p> : null}
-              {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
-              {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("panel")}>
-                  Generate panel
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("variation")}>
-                  Generate variation
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
-                  Animate
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
-                  Generate clip
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
-                  Generate GIF
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
-                  Generate reel
-                </Button>
-                {universeId ? (
-                  <>
-                    <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                      Add to production
-                    </Link>
-                    <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                      Open 2.5D
-                    </Link>
-                  </>
-                ) : null}
-              </div>
-              <StatusLine state={mediaState} />
-            </aside>
-          ) : null}
-        </section>
+            {selected ? (
+              <aside className="studio-inspector" aria-label="Selected panel">
+                {selected.still ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={selected.still} alt="" className="mb-3 aspect-video w-full rounded object-cover" />
+                ) : (
+                  <div className="mb-3 aspect-video rounded bg-muted/40" />
+                )}
+                <p className="suite-kicker">{selected.kind}</p>
+                <h3 className="text-lg font-medium text-foreground">{selected.title}</h3>
+                {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
+                <p className="mt-2 text-sm text-muted-foreground">{selected.description}</p>
+                {selected.camera ? <p className="mt-2 text-xs text-muted-foreground">Camera · {selected.camera}</p> : null}
+                {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
+                {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("panel")}>
+                    Generate panel
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("variation")}>
+                    Generate variation
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
+                    Animate
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
+                    Generate clip
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
+                    Generate GIF
+                  </Button>
+                  <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
+                    Generate reel
+                  </Button>
+                  {universeId ? (
+                    <>
+                      <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                        Add to production
+                      </Link>
+                      <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                        Open 2.5D
+                      </Link>
+                    </>
+                  ) : null}
+                </div>
+                <StatusLine state={mediaState} />
+              </aside>
+            ) : null}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

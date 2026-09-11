@@ -4,7 +4,7 @@ import {
   holographicPanFromPointerX,
   holographicMouseUv,
   holographicUvShift,
-  shouldUploadMuxVideoFrame,
+  muxVideoTextureUpdate,
   tessellatePlane,
   tessellateVertexCount,
 } from "../holographic-warp";
@@ -25,17 +25,36 @@ assert(right.x === 1, "right pointer maps to mouse uv 1");
 
 assert(holographicUvShift(0) < 0, "mouse left yields a negative UV shift (pixels appear to slide right)");
 assert(holographicUvShift(1) > 0, "mouse right yields a positive UV shift (pixels appear to slide left)");
-assert(HOLOGRAPHIC_PARALLAX_STRENGTH === 0.7, "cursor parallax punch is 0.70");
+assert(HOLOGRAPHIC_PARALLAX_STRENGTH === 0.75, "cursor parallax punch is 0.75");
 assert(
   Math.abs(holographicUvShift(0)) > Math.abs(holographicUvShift(0, 0.45)),
-  "0.70 parallax separates layers more than the previous 0.45 baseline",
+  "0.75 parallax separates layers more than the previous 0.45 baseline",
 );
 
-assert(shouldUploadMuxVideoFrame({ readyState: 1, currentTime: 1, lastUploadedTime: -1 }) === false, "skip upload before HAVE_CURRENT_DATA");
-assert(shouldUploadMuxVideoFrame({ readyState: 2, currentTime: 0, lastUploadedTime: -1, videoWidth: 1280 }) === true, "first decoded frame uploads");
-assert(shouldUploadMuxVideoFrame({ readyState: 4, currentTime: 1.2, lastUploadedTime: 1.2, videoWidth: 1280 }) === false, "duplicate Mux clock does not re-upload");
-assert(shouldUploadMuxVideoFrame({ readyState: 4, currentTime: 1.24, lastUploadedTime: 1.2, videoWidth: 1280 }) === true, "advanced Mux clock uploads");
-assert(shouldUploadMuxVideoFrame({ readyState: 4, currentTime: 3, lastUploadedTime: 1.2, videoWidth: 0 }) === false, "skip upload until video dimensions exist");
+assert(
+  muxVideoTextureUpdate({ readyState: 1, videoWidth: 1280, videoHeight: 720, allocatedWidth: 0, allocatedHeight: 0 }) === "skip",
+  "skip GPU upload before HAVE_CURRENT_DATA",
+);
+assert(
+  muxVideoTextureUpdate({ readyState: 4, videoWidth: 0, videoHeight: 0, allocatedWidth: 0, allocatedHeight: 0 }) === "skip",
+  "skip GPU upload until Mux has pixel dimensions",
+);
+assert(
+  muxVideoTextureUpdate({ readyState: 2, videoWidth: 1280, videoHeight: 720, allocatedWidth: 0, allocatedHeight: 0 }) === "allocate",
+  "first decoded frame allocates the video texture",
+);
+assert(
+  muxVideoTextureUpdate({ readyState: 4, videoWidth: 1280, videoHeight: 720, allocatedWidth: 1280, allocatedHeight: 720 }) === "subimage",
+  "same Mux resolution updates in place with texSubImage2D",
+);
+assert(
+  muxVideoTextureUpdate({ readyState: 4, videoWidth: 1920, videoHeight: 1080, allocatedWidth: 1280, allocatedHeight: 720 }) === "allocate",
+  "HLS resolution change reallocates instead of timestamp-skipping",
+);
+assert(
+  muxVideoTextureUpdate({ readyState: 4, videoWidth: 1280, videoHeight: 720, allocatedWidth: 1280, allocatedHeight: 720 }) === "subimage",
+  "duplicate HLS currentTime is not part of the upload gate",
+);
 
 assert(HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y === false, "Mux VideoTexture.flipY stays false (UNPACK_FLIP_Y off)");
 

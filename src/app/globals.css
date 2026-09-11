@@ -515,7 +515,7 @@
 
   .storyboard-workspace {
     display: grid;
-    gap: 1.25rem;
+    gap: 1.5rem;
   }
 
   .storyboard-target-bar {
@@ -527,42 +527,6 @@
   .storyboard-target {
     display: grid;
     gap: 0.55rem;
-    max-width: 28rem;
-  }
-
-  .storyboard-workspace-columns {
-    display: grid;
-    gap: 1.25rem;
-    min-width: 0;
-  }
-
-  .storyboard-column {
-    display: none;
-    min-width: 0;
-  }
-
-  .storyboard-column-current {
-    display: grid;
-    gap: 0.85rem;
-  }
-
-  @media (min-width: 1024px) {
-    .storyboard-workspace-columns {
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr) minmax(16rem, 0.95fr);
-      align-items: start;
-    }
-
-    .storyboard-column,
-    .storyboard-column-current {
-      display: grid;
-      gap: 0.85rem;
-    }
-
-    .storyboard-workspace > .studio-inspector {
-      grid-column: auto;
-      grid-row: auto;
-      position: static;
-    }
   }
 
   .storyboard-panel-strip {

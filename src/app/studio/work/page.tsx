@@ -19,7 +19,7 @@ export default async function StudioWorkPage() {
       <div className="space-y-2">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Standalone work</p>
         <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-display, inherit)" }}>
-          Storyboard
+          Storyboard Workspace
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Write a story, generate a sequence, and produce media. This work is not attached to a Universe until you curate that relationship.

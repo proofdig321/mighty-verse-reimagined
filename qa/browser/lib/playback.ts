@@ -202,6 +202,7 @@ export async function readTheaterSync(page: {
   draws: number;
   texUploads: number;
   texSkips: number;
+  texPath: string | null;
   pan: number;
 }> {
   const theater = page.locator("[data-holographic-theater]");
@@ -212,6 +213,7 @@ export async function readTheaterSync(page: {
     draws: Number(await theater.getAttribute("data-holographic-draws") ?? 0),
     texUploads: Number(await theater.getAttribute("data-holographic-tex-uploads") ?? 0),
     texSkips: Number(await theater.getAttribute("data-holographic-tex-skips") ?? 0),
+    texPath: await theater.getAttribute("data-holographic-tex-path"),
     pan: Number(await theater.getAttribute("data-holographic-pan")),
   };
 }

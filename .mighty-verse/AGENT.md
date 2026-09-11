@@ -185,7 +185,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - Extra Sentinel candidates become storyboard beats, never new Scenes
 - Authorise writes existing `projection_media_binding.start_ms/end_ms` via `decideSceneTiming`
 - Public 2.5D uses canonical stills. Suite uses the latest completed inspection session when present. Stage 4.0 exposes the same 2.5D as Studio Preview inside Creative Suite; `/worlds/{id}/holographic` remains the audience Experience.
-- Mux cinema is a custom WebGL1 compositor (`HolographicTheater`), not Three.js / R3F. `texture.flipY` stays false. `texImage2D` uploads only net-new Mux frames. Parallax strength is 0.70. No new tables.
+- Mux cinema is a custom WebGL1 compositor (`HolographicTheater`), not Three.js / R3F. `texture.flipY` stays false. Steady frames use `texSubImage2D` (allocate on size change). Do not skip uploads on HLS `currentTime`. Parallax strength is 0.75. No new tables.
 
 ### Media Intelligence (browser-side, ephemeral)
 - `src/lib/media/intelligence.ts` — sampleFrames, computeFrameDeltas, detectBoundaryTimestamps
@@ -414,9 +414,9 @@ Do not use screenshots to prove orientation or audio/lyric sync. Chrome smoke
 `qa/browser/smoke/holographic-playback.smoke.ts` is the proof path:
 
 - luma-row correlation of Mux `<video>` vs the theater canvas (upright)
-- `data-holographic-flip-y=false` and `data-holographic-parallax=0.70`
+- `data-holographic-flip-y=false` and `data-holographic-parallax=0.75`
 - cursor left/right stereo pan
-- paused clock: rAF draws continue, `texImage2D` uploads stay flat
+- `texSubImage2D` in-place uploads (`data-holographic-tex-path=subimage`); paused Mux clock holds while rAF continues
 
 Same compositor serves Studio preview and the public holographic Experience.
 

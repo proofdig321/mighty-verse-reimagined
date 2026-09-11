@@ -8,7 +8,7 @@
  */
 
 export const HOLOGRAPHIC_PAN_MAX = 0.8;
-export const HOLOGRAPHIC_PARALLAX_STRENGTH = 0.7;
+export const HOLOGRAPHIC_PARALLAX_STRENGTH = 0.75;
 export const HOLOGRAPHIC_MESH_SEGMENTS = 64;
 
 /** HTMLVideoElement.HAVE_CURRENT_DATA — frame pixels exist to upload. */
@@ -52,21 +52,26 @@ export function holographicUvShift(mouseUv: number, strength = HOLOGRAPHIC_PARAL
   return (mouseUv - 0.5) * strength;
 }
 
+export type MuxVideoTextureUpdate = "skip" | "allocate" | "subimage";
+
 /**
- * Skip blocking `texImage2D` until Mux has a net-new decoded frame.
- * rAF still draws the last GPU texture so cursor parallax stays at display rate.
+ * HLS `currentTime` is a VBR media clock, not a frame tick. Do not gate GPU
+ * uploads on timestamp equality — that drops cinema frames against audio.
+ * Allocate once (or on resolution change), then `texSubImage2D` in place.
  */
-export function shouldUploadMuxVideoFrame(input: {
+export function muxVideoTextureUpdate(input: {
   readyState: number;
-  currentTime: number;
-  lastUploadedTime: number;
-  videoWidth?: number;
-}): boolean {
-  if (input.readyState < VIDEO_HAVE_CURRENT_DATA) return false;
-  if ((input.videoWidth ?? 1) <= 0) return false;
-  if (!Number.isFinite(input.currentTime)) return false;
-  if (input.currentTime === input.lastUploadedTime) return false;
-  return true;
+  videoWidth: number;
+  videoHeight: number;
+  allocatedWidth: number;
+  allocatedHeight: number;
+}): MuxVideoTextureUpdate {
+  if (input.readyState < VIDEO_HAVE_CURRENT_DATA) return "skip";
+  if (input.videoWidth <= 0 || input.videoHeight <= 0) return "skip";
+  if (input.allocatedWidth !== input.videoWidth || input.allocatedHeight !== input.videoHeight) {
+    return "allocate";
+  }
+  return "subimage";
 }
 
 /**
