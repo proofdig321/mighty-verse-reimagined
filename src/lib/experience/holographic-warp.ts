@@ -8,8 +8,11 @@
  */
 
 export const HOLOGRAPHIC_PAN_MAX = 0.8;
-export const HOLOGRAPHIC_PARALLAX_STRENGTH = 0.45;
+export const HOLOGRAPHIC_PARALLAX_STRENGTH = 0.7;
 export const HOLOGRAPHIC_MESH_SEGMENTS = 64;
+
+/** HTMLVideoElement.HAVE_CURRENT_DATA — frame pixels exist to upload. */
+export const VIDEO_HAVE_CURRENT_DATA = 2;
 
 /**
  * Three.js `texture.flipY = false` for the Mux HTML video texture.
@@ -47,6 +50,23 @@ export function holographicMouseUv(pointer: TheaterPointer): { x: number; y: num
  */
 export function holographicUvShift(mouseUv: number, strength = HOLOGRAPHIC_PARALLAX_STRENGTH): number {
   return (mouseUv - 0.5) * strength;
+}
+
+/**
+ * Skip blocking `texImage2D` until Mux has a net-new decoded frame.
+ * rAF still draws the last GPU texture so cursor parallax stays at display rate.
+ */
+export function shouldUploadMuxVideoFrame(input: {
+  readyState: number;
+  currentTime: number;
+  lastUploadedTime: number;
+  videoWidth?: number;
+}): boolean {
+  if (input.readyState < VIDEO_HAVE_CURRENT_DATA) return false;
+  if ((input.videoWidth ?? 1) <= 0) return false;
+  if (!Number.isFinite(input.currentTime)) return false;
+  if (input.currentTime === input.lastUploadedTime) return false;
+  return true;
 }
 
 /**

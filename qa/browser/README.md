@@ -77,7 +77,7 @@ The config reuses an existing dev server when one is already listening.
 | `/moments` | `/moments` | Listing + opening a real moment, Mux provider path |
 | `/authority/curate` | `/authority/curate` | Auth gate or incoming media + Universe picker. Hub and Sentinel are child routes. |
 | Super Hero Ego Creative Suite | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc` | Auth gate; listing → suite; Source / Sentinel / Storyboard / 2.5D Preview / Scenes / Creative Moments / Experience; Mux source preview; in-suite 2.5D |
-| Super Hero Ego 2.5D | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/holographic` | Mural + four Scene planes + Creative Moments; canonical Mux stills |
+| Super Hero Ego 2.5D | `/worlds/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/holographic` | Mux WebGL cinema: upright luma check, flipY false, parallax 0.70, pan, paused upload-skip |
 | Super Hero Ego Universe identity | `/authority/universes/05ccc0c6-75f9-4864-b0c1-af5e36bf45cc/identity` | Auth gate; title/description form; validation; idempotent save; return to suite |
 | Unbound Livepeer inspect | `/authority/media/inspect?assetId=bda79051-6bc9-497f-b0aa-12d95130290c` | Persist Sentinel evidence without a master; saved inspections remain after reload |
 | `/editor` | `/editor` | Experience Editor, real Scenes, Mux thumbnails, timeline init |

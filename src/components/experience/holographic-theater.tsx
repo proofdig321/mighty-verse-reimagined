@@ -11,6 +11,7 @@ import {
   holographicMouseUv,
   holographicPanFromPointerX,
   lerp,
+  shouldUploadMuxVideoFrame,
   tessellatePlane,
   tessellateVertexCount,
   type TheaterPointer,
@@ -313,6 +314,7 @@ export function HolographicTheater({
     gl.bindTexture(gl.TEXTURE_2D, videoTexture);
     bindVideoTextureUnpack(gl);
     surface.dataset.holographicFlipY = String(HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y);
+    surface.dataset.holographicParallax = HOLOGRAPHIC_PARALLAX_STRENGTH.toFixed(2);
     const warpProgram: WebGLProgram = videoProgram;
     const overlayProgram: WebGLProgram = stillProgram;
     const meshBuffer: WebGLBuffer = mesh;
@@ -341,6 +343,14 @@ export function HolographicTheater({
     const textures = new Map<string, WebGLTexture>();
     const mouse = { x: 0.5, y: 0.5 };
     const started = performance.now();
+    let lastUploadedTime = -1;
+    let texUploads = 0;
+    let texSkips = 0;
+    let draws = 0;
+    let seekVideo: HTMLVideoElement | null = null;
+    const onSeeked = () => {
+      lastUploadedTime = -1;
+    };
 
     async function loadTextures() {
       for (const layer of layersRef.current) {
@@ -389,18 +399,37 @@ export function HolographicTheater({
       const video =
         videoRef?.current ??
         (surface.parentElement?.querySelector("[data-holographic-kind='mural'] video") as HTMLVideoElement | null);
-      if (video && video.readyState >= 2 && video.videoWidth > 0) {
+      if (video && seekVideo !== video) {
+        seekVideo?.removeEventListener("seeked", onSeeked);
+        seekVideo = video;
+        video.addEventListener("seeked", onSeeked);
+      }
+      if (!video) {
+        surface.dataset.holographicWarp = "novideo";
+      } else if (
+        !shouldUploadMuxVideoFrame({
+          readyState: video.readyState,
+          currentTime: video.currentTime,
+          lastUploadedTime,
+          videoWidth: video.videoWidth,
+        })
+      ) {
+        texSkips += 1;
+        if (video.readyState < video.HAVE_CURRENT_DATA || video.videoWidth <= 0) {
+          surface.dataset.holographicWarp = "waiting";
+        }
+      } else {
         try {
           gl.bindTexture(gl.TEXTURE_2D, videoTexture);
           bindVideoTextureUnpack(gl);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+          lastUploadedTime = video.currentTime;
+          texUploads += 1;
           const glError = gl.getError();
           surface.dataset.holographicWarp = glError === gl.NO_ERROR ? "live" : "blocked";
         } catch {
           surface.dataset.holographicWarp = "blocked";
         }
-      } else {
-        surface.dataset.holographicWarp = video ? "waiting" : "novideo";
       }
 
       const viewH = 2 * Math.tan(fov / 2) * cameraZ;
@@ -442,6 +471,10 @@ export function HolographicTheater({
         gl.bindTexture(gl.TEXTURE_2D, texture);
         gl.drawArrays(gl.TRIANGLES, 0, 6);
       });
+      draws += 1;
+      surface.dataset.holographicDraws = String(draws);
+      surface.dataset.holographicTexUploads = String(texUploads);
+      surface.dataset.holographicTexSkips = String(texSkips);
       frame = window.requestAnimationFrame(draw);
     }
 
@@ -449,6 +482,7 @@ export function HolographicTheater({
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(frame);
+      seekVideo?.removeEventListener("seeked", onSeeked);
       textures.forEach((texture) => gl.deleteTexture(texture));
       gl.deleteTexture(videoTexture);
     };

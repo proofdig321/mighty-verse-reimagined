@@ -191,6 +191,31 @@ export async function sampleCinemaOrientation(page: {
   });
 }
 
+export async function readTheaterSync(page: {
+  locator: (selector: string) => {
+    getAttribute: (name: string) => Promise<string | null>;
+  };
+}): Promise<{
+  warp: string | null;
+  flipY: string | null;
+  parallax: number;
+  draws: number;
+  texUploads: number;
+  texSkips: number;
+  pan: number;
+}> {
+  const theater = page.locator("[data-holographic-theater]");
+  return {
+    warp: await theater.getAttribute("data-holographic-warp"),
+    flipY: await theater.getAttribute("data-holographic-flip-y"),
+    parallax: Number(await theater.getAttribute("data-holographic-parallax")),
+    draws: Number(await theater.getAttribute("data-holographic-draws") ?? 0),
+    texUploads: Number(await theater.getAttribute("data-holographic-tex-uploads") ?? 0),
+    texSkips: Number(await theater.getAttribute("data-holographic-tex-skips") ?? 0),
+    pan: Number(await theater.getAttribute("data-holographic-pan")),
+  };
+}
+
 export function isMuxHlsAbort(url: string, failure: string | null): boolean {
   const muxMediaHost = /stream\.mux\.com|edgemv\.mux\.com|image\.mux\.com/i.test(url);
   const aborted = /ERR_ABORTED|net::ERR_ABORTED|aborted/i.test(failure ?? "");

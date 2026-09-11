@@ -1,6 +1,6 @@
 import { CANON, ROUTES, SCENE_MOMENTS } from "../lib/canon";
 import { test, expect } from "../lib/fixtures";
-import { readVideoSnapshot, sampleCinemaOrientation, samplePaintedFrame, tryStartNativeVideoPlayback } from "../lib/playback";
+import { readVideoSnapshot, sampleCinemaOrientation, samplePaintedFrame, tryStartNativeVideoPlayback, readTheaterSync } from "../lib/playback";
 import { muxMediaRequests, reportEvidence } from "../lib/observe";
 
 test.use({ screenshot: "off" });
@@ -60,6 +60,7 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
     .toBe("live");
   notes.push("B1: Mux frames are bound as the WebGL video texture");
   await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-flip-y", "false");
+  await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-parallax", "0.70");
   await expect
     .poll(async () => {
       const orientation = await sampleCinemaOrientation(page);
@@ -86,6 +87,13 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
   }
   notes.push("B1b: Cursor left pans audio left and right pans audio right");
 
+  const playingSync = await readTheaterSync(page);
+  expect(playingSync.texUploads, "playing Mux clock uploads unique frames").toBeGreaterThan(0);
+  expect(playingSync.draws, "rAF keeps drawing while uploads are cached").toBeGreaterThanOrEqual(playingSync.texUploads);
+  notes.push(
+    `B1d: playing draws=${playingSync.draws} uploads=${playingSync.texUploads} skips=${playingSync.texSkips} parallax=${playingSync.parallax.toFixed(2)}`,
+  );
+
   const powerhouse = page.locator(`[data-holographic-kind='scene'][data-master-id='${SCENE_MOMENTS.powerhouse.sceneMasterId}']`);
   await powerhouse.click();
   await expect
@@ -98,6 +106,17 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
 
   await page.getByRole("button", { name: "Pause" }).click();
   await expect(page.locator("[data-holographic-playing='false']")).toHaveCount(1);
+  const pausedAt = await readTheaterSync(page);
+  await expect
+    .poll(async () => {
+      const next = await readTheaterSync(page);
+      return next.draws > pausedAt.draws + 6 && next.texUploads <= pausedAt.texUploads + 1;
+    }, { timeout: 4000 })
+    .toBeTruthy();
+  const pausedSync = await readTheaterSync(page);
+  notes.push(
+    `B1e: paused rAF continues (draws ${pausedAt.draws}→${pausedSync.draws}) without duplicate texImage2D (uploads ${pausedAt.texUploads}→${pausedSync.texUploads})`,
+  );
   await page.getByRole("button", { name: "Restart" }).click();
   await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
   notes.push("C: Pause and Restart return the Experience to a stopped clock");
