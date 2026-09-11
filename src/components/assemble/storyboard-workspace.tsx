@@ -283,7 +283,7 @@ export function StoryboardWorkspace({
                 ))}
               </TabsList>
 
-              <TabsContent value="script" className="space-y-4" keepMounted>
+              <TabsContent value="script" className="space-y-4">
                 <section data-column="script" aria-labelledby="storyboard-script-heading" className="space-y-3">
                   <h3 id="storyboard-script-heading" className="sr-only">
                     Script
@@ -312,7 +312,7 @@ export function StoryboardWorkspace({
                 </section>
               </TabsContent>
 
-              <TabsContent value="assist" className="space-y-4" keepMounted>
+              <TabsContent value="assist" className="space-y-4">
                 <label className="block space-y-2">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">AI Assist</span>
                   <Textarea
@@ -331,7 +331,7 @@ export function StoryboardWorkspace({
                 </p>
               </TabsContent>
 
-              <TabsContent value="sentinel" keepMounted>
+              <TabsContent value="sentinel">
                 <section data-column="sentinel" aria-labelledby="universe-sentinel" className="space-y-3">
                   {intelligence && universeId ? (
                     <div className="suite-section">
@@ -363,7 +363,7 @@ export function StoryboardWorkspace({
                 </section>
               </TabsContent>
 
-              <TabsContent value="references" className="space-y-3" keepMounted>
+              <TabsContent value="references" className="space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">References</p>
                 {references.length === 0 && generated.length === 0 ? (
                   <p className="suite-empty">No curated workspace reference assets indexed yet.</p>

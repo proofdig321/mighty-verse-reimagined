@@ -63,8 +63,8 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseStoryboard}`));
   await expect(page.getByRole("heading", { name: "Storyboard", exact: true })).toBeVisible();
   await expect(page.locator(".storyboard-panel-strip [data-panel-kind='scene']")).toHaveCount(4);
-  await expect(page.getByText("Canonical Scene").first()).toBeVisible();
-  await expect(page.getByText("Storyboard beat").first()).toBeVisible();
+  await expect(page.locator(".storyboard-panel-strip").getByText("Canonical Scene").first()).toBeVisible();
+  await expect(page.locator(".storyboard-panel-strip").getByText("Storyboard beat").first()).toBeVisible();
 
   await page.getByRole("tab", { name: "Sentinel" }).click();
   const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
