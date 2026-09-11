@@ -276,7 +276,12 @@ export function HolographicTheater({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const glContext = canvas.getContext("webgl", { alpha: true, antialias: true, premultipliedAlpha: true });
+    const glContext = canvas.getContext("webgl", {
+      alpha: true,
+      antialias: true,
+      premultipliedAlpha: true,
+      preserveDrawingBuffer: true,
+    });
     if (!glContext) {
       canvas.dataset.holographicTheater = "unavailable";
       return;

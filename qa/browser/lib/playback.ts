@@ -140,14 +140,19 @@ export async function sampleCinemaOrientation(page: {
       if (!ctx) return [];
       ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
       const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const y0 = Math.floor(canvas.height * 0.2);
+      const y1 = Math.ceil(canvas.height * 0.8);
       const rows: number[] = [];
-      for (let y = 0; y < canvas.height; y += 1) {
+      for (let y = y0; y < y1; y += 1) {
         let sum = 0;
+        let lit = 0;
         for (let x = 0; x < canvas.width; x += 1) {
           const i = (y * canvas.width + x) * 4;
-          sum += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114;
+          const luma = pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114;
+          sum += luma;
+          if (luma > 8) lit += 1;
         }
-        rows.push(sum / canvas.width);
+        if (lit > canvas.width * 0.1) rows.push(sum / canvas.width);
       }
       return rows;
     }
