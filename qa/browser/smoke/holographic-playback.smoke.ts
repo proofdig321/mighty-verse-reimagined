@@ -1,7 +1,9 @@
 import { CANON, ROUTES, SCENE_MOMENTS } from "../lib/canon";
 import { test, expect } from "../lib/fixtures";
 import { readVideoSnapshot, sampleCinemaOrientation, samplePaintedFrame, tryStartNativeVideoPlayback } from "../lib/playback";
-import { captureScreenshot, muxMediaRequests, reportEvidence } from "../lib/observe";
+import { muxMediaRequests, reportEvidence } from "../lib/observe";
+
+test.use({ screenshot: "off" });
 
 test("Super Hero Ego holographic Experience plays Mux mural through canonical Scenes", async ({ page, observe }, testInfo) => {
   test.setTimeout(120_000);
@@ -57,13 +59,17 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
     .poll(async () => page.locator("[data-holographic-theater]").getAttribute("data-holographic-warp"), { timeout: 20000 })
     .toBe("live");
   notes.push("B1: Mux frames are bound as the WebGL video texture");
+  await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-flip-y", "false");
   await expect
     .poll(async () => {
       const orientation = await sampleCinemaOrientation(page);
       return orientation.upright;
     }, { timeout: 10000 })
     .toBeTruthy();
-  notes.push("B1c: Mux WebGL texture is right-side up (UNPACK_FLIP_Y off)");
+  const orientation = await sampleCinemaOrientation(page);
+  notes.push(
+    `B1c: Mux WebGL texture is right-side up (texture.flipY=false); luma unflipped=${orientation.unflipped.toFixed(3)} flipped=${orientation.flipped.toFixed(3)}`,
+  );
 
   const cinema = page.locator("[data-holographic-cinema]");
   const cinemaBox = await cinema.boundingBox();
@@ -100,6 +106,5 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
     await expect(page.locator(`[data-holographic-kind='scene'][data-master-id='${scene.sceneMasterId}']`)).toBeVisible();
   }
   expect(muxMediaRequests(observe).length).toBeGreaterThan(0);
-  await captureScreenshot(page, testInfo, "holographic-experience-play");
   reportEvidence(testInfo, "BROWSER VERIFIED", "Holographic Experience Mux playback", page.url(), notes, observe);
 });

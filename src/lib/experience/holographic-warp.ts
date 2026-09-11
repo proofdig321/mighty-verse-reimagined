@@ -11,6 +11,13 @@ export const HOLOGRAPHIC_PAN_MAX = 0.8;
 export const HOLOGRAPHIC_PARALLAX_STRENGTH = 0.45;
 export const HOLOGRAPHIC_MESH_SEGMENTS = 64;
 
+/**
+ * Three.js `texture.flipY = false` for the Mux HTML video texture.
+ * Mesh UVs put v=0 at the top of the plane, so unpack-flip must stay off
+ * or Golden Shovel titles and characters render upside down.
+ */
+export const HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y = false;
+
 export type TheaterPointer = { x: number; y: number };
 
 export function clamp(value: number, min: number, max: number): number {
@@ -45,6 +52,8 @@ export function holographicUvShift(mouseUv: number, strength = HOLOGRAPHIC_PARAL
 /**
  * Dense 16:9-ready plane in clip-local space [-1, 1].
  * Each vertex is x, y, z, u, v. Triangle list, 6 verts per cell.
+ * v=0 is the top of the plane (y=+1). Do not invert this to "fix" video orientation —
+ * set HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y instead.
  */
 export function tessellatePlane(segments = HOLOGRAPHIC_MESH_SEGMENTS): Float32Array {
   const count = Math.max(2, Math.floor(segments));

@@ -7,6 +7,7 @@ import type { HolographicAudioGraph } from "@/lib/experience/holographic-spatial
 import {
   HOLOGRAPHIC_MESH_SEGMENTS,
   HOLOGRAPHIC_PARALLAX_STRENGTH,
+  HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y,
   holographicMouseUv,
   holographicPanFromPointerX,
   lerp,
@@ -180,10 +181,21 @@ function createQuad(gl: WebGLRenderingContext) {
   );
 }
 
+/**
+ * Mux video → GPU unpack. Same contract as Three.js:
+ * `texture.flipY = false` + sRGB / browser default color conversion.
+ * Do not invert the mesh or vertex math to correct orientation.
+ */
+function bindVideoTextureUnpack(gl: WebGLRenderingContext) {
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y ? 1 : 0);
+  gl.pixelStorei(gl.UNPACK_COLORSPACE_CONVERSION_WEBGL, gl.BROWSER_DEFAULT_WEBGL);
+}
+
 function emptyTexture(gl: WebGLRenderingContext) {
   const texture = gl.createTexture();
   if (!texture) return null;
   gl.bindTexture(gl.TEXTURE_2D, texture);
+  bindVideoTextureUnpack(gl);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([5, 5, 8, 255]));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -213,7 +225,7 @@ function canvasTexture(gl: WebGLRenderingContext, title: string, still: HTMLImag
   const texture = gl.createTexture();
   if (!texture) return null;
   gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+  bindVideoTextureUnpack(gl);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
@@ -298,6 +310,9 @@ export function HolographicTheater({
       surface.dataset.holographicTheater = "unavailable";
       return;
     }
+    gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+    bindVideoTextureUnpack(gl);
+    surface.dataset.holographicFlipY = String(HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y);
     const warpProgram: WebGLProgram = videoProgram;
     const overlayProgram: WebGLProgram = stillProgram;
     const meshBuffer: WebGLBuffer = mesh;
@@ -377,9 +392,7 @@ export function HolographicTheater({
       if (video && video.readyState >= 2 && video.videoWidth > 0) {
         try {
           gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-          // Video UV origin is top-left. Keep UNPACK_FLIP_Y off so Mux frames
-          // stay right-side up. Do not invert the mesh or vertex math.
-          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+          bindVideoTextureUnpack(gl);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
           const glError = gl.getError();
           surface.dataset.holographicWarp = glError === gl.NO_ERROR ? "live" : "blocked";
