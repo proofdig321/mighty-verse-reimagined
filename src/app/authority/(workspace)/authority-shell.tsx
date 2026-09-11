@@ -7,6 +7,7 @@ import {
   Clapperboard, Film, Globe, LayoutDashboard, Layers,
   Menu, MonitorPlay, Plus, ShieldCheck, Sparkles, Upload, Users, X, Wand2,
 } from "lucide-react";
+import { ThemePresetControl } from "@/components/theme/theme-preset-control";
 import { WorkspaceJourney } from "@/components/assemble/workspace-journey";
 
 const NAV_GROUPS = [
@@ -46,6 +47,7 @@ const NAV_GROUPS = [
 
 export default function AuthorityShell({ children }: { children: React.ReactNode }) {
   const [mobileNav, setMobileNav] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
 
   function isActive(href: string, match: "prefix" | "exact" = "prefix") {
@@ -75,6 +77,9 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
             </div>
             <span className="text-sm font-semibold text-foreground">Authority</span>
           </div>
+          <div className="ml-auto">
+            <ThemePresetControl />
+          </div>
         </div>
       </div>
 
@@ -82,27 +87,38 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
       <aside
         className={`
           ${mobileNav ? "flex" : "hidden"}
-          fixed inset-y-0 left-0 z-20 w-64 flex-col border-r border-border
+          fixed inset-y-0 left-0 z-20 flex-col border-r border-border
           lg:flex lg:static lg:inset-auto lg:min-h-screen lg:shrink-0 scrollbar-hidden
+          ${collapsed ? "lg:w-16" : "lg:w-64"} w-64
         `}
         style={{ background: "var(--sidebar)" }}
+        data-authority-sidebar={collapsed ? "collapsed" : "expanded"}
       >
         {/* Sidebar header */}
-        <div className="flex items-start justify-between px-5 pt-6 pb-5 border-b border-border">
+        <div className={`flex items-start justify-between pt-6 pb-5 border-b border-border ${collapsed ? "px-2" : "px-5"}`}>
           <Link href="/authority" className="group" onClick={() => setMobileNav(false)}>
-            <div className="flex items-center gap-2.5">
+            <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
               <div
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
                 style={{ background: "var(--accent-mv)" }}
               >
                 MV
               </div>
-              <div>
-                <p className="text-xs font-bold tracking-tight text-foreground leading-none">MIGHTY VERSE</p>
-                <p className="text-[10px] text-muted-foreground leading-none mt-0.5">AUTHORITY CONSOLE</p>
-              </div>
+              {collapsed ? null : (
+                <div>
+                  <p className="text-xs font-bold tracking-tight text-foreground leading-none">MIGHTY VERSE</p>
+                  <p className="text-[10px] text-muted-foreground leading-none mt-0.5">AUTHORITY CONSOLE</p>
+                </div>
+              )}
             </div>
           </Link>
+          <button
+            className="hidden text-muted-foreground hover:text-foreground lg:inline-flex"
+            onClick={() => setCollapsed((value) => !value)}
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? "›" : "‹"}
+          </button>
           <button
             className="lg:hidden text-muted-foreground hover:text-foreground"
             onClick={() => setMobileNav(false)}
@@ -116,9 +132,11 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
         <nav aria-label="Authority" className="flex-1 px-3 py-5 overflow-y-auto space-y-5">
           {NAV_GROUPS.map((group) => (
             <div key={group.label}>
-              <p className="mb-1.5 px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/50">
-                {group.label}
-              </p>
+              {collapsed ? null : (
+                <p className="mb-1.5 px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/50">
+                  {group.label}
+                </p>
+              )}
               <div className="space-y-0.5">
                 {group.links.map(({ label, href, icon: Icon, match }) => {
                   const active = isActive(href, match);
@@ -141,7 +159,7 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
                         strokeWidth={1.5}
                         className={active ? "text-accent-mv" : "text-muted-foreground/60 group-hover:text-muted-foreground"}
                       />
-                      {label}
+                      {collapsed ? null : label}
                     </Link>
                   );
                 })}
@@ -150,23 +168,28 @@ export default function AuthorityShell({ children }: { children: React.ReactNode
           ))}
         </nav>
 
-        <div className="px-2 pb-2">
-          <WorkspaceJourney compact />
-        </div>
+        {collapsed ? null : (
+          <div className="px-2 pb-2">
+            <WorkspaceJourney compact />
+          </div>
+        )}
 
         {/* Footer */}
-        <div className="px-5 py-4 border-t border-border">
+        <div className={`${collapsed ? "px-2" : "px-5"} py-4 border-t border-border`}>
           <Link
             href="/"
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Public site / Experience
+            {collapsed ? "←" : "← Public site / Experience"}
           </Link>
         </div>
       </aside>
 
       {/* Main */}
       <div className="min-w-0 flex-1 flex flex-col">
+        <header className="hidden items-center justify-end border-b border-border px-6 py-3 lg:flex">
+          <ThemePresetControl />
+        </header>
         <main className="flex-1 w-full px-4 pt-8 pb-16 sm:px-6 lg:px-10">
           <div className="dashboard-content">{children}</div>
         </main>

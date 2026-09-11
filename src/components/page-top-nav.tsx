@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
+import { ThemePresetControl } from "@/components/theme/theme-preset-control";
 
 type Props = { activePath?: string };
 
@@ -55,6 +56,9 @@ export default function PageTopNav({ activePath = "" }: Props) {
 
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
+            <div className="hidden lg:block">
+              <ThemePresetControl />
+            </div>
             <Link
               href="/auth/sign-in?next=/studio"
               className="hidden sm:block px-3 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-85"

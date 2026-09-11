@@ -143,6 +143,7 @@ export const ROUTES = {
   /** Canonical public Universe page. There is no `/universes/[id]` route. */
   universeLive: `/worlds/${CANON.universeId}`,
   universeScenes: `/worlds/${CANON.universeId}/scenes`,
+  scenes: "/scenes",
   universeHolographic: `/worlds/${CANON.universeId}/holographic`,
   experienceJourney: "/universes?intent=experience",
   muralLive: `/worlds/${CANON.muralId}`,

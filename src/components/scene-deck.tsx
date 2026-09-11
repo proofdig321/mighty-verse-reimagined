@@ -1,10 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Dices, LayoutGrid, Rows3 } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { Button } from "@/components/ui/button";
+import { CustomSequenceTrack } from "@/components/experience/custom-sequence-track";
+import {
+  addToCustomSequence,
+  clearCustomSequence,
+  removeCustomSequenceSlot,
+  type CustomSequenceItem,
+} from "@/lib/experience/custom-sequence";
 
 export type SceneDeckItem = {
   id: string;
@@ -111,6 +118,7 @@ export default function SceneDeck({
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [gridView, setGridView] = useState(false);
+  const [sequence, setSequence] = useState<CustomSequenceItem[]>([]);
   const draggedInteraction = useRef(false);
   const deckRef = useRef<HTMLDivElement>(null);
 
@@ -152,6 +160,31 @@ export default function SceneDeck({
     });
     setDropTargetId(null);
     setDraggedId(null);
+  }
+
+  function addToSequence(scene: SceneDeckItem, event?: { preventDefault: () => void; stopPropagation: () => void }) {
+    event?.preventDefault();
+    event?.stopPropagation();
+    setSequence((current) => addToCustomSequence(current, scene));
+  }
+
+  function sequenceAction(scene: SceneDeckItem) {
+    if (!revealedIds.has(scene.id)) return null;
+    const inSequence = sequence.some((item) => item.sceneId === scene.id);
+    return (
+      <Button
+        type="button"
+        size="sm"
+        variant={inSequence ? "secondary" : "default"}
+        data-sequence-add={scene.id}
+        className="relative z-20 h-8 w-full text-[11px]"
+        disabled={inSequence}
+        onClick={(event) => addToSequence(scene, event)}
+        onPointerDown={(event) => event.stopPropagation()}
+      >
+        {inSequence ? "In custom sequence" : "Add to Custom Sequence Track"}
+      </Button>
+    );
   }
 
   const controls = (
@@ -244,32 +277,36 @@ export default function SceneDeck({
 
     if (isRevealed && scene.href) {
       return (
-        <Link
-          key={scene.id}
-          href={scene.href}
-          data-scene-id={scene.id}
-          aria-label={openLabel}
-          className={cardClass}
-          style={{ position: "relative", cursor: "pointer" }}
-        >
-          {visual}
-        </Link>
+        <div key={scene.id} className="flex flex-col gap-2">
+          <Link
+            href={scene.href}
+            data-scene-id={scene.id}
+            aria-label={openLabel}
+            className={cardClass}
+            style={{ position: "relative", cursor: "pointer" }}
+          >
+            {visual}
+          </Link>
+          {sequenceAction(scene)}
+        </div>
       );
     }
 
     return (
-      <button
-        key={scene.id}
-        type="button"
-        data-scene-id={scene.id}
-        onClick={() => reveal(scene.id)}
-        aria-label={revealLabel}
-        aria-pressed={isActive}
-        className={cardClass}
-        style={{ position: "relative", cursor: "pointer" }}
-      >
-        {visual}
-      </button>
+      <div key={scene.id} className="flex flex-col gap-2">
+        <button
+          type="button"
+          data-scene-id={scene.id}
+          onClick={() => reveal(scene.id)}
+          aria-label={revealLabel}
+          aria-pressed={isActive}
+          className={cardClass}
+          style={{ position: "relative", cursor: "pointer" }}
+        >
+          {visual}
+        </button>
+        {sequenceAction(scene)}
+      </div>
     );
   }
 
@@ -350,7 +387,7 @@ export default function SceneDeck({
 
     if (isRevealed && scene.href) {
       return (
-        <div key={scene.id} className="shrink-0">
+        <div key={scene.id} className="flex shrink-0 flex-col gap-2">
           <Link href={scene.href} className="block" onClick={(e) => {
             if (draggedInteraction.current || draggedId) {
               e.preventDefault();
@@ -359,11 +396,17 @@ export default function SceneDeck({
           }}>
             {card}
           </Link>
+          {sequenceAction(scene)}
         </div>
       );
     }
 
-    return <div key={scene.id} className="shrink-0">{card}</div>;
+    return (
+      <div key={scene.id} className="flex shrink-0 flex-col gap-2">
+        {card}
+        {sequenceAction(scene)}
+      </div>
+    );
   }
 
   return (
@@ -489,12 +532,18 @@ export default function SceneDeck({
                 </div>
               </div>
               <p className="text-xs text-muted-foreground pt-4">
-                Drag cards to reorder your timeline.
+                Drag cards to reorder the deck. Add flipped cards to the custom sequence track without changing canonical order.
               </p>
             </div>
           )}
         </div>
       )}
+
+      <CustomSequenceTrack
+        items={sequence}
+        onRemove={(slotId) => setSequence((current) => removeCustomSequenceSlot(current, slotId))}
+        onClear={() => setSequence(clearCustomSequence())}
+      />
 
     </section>
   );
