@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 
 export type HolographicMediaClock = {
   endpoint_ref: string;
@@ -53,10 +53,14 @@ export function HolographicLayerMedia({
 }) {
   const mediaRef = useRef<HTMLVideoElement>(null);
 
-  function setMedia(node: HTMLVideoElement | null) {
-    mediaRef.current = node;
-    if (parentMediaRef) parentMediaRef.current = node;
-  }
+  useLayoutEffect(() => {
+    if (!parentMediaRef) return;
+    const media = mediaRef.current;
+    parentMediaRef.current = media;
+    return () => {
+      if (parentMediaRef.current === media) parentMediaRef.current = null;
+    };
+  }, [parentMediaRef]);
   const onTimeRef = useRef(onTimeMs);
   const onReadyRef = useRef(onReady);
   const onEndedRef = useRef(onEnded);
@@ -76,7 +80,6 @@ export function HolographicLayerMedia({
   useEffect(() => {
     const media = mediaRef.current;
     if (!media) return;
-    media.crossOrigin = "anonymous";
     const startSec = clock.start_ms != null ? clock.start_ms / 1000 : 0;
     const endSec = clock.end_ms != null ? clock.end_ms / 1000 : null;
     let hls: { destroy: () => void } | undefined;
@@ -105,6 +108,7 @@ export function HolographicLayerMedia({
           if (data.fatal) onErrorRef.current?.();
         });
       } else if (media.canPlayType("application/vnd.apple.mpegurl")) {
+        media.crossOrigin = "anonymous";
         media.src = clock.endpoint_ref;
         media.addEventListener("loadedmetadata", attachRange, { once: true });
         media.addEventListener("error", () => onErrorRef.current?.(), { once: true });
@@ -162,11 +166,8 @@ export function HolographicLayerMedia({
       media.removeEventListener("pause", onPause);
       media.removeEventListener("ended", onNativeEnded);
       hls?.destroy();
-      if (parentMediaRef && parentMediaRef.current === media) {
-        parentMediaRef.current = null;
-      }
     };
-  }, [clock.endpoint_ref, clock.start_ms, clock.end_ms, clock.projection_id, clock.master_id, clock.canonical_state_id, parentMediaRef]);
+  }, [clock.endpoint_ref, clock.start_ms, clock.end_ms, clock.projection_id, clock.master_id, clock.canonical_state_id]);
 
   useEffect(() => {
     const media = mediaRef.current;
@@ -201,11 +202,10 @@ export function HolographicLayerMedia({
   return (
     <div className="holographic-layer-media" data-holographic-media="">
       <video
-        ref={setMedia}
+        ref={mediaRef}
         poster={posterUrl ?? undefined}
         playsInline
         preload="auto"
-        crossOrigin="anonymous"
         muted={muted}
         loop={loop && clock.end_ms == null}
         aria-label={`${title} playback`}

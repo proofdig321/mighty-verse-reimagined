@@ -41,6 +41,7 @@ void main() {
 `;
 
 const VIDEO_VERT = `
+precision mediump float;
 attribute vec3 a_pos;
 attribute vec2 a_uv;
 uniform mat4 u_mvp;
@@ -365,17 +366,22 @@ export function HolographicTheater({
       const view = viewOffset((mouse.x - 0.5) * 0.35, (mouse.y - 0.5) * 0.22, cameraZ);
       const vp = mat4Multiply(proj, view);
 
-      const video = videoRef?.current ?? null;
+      const video =
+        videoRef?.current ??
+        (surface.parentElement?.querySelector("[data-holographic-kind='mural'] video") as HTMLVideoElement | null);
       if (video && video.readyState >= 2 && video.videoWidth > 0) {
         try {
           gl.bindTexture(gl.TEXTURE_2D, videoTexture);
           gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
           gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
           gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
-          surface.dataset.holographicWarp = "live";
+          const glError = gl.getError();
+          surface.dataset.holographicWarp = glError === gl.NO_ERROR ? "live" : "blocked";
         } catch {
           surface.dataset.holographicWarp = "blocked";
         }
+      } else {
+        surface.dataset.holographicWarp = video ? "waiting" : "novideo";
       }
 
       const viewH = 2 * Math.tan(fov / 2) * cameraZ;
