@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
-import PageTopNav from "@/components/page-top-nav";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
 
@@ -69,7 +68,6 @@ export default async function MuralsPage() {
 
   return (
     <div className="public-page">
-      <PageTopNav activePath="/murals" />
 
       {/* Header band — heading left, controls right */}
       <div className="border-b border-border bg-card/20">

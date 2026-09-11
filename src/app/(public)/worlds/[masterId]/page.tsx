@@ -6,7 +6,6 @@ import type { ProjectionMedia } from "@/components/player/projection-media-playe
 import { Button, buttonVariants } from "@/components/ui/button";
 import MediaHero from "@/components/media-hero";
 import { UniverseWorldExperience } from "@/components/experience/universe-world";
-import PageTopNav from "@/components/page-top-nav";
 import { sceneStillUrl } from "@/lib/experience/universe-world";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
 
@@ -349,7 +348,6 @@ export default async function WorldPage({
   if (data.canonical_type === "mural") {
     return (
       <div className="min-h-screen bg-background">
-        <PageTopNav activePath="/murals" />
 
         {/* Breadcrumb */}
         {data.universe_master_id && (
@@ -485,7 +483,6 @@ export default async function WorldPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <PageTopNav />
 
       {data.media?.playback_id && data.projection_id && data.canonical_state_id ? (
         <div className="border-b border-border">

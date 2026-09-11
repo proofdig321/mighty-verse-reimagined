@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       panelId,
       title,
       description: prompt || null,
-      source: stillUrl ? "sentinel" : "ai",
+      source: stillUrl ? "reference" : "ai",
       muxAssetId: ingested.mux_asset_id,
       playbackId: ingested.playback_id,
       durationMs: ingested.duration_ms ?? generated.duration_ms,

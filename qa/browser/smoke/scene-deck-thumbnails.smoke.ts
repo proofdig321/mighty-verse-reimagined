@@ -47,6 +47,10 @@ test("Scene Deck revealed cards show each Scene still, not mural time=0", async 
   const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflowX, `narrow sequence overflow ${overflowX}px`).toBeLessThan(24);
   await page.setViewportSize({ width: 1280, height: 800 });
+  await expect(page.getByRole("button", { name: "Play sequence" })).toBeVisible();
+  await page.getByRole("button", { name: "Play sequence" }).click();
+  await expect(page.locator("video").first()).toBeVisible();
+  await page.getByRole("button", { name: "Close timeline player" }).click();
   await expect(page.getByRole("button", { name: "Clear sequence" })).toBeVisible();
   await page.getByRole("button", { name: "Clear sequence" }).click();
   await expect(track).toHaveAttribute("data-sequence-count", "0");
@@ -79,9 +83,14 @@ test("public /scenes flipped cards add to a client sequence track", async ({ pag
   await expect(track).toHaveAttribute("data-sequence-count", "1");
   await expect(track.getByText(SCENE_MOMENTS.powerhouse.sceneTitle)).toBeVisible();
   await expect(track.getByText(SCENE_MOMENTS.powerhouse.sceneMasterId)).toHaveCount(0);
+  await expect(page.getByRole("link", { name: /Build Experience/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Play sequence" })).toBeVisible();
+  await page.getByRole("button", { name: "Play sequence" }).click();
+  await expect(page.locator("video").first()).toBeVisible();
+  await page.getByRole("button", { name: "Close timeline player" }).click();
   await expect(page.getByRole("button", { name: "Clear sequence" })).toBeVisible();
   expect(observe.requests.some((entry) => entry.url.includes("/api/authority/media/timeline") && entry.method === "PATCH")).toBeFalsy();
-  notes.push("B: flipping Powerhouse on /scenes populates the custom sequence without a timeline PATCH");
+  notes.push("B: flipping Powerhouse on /scenes populates the custom sequence and plays the original TimelinePlayer without a timeline PATCH");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Stage 3.4 public /scenes custom sequence", page.url(), notes, observe);

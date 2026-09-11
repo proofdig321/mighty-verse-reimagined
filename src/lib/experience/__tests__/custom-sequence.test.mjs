@@ -3,6 +3,7 @@ import {
   clearCustomSequence,
   removeCustomSequenceSlot,
   sequenceThumbnailUrl,
+  sequenceToPlaybackSegments,
 } from "../custom-sequence";
 
 function assert(condition, message) {
@@ -28,5 +29,9 @@ assert(
 assert(addToCustomSequence(first, powerhouse).length === 1, "duplicate Scene is not appended");
 assert(removeCustomSequenceSlot(first, powerhouse.id).length === 0, "remove drops the client slot");
 assert(clearCustomSequence().length === 0, "clear empties the client sequence");
+const playable = sequenceToPlaybackSegments(addToCustomSequence([], { ...powerhouse, endMs: 79000, projectionId: "3039ca84-7e11-4eb6-8895-d16d13a899c3" }));
+assert(playable.length === 1, "sequence maps onto the existing TimelinePlayer segments");
+assert(playable[0].startMs === 36000 && playable[0].endMs === 79000, "player keeps the canonical Scene window");
+assert(playable[0].playbackId === powerhouse.playbackId, "player keeps the Mux storage ref, not a new identity");
 
 console.log("custom-sequence.test.mjs: ok");

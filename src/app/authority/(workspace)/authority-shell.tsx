@@ -1,199 +1,71 @@
 "use client";
 
-import { useState } from "react";
-import { usePathname } from "next/navigation";
-import Link from "next/link";
+import type { ReactNode } from "react";
 import {
-  Clapperboard, Film, Globe, LayoutDashboard, Layers,
-  Menu, MonitorPlay, Plus, ShieldCheck, Sparkles, Upload, Users, X, Wand2,
+  Clapperboard,
+  Film,
+  Globe,
+  LayoutDashboard,
+  Layers,
+  MonitorPlay,
+  Plus,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  Users,
+  Wand2,
 } from "lucide-react";
-import { ThemePresetControl } from "@/components/theme/theme-preset-control";
+import { AppShell } from "@/components/layout/app-shell";
 import { WorkspaceJourney } from "@/components/assemble/workspace-journey";
 
-const NAV_GROUPS = [
-  {
-    label: "Workspace",
-    links: [
-      { label: "Dashboard",  href: "/authority",        icon: LayoutDashboard, match: "prefix" as const },
-      { label: "Create Work", href: "/authority/create", icon: Plus, match: "prefix" as const },
-      { label: "Curate",     href: "/authority/curate", icon: Wand2, match: "prefix" as const },
-      { label: "Creative Studio", href: "/studio", icon: MonitorPlay, match: "prefix" as const },
-    ],
-  },
-  {
-    label: "Canonical",
-    links: [
-      { label: "Universes",        href: "/authority/universes",        icon: Globe, match: "exact" as const },
-      { label: "Murals",           href: "/authority/murals",           icon: Layers, match: "prefix" as const },
-      { label: "Scenes",           href: "/authority/scenes",           icon: Clapperboard, match: "prefix" as const },
-      { label: "Creative Moments", href: "/authority/creative-moments", icon: Sparkles, match: "prefix" as const },
-    ],
-  },
-  {
-    label: "Media",
-    links: [
-      { label: "Gallery",   href: "/authority/media",        icon: Film, match: "prefix" as const },
-      { label: "Add Media", href: "/authority/media/intake", icon: Upload, match: "prefix" as const },
-    ],
-  },
-  {
-    label: "Rights",
-    links: [
-      { label: "Participants",    href: "/authority/participants",    icon: Users, match: "prefix" as const },
-      { label: "Proof of Rights", href: "/authority/proof-of-rights", icon: ShieldCheck, match: "prefix" as const },
-    ],
-  },
-] as const;
-
-export default function AuthorityShell({ children }: { children: React.ReactNode }) {
-  const [mobileNav, setMobileNav] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
-  const pathname = usePathname();
-
-  function isActive(href: string, match: "prefix" | "exact" = "prefix") {
-    if (href === "/authority") return pathname === "/authority";
-    if (match === "exact") return pathname === href;
-    return pathname === href || pathname.startsWith(href + "/");
-  }
-
+export default function AuthorityShell({ children }: { children: ReactNode }) {
   return (
-    <div className="multiverse-page min-h-screen overflow-x-hidden bg-background flex flex-col lg:flex-row">
-      {/* Mobile top bar */}
-      <div className="sticky top-0 z-10 border-b border-border bg-background/95 backdrop-blur-sm px-4 py-3 lg:hidden">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setMobileNav(true)}
-            aria-label="Open navigation"
-            className="text-muted-foreground hover:text-foreground"
-          >
-            <Menu size={18} />
-          </button>
-          <div className="flex items-center gap-2">
-            <div
-              className="w-6 h-6 rounded flex items-center justify-center text-[10px] font-bold text-white shrink-0"
-              style={{ background: "var(--accent-mv)" }}
-            >
-              MV
-            </div>
-            <span className="text-sm font-semibold text-foreground">Authority</span>
-          </div>
-          <div className="ml-auto">
-            <ThemePresetControl />
-          </div>
+    <AppShell
+      brandTitle="Mighty Verse"
+      brandKicker="Authority Console"
+      headerEyebrow="Authority"
+      headerTitle="Create → Curate → Studio → Experience"
+      footer={
+        <div className="space-y-3 border-t border-border px-3 py-4">
+          <WorkspaceJourney compact />
         </div>
-      </div>
-
-      {/* Sidebar */}
-      <aside
-        className={`
-          ${mobileNav ? "flex" : "hidden"}
-          fixed inset-y-0 left-0 z-20 flex-col border-r border-border
-          lg:flex lg:static lg:inset-auto lg:min-h-screen lg:shrink-0 scrollbar-hidden
-          ${collapsed ? "lg:w-16" : "lg:w-64"} w-64
-        `}
-        style={{ background: "var(--sidebar)" }}
-        data-authority-sidebar={collapsed ? "collapsed" : "expanded"}
-      >
-        {/* Sidebar header */}
-        <div className={`flex items-start justify-between pt-6 pb-5 border-b border-border ${collapsed ? "px-2" : "px-5"}`}>
-          <Link href="/authority" className="group" onClick={() => setMobileNav(false)}>
-            <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
-              <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold text-white shrink-0"
-                style={{ background: "var(--accent-mv)" }}
-              >
-                MV
-              </div>
-              {collapsed ? null : (
-                <div>
-                  <p className="text-xs font-bold tracking-tight text-foreground leading-none">MIGHTY VERSE</p>
-                  <p className="text-[10px] text-muted-foreground leading-none mt-0.5">AUTHORITY CONSOLE</p>
-                </div>
-              )}
-            </div>
-          </Link>
-          <button
-            className="hidden text-muted-foreground hover:text-foreground lg:inline-flex"
-            onClick={() => setCollapsed((value) => !value)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-          >
-            {collapsed ? "›" : "‹"}
-          </button>
-          <button
-            className="lg:hidden text-muted-foreground hover:text-foreground"
-            onClick={() => setMobileNav(false)}
-            aria-label="Close navigation"
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        {/* Nav */}
-        <nav aria-label="Authority" className="flex-1 px-3 py-5 overflow-y-auto space-y-5">
-          {NAV_GROUPS.map((group) => (
-            <div key={group.label}>
-              {collapsed ? null : (
-                <p className="mb-1.5 px-3 text-[9px] font-semibold uppercase tracking-[0.22em] text-muted-foreground/50">
-                  {group.label}
-                </p>
-              )}
-              <div className="space-y-0.5">
-                {group.links.map(({ label, href, icon: Icon, match }) => {
-                  const active = isActive(href, match);
-                  return (
-                    <Link
-                      key={label}
-                      href={href}
-                      onClick={() => setMobileNav(false)}
-                      className={`group relative flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
-                        active
-                          ? "bg-accent text-foreground font-medium"
-                          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
-                      }`}
-                    >
-                      {active && (
-                        <span className="absolute left-0 top-1/2 -translate-y-1/2 h-4 w-0.5 rounded-full bg-accent-mv" />
-                      )}
-                      <Icon
-                        size={15}
-                        strokeWidth={1.5}
-                        className={active ? "text-accent-mv" : "text-muted-foreground/60 group-hover:text-muted-foreground"}
-                      />
-                      {collapsed ? null : label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </nav>
-
-        {collapsed ? null : (
-          <div className="px-2 pb-2">
-            <WorkspaceJourney compact />
-          </div>
-        )}
-
-        {/* Footer */}
-        <div className={`${collapsed ? "px-2" : "px-5"} py-4 border-t border-border`}>
-          <Link
-            href="/"
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            {collapsed ? "←" : "← Public site / Experience"}
-          </Link>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <div className="min-w-0 flex-1 flex flex-col">
-        <header className="hidden items-center justify-end border-b border-border px-6 py-3 lg:flex">
-          <ThemePresetControl />
-        </header>
-        <main className="flex-1 w-full px-4 pt-8 pb-16 sm:px-6 lg:px-10">
-          <div className="dashboard-content">{children}</div>
-        </main>
-      </div>
-    </div>
+      }
+      groups={[
+        {
+          label: "Workspace",
+          items: [
+            { href: "/authority", label: "Dashboard", icon: LayoutDashboard, exact: true },
+            { href: "/authority/create", label: "Create Work", icon: Plus },
+            { href: "/authority/curate", label: "Curate", icon: Wand2 },
+            { href: "/studio", label: "Creative Studio", icon: MonitorPlay },
+          ],
+        },
+        {
+          label: "Canonical",
+          items: [
+            { href: "/authority/universes", label: "Universes", icon: Globe, match: "exact" },
+            { href: "/authority/murals", label: "Murals", icon: Layers },
+            { href: "/authority/scenes", label: "Scenes", icon: Clapperboard },
+            { href: "/authority/creative-moments", label: "Creative Moments", icon: Sparkles },
+          ],
+        },
+        {
+          label: "Media",
+          items: [
+            { href: "/authority/media", label: "Gallery", icon: Film },
+            { href: "/authority/media/intake", label: "Add Media", icon: Upload },
+          ],
+        },
+        {
+          label: "Rights",
+          items: [
+            { href: "/authority/participants", label: "Participants", icon: Users },
+            { href: "/authority/proof-of-rights", label: "Proof of Rights", icon: ShieldCheck },
+          ],
+        },
+      ]}
+    >
+      {children}
+    </AppShell>
   );
 }

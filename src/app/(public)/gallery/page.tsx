@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { getServiceClient } from "@/lib/authority/validate";
-import PageTopNav from "@/components/page-top-nav";
 import GalleryFilterClient from "@/components/gallery-filter-client";
 
 type MediaItem = {
@@ -49,7 +48,6 @@ export default async function GalleryPage() {
   const items = await getData();
   return (
     <div className="public-page">
-      <PageTopNav activePath="/gallery" />
       <GalleryFilterClient items={items} />
     </div>
   );

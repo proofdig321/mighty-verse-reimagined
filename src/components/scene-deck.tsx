@@ -6,12 +6,15 @@ import { Dices, LayoutGrid, Rows3 } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { Button } from "@/components/ui/button";
 import { CustomSequenceTrack } from "@/components/experience/custom-sequence-track";
+import TimelinePlayer from "@/components/experience/timeline-player";
 import {
   addToCustomSequence,
   clearCustomSequence,
   removeCustomSequenceSlot,
+  sequenceToPlaybackSegments,
   type CustomSequenceItem,
 } from "@/lib/experience/custom-sequence";
+import type { PlaybackSegment } from "@/lib/experience/playback";
 
 export type SceneDeckItem = {
   id: string;
@@ -21,6 +24,7 @@ export type SceneDeckItem = {
   provider?: string | null;
   startMs?: number | null;
   endMs?: number | null;
+  projectionId?: string | null;
 };
 
 type Props = {
@@ -119,6 +123,7 @@ export default function SceneDeck({
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
   const [gridView, setGridView] = useState(false);
   const [sequence, setSequence] = useState<CustomSequenceItem[]>([]);
+  const [playerSegments, setPlayerSegments] = useState<PlaybackSegment[] | null>(null);
   const draggedInteraction = useRef(false);
   const deckRef = useRef<HTMLDivElement>(null);
 
@@ -543,7 +548,14 @@ export default function SceneDeck({
         items={sequence}
         onRemove={(slotId) => setSequence((current) => removeCustomSequenceSlot(current, slotId))}
         onClear={() => setSequence(clearCustomSequence())}
+        onPlay={() => {
+          const segments = sequenceToPlaybackSegments(sequence);
+          if (segments.length) setPlayerSegments(segments);
+        }}
       />
+      {playerSegments ? (
+        <TimelinePlayer segments={playerSegments} onClose={() => setPlayerSegments(null)} />
+      ) : null}
 
     </section>
   );

@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { getDiscovery } from "@/lib/discovery";
 import type { DiscoveryUniverse } from "@/lib/discovery";
 import { Suspense } from "react";
-import PageTopNav from "@/components/page-top-nav";
 import UniversesFilterClient from "@/components/universes-filter-client";
 
 export default async function UniversesPage() {
@@ -20,7 +19,6 @@ export default async function UniversesPage() {
 
   return (
     <div className="public-page">
-      <PageTopNav activePath="/universes" />
       <Suspense>
         <UniversesFilterClient universes={universes} />
       </Suspense>

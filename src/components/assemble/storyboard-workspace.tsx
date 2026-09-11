@@ -1,7 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -12,6 +13,12 @@ import type { SuiteScene } from "@/lib/assemble/suite";
 import type { SentinelIntelligence, StoryboardPanel } from "@/lib/media/sentinel-intelligence";
 import { composeStoryboardBody, type StoryboardScriptPanel } from "@/lib/storyboard/script";
 import { chromePromptAvailability, promptWithChrome, STORYBOARD_SYSTEM } from "@/lib/ai/chrome";
+import {
+  catalogForChrome,
+  GALLERY_THEME_SYSTEM,
+  parseChromeThemeMatch,
+  pickGalleryTheme,
+} from "@/lib/storyboard/gallery-theme";
 import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
 import { AssociateStoryboard } from "./associate-storyboard";
@@ -68,6 +75,9 @@ export function StoryboardWorkspace({
   const [saveState, setSaveState] = useState<GenerationState>({ status: "idle", message: "" });
   const [mediaState, setMediaState] = useState<GenerationState>({ status: "idle", message: "" });
   const [generated, setGenerated] = useState<StoryboardArtifactCard[]>(artifacts);
+  const [panelStills, setPanelStills] = useState<Record<string, string>>({});
+  const [pendingPanels, setPendingPanels] = useState<Record<string, boolean>>({});
+  const [playing, setPlaying] = useState(false);
 
   const sentinelPanels = intelligence?.storyboard ?? [];
   const selectedSentinel = sentinelPanels.find((panel) => panel.panel_id === selectedId) ?? null;
@@ -81,7 +91,7 @@ export function StoryboardWorkspace({
         description: selectedScript.description,
         time: null as string | null,
         kind: "Script beat",
-        still: null as string | null,
+        still: panelStills[selectedScript.panel_id] ?? null,
         camera: selectedScript.camera,
         movement: selectedScript.movement,
         transition: selectedScript.transition,
@@ -96,7 +106,7 @@ export function StoryboardWorkspace({
             : "Sentinel evidence. A storyboard beat is not a Scene.",
         time: formatTimelineMs(selectedSentinel.time_ms),
         kind: selectedSentinel.kind === "scene" ? "Canonical Scene" : "Sentinel beat",
-        still: selectedSentinel.still_url,
+        still: panelStills[selectedSentinel.panel_id] ?? selectedSentinel.still_url,
         camera: null,
         movement: null,
         transition: null,
@@ -111,14 +121,14 @@ export function StoryboardWorkspace({
             ? `${formatTimelineMs(selectedScene.start_ms)} → ${formatTimelineMs(selectedScene.end_ms)}`
             : null,
         kind: "Canonical Scene",
-        still: null,
+        still: panelStills[selectedScene.master_id] ?? null,
         camera: null,
         movement: null,
         transition: null,
       };
     }
     return null;
-  }, [selectedScript, selectedSentinel, selectedScene]);
+  }, [selectedScript, selectedSentinel, selectedScene, panelStills]);
 
   function generatePanels() {
     const composed = composeStoryboardBody(script);
@@ -152,7 +162,8 @@ export function StoryboardWorkspace({
         prompt: [
           `Universe: ${universeTitle ?? "Untitled"}`,
           script ? `Current story body:\n${script}` : "No current story body.",
-          instruction || "Write a cinematic storyboard story body.",
+          `Gallery artifacts (visual themes):\n${catalogForChrome(references)}`,
+          instruction || "Write a cinematic storyboard story body that can be pictured from the gallery artifacts.",
         ].join("\n\n"),
       });
       if (result.ok) {
@@ -193,9 +204,23 @@ export function StoryboardWorkspace({
     setAssistState({ status: "ready", message: "Gemini refined the story body. It did not create Scenes." });
   }
 
-  async function generateMedia(outputType: StoryboardOutputType) {
-    const still = selected?.still ?? references[0]?.still_url ?? sentinelPanels.find((panel) => panel.still_url)?.still_url ?? null;
-    const stillUrls = sentinelPanels.map((panel) => panel.still_url).filter(Boolean) as string[];
+  async function generateMedia(
+    outputType: StoryboardOutputType,
+    target?: { panelId: string | null; title: string; description: string; still: string | null },
+  ) {
+    const panelId = target?.panelId ?? selectedId;
+    const title = target?.title ?? selected?.title ?? "Storyboard artifact";
+    const description = target?.description ?? selected?.description ?? script;
+    const still =
+      target?.still ??
+      selected?.still ??
+      references[0]?.still_url ??
+      sentinelPanels.find((panel) => panel.still_url)?.still_url ??
+      null;
+    const stillUrls = [
+      ...references.map((reference) => reference.still_url).filter(Boolean),
+      ...sentinelPanels.map((panel) => panel.still_url).filter(Boolean),
+    ] as string[];
     setMediaState({ status: "generating", message: `Generating ${outputType}…` });
     const response = await fetch("/api/authority/storyboard/generate", {
       method: "POST",
@@ -203,9 +228,9 @@ export function StoryboardWorkspace({
       body: JSON.stringify({
         universe_id: universeId,
         output_type: outputType,
-        prompt: selected?.description ?? script,
-        title: selected?.title ?? "Storyboard artifact",
-        panel_id: selectedId,
+        prompt: description,
+        title,
+        panel_id: panelId,
         still_url: still,
         still_urls: outputType === "reel" ? stillUrls : still ? [still] : [],
       }),
@@ -218,11 +243,38 @@ export function StoryboardWorkspace({
       });
       return;
     }
+    if (panelId && (payload.still_url || still)) {
+      setPanelStills((current) => ({ ...current, [panelId]: payload.still_url ?? still }));
+    }
     setGenerated((current) => [
-      { title: selected?.title ?? "Storyboard artifact", output_type: outputType, still_url: payload.still_url ?? still, status: "ready" },
+      { title, output_type: outputType, still_url: payload.still_url ?? still, status: "ready" },
       ...current,
     ]);
-    setMediaState({ status: "ready", message: `${outputType} is on Mux. It is an artifact, not a Scene.` });
+    setMediaState({ status: "ready", message: `${outputType} is linked from gallery / Mux. It is an artifact, not a Scene.` });
+  }
+
+  async function generateShot(panelId: string) {
+    const scriptPanel = scriptPanels.find((panel) => panel.panel_id === panelId);
+    const sentinelPanel = sentinelPanels.find((panel) => panel.panel_id === panelId);
+    const scene = scenes.find((item) => item.master_id === panelId);
+    const title = scriptPanel?.title ?? sentinelPanel?.title ?? sceneShortTitle(scene?.title) ?? "Storyboard shot";
+    const description = scriptPanel?.description ?? sentinelPanel?.title ?? scene?.description ?? title;
+    setPendingPanels((current) => ({ ...current, [panelId]: true }));
+    setSelectedId(panelId);
+    let still = panelStills[panelId] ?? sentinelPanel?.still_url ?? pickGalleryTheme({ title, description }, references)?.still_url ?? null;
+    const chrome = await chromePromptAvailability();
+    if (!still && chrome.text && references.some((reference) => reference.still_url)) {
+      const result = await promptWithChrome({
+        system: GALLERY_THEME_SYSTEM,
+        prompt: [`Beat: ${title}`, description, `Gallery artifacts:\n${catalogForChrome(references)}`, "Reply with the matching artifact title only."].join("\n\n"),
+      });
+      if (result.ok) {
+        still = parseChromeThemeMatch(result.text, references)?.still_url ?? still;
+      }
+    }
+    if (still) setPanelStills((current) => ({ ...current, [panelId]: still }));
+    await generateMedia("panel", { panelId, title, description, still });
+    setPendingPanels((current) => ({ ...current, [panelId]: false }));
   }
 
   const tabs: { id: MaterialTab; label: string }[] = [
@@ -232,6 +284,22 @@ export function StoryboardWorkspace({
     { id: "references", label: "References" },
   ];
   const sequenceEmpty = scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0;
+  const shotIds = [
+    ...scriptPanels.map((panel) => panel.panel_id),
+    ...sentinelPanels.map((panel) => panel.panel_id),
+    ...(scriptPanels.length === 0 && sentinelPanels.length === 0 ? scenes.map((scene) => scene.master_id) : []),
+  ];
+
+  useEffect(() => {
+    if (!playing || shotIds.length === 0) return;
+    const timer = window.setInterval(() => {
+      setSelectedId((current) => {
+        const index = Math.max(0, shotIds.indexOf(current ?? shotIds[0]));
+        return shotIds[(index + 1) % shotIds.length];
+      });
+    }, 2200);
+    return () => window.clearInterval(timer);
+  }, [playing, shotIds.join("|")]);
 
   return (
     <div className="storyboard-workspace" data-storyboard-layout="workspace">
@@ -262,8 +330,8 @@ export function StoryboardWorkspace({
       <div className="grid gap-6 lg:grid-cols-12">
         <Card className="bg-card/50 lg:col-span-5">
           <CardHeader className="border-b border-border/70">
-            <CardTitle>Script Engine</CardTitle>
-            <CardDescription>Draft the story body, run Chrome Prompt API assist, or open Sentinel evidence.</CardDescription>
+            <CardTitle>Script & Narrative</CardTitle>
+            <CardDescription>Draft the story body, run Chrome Prompt API assist against gallery themes, or open Sentinel evidence.</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs
@@ -293,7 +361,7 @@ export function StoryboardWorkspace({
                     <Textarea
                       value={script}
                       onChange={(event) => setScript(event.target.value)}
-                      className="min-h-[220px] font-mono text-sm leading-relaxed"
+                      className="min-h-[320px] font-mono text-sm leading-relaxed"
                       placeholder="Golden Shovel walks a futuristic Johannesburg skyline.&#10;Camera: rise through the mural&#10;The city transforms around him.&#10;Spirit avatar appears."
                     />
                   </label>
@@ -393,6 +461,20 @@ export function StoryboardWorkspace({
                         <p className="text-[10px] text-muted-foreground">
                           {reference.role} · {formatTimelineMs(reference.time_ms)}
                         </p>
+                        {selectedId && reference.still_url ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="mt-1 h-7 w-full text-[10px]"
+                            onClick={() => {
+                              setPanelStills((current) => ({ ...current, [selectedId]: reference.still_url as string }));
+                              setMediaState({ status: "ready", message: "Gallery artifact linked to the selected shot. It is not a Scene." });
+                            }}
+                          >
+                            Use on shot
+                          </Button>
+                        ) : null}
                       </li>
                     ))}
                   </ul>
@@ -410,7 +492,7 @@ export function StoryboardWorkspace({
               </h2>
             </CardTitle>
             <CardDescription>
-              Workspace visual sequence — script beats, Sentinel evidence, and canonical Scenes are materials, not the same thing.
+              Storyboard panels — GENERATE links each shot to a gallery artifact. Text-to-animation uses those stills, not invented pictures.
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col gap-6 pt-4" data-column="sequence" aria-labelledby="storyboard-sequence">
@@ -424,46 +506,113 @@ export function StoryboardWorkspace({
               </div>
             ) : (
               <ol className="storyboard-panel-strip">
-                {scriptPanels.map((panel, index) => (
-                  <li key={panel.panel_id}>
-                    <button
-                      type="button"
-                      className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}
-                      onClick={() => setSelectedId(panel.panel_id)}
-                    >
-                      <div className="storyboard-panel-empty" aria-hidden="true" />
-                      <p className="suite-kicker">Panel {String(index + 1).padStart(2, "0")}</p>
-                      <p className="text-sm text-foreground">{panel.title}</p>
-                      <p className="suite-proposal-badge">Script</p>
-                    </button>
-                  </li>
-                ))}
+                {scriptPanels.map((panel, index) => {
+                  const still = panelStills[panel.panel_id];
+                  const pending = pendingPanels[panel.panel_id];
+                  return (
+                    <li key={panel.panel_id}>
+                      <div className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}>
+                        <button type="button" className="contents" onClick={() => setSelectedId(panel.panel_id)}>
+                          {still ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={still} alt="" />
+                          ) : (
+                            <div className="storyboard-panel-empty flex items-center justify-center text-xs text-muted-foreground">
+                              {pending ? "Pending…" : "Pending…"}
+                            </div>
+                          )}
+                          <p className="suite-kicker">Shot {String(index + 1).padStart(2, "0")}</p>
+                          <p className="text-sm text-foreground">{panel.title}</p>
+                          <p className="suite-proposal-badge">Script</p>
+                        </button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="mt-2 h-7 w-full text-[10px]"
+                          disabled={pending}
+                          onClick={() => void generateShot(panel.panel_id)}
+                        >
+                          {pending ? "Pending…" : "GENERATE"}
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
                 {sentinelPanels.map((panel) => (
                   <li key={panel.panel_id}>
                     <StoryboardEvidencePanel
                       panel={panel}
                       selected={selectedId === panel.panel_id}
+                      still={panelStills[panel.panel_id] ?? panel.still_url}
+                      pending={Boolean(pendingPanels[panel.panel_id])}
                       onSelect={() => setSelectedId(panel.panel_id)}
+                      onGenerate={() => void generateShot(panel.panel_id)}
                     />
                   </li>
                 ))}
                 {scriptPanels.length === 0 && sentinelPanels.length === 0
-                  ? scenes.map((scene, index) => (
-                      <li key={scene.master_id}>
-                        <button
-                          type="button"
-                          className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}
-                          onClick={() => setSelectedId(scene.master_id)}
-                        >
-                          <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
-                          <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
-                          <p className="suite-canon-badge">Scene</p>
-                        </button>
-                      </li>
-                    ))
+                  ? scenes.map((scene, index) => {
+                      const still = panelStills[scene.master_id];
+                      const pending = pendingPanels[scene.master_id];
+                      return (
+                        <li key={scene.master_id}>
+                          <div className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}>
+                            <button type="button" className="contents" onClick={() => setSelectedId(scene.master_id)}>
+                              {still ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={still} alt="" />
+                              ) : (
+                                <div className="storyboard-panel-empty" />
+                              )}
+                              <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
+                              <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
+                              <p className="suite-canon-badge">Scene</p>
+                            </button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              className="mt-2 h-7 w-full text-[10px]"
+                              disabled={pending}
+                              onClick={() => void generateShot(scene.master_id)}
+                            >
+                              {pending ? "Pending…" : "GENERATE"}
+                            </Button>
+                          </div>
+                        </li>
+                      );
+                    })
                   : null}
               </ol>
             )}
+
+            {shotIds.length > 0 ? (
+              <div className="flex items-center gap-3 border-t border-border pt-4">
+                <Button type="button" variant="ghost" size="sm" onClick={() => {
+                  const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
+                  setSelectedId(shotIds[Math.max(0, index - 1)]);
+                }}>
+                  <SkipBack size={14} />
+                </Button>
+                <Button type="button" size="sm" onClick={() => setPlaying((value) => !value)}>
+                  {playing ? <Pause size={14} /> : <Play size={14} />}
+                </Button>
+                <Button type="button" variant="ghost" size="sm" onClick={() => {
+                  const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
+                  setSelectedId(shotIds[Math.min(shotIds.length - 1, index + 1)]);
+                }}>
+                  <SkipForward size={14} />
+                </Button>
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(0, shotIds.length - 1)}
+                  value={Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]))}
+                  onChange={(event) => setSelectedId(shotIds[Number(event.target.value)] ?? shotIds[0])}
+                  className="h-1 flex-1 accent-current"
+                  aria-label="Storyboard shot scrubber"
+                />
+              </div>
+            ) : null}
 
             {selected ? (
               <aside className="studio-inspector" aria-label="Selected panel">
@@ -537,31 +686,44 @@ function StatusLine({ state }: { state: GenerationState }) {
 function StoryboardEvidencePanel({
   panel,
   selected,
+  still,
+  pending,
   onSelect,
+  onGenerate,
 }: {
   panel: StoryboardPanel;
   selected: boolean;
+  still: string | null;
+  pending: boolean;
   onSelect: () => void;
+  onGenerate: () => void;
 }) {
   return (
-    <button
-      type="button"
-      className={cn("storyboard-panel", selected && "storyboard-panel-current")}
-      data-panel-kind={panel.kind}
-      data-scene-id={panel.scene_master_id ?? undefined}
-      onClick={onSelect}
-    >
-      {panel.still_url ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={panel.still_url} alt="" />
-      ) : (
-        <div className="storyboard-panel-empty" />
-      )}
-      <p className={panel.kind === "scene" ? "suite-canon-badge" : "suite-proposal-badge"}>
-        {panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat"}
-      </p>
-      <p className="text-sm text-foreground">{panel.title}</p>
-      <p className="font-mono text-[10px] text-muted-foreground">{formatTimelineMs(panel.time_ms)}</p>
-    </button>
+    <div className={cn("storyboard-panel", selected && "storyboard-panel-current")}>
+      <button
+        type="button"
+        className="contents"
+        data-panel-kind={panel.kind}
+        data-scene-id={panel.scene_master_id ?? undefined}
+        onClick={onSelect}
+      >
+        {still ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={still} alt="" />
+        ) : (
+          <div className="storyboard-panel-empty flex items-center justify-center text-xs text-muted-foreground">
+            {pending ? "Pending…" : null}
+          </div>
+        )}
+        <p className={panel.kind === "scene" ? "suite-canon-badge" : "suite-proposal-badge"}>
+          {panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat"}
+        </p>
+        <p className="text-sm text-foreground">{panel.title}</p>
+        <p className="font-mono text-[10px] text-muted-foreground">{formatTimelineMs(panel.time_ms)}</p>
+      </button>
+      <Button type="button" size="sm" className="mt-2 h-7 w-full text-[10px]" disabled={pending} onClick={onGenerate}>
+        {pending ? "Pending…" : "GENERATE"}
+      </Button>
+    </div>
   );
 }

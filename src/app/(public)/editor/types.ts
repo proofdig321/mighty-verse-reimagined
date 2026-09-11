@@ -1,3 +1,5 @@
+export type { PlaybackSegment } from "@/lib/experience/playback";
+
 /** A canonical Scene available in the library */
 export type LibraryScene = {
   masterId: string;
@@ -28,17 +30,4 @@ export type AssemblyItem = {
   startMs: number | null;
   endMs: number | null;
   durationSec: number | null;
-};
-
-/** A resolved playback segment for the timeline player */
-export type PlaybackSegment = {
-  projectionId: string;
-  title: string | null;
-  playbackId: string;
-  /** Full HLS endpoint URL. For Mux: stream.mux.com URL. For Livepeer: resolved via proxy. */
-  hlsUrl?: string | null;
-  /** Provider name: "mux" | "livepeer". Defaults to "livepeer" for historical assets. */
-  provider?: string | null;
-  startMs: number;
-  endMs: number;
 };

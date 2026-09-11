@@ -147,6 +147,18 @@ html[data-theme="neo-brutalism"] {
   --sidebar: oklch(0.1 0.02 90);
 }
 
+html[data-theme="tangerine"] {
+  --background: oklch(0.14 0.03 55);
+  --foreground: oklch(0.98 0.02 80);
+  --card: oklch(0.18 0.04 55);
+  --border: oklch(0.75 0.16 55 / 0.45);
+  --primary: oklch(0.72 0.18 50);
+  --accent-mv: oklch(0.72 0.18 50);
+  --accent-mv-gold: oklch(0.82 0.16 75);
+  --ring: oklch(0.72 0.18 50);
+  --sidebar: oklch(0.12 0.03 55);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -566,12 +578,6 @@ html[data-theme="neo-brutalism"] {
   @media (min-width: 640px) {
     .storyboard-panel-strip {
       grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (min-width: 768px) {
-    .storyboard-panel-strip {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
 

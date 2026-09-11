@@ -4,37 +4,49 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { formatTimelineMs } from "@/lib/media/timing";
 import type { CustomSequenceItem } from "@/lib/experience/custom-sequence";
+import { sequenceToPlaybackSegments } from "@/lib/experience/custom-sequence";
 
 export function CustomSequenceTrack({
   items,
   onRemove,
   onClear,
+  onPlay,
 }: {
   items: CustomSequenceItem[];
   onRemove: (slotId: string) => void;
   onClear: () => void;
+  onPlay: () => void;
 }) {
+  const canPlay = sequenceToPlaybackSegments(items).length > 0;
+
   return (
     <Card className="mt-6 border-border/80 bg-card/60" data-custom-sequence-track="" data-sequence-count={items.length}>
       <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0 border-b border-border/70 pb-4">
         <div className="min-w-0">
           <CardTitle>Interactive timeline composer</CardTitle>
           <CardDescription>
-            Client sequence for flipped Scene cards. Shuffle still only rearranges the deck. This does not change canonical Scene order.
+            Create your own timeline from flipped Scene cards. Play uses the Experience Editor timeline player. Shuffle still only rearranges the deck.
           </CardDescription>
         </div>
-        {items.length > 0 ? (
-          <Button type="button" variant="outline" size="sm" onClick={onClear}>
-            Clear sequence
-          </Button>
-        ) : null}
+        <div className="flex shrink-0 flex-wrap gap-2">
+          {canPlay ? (
+            <Button type="button" size="sm" onClick={onPlay}>
+              Play sequence
+            </Button>
+          ) : null}
+          {items.length > 0 ? (
+            <Button type="button" variant="outline" size="sm" onClick={onClear}>
+              Clear sequence
+            </Button>
+          ) : null}
+        </div>
       </CardHeader>
       <CardContent className="pt-4">
         {items.length === 0 ? (
           <div className="flex min-h-[140px] flex-col items-center justify-center rounded-lg border border-dashed border-border px-6 py-10 text-center">
             <h3 className="text-sm font-medium text-foreground">Sequence workspace is empty</h3>
             <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-              Flip a Scene card, then add it to this custom playback layout.
+              Flip a Scene card, then add it to this custom playback layout. Build Experience opens the original timeline editor.
             </p>
           </div>
         ) : (

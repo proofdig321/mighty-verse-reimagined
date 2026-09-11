@@ -2,7 +2,6 @@ export const dynamic = "force-dynamic";
 
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
-import PageTopNav from "@/components/page-top-nav";
 import SceneDeckClient from "@/components/scene-deck-client";
 import { Button } from "@/components/ui/button";
 
@@ -86,17 +85,21 @@ export default async function ScenesPage() {
 
   return (
     <div className="public-page">
-      <PageTopNav activePath="/scenes" />
       <div className="mx-auto max-w-7xl px-6 py-10">
         <div className="flex items-start justify-between gap-4 mb-8">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-1" style={{ color: "var(--accent-mv)" }}>Scenes in the Mural</p>
             <h1 className="text-3xl font-semibold" style={{ fontFamily: "var(--font-display, inherit)" }}>Scene Deck</h1>
-            <p className="text-sm text-muted-foreground mt-1">Reveal the Scenes of a Universe. Shuffle is presentation, not canonical order.</p>
+            <p className="text-sm text-muted-foreground mt-1">Shuffle the deck to reveal hidden creative moments. Create your own timeline.</p>
           </div>
-          <Link href="/universes" className="shrink-0 mt-1">
-            <Button variant="outline" size="sm">Explore Universes</Button>
-          </Link>
+          <div className="flex shrink-0 flex-wrap gap-2 mt-1">
+            <Link href="/editor">
+              <Button size="sm">Build Experience →</Button>
+            </Link>
+            <Link href="/universes">
+              <Button variant="outline" size="sm">Explore Universes</Button>
+            </Link>
+          </div>
         </div>
         <SceneDeckClient scenes={scenes} faceDownUntilSelected label="From the Mural" hideHeader />
       </div>

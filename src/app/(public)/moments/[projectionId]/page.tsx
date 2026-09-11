@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import ArtworkFrame from "@/components/artwork-frame";
-import PageTopNav from "@/components/page-top-nav";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
 
 type SceneMomentData = MomentData & {
@@ -206,7 +205,6 @@ export default async function MomentPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <PageTopNav activePath="/moments" />
 
       <div className="mx-auto max-w-7xl px-6 py-8">
 

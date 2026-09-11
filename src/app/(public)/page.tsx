@@ -6,7 +6,6 @@ import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
-import PageTopNav from "@/components/page-top-nav";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -22,7 +21,6 @@ export default async function HomePage() {
 
   return (
     <div className="public-page">
-      <PageTopNav activePath="/" />
 
       {/* ── Hero ─────────────────────────────────────────────────────────── */}
       <section className="public-hero relative overflow-hidden">

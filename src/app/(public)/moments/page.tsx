@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import { sceneShortTitle } from "@/lib/assemble/composition";
-import PageTopNav from "@/components/page-top-nav";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
 
@@ -119,7 +118,6 @@ export default async function MomentsPage() {
 
   return (
     <div className="public-page">
-      <PageTopNav activePath="/moments" />
 
       <div className="border-b border-border bg-card/20">
         <div className="mx-auto max-w-7xl px-6 py-6">

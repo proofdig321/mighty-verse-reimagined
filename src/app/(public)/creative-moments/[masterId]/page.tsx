@@ -5,7 +5,6 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Separator } from "@/components/ui/separator";
 import { buttonVariants } from "@/components/ui/button";
-import PageTopNav from "@/components/page-top-nav";
 
 type RelatedScene = {
   master_id: string;
@@ -100,7 +99,6 @@ export default async function CreativeMomentPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <PageTopNav activePath="/moments" />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
         {data.universe_master_id ? (

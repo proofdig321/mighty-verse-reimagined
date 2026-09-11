@@ -1,5 +1,4 @@
 import Link from "next/link";
-import PageTopNav from "@/components/page-top-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { CREATIVE_STUDIO_HREF, DASHBOARD_HREF } from "@/lib/product-nav";
 import { cn } from "@/lib/utils";
@@ -7,7 +6,6 @@ import { cn } from "@/lib/utils";
 export default function AuthorityPublicPage() {
   return (
     <div className="min-h-screen bg-background">
-      <PageTopNav activePath="/authority/public" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-10">
         <div className="space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Assemble</p>

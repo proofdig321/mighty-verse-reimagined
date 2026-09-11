@@ -1,3 +1,6 @@
-export default function PublicLayout({ children }: { children: React.ReactNode }) {
-  return <div className="multiverse-page min-h-screen w-full">{children}</div>;
+import type { ReactNode } from "react";
+import { PublicShell } from "@/components/layout/public-shell";
+
+export default function PublicLayout({ children }: { children: ReactNode }) {
+  return <PublicShell>{children}</PublicShell>;
 }

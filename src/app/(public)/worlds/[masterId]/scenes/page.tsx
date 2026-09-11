@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
-import PageTopNav from "@/components/page-top-nav";
 import SceneDeckClient from "@/components/scene-deck-client";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -133,7 +132,6 @@ export default async function UniverseScenesPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <PageTopNav activePath="/scenes" />
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">
@@ -150,12 +148,17 @@ export default async function UniverseScenesPage({
                 Scene Deck
               </h1>
               <p className="text-sm text-muted-foreground">
-                Reveal the Scenes of this Universe. Shuffle is presentation, not canonical order.
+                Reveal the Scenes of this Universe. Shuffle is presentation, not canonical order. Create your own timeline.
               </p>
             </div>
-            <Link href={`/worlds/${masterId}/holographic`} className={buttonVariants({ size: "lg" })} data-experience-entry="experience">
-              Enter Experience
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link href="/editor" className={buttonVariants({ size: "lg", variant: "outline" })}>
+                Build Experience →
+              </Link>
+              <Link href={`/worlds/${masterId}/holographic`} className={buttonVariants({ size: "lg" })} data-experience-entry="experience">
+                Enter Experience
+              </Link>
+            </div>
           </div>
         <SceneDeckClient scenes={scenes} hideHeader faceDownUntilSelected={false} />
       </div>

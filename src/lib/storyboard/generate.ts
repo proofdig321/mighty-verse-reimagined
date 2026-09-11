@@ -46,6 +46,24 @@ async function ffmpeg(args: string[]) {
   await execFileAsync("ffmpeg", args, { timeout: 45_000 });
 }
 
+async function stillToClip(dir: string, stillUrl: string, filePath: string) {
+  const imagePath = join(dir, "panel-source.bin");
+  await downloadToFile(stillUrl, imagePath);
+  await ffmpeg([
+    "-y",
+    "-loop", "1",
+    "-i", imagePath,
+    "-f", "lavfi",
+    "-i", "anullsrc=r=44100:cl=stereo",
+    "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+    "-t", "2",
+    "-c:v", "libx264",
+    "-c:a", "aac",
+    "-shortest",
+    filePath,
+  ]);
+}
+
 export async function generateStoryboardMedia(input: {
   output_type: StoryboardOutputType;
   prompt: string;
@@ -61,6 +79,24 @@ export async function generateStoryboardMedia(input: {
   }
 
   if (type === "panel" || type === "still" || type === "variation") {
+    if (input.still_url && type !== "variation") {
+      const filePath = join(dir, "panel.mp4");
+      try {
+        await stillToClip(dir, input.still_url, filePath);
+      } catch {
+        return { ok: false, status: "failed", output_type: type, message: "Gallery still could not be turned into a storyboard panel." };
+      }
+      return {
+        ok: true,
+        output_type: type,
+        status: "ready",
+        file_path: filePath,
+        mime: "video/mp4",
+        duration_ms: 2000,
+        still_only: false,
+        creates_canonical: false,
+      };
+    }
     const image = await generateGeminiImage({
       prompt:
         type === "variation"

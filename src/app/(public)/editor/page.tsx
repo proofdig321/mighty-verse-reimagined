@@ -4,7 +4,6 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { resolveThumbnail } from "@/lib/media/thumbnail";
-import PageTopNav from "@/components/page-top-nav";
 import EditorShell from "./editor-shell";
 import type { LibraryScene } from "./types";
 
@@ -126,8 +125,7 @@ export default async function EditorPage() {
   const savedDecks = await loadUserDecks(participantId);
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-background">
-      <PageTopNav activePath="/editor" />
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="flex-1 min-h-0">
         <EditorShell
           scenes={scenes}

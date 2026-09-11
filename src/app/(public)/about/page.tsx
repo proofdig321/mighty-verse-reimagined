@@ -3,7 +3,6 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getDiscovery } from "@/lib/discovery";
 import type { DiscoveryUniverse } from "@/lib/discovery";
-import PageTopNav from "@/components/page-top-nav";
 import { Button } from "@/components/ui/button";
 
 export default async function AboutPage() {
@@ -20,7 +19,6 @@ export default async function AboutPage() {
 
   return (
     <div className="public-page">
-      <PageTopNav activePath="/about" />
 
       {/* Page header */}
       <div className="public-hero">

@@ -9,7 +9,6 @@ import { productionLayersFromResults } from "@/lib/production/projection";
 import { composeHolographicProgram, type ExperienceSurfaceLinks } from "@/lib/experience/holographic-program";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import ExperienceToggle from "@/components/experience-toggle";
-import PageTopNav from "@/components/page-top-nav";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -65,7 +64,6 @@ export default async function HolographicWorldPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <PageTopNav activePath="/universes" />
 
       <div className="border-b border-border/50 bg-card/20">
         <div className="mx-auto max-w-7xl px-6 py-3">

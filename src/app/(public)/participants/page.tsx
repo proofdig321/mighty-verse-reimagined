@@ -1,7 +1,6 @@
 export const dynamic = "force-dynamic";
 
 import { getServiceClient } from "@/lib/authority/validate";
-import PageTopNav from "@/components/page-top-nav";
 import ParticipantsFilterClient from "@/components/participants-filter-client";
 
 type ParticipantItem = {
@@ -45,7 +44,6 @@ export default async function ParticipantsPublicPage() {
   const participants = await getData();
   return (
     <div className="public-page">
-      <PageTopNav activePath="/participants" />
       <ParticipantsFilterClient participants={participants} />
     </div>
   );

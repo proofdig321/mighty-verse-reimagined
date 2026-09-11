@@ -33,6 +33,7 @@ export default function SceneDeckClient({ scenes, faceDownUntilSelected, label, 
         provider: scene.provider,
         startMs: scene.start_ms,
         endMs: scene.end_ms,
+        projectionId: scene.projection_id,
       }))}
     />
   );

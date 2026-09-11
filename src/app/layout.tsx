@@ -28,7 +28,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var t=localStorage.getItem("mv-theme-preset");if(t==="soft-pop"||t==="neo-brutalism"||t==="default")document.documentElement.dataset.theme=t}catch(e){}`,
+            __html: `try{var t=localStorage.getItem("mv-theme-preset");if(t==="soft-pop"||t==="neo-brutalism"||t==="tangerine"||t==="default")document.documentElement.dataset.theme=t}catch(e){}`,
           }}
         />
       </head>
