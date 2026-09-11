@@ -17,6 +17,7 @@ import {
   type HolographicProgram,
 } from "@/lib/experience/holographic-program";
 import { cn } from "@/lib/utils";
+import { attachHolographicAudio, type HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
 import { HolographicLayerMedia } from "./holographic-layer-media";
 import { HolographicTheater, type TheaterPointer } from "./holographic-theater";
 import { CreativeMomentCard } from "./creative-moment-card";
@@ -107,6 +108,8 @@ export function HolographicStage({
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
   const pointerRef = useRef<TheaterPointer>({ x: 0, y: 0 });
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const audioRef = useRef<HolographicAudioGraph | null>(null);
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(!program.clock);
   const [failed, setFailed] = useState(false);
@@ -161,13 +164,23 @@ export function HolographicStage({
     setSeekNonce((value) => value + 1);
   }
 
+  function unlockSpatialAudio() {
+    const video = videoRef.current;
+    if (!video) return;
+    audioRef.current = attachHolographicAudio(video);
+    void audioRef.current?.resume();
+  }
+
   function toggle() {
     if (timeMs >= durationMs) {
       setTimeMs(0);
       setSeekToMs(0);
       setSeekNonce((value) => value + 1);
     }
-    if (!playing) setMuted(false);
+    if (!playing) {
+      setMuted(false);
+      unlockSpatialAudio();
+    }
     setPlaying((value) => !value);
   }
 
@@ -181,6 +194,7 @@ export function HolographicStage({
     if (layer.start_ms == null) return;
     seekTo(layer.start_ms);
     setMuted(false);
+    unlockSpatialAudio();
     setPlaying(true);
     onSelectScene?.(layer.master_id, layer.start_ms);
   }
@@ -197,7 +211,11 @@ export function HolographicStage({
       toggle();
     } else if (event.key === "m") {
       event.preventDefault();
-      setMuted((value) => !value);
+      setMuted((value) => {
+        const next = !value;
+        if (!next) unlockSpatialAudio();
+        return next;
+      });
     } else if (event.key === "f") {
       event.preventDefault();
       void cinemaRef.current?.requestFullscreen?.();
@@ -256,6 +274,7 @@ export function HolographicStage({
           <div
             className="holographic-cinema"
             data-holographic-cinema=""
+            data-hologram={program.clock ? "live" : "still"}
             ref={cinemaRef}
             onPointerMove={onMove}
             onPointerLeave={onLeave}
@@ -279,6 +298,7 @@ export function HolographicStage({
                     volume={volume}
                     seekNonce={seekNonce}
                     seekToMs={seekToMs}
+                    mediaRef={videoRef}
                     onTimeMs={setTimeMs}
                     onReady={() => {
                       setReady(true);
@@ -297,8 +317,14 @@ export function HolographicStage({
               </LayerCard>
             ) : null}
 
-            {spatialLayers.length > 0 ? (
-              <HolographicTheater layers={spatialLayers} timeMs={timeMs} pointerRef={pointerRef} />
+            {program.clock || spatialLayers.length > 0 ? (
+              <HolographicTheater
+                layers={spatialLayers}
+                timeMs={timeMs}
+                pointerRef={pointerRef}
+                videoRef={videoRef}
+                audioRef={audioRef}
+              />
             ) : null}
 
             {!ready && !failed ? <p className="holographic-media-status">Loading mural…</p> : null}
@@ -331,7 +357,13 @@ export function HolographicStage({
                   className="holographic-mute"
                   aria-pressed={!muted && volume > 0}
                   aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-                  onClick={() => setMuted((value) => !value)}
+                  onClick={() => {
+                    setMuted((value) => {
+                      const next = !value;
+                      if (!next) unlockSpatialAudio();
+                      return next;
+                    });
+                  }}
                 >
                   {muted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
                 </button>
@@ -346,6 +378,7 @@ export function HolographicStage({
                     const next = Number(event.target.value);
                     setVolume(next);
                     setMuted(next === 0);
+                    if (next > 0) unlockSpatialAudio();
                   }}
                 />
               </label>

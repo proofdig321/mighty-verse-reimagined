@@ -53,6 +53,25 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
   await expect(page.locator("[data-holographic-playing='true']")).toHaveCount(1);
   notes.push("B: Play starts decoded Mux mural video with audio unlocked");
   await expect(page.locator("[data-holographic-muted='false']")).toHaveCount(1);
+  await expect
+    .poll(async () => page.locator("[data-holographic-theater]").getAttribute("data-holographic-warp"), { timeout: 20000 })
+    .toBe("live");
+  notes.push("B1: Mux frames are bound as the WebGL video texture");
+
+  const cinema = page.locator("[data-holographic-cinema]");
+  const cinemaBox = await cinema.boundingBox();
+  expect(cinemaBox, "cinema has a pointer surface").toBeTruthy();
+  if (cinemaBox) {
+    await page.mouse.move(cinemaBox.x + 8, cinemaBox.y + cinemaBox.height / 2);
+    await expect
+      .poll(async () => Number(await page.locator("[data-holographic-theater]").getAttribute("data-holographic-pan")), { timeout: 5000 })
+      .toBeLessThan(-0.4);
+    await page.mouse.move(cinemaBox.x + cinemaBox.width - 8, cinemaBox.y + cinemaBox.height / 2);
+    await expect
+      .poll(async () => Number(await page.locator("[data-holographic-theater]").getAttribute("data-holographic-pan")), { timeout: 5000 })
+      .toBeGreaterThan(0.4);
+  }
+  notes.push("B1b: Cursor left pans audio left and right pans audio right");
 
   const powerhouse = page.locator(`[data-holographic-kind='scene'][data-master-id='${SCENE_MOMENTS.powerhouse.sceneMasterId}']`);
   await powerhouse.click();
