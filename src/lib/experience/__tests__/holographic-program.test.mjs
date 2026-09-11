@@ -88,4 +88,31 @@ assert(audienceLabel(UNIVERSE, "Experience") === "Experience", "internal identif
 assert(audienceLabel("Super Hero Ego", "Experience") === "Super Hero Ego", "the Universe title remains the audience name");
 assert(audienceLayerTitle("Golden Shovel — Powerhouse production", "Realization") === "Golden Shovel — Powerhouse", "production suffix is not an audience label");
 
+const withReason = composeHolographicProgram({
+  title: "Super Hero Ego",
+  layers,
+  source: program.clock
+    ? {
+        asset_id: "795c057e-2967-4e93-8f5e-06297c674cb0",
+        title: "Super Hero Ego",
+        provider: "mux",
+        playback_id: PLAYBACK,
+        endpoint_ref: program.clock.endpoint_ref,
+        duration_ms: 254800,
+        mural_id: MURAL,
+        mural_title: "Super Hero Ego",
+        mural_projection_id: "2e68a8d6-6b15-4d16-a0d9-2ea290815f21",
+        mural_canonical_state_id: MURAL,
+        windows: program.windows,
+      }
+    : null,
+  moments: [
+    { master_id: "2745a50a-5417-4613-b23b-ef4857ab112e", title: "Reason", scene_ids: [DARK_KNIGHT] },
+  ],
+});
+const reason = withReason.layers.find((layer) => layer.kind === "moment" && layer.title === "Reason");
+assert(reason, "Universe Creative Moments missing from Sentinel still join the program");
+assert(reason.related_scene_ids.includes(DARK_KNIGHT), "Reason keeps its Scene relationship");
+assert(Boolean(reason.still_url), "Reason receives a Scene still for the collectible plane");
+
 console.log("Holographic program tests: all passed");

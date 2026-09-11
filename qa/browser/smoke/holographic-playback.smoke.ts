@@ -15,9 +15,13 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
   await expect(page.getByRole("button", { name: "Restart" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Mute|Unmute/ })).toBeVisible();
   await expect(page.getByRole("slider", { name: "Experience progress" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Scenes" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Creative Moments" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Canonical Scene Exploration" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Creative Moments & Contributors" })).toBeVisible();
+  await expect(page.locator("[data-holographic-kind='moment']")).toHaveCount(3);
+  await expect(page.locator("[data-holographic-kind='moment'] img")).toHaveCount(3);
+  await expect(page.locator(`[data-holographic-kind='scene'][data-master-id='${SCENE_MOMENTS.swordMaster.sceneMasterId}']`)).toContainText(/Reason/i);
   await expect(page.locator("[data-holographic-cinema]")).toHaveCount(1);
+  await expect(page.locator("[data-holographic-theater]")).toHaveCount(1);
   await expect(page.locator("text=/production-plan:/i")).toHaveCount(0);
   await expect(page.locator(".holographic-transport")).not.toContainText(CANON.universeId);
   notes.push("A: Experience presents Super Hero Ego without internal identifiers in the transport");

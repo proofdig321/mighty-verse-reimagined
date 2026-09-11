@@ -12,6 +12,7 @@ import {
   type UniverseSceneMomentRel,
 } from "@/lib/experience/universe-world";
 import { cn } from "@/lib/utils";
+import { CreativeMomentCard } from "./creative-moment-card";
 
 export type UniverseWorldExperienceProps = {
   universeId: string;
@@ -194,33 +195,20 @@ export function UniverseWorldExperience({
           <ul className="world-presence-list">
             {contributors.map((contributor) => (
               <li key={contributor.master_id}>
-                <article
-                  className="world-presence"
-                  data-moment-id={contributor.master_id}
-                  data-has-moment-projection={contributor.hasMomentProjection ? "true" : "false"}
-                  aria-labelledby={`world-moment-${contributor.master_id}`}
-                >
-                  <h3 id={`world-moment-${contributor.master_id}`} className="world-presence-title">
-                    {contributor.title ?? "Creative Moment"}
-                  </h3>
-                  <p className="world-presence-kind">
-                    {contributor.hasMomentProjection
+                <CreativeMomentCard
+                  masterId={contributor.master_id}
+                  title={contributor.title ?? "Creative Moment"}
+                  stillUrl={contributor.stillUrl}
+                  href={contributor.href}
+                  sceneTitles={contributor.scenes.map((scene) => scene.shortTitle)}
+                  kind={
+                    contributor.hasMomentProjection
                       ? "Creative Moment with a Moment encounter"
-                      : "Creative identity in this Universe"}
-                  </p>
-                  {contributor.scenes.length > 0 ? (
-                    <p className="world-presence-scenes">
-                      {contributor.scenes.length > 1 ? "Present across " : "Present in "}
-                      {contributor.scenes.map((scene) => scene.shortTitle).join(" and ")}
-                    </p>
-                  ) : null}
-                  <Link href={contributor.href} className="world-presence-link">
-                    View Creative Moment
-                    <span className="sr-only">
-                      {` ${contributor.title ?? "Creative Moment"}`}
-                    </span>
-                  </Link>
-                </article>
+                      : "Creative identity in this Universe"
+                  }
+                  copyMode="always"
+                  hasMomentProjection={contributor.hasMomentProjection}
+                />
               </li>
             ))}
           </ul>

@@ -18,6 +18,8 @@ import {
 } from "@/lib/experience/holographic-program";
 import { cn } from "@/lib/utils";
 import { HolographicLayerMedia } from "./holographic-layer-media";
+import { HolographicTheater, type TheaterPointer } from "./holographic-theater";
+import { CreativeMomentCard } from "./creative-moment-card";
 
 function LayerCard({
   layer,
@@ -104,6 +106,7 @@ export function HolographicStage({
   onSelectScene?: (sceneMasterId: string, startMs: number) => void;
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
+  const pointerRef = useRef<TheaterPointer>({ x: 0, y: 0 });
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(!program.clock);
   const [failed, setFailed] = useState(false);
@@ -119,7 +122,7 @@ export function HolographicStage({
   const scenes = program.layers.filter((layer) => layer.kind === "scene");
   const moments = program.layers.filter((layer) => layer.kind === "moment");
   const productions = program.layers.filter((layer) => layer.kind === "production");
-  const activeScene = scenes.find((layer) => layerIsActive(layer, timeMs)) ?? null;
+  const spatialLayers = [...scenes, ...moments];
 
   useEffect(() => {
     if (!playing || program.clock) return;
@@ -141,15 +144,14 @@ export function HolographicStage({
       return;
     }
     const rect = event.currentTarget.getBoundingClientRect();
-    const x = ((event.clientX - rect.left) / rect.width - 0.5) * 10;
-    const y = ((event.clientY - rect.top) / rect.height - 0.5) * -6;
-    event.currentTarget.style.setProperty("--hx", `${x}deg`);
-    event.currentTarget.style.setProperty("--hy", `${y}deg`);
+    pointerRef.current = {
+      x: (event.clientX - rect.left) / rect.width - 0.5,
+      y: 0.5 - (event.clientY - rect.top) / rect.height,
+    };
   }
 
-  function onLeave(event: PointerEvent<HTMLDivElement>) {
-    event.currentTarget.style.setProperty("--hx", "0deg");
-    event.currentTarget.style.setProperty("--hy", "0deg");
+  function onLeave() {
+    pointerRef.current = { x: 0, y: 0 };
   }
 
   function restart() {
@@ -165,7 +167,7 @@ export function HolographicStage({
       setSeekToMs(0);
       setSeekNonce((value) => value + 1);
     }
-    if (!playing && mode === "public") setMuted(false);
+    if (!playing) setMuted(false);
     setPlaying((value) => !value);
   }
 
@@ -178,7 +180,7 @@ export function HolographicStage({
   function seekScene(layer: HolographicLayer) {
     if (layer.start_ms == null) return;
     seekTo(layer.start_ms);
-    if (mode === "public") setMuted(false);
+    setMuted(false);
     setPlaying(true);
     onSelectScene?.(layer.master_id, layer.start_ms);
   }
@@ -295,14 +297,8 @@ export function HolographicStage({
               </LayerCard>
             ) : null}
 
-            {activeScene?.still_url ? (
-              <div className="holographic-depth" aria-hidden="true">
-                <div className="holographic-depth-plane">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={activeScene.still_url} alt="" />
-                  <p>{sceneShortTitle(activeScene.title) ?? layerTitle(activeScene)}</p>
-                </div>
-              </div>
+            {spatialLayers.length > 0 ? (
+              <HolographicTheater layers={spatialLayers} timeMs={timeMs} pointerRef={pointerRef} />
             ) : null}
 
             {!ready && !failed ? <p className="holographic-media-status">Loading mural…</p> : null}
@@ -394,7 +390,7 @@ export function HolographicStage({
                 <div>
                   <p className="world-kicker">Reveal</p>
                   <h2 id="experience-scenes-heading" className="world-section-title">
-                    Scenes
+                    Canonical Scene Exploration
                   </h2>
                   <p className="world-section-note">
                     Canonical spatial units in the Mural. Select a Scene to seek playback. Timing stays canonical.
@@ -466,7 +462,7 @@ export function HolographicStage({
             <section className="world-section" aria-labelledby="experience-moments-heading">
               <p className="world-kicker">Reveal</p>
               <h2 id="experience-moments-heading" className="world-section-title">
-                Creative Moments
+                Creative Moments & Contributors
               </h2>
               <p className="world-section-note">
                 Contributors present in this Universe. A Creative Moment can relate to more than one Scene.
@@ -479,36 +475,16 @@ export function HolographicStage({
                   const href = links?.momentHref[layer.master_id];
                   return (
                     <li key={layer.layer_id}>
-                      <article
-                        className={cn(
-                          "world-presence holographic-layer holographic-layer-moment",
-                          active && "holographic-layer-active",
-                          !active && "holographic-layer-inactive",
-                        )}
-                        data-holographic-kind="moment"
-                        data-master-id={layer.master_id}
-                        data-moment-id={layer.master_id}
-                        data-layer-active={active ? "true" : "false"}
-                        aria-labelledby={`experience-moment-${layer.master_id}`}
-                      >
-                        {stillSurface(layer, title, "world-still")}
-                        <h3 id={`experience-moment-${layer.master_id}`} className="world-presence-title">
-                          {title}
-                        </h3>
-                        <p className="world-presence-kind">Creative identity in this Universe</p>
-                        {related.length > 0 ? (
-                          <p className="world-presence-scenes">
-                            {related.length > 1 ? "Present across " : "Present in "}
-                            {related.join(" and ")}
-                          </p>
-                        ) : null}
-                        {href ? (
-                          <Link href={href} className="world-presence-link">
-                            View Creative Moment
-                            <span className="sr-only">{` ${title}`}</span>
-                          </Link>
-                        ) : null}
-                      </article>
+                      <CreativeMomentCard
+                        masterId={layer.master_id}
+                        title={title}
+                        stillUrl={layer.still_url}
+                        href={href}
+                        sceneTitles={related}
+                        kind="Creative identity in this Universe"
+                        copyMode="hover"
+                        active={active}
+                      />
                     </li>
                   );
                 })}

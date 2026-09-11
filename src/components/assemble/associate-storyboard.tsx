@@ -7,21 +7,22 @@ import { Label } from "@/components/ui/label";
 
 export function AssociateStoryboard({
   universes,
+  value,
+  onChange,
 }: {
   universes: { master_id: string; title: string }[];
+  value?: string;
+  onChange?: (universeId: string) => void;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
-  const [universeId, setUniverseId] = useState("");
+  const [internalId, setInternalId] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const universeId = value ?? internalId;
 
-  if (!open) {
-    return (
-      <Button type="button" variant="outline" size="sm" onClick={() => setOpen(true)}>
-        Associate with Universe
-      </Button>
-    );
+  function setUniverseId(next: string) {
+    if (onChange) onChange(next);
+    else setInternalId(next);
   }
 
   async function confirm() {
@@ -44,24 +45,24 @@ export function AssociateStoryboard({
 
   return (
     <form
-      className="max-w-sm space-y-3"
-      aria-label="Associate storyboard with Universe"
+      className="storyboard-target"
+      aria-label="Target Association"
       onSubmit={(event) => {
         event.preventDefault();
         void confirm();
       }}
     >
-      <div className="space-y-1">
-        <Label htmlFor="associate-storyboard-universe">Canonical work</Label>
+      <div className="storyboard-target-field">
+        <Label htmlFor="associate-storyboard-universe">Target Association</Label>
         <select
           id="associate-storyboard-universe"
-          aria-label="Select Universe to associate"
+          aria-label="Target Association"
           value={universeId}
           disabled={busy}
           onChange={(event) => setUniverseId(event.target.value)}
           className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm"
         >
-          <option value="">Select an existing Universe…</option>
+          <option value="">Independent / Standalone Project</option>
           {universes.map((universe) => (
             <option key={universe.master_id} value={universe.master_id}>
               {universe.title}
@@ -70,21 +71,18 @@ export function AssociateStoryboard({
         </select>
       </div>
       <p className="text-xs text-muted-foreground">
-        This attaches the creative artifact to the Universe. It does not create Scenes or change canonical timing.
+        Work stays independent until you attach it. Attachment does not create Scenes or change canonical timing.
       </p>
       {error ? (
         <p role="alert" className="text-xs text-destructive">
           {error}
         </p>
       ) : null}
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" size="sm" disabled={busy || !universeId}>
-          {busy ? "Associating…" : "Confirm association"}
+      {universeId ? (
+        <Button type="submit" size="sm" disabled={busy}>
+          Publish / Attach to Canonical Universe
         </Button>
-        <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setOpen(false)}>
-          Cancel
-        </Button>
-      </div>
+      ) : null}
     </form>
   );
 }

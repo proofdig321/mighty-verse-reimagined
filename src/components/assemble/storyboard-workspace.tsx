@@ -231,34 +231,48 @@ export function StoryboardWorkspace({
 
   return (
     <div className="storyboard-workspace">
-      <section className="suite-section" aria-labelledby="storyboard-materials">
-        <p className="suite-kicker">Materials</p>
-        <h2 id="storyboard-materials" className="sr-only">
-          Storyboard materials
-        </h2>
-        <div className="studio-material-tabs" role="tablist" aria-label="Storyboard materials">
-          {tabs.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              role="tab"
-              aria-selected={tab === item.id}
-              className={cn("studio-material-tab", tab === item.id && "studio-material-tab-current")}
-              onClick={() => setTab(item.id)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+      <div className="storyboard-target-bar">
+        {universeId ? (
+          <p className="text-sm text-muted-foreground">
+            Target Association · {universeTitle ?? "Canonical Universe"}
+          </p>
+        ) : (
+          <AssociateStoryboard universes={universes} />
+        )}
+      </div>
 
-        {tab === "script" ? (
-          <div className="mt-4 space-y-3">
+      <div className="studio-material-tabs" role="tablist" aria-label="Storyboard materials">
+        {tabs.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            role="tab"
+            aria-selected={tab === item.id}
+            className={cn("studio-material-tab", tab === item.id && "studio-material-tab-current")}
+            onClick={() => setTab(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="storyboard-workspace-columns">
+        <section
+          className={cn("storyboard-column", (tab === "script" || tab === "assist") && "storyboard-column-current")}
+          data-column="script"
+          aria-labelledby="storyboard-script-heading"
+        >
+          <p className="suite-kicker">Ingest</p>
+          <h2 id="storyboard-script-heading" className="suite-section-title">
+            Script
+          </h2>
+          <div className="space-y-3">
             <label className="block space-y-2">
               <span className="suite-kicker">Story body</span>
               <textarea
                 value={script}
                 onChange={(event) => setScript(event.target.value)}
-                rows={8}
+                rows={10}
                 className="w-full rounded-lg border border-border bg-card/40 px-3 py-2 text-sm text-foreground"
                 placeholder="Golden Shovel walks a futuristic Johannesburg skyline.&#10;Camera: rise through the mural&#10;The city transforms around him.&#10;Spirit avatar appears."
               />
@@ -275,13 +289,8 @@ export function StoryboardWorkspace({
             <p className="suite-section-note">
               Script is a creative input. Generating panels does not create Scenes or change canonical timing.
             </p>
-          </div>
-        ) : null}
-
-        {tab === "assist" ? (
-          <div className="mt-4 space-y-3">
             <label className="block space-y-2">
-              <span className="suite-kicker">Instruction</span>
+              <span className="suite-kicker">AI Assist</span>
               <textarea
                 value={instruction}
                 onChange={(event) => setInstruction(event.target.value)}
@@ -299,37 +308,104 @@ export function StoryboardWorkspace({
               AI output remains a proposal until you curate it.
             </p>
           </div>
-        ) : null}
+        </section>
 
-        {tab === "sentinel" ? (
-          <div className="mt-4">
-            {intelligence && universeId ? (
-              <section className="suite-section" aria-labelledby="universe-sentinel">
-                <div className="suite-section-head">
-                  <h2 id="universe-sentinel" className="suite-section-title">
-                    Sentinel
-                  </h2>
-                  <p className="suite-section-note">
-                    Observational evidence for this source. Sentinel does not create Scenes. Authorise windows only when the curator agrees.
-                  </p>
-                </div>
-                <SentinelIntelligencePanel
-                  universeId={universeId}
-                  intelligence={intelligence}
-                  canAuthorise={canAuthoriseSentinel}
-                  canRetainReference={canAuthoriseSentinel}
-                  inspectHref={inspectHref}
-                  previewHref={previewHref}
-                />
-              </section>
-            ) : (
+        <section
+          className={cn("storyboard-column", tab === "sentinel" && "storyboard-column-current")}
+          data-column="sentinel"
+          aria-labelledby="universe-sentinel"
+        >
+          {intelligence && universeId ? (
+            <div className="suite-section">
+              <div className="suite-section-head">
+                <h2 id="universe-sentinel" className="suite-section-title">
+                  Sentinel
+                </h2>
+                <p className="suite-section-note">
+                  Observational evidence for this source. Sentinel does not create Scenes. Authorise windows only when the curator agrees.
+                </p>
+              </div>
+              <SentinelIntelligencePanel
+                universeId={universeId}
+                intelligence={intelligence}
+                canAuthorise={canAuthoriseSentinel}
+                canRetainReference={canAuthoriseSentinel}
+                inspectHref={inspectHref}
+                previewHref={previewHref}
+              />
+            </div>
+          ) : (
+            <>
+              <h2 id="universe-sentinel" className="suite-section-title">
+                Sentinel
+              </h2>
               <p className="suite-empty">No Sentinel evidence is available yet. Inspect the bound source to observe it.</p>
-            )}
-          </div>
-        ) : null}
+            </>
+          )}
+        </section>
 
-        {tab === "references" ? (
-          <div className="mt-4">
+        <section
+          className={cn(
+            "storyboard-column",
+            (tab === "script" || tab === "assist" || tab === "references") && "storyboard-column-current",
+          )}
+          data-column="sequence"
+          aria-labelledby="storyboard-sequence"
+        >
+          <div className="suite-section-head">
+            <h2 id="storyboard-sequence" className="suite-section-title">
+              Storyboard
+            </h2>
+            <p className="suite-section-note">
+              A visual sequence for this work. Script beats, Sentinel evidence, and canonical Scenes are materials — not the same thing.
+            </p>
+          </div>
+          <ol className="storyboard-panel-strip">
+            {scriptPanels.map((panel, index) => (
+              <li key={panel.panel_id}>
+                <button
+                  type="button"
+                  className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}
+                  onClick={() => setSelectedId(panel.panel_id)}
+                >
+                  <div className="storyboard-panel-empty" aria-hidden="true" />
+                  <p className="suite-kicker">Panel {String(index + 1).padStart(2, "0")}</p>
+                  <p className="text-sm text-foreground">{panel.title}</p>
+                  <p className="suite-proposal-badge">Script</p>
+                </button>
+              </li>
+            ))}
+            {sentinelPanels.map((panel) => (
+              <li key={panel.panel_id}>
+                <StoryboardEvidencePanel
+                  panel={panel}
+                  selected={selectedId === panel.panel_id}
+                  onSelect={() => setSelectedId(panel.panel_id)}
+                />
+              </li>
+            ))}
+            {scriptPanels.length === 0 && sentinelPanels.length === 0
+              ? scenes.map((scene, index) => (
+                  <li key={scene.master_id}>
+                    <button
+                      type="button"
+                      className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}
+                      onClick={() => setSelectedId(scene.master_id)}
+                    >
+                      <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
+                      <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
+                      <p className="suite-canon-badge">Scene</p>
+                    </button>
+                  </li>
+                ))
+              : null}
+          </ol>
+          {scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0 ? (
+            <p className="suite-empty">Write a script or inspect source media to begin a storyboard.</p>
+          ) : null}
+
+          <div className={cn("mt-6", tab !== "references" && "storyboard-references")}>
+            <p className="suite-kicker">Media compositions</p>
             {references.length === 0 && generated.length === 0 ? (
               <p className="suite-empty">No curated references yet. Keep a Sentinel still as a reference from the Sentinel materials.</p>
             ) : (
@@ -363,113 +439,57 @@ export function StoryboardWorkspace({
               </ul>
             )}
           </div>
-        ) : null}
-      </section>
 
-      <section className="suite-section" aria-labelledby="storyboard-sequence">
-        <div className="suite-section-head">
-          <h2 id="storyboard-sequence" className="suite-section-title">
-            Storyboard
-          </h2>
-          <p className="suite-section-note">
-            A visual sequence for this work. Script beats, Sentinel evidence, and canonical Scenes are materials — not the same thing.
-          </p>
-        </div>
-        <ol className="storyboard-panel-strip">
-          {scriptPanels.map((panel, index) => (
-            <li key={panel.panel_id}>
-              <button
-                type="button"
-                className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}
-                onClick={() => setSelectedId(panel.panel_id)}
-              >
-                <div className="storyboard-panel-empty" aria-hidden="true" />
-                <p className="suite-kicker">Panel {String(index + 1).padStart(2, "0")}</p>
-                <p className="text-sm text-foreground">{panel.title}</p>
-                <p className="suite-proposal-badge">Script</p>
-              </button>
-            </li>
-          ))}
-          {sentinelPanels.map((panel) => (
-            <li key={panel.panel_id}>
-              <StoryboardEvidencePanel
-                panel={panel}
-                selected={selectedId === panel.panel_id}
-                onSelect={() => setSelectedId(panel.panel_id)}
-              />
-            </li>
-          ))}
-          {scriptPanels.length === 0 && sentinelPanels.length === 0
-            ? scenes.map((scene, index) => (
-                <li key={scene.master_id}>
-                  <button
-                    type="button"
-                    className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}
-                    onClick={() => setSelectedId(scene.master_id)}
-                  >
-                    <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
-                    <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
-                    <p className="suite-canon-badge">Scene</p>
-                  </button>
-                </li>
-              ))
-            : null}
-        </ol>
-        {scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0 ? (
-          <p className="suite-empty">Write a script or inspect source media to begin a storyboard.</p>
-        ) : null}
-      </section>
-
-      {selected ? (
-        <aside className="studio-inspector" aria-label="Selected panel">
-          {selected.still ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={selected.still} alt="" className="mb-3 aspect-video w-full rounded object-cover" />
-          ) : (
-            <div className="mb-3 aspect-video rounded bg-muted/40" />
-          )}
-          <p className="suite-kicker">{selected.kind}</p>
-          <h3 className="text-lg font-medium text-foreground">{selected.title}</h3>
-          {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
-          <p className="mt-2 text-sm text-muted-foreground">{selected.description}</p>
-          {selected.camera ? <p className="mt-2 text-xs text-muted-foreground">Camera · {selected.camera}</p> : null}
-          {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
-          {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("panel")}>
-              Generate panel
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("variation")}>
-              Generate variation
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
-              Animate
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
-              Generate clip
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
-              Generate GIF
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
-              Generate reel
-            </Button>
-            {universeId ? (
-              <>
-                <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  Add to production
-                </Link>
-                <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  Open 2.5D
-                </Link>
-              </>
-            ) : (
-              <AssociateStoryboard universes={universes} />
-            )}
-          </div>
-          <StatusLine state={mediaState} />
-        </aside>
-      ) : null}
+          {selected ? (
+            <aside className="studio-inspector mt-6" aria-label="Selected panel">
+              {selected.still ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={selected.still} alt="" className="mb-3 aspect-video w-full rounded object-cover" />
+              ) : (
+                <div className="mb-3 aspect-video rounded bg-muted/40" />
+              )}
+              <p className="suite-kicker">{selected.kind}</p>
+              <h3 className="text-lg font-medium text-foreground">{selected.title}</h3>
+              {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
+              <p className="mt-2 text-sm text-muted-foreground">{selected.description}</p>
+              {selected.camera ? <p className="mt-2 text-xs text-muted-foreground">Camera · {selected.camera}</p> : null}
+              {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
+              {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("panel")}>
+                  Generate panel
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("variation")}>
+                  Generate variation
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
+                  Animate
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
+                  Generate clip
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
+                  Generate GIF
+                </Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
+                  Generate reel
+                </Button>
+                {universeId ? (
+                  <>
+                    <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                      Add to production
+                    </Link>
+                    <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                      Open 2.5D
+                    </Link>
+                  </>
+                ) : null}
+              </div>
+              <StatusLine state={mediaState} />
+            </aside>
+          ) : null}
+        </section>
+      </div>
     </div>
   );
 }

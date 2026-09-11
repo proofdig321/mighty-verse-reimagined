@@ -15,6 +15,7 @@ type CreativeMomentItem = {
   scene_titles: string[];
   playback_id: string | null;
   provider: string | null;
+  start_ms: number | null;
 };
 
 async function getData(): Promise<CreativeMomentItem[]> {
@@ -44,6 +45,9 @@ async function getData(): Promise<CreativeMomentItem[]> {
   const { data: scenePres } = sceneIds.length
     ? await svc.from("work_presentation").select("master_id, title").in("master_id", sceneIds)
     : { data: [] };
+  const { data: sceneProjs } = sceneIds.length
+    ? await svc.from("projection").select("master_id, projection_id").in("master_id", sceneIds).eq("projection_type", "experiential")
+    : { data: [] };
 
   const { data: murals } = universeIds.length
     ? await svc.from("master").select("master_id, parent_master_id").in("parent_master_id", universeIds).eq("canonical_type", "mural")
@@ -53,8 +57,14 @@ async function getData(): Promise<CreativeMomentItem[]> {
     ? await svc.from("projection").select("master_id, projection_id").in("master_id", muralIds).eq("projection_type", "experiential")
     : { data: [] };
   const muralProjIds = (muralProjs ?? []).map((p) => p.projection_id);
-  const { data: bindings } = muralProjIds.length
-    ? await svc.from("projection_media_binding").select("projection_id, asset_id").in("projection_id", muralProjIds).eq("binding_type", "primary").eq("access_level", "public")
+  const sceneProjIds = (sceneProjs ?? []).map((p) => p.projection_id);
+  const { data: bindings } = [...muralProjIds, ...sceneProjIds].length
+    ? await svc
+        .from("projection_media_binding")
+        .select("projection_id, asset_id, start_ms")
+        .in("projection_id", [...muralProjIds, ...sceneProjIds])
+        .eq("binding_type", "primary")
+        .eq("access_level", "public")
     : { data: [] };
   const assetIds = (bindings ?? []).map((b) => b.asset_id);
   const { data: assets } = assetIds.length
@@ -79,6 +89,13 @@ async function getData(): Promise<CreativeMomentItem[]> {
       .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
       .map((row) => row.scene_master_id);
     const media = m.parent_master_id ? muralPlaybackByUniverse.get(m.parent_master_id) ?? null : null;
+    const hostSceneId = relatedSceneIds[0] ?? null;
+    const hostProjection = hostSceneId
+      ? (sceneProjs ?? []).find((projection) => projection.master_id === hostSceneId)
+      : null;
+    const hostBinding = hostProjection
+      ? (bindings ?? []).find((binding) => binding.projection_id === hostProjection.projection_id)
+      : null;
     return {
       master_id: m.master_id,
       title: (presentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
@@ -92,6 +109,7 @@ async function getData(): Promise<CreativeMomentItem[]> {
       }),
       playback_id: media?.playback_id ?? null,
       provider: media?.provider ?? null,
+      start_ms: hostBinding?.start_ms ?? null,
     };
   });
 }
@@ -135,6 +153,7 @@ export default async function MomentsPage() {
                     provider={moment.provider}
                     title={moment.title ?? "Creative Moment"}
                     aspectRatio="16/9"
+                    startMs={moment.start_ms}
                   />
                 ) : (
                   <ArtworkFrame artworkUrl={null} alt={moment.title ?? ""} aspectRatio="16/9" />

@@ -44,6 +44,7 @@ assert(proverb.scenes.map((scene) => scene.shortTitle).join(",") === "Powerhouse
 assert(mothipa && mothipa.hasMomentProjection === true, "Mothipa keeps its Moment projection");
 assert(mothipa.href === `/creative-moments/${MOTHIPA}`, "Mothipa identity uses the Creative Moment route");
 assert(reason && reason.scenes[0].shortTitle === "Sword Master", "Reason relates to Sword Master only");
+assert(reason && reason.stillUrl === null, "Reason still waits on Scene media in this fixture");
 assert(sceneShortTitle("Golden Shovel — Powerhouse") === "Powerhouse", "encounter titles use cinematic short names");
 
 console.log("Universe Experience helpers: all passed");

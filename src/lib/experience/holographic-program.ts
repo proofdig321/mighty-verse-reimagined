@@ -160,17 +160,21 @@ export function composeHolographicProgram(input: {
   for (const moment of input.moments ?? []) {
     if (presentMoments.has(moment.master_id)) continue;
     const related = layers.filter((layer) => layer.kind === "scene" && moment.scene_ids.includes(layer.master_id));
+    const host = related[0] ?? null;
+    const still =
+      host?.still_url ??
+      (host?.start_ms != null ? stillAtTime(input.source?.playback_id ?? null, host.start_ms) : null);
     layers.push({
       layer_id: `moment-${moment.master_id}`,
       kind: "moment",
       master_id: moment.master_id,
       title: moment.title,
-      still_url: related[0]?.still_url ?? null,
+      still_url: still,
       depth: 108,
       offset_x: 0,
       offset_y: -72,
       related_scene_ids: moment.scene_ids,
-      start_ms: related[0]?.start_ms ?? null,
+      start_ms: host?.start_ms ?? null,
       end_ms: related[related.length - 1]?.end_ms ?? null,
       playback_endpoint: null,
     });

@@ -7,6 +7,7 @@
  */
 
 import { sceneOrdinal, sceneShortTitle, sceneStillUrl } from "../assemble/composition";
+import { momentCardStillUrl } from "./moment-card";
 
 export type UniverseSceneEncounter = {
   master_id: string;
@@ -40,6 +41,7 @@ export type ContributorPresence = {
   title: string | null;
   href: string;
   hasMomentProjection: boolean;
+  stillUrl: string | null;
   scenes: { master_id: string; title: string | null; shortTitle: string }[];
 };
 
@@ -57,12 +59,18 @@ export function contributorPresence(
       .filter((relation) => relation.moment_master_id === moment.master_id)
       .map((relation) => scenesById.get(relation.scene_master_id))
       .filter((scene): scene is UniverseSceneEncounter => Boolean(scene));
+    const host = related[0] ?? null;
 
     return {
       master_id: moment.master_id,
       title: moment.title,
       href: `/creative-moments/${moment.master_id}`,
       hasMomentProjection: Boolean(moment.projection_id),
+      stillUrl: momentCardStillUrl(
+        host
+          ? { provider: host.provider, storage_ref: host.playback_id, start_ms: host.start_ms }
+          : null,
+      ),
       scenes: related.map((scene) => ({
         master_id: scene.master_id,
         title: scene.title,
