@@ -193,9 +193,8 @@ html[data-theme="tangerine"] {
 
 @layer components {
   .public-page {
-    min-height: 100vh;
+    min-height: 0;
     overflow-x: hidden;
-    background: color-mix(in oklch, var(--background) 94%, var(--primary));
   }
 
   .public-hero {
@@ -552,7 +551,20 @@ html[data-theme="tangerine"] {
 
   .storyboard-workspace {
     display: grid;
-    gap: 1.5rem;
+    gap: 1.25rem;
+  }
+
+  .storyboard-stage {
+    display: grid;
+    gap: 1.25rem;
+    min-height: min(70vh, 52rem);
+  }
+
+  @media (min-width: 1024px) {
+    .storyboard-stage {
+      grid-template-columns: minmax(17rem, 5fr) minmax(0, 7fr);
+      align-items: stretch;
+    }
   }
 
   .storyboard-target-bar {
@@ -583,13 +595,23 @@ html[data-theme="tangerine"] {
 
   .storyboard-panel {
     display: grid;
-    gap: 0.35rem;
     width: 100%;
+    overflow: hidden;
     text-align: left;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: color-mix(in oklch, var(--card) 55%, transparent);
-    padding: 0.6rem;
+    border-radius: calc(var(--radius) + 2px);
+    background: color-mix(in oklch, var(--card) 72%, transparent);
+  }
+
+  .storyboard-panel-hit {
+    display: block;
+    width: 100%;
+    text-align: left;
+  }
+
+  .storyboard-panel-frame {
+    position: relative;
+    background: color-mix(in oklch, var(--muted) 55%, transparent);
   }
 
   .storyboard-panel img,
@@ -598,12 +620,40 @@ html[data-theme="tangerine"] {
     width: 100%;
     aspect-ratio: 16 / 10;
     object-fit: cover;
-    border-radius: 0.3rem;
     background: color-mix(in oklch, var(--muted) 50%, transparent);
   }
 
+  .storyboard-panel-overlay {
+    position: absolute;
+    inset: 0.55rem auto auto 0.65rem;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .storyboard-panel-overlay p:first-child,
+  .storyboard-panel-meta p:first-child {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .storyboard-panel-overlay p:last-child,
+  .storyboard-panel-meta p:last-child {
+    font-size: 0.68rem;
+    color: var(--muted-foreground);
+  }
+
+  .storyboard-panel-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.55rem 0.7rem 0.7rem;
+  }
+
   .storyboard-panel-current {
-    border-color: color-mix(in oklch, var(--accent-mv-gold) 55%, var(--border));
+    border-color: color-mix(in oklch, var(--primary) 70%, var(--border));
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 35%, transparent);
   }
 
   .studio-inspector {

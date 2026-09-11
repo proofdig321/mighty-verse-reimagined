@@ -135,16 +135,9 @@ export default function EditorShell({ scenes, initialDecks, isAuthenticated }: P
   const canPlay = assembly.some(i => i.playbackId && i.startMs != null && i.endMs != null);
 
   return (
-    <div className="flex flex-col h-screen bg-background overflow-hidden">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-6 py-3 border-b border-border bg-card/50 shrink-0">
-        <div className="flex items-center gap-3">
-          <span className="text-[10px] font-semibold uppercase tracking-[0.25em]" style={{ color: "var(--accent-mv)" }}>
-            Mighty Verse
-          </span>
-          <span className="text-muted-foreground text-xs">/</span>
-          <span className="text-sm font-medium text-foreground">Experience Editor</span>
-        </div>
+    <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
+      <div className="flex shrink-0 items-center justify-between border-b border-border bg-card/50 px-4 py-2.5">
+        <p className="text-sm font-medium text-foreground">Experience Editor</p>
         <Button
           size="sm"
           disabled={!canPlay}

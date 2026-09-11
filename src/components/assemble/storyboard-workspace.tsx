@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { Pause, Play, SkipBack, SkipForward } from "lucide-react";
+import { FileText, Images, Pause, Play, Shield, SkipBack, SkipForward, Sparkles } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -277,11 +277,11 @@ export function StoryboardWorkspace({
     setPendingPanels((current) => ({ ...current, [panelId]: false }));
   }
 
-  const tabs: { id: MaterialTab; label: string }[] = [
-    { id: "script", label: "Script" },
-    { id: "assist", label: "AI Assist" },
-    { id: "sentinel", label: "Sentinel" },
-    { id: "references", label: "References" },
+  const tabs: { id: MaterialTab; label: string; icon: typeof FileText }[] = [
+    { id: "script", label: "Script", icon: FileText },
+    { id: "assist", label: "AI Assist", icon: Sparkles },
+    { id: "sentinel", label: "Sentinel", icon: Shield },
+    { id: "references", label: "References", icon: Images },
   ];
   const sequenceEmpty = scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0;
   const shotIds = [
@@ -303,7 +303,7 @@ export function StoryboardWorkspace({
 
   return (
     <div className="storyboard-workspace" data-storyboard-layout="workspace">
-      <div className="flex flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         {universeId ? (
           <p className="text-sm text-muted-foreground">
             Target Association · {universeTitle ?? "Canonical Universe"}
@@ -327,13 +327,13 @@ export function StoryboardWorkspace({
         )}
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-12">
-        <Card className="bg-card/50 lg:col-span-5">
+      <div className="storyboard-stage">
+        <Card className="flex min-h-0 flex-col bg-card/70">
           <CardHeader className="border-b border-border/70">
-            <CardTitle>Script & Narrative</CardTitle>
-            <CardDescription>Draft the story body, run Chrome Prompt API assist against gallery themes, or open Sentinel evidence.</CardDescription>
+            <CardTitle className="uppercase tracking-[0.16em]">Script & Narrative</CardTitle>
+            <CardDescription>Draft the story. Chrome Prompt API reads gallery artifact themes when you GENERATE a shot.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex flex-1 flex-col pt-4">
             <Tabs
               value={tab}
               onValueChange={(value) => {
@@ -341,14 +341,18 @@ export function StoryboardWorkspace({
                   setTab(value);
                 }
               }}
-              className="w-full gap-4"
+              className="flex min-h-0 flex-1 flex-col gap-4"
             >
-              <TabsList className="grid h-auto w-full grid-cols-2 sm:grid-cols-4" aria-label="Storyboard materials">
-                {tabs.map((item) => (
-                  <TabsTrigger key={item.id} value={item.id}>
-                    {item.label}
-                  </TabsTrigger>
-                ))}
+              <TabsList className="h-auto w-full justify-start gap-1" aria-label="Storyboard materials">
+                {tabs.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <TabsTrigger key={item.id} value={item.id} className="gap-1.5">
+                      <Icon size={13} />
+                      {item.label}
+                    </TabsTrigger>
+                  );
+                })}
               </TabsList>
 
               <TabsContent value="script" className="space-y-4">
@@ -361,8 +365,8 @@ export function StoryboardWorkspace({
                     <Textarea
                       value={script}
                       onChange={(event) => setScript(event.target.value)}
-                      className="min-h-[320px] font-mono text-sm leading-relaxed"
-                      placeholder="Golden Shovel walks a futuristic Johannesburg skyline.&#10;Camera: rise through the mural&#10;The city transforms around him.&#10;Spirit avatar appears."
+                      className="min-h-[28rem] flex-1 font-mono text-sm leading-relaxed"
+                      placeholder="SCENE 1: EXT. CITY STREET — NIGHT&#10;The detective walks the mural. Camera: close-up.&#10;GENERATE stills from gallery artifacts, not invented pictures."
                     />
                   </label>
                   <div className="flex flex-wrap gap-2">
@@ -484,18 +488,19 @@ export function StoryboardWorkspace({
           </CardContent>
         </Card>
 
-        <Card className="flex min-h-[28rem] flex-col bg-card/50 lg:col-span-7">
+        <Card className="flex min-h-0 flex-col bg-card/70">
           <CardHeader className="border-b border-border/70">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Storyboard panels</p>
             <CardTitle>
               <h2 id="storyboard-sequence" className="text-base font-medium leading-snug">
                 Storyboard
               </h2>
             </CardTitle>
             <CardDescription>
-              Storyboard panels — GENERATE links each shot to a gallery artifact. Text-to-animation uses those stills, not invented pictures.
+              GENERATE links each shot to a gallery artifact. Text-to-animation uses those stills as the visual theme.
             </CardDescription>
           </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-6 pt-4" data-column="sequence" aria-labelledby="storyboard-sequence">
+          <CardContent className="flex flex-1 flex-col gap-4 pt-4" data-column="sequence" aria-labelledby="storyboard-sequence">
             {sequenceEmpty ? (
               <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
                 <div className="mb-3 size-12 rounded-full border border-border bg-background" aria-hidden="true" />
@@ -506,38 +511,19 @@ export function StoryboardWorkspace({
               </div>
             ) : (
               <ol className="storyboard-panel-strip">
-                {scriptPanels.map((panel, index) => {
-                  const still = panelStills[panel.panel_id];
-                  const pending = pendingPanels[panel.panel_id];
-                  return (
-                    <li key={panel.panel_id}>
-                      <div className={cn("storyboard-panel", selectedId === panel.panel_id && "storyboard-panel-current")}>
-                        <button type="button" className="contents" onClick={() => setSelectedId(panel.panel_id)}>
-                          {still ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={still} alt="" />
-                          ) : (
-                            <div className="storyboard-panel-empty flex items-center justify-center text-xs text-muted-foreground">
-                              {pending ? "Pending…" : "Pending…"}
-                            </div>
-                          )}
-                          <p className="suite-kicker">Shot {String(index + 1).padStart(2, "0")}</p>
-                          <p className="text-sm text-foreground">{panel.title}</p>
-                          <p className="suite-proposal-badge">Script</p>
-                        </button>
-                        <Button
-                          type="button"
-                          size="sm"
-                          className="mt-2 h-7 w-full text-[10px]"
-                          disabled={pending}
-                          onClick={() => void generateShot(panel.panel_id)}
-                        >
-                          {pending ? "Pending…" : "GENERATE"}
-                        </Button>
-                      </div>
-                    </li>
-                  );
-                })}
+                {scriptPanels.map((panel, index) => (
+                  <li key={panel.panel_id}>
+                    <ShotFrame
+                      shotLabel={`Shot ${index + 1}`}
+                      subtitle={panel.camera || panel.title}
+                      still={panelStills[panel.panel_id] ?? null}
+                      pending={Boolean(pendingPanels[panel.panel_id])}
+                      selected={selectedId === panel.panel_id}
+                      onSelect={() => setSelectedId(panel.panel_id)}
+                      onGenerate={() => void generateShot(panel.panel_id)}
+                    />
+                  </li>
+                ))}
                 {sentinelPanels.map((panel) => (
                   <li key={panel.panel_id}>
                     <StoryboardEvidencePanel
@@ -551,71 +537,58 @@ export function StoryboardWorkspace({
                   </li>
                 ))}
                 {scriptPanels.length === 0 && sentinelPanels.length === 0
-                  ? scenes.map((scene, index) => {
-                      const still = panelStills[scene.master_id];
-                      const pending = pendingPanels[scene.master_id];
-                      return (
-                        <li key={scene.master_id}>
-                          <div className={cn("storyboard-panel", selectedId === scene.master_id && "storyboard-panel-current")}>
-                            <button type="button" className="contents" onClick={() => setSelectedId(scene.master_id)}>
-                              {still ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img src={still} alt="" />
-                              ) : (
-                                <div className="storyboard-panel-empty" />
-                              )}
-                              <p className="suite-kicker">{String(index + 1).padStart(2, "0")}</p>
-                              <p className="text-sm text-foreground">{sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}</p>
-                              <p className="suite-canon-badge">Scene</p>
-                            </button>
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="mt-2 h-7 w-full text-[10px]"
-                              disabled={pending}
-                              onClick={() => void generateShot(scene.master_id)}
-                            >
-                              {pending ? "Pending…" : "GENERATE"}
-                            </Button>
-                          </div>
-                        </li>
-                      );
-                    })
+                  ? scenes.map((scene, index) => (
+                      <li key={scene.master_id}>
+                        <ShotFrame
+                          shotLabel={`Shot ${index + 1}`}
+                          subtitle={sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}
+                          still={panelStills[scene.master_id] ?? null}
+                          pending={Boolean(pendingPanels[scene.master_id])}
+                          selected={selectedId === scene.master_id}
+                          onSelect={() => setSelectedId(scene.master_id)}
+                          onGenerate={() => void generateShot(scene.master_id)}
+                          badge="Scene"
+                        />
+                      </li>
+                    ))
                   : null}
               </ol>
             )}
+          </CardContent>
+        </Card>
+      </div>
 
-            {shotIds.length > 0 ? (
-              <div className="flex items-center gap-3 border-t border-border pt-4">
-                <Button type="button" variant="ghost" size="sm" onClick={() => {
-                  const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
-                  setSelectedId(shotIds[Math.max(0, index - 1)]);
-                }}>
-                  <SkipBack size={14} />
-                </Button>
-                <Button type="button" size="sm" onClick={() => setPlaying((value) => !value)}>
-                  {playing ? <Pause size={14} /> : <Play size={14} />}
-                </Button>
-                <Button type="button" variant="ghost" size="sm" onClick={() => {
-                  const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
-                  setSelectedId(shotIds[Math.min(shotIds.length - 1, index + 1)]);
-                }}>
-                  <SkipForward size={14} />
-                </Button>
-                <input
-                  type="range"
-                  min={0}
-                  max={Math.max(0, shotIds.length - 1)}
-                  value={Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]))}
-                  onChange={(event) => setSelectedId(shotIds[Number(event.target.value)] ?? shotIds[0])}
-                  className="h-1 flex-1 accent-current"
-                  aria-label="Storyboard shot scrubber"
-                />
-              </div>
-            ) : null}
+      {shotIds.length > 0 ? (
+        <div className="flex items-center gap-3 rounded-xl border border-border bg-card/70 px-4 py-3">
+          <Button type="button" variant="ghost" size="sm" onClick={() => {
+            const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
+            setSelectedId(shotIds[Math.max(0, index - 1)]);
+          }}>
+            <SkipBack size={14} />
+          </Button>
+          <Button type="button" size="sm" onClick={() => setPlaying((value) => !value)}>
+            {playing ? <Pause size={14} /> : <Play size={14} />}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => {
+            const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
+            setSelectedId(shotIds[Math.min(shotIds.length - 1, index + 1)]);
+          }}>
+            <SkipForward size={14} />
+          </Button>
+          <input
+            type="range"
+            min={0}
+            max={Math.max(0, shotIds.length - 1)}
+            value={Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]))}
+            onChange={(event) => setSelectedId(shotIds[Number(event.target.value)] ?? shotIds[0])}
+            className="h-1 flex-1 accent-current"
+            aria-label="Storyboard shot scrubber"
+          />
+        </div>
+      ) : null}
 
-            {selected ? (
-              <aside className="studio-inspector" aria-label="Selected panel">
+      {selected ? (
+        <aside className="studio-inspector" aria-label="Selected panel">
                 {selected.still ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={selected.still} alt="" className="mb-3 aspect-video w-full rounded object-cover" />
@@ -662,9 +635,6 @@ export function StoryboardWorkspace({
                 <StatusLine state={mediaState} />
               </aside>
             ) : null}
-          </CardContent>
-        </Card>
-      </div>
     </div>
   );
 }
@@ -698,32 +668,89 @@ function StoryboardEvidencePanel({
   onSelect: () => void;
   onGenerate: () => void;
 }) {
+  const kindLabel = panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat";
+  return (
+    <ShotFrame
+      shotLabel={kindLabel}
+      subtitle={panel.title}
+      still={still}
+      pending={pending}
+      selected={selected}
+      onSelect={onSelect}
+      onGenerate={onGenerate}
+      badge={kindLabel}
+      panelKind={panel.kind}
+      sceneId={panel.scene_master_id}
+      caption={formatTimelineMs(panel.time_ms)}
+    />
+  );
+}
+
+function ShotFrame({
+  shotLabel,
+  subtitle,
+  still,
+  pending,
+  selected,
+  onSelect,
+  onGenerate,
+  badge,
+  panelKind,
+  sceneId,
+  caption,
+}: {
+  shotLabel: string;
+  subtitle: string;
+  still: string | null;
+  pending: boolean;
+  selected: boolean;
+  onSelect: () => void;
+  onGenerate: () => void;
+  badge?: string;
+  panelKind?: string;
+  sceneId?: string | null;
+  caption?: string;
+}) {
   return (
     <div className={cn("storyboard-panel", selected && "storyboard-panel-current")}>
       <button
         type="button"
-        className="contents"
-        data-panel-kind={panel.kind}
-        data-scene-id={panel.scene_master_id ?? undefined}
+        className="storyboard-panel-hit"
+        data-panel-kind={panelKind}
+        data-scene-id={sceneId ?? undefined}
         onClick={onSelect}
       >
-        {still ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={still} alt="" />
-        ) : (
-          <div className="storyboard-panel-empty flex items-center justify-center text-xs text-muted-foreground">
-            {pending ? "Pending…" : null}
+        <div className="storyboard-panel-frame">
+          {still ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={still} alt="" />
+          ) : (
+            <div className="storyboard-panel-empty flex items-center justify-center text-xs text-muted-foreground">
+              {pending ? "Pending…" : "Pending…"}
+            </div>
+          )}
+          <div className="storyboard-panel-overlay">
+            <p>{shotLabel}</p>
+            <p>{subtitle}</p>
           </div>
-        )}
-        <p className={panel.kind === "scene" ? "suite-canon-badge" : "suite-proposal-badge"}>
-          {panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat"}
-        </p>
-        <p className="text-sm text-foreground">{panel.title}</p>
-        <p className="font-mono text-[10px] text-muted-foreground">{formatTimelineMs(panel.time_ms)}</p>
+        </div>
       </button>
-      <Button type="button" size="sm" className="mt-2 h-7 w-full text-[10px]" disabled={pending} onClick={onGenerate}>
-        {pending ? "Pending…" : "GENERATE"}
-      </Button>
+      <div className="storyboard-panel-meta">
+        <div className="min-w-0">
+          {badge ? (
+            <p className={badge === "Canonical Scene" || badge === "Scene" ? "suite-canon-badge" : "suite-proposal-badge"}>
+              {badge}
+            </p>
+          ) : (
+            <p>{shotLabel}</p>
+          )}
+          <p className="truncate">{subtitle}</p>
+          {caption ? <p className="font-mono text-[10px] text-muted-foreground">{caption}</p> : null}
+        </div>
+        <Button type="button" size="sm" className="h-7 shrink-0 text-[10px]" variant={selected ? "default" : "outline"} disabled={pending} onClick={onGenerate}>
+          {pending ? "Pending…" : "GENERATE"}
+        </Button>
+      </div>
     </div>
   );
 }

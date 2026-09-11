@@ -1,11 +1,13 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import { Clapperboard, Film, MonitorPlay, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
 import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export default async function StudioHomePage() {
@@ -16,7 +18,7 @@ export default async function StudioHomePage() {
   const hasStandalone = Boolean(recent.body || recent.artifacts.length);
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-8">
       <section className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Start</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
@@ -26,14 +28,45 @@ export default async function StudioHomePage() {
           Creative Studio is a workstation. Begin with a story, a campaign, a reel, or an existing Universe.
           Generated work stays an artifact until you curate it.
         </p>
-        <div className="flex flex-wrap gap-2">
-          <Link href="/studio/work" className={cn(buttonVariants({ size: "lg" }))}>
-            New creative work
-          </Link>
-          <Link href="/authority/create" className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-            Establish a Universe
-          </Link>
-        </div>
+      </section>
+
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <Link href="/studio/work">
+          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
+            <CardHeader>
+              <Plus size={16} className="text-muted-foreground" />
+              <CardTitle>New creative work</CardTitle>
+              <CardDescription>Open the script and storyboard workspace.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/authority/create">
+          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
+            <CardHeader>
+              <MonitorPlay size={16} className="text-muted-foreground" />
+              <CardTitle>Establish a Universe</CardTitle>
+              <CardDescription>Create Work. YouTube is the primary ingest path.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/scenes">
+          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
+            <CardHeader>
+              <Clapperboard size={16} className="text-muted-foreground" />
+              <CardTitle>Scene Deck</CardTitle>
+              <CardDescription>Discover, reveal, reorder, then play your own timeline.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/editor">
+          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
+            <CardHeader>
+              <Film size={16} className="text-muted-foreground" />
+              <CardTitle>Timeline</CardTitle>
+              <CardDescription>Build Experience with the original timeline player.</CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
       </section>
 
       {hasStandalone ? (
@@ -42,16 +75,16 @@ export default async function StudioHomePage() {
           <h2 id="studio-recent" className="text-xl font-semibold tracking-tight">
             Standalone storyboard
           </h2>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            This work is not attached to a Universe yet. Open it to continue, or associate it when you are ready to curate.
-          </p>
-          <Link href="/studio/work" className="block max-w-xl rounded-lg border border-border bg-card/40 p-4 transition-colors hover:bg-card">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Storyboard</p>
-            <p className="mt-1 text-base font-medium text-foreground">Continue standalone work</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {recent.body ? `${recent.body.panel_count || 0} panels` : "Story body in progress"}
-              {recent.artifacts.length ? ` · ${recent.artifacts.length} artifacts` : ""}
-            </p>
+          <Link href="/studio/work" className="block max-w-xl">
+            <Card className="bg-card/80 transition-colors hover:bg-accent/20">
+              <CardHeader>
+                <CardTitle>Continue standalone work</CardTitle>
+                <CardDescription>
+                  {recent.body ? `${recent.body.panel_count || 0} panels` : "Story body in progress"}
+                  {recent.artifacts.length ? ` · ${recent.artifacts.length} artifacts` : ""}
+                </CardDescription>
+              </CardHeader>
+            </Card>
           </Link>
         </section>
       ) : null}
@@ -70,16 +103,19 @@ export default async function StudioHomePage() {
           <ul className="grid gap-3 sm:grid-cols-2">
             {projects.map((project) => (
               <li key={project.master_id}>
-                <Link
-                  href={`/authority/universes/${project.master_id}`}
-                  aria-label={project.title}
-                  className="block rounded-lg border border-border bg-card/40 p-4 transition-colors hover:bg-card"
-                >
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Universe</p>
-                  <p className="mt-1 text-base font-medium text-foreground">{project.title}</p>
-                  {project.description ? (
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{project.description}</p>
-                  ) : null}
+                <Link href={`/authority/universes/${project.master_id}`} aria-label={project.title}>
+                  <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
+                    <CardHeader>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Universe</p>
+                      <CardTitle>{project.title}</CardTitle>
+                      {project.description ? (
+                        <CardDescription className="line-clamp-2">{project.description}</CardDescription>
+                      ) : null}
+                    </CardHeader>
+                    <CardContent>
+                      <span className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>Open workspace</span>
+                    </CardContent>
+                  </Card>
                 </Link>
               </li>
             ))}

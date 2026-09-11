@@ -84,9 +84,9 @@ export default async function ScenesPage() {
   const scenes = await getData();
 
   return (
-    <div className="public-page">
-      <div className="mx-auto max-w-7xl px-6 py-10">
-        <div className="flex items-start justify-between gap-4 mb-8">
+    <div className="public-page space-y-8">
+      <div>
+        <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-1" style={{ color: "var(--accent-mv)" }}>Scenes in the Mural</p>
             <h1 className="text-3xl font-semibold" style={{ fontFamily: "var(--font-display, inherit)" }}>Scene Deck</h1>

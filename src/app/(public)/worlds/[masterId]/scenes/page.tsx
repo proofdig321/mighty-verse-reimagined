@@ -131,8 +131,7 @@ export default async function UniverseScenesPage({
   if (universeTitle === null && scenes.length === 0) notFound();
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-6 py-10 space-y-6">
+    <div className="space-y-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-3">
               <Link
@@ -161,7 +160,6 @@ export default async function UniverseScenesPage({
             </div>
           </div>
         <SceneDeckClient scenes={scenes} hideHeader faceDownUntilSelected={false} />
-      </div>
     </div>
   );
 }
