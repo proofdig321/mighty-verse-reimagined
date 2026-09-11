@@ -372,9 +372,10 @@ export function HolographicTheater({
       if (video && video.readyState >= 2 && video.videoWidth > 0) {
         try {
           gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
-          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
+          // Video UV origin is top-left. Keep UNPACK_FLIP_Y off so Mux frames
+          // stay right-side up. Do not invert the mesh or vertex math.
           gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+          gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, video);
           const glError = gl.getError();
           surface.dataset.holographicWarp = glError === gl.NO_ERROR ? "live" : "blocked";
         } catch {

@@ -1,6 +1,6 @@
 import { CANON, ROUTES, SCENE_MOMENTS } from "../lib/canon";
 import { test, expect } from "../lib/fixtures";
-import { readVideoSnapshot, samplePaintedFrame, tryStartNativeVideoPlayback } from "../lib/playback";
+import { readVideoSnapshot, sampleCinemaOrientation, samplePaintedFrame, tryStartNativeVideoPlayback } from "../lib/playback";
 import { captureScreenshot, muxMediaRequests, reportEvidence } from "../lib/observe";
 
 test("Super Hero Ego holographic Experience plays Mux mural through canonical Scenes", async ({ page, observe }, testInfo) => {
@@ -57,6 +57,13 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
     .poll(async () => page.locator("[data-holographic-theater]").getAttribute("data-holographic-warp"), { timeout: 20000 })
     .toBe("live");
   notes.push("B1: Mux frames are bound as the WebGL video texture");
+  await expect
+    .poll(async () => {
+      const orientation = await sampleCinemaOrientation(page);
+      return orientation.upright;
+    }, { timeout: 10000 })
+    .toBeTruthy();
+  notes.push("B1c: Mux WebGL texture is right-side up (UNPACK_FLIP_Y off)");
 
   const cinema = page.locator("[data-holographic-cinema]");
   const cinemaBox = await cinema.boundingBox();

@@ -119,6 +119,73 @@ export async function samplePaintedFrame(player: Locator): Promise<PaintedFrameS
   });
 }
 
+/**
+ * Compare luma rows of the Mux <video> to the WebGL cinema canvas.
+ * Upright: unflipped correlation beats a vertically mirrored one.
+ */
+export async function sampleCinemaOrientation(page: {
+  evaluate: <T>(fn: () => T | Promise<T>) => Promise<T>;
+}): Promise<{ upright: boolean; unflipped: number; flipped: number }> {
+  return page.evaluate(() => {
+    const video = document.querySelector("[data-holographic-kind='mural'] video") as HTMLVideoElement | null;
+    const theater = document.querySelector("[data-holographic-theater]") as HTMLCanvasElement | null;
+    const empty = { upright: false, unflipped: 0, flipped: 0 };
+    if (!video || !theater || video.videoWidth < 16 || theater.width < 16) return empty;
+
+    function rowMeans(source: CanvasImageSource): number[] {
+      const canvas = document.createElement("canvas");
+      canvas.width = 64;
+      canvas.height = 36;
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      if (!ctx) return [];
+      ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+      const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+      const rows: number[] = [];
+      for (let y = 0; y < canvas.height; y += 1) {
+        let sum = 0;
+        for (let x = 0; x < canvas.width; x += 1) {
+          const i = (y * canvas.width + x) * 4;
+          sum += pixels[i] * 0.299 + pixels[i + 1] * 0.587 + pixels[i + 2] * 0.114;
+        }
+        rows.push(sum / canvas.width);
+      }
+      return rows;
+    }
+
+    function corr(a: number[], b: number[]): number {
+      const n = Math.min(a.length, b.length);
+      if (n < 8) return 0;
+      let meanA = 0;
+      let meanB = 0;
+      for (let i = 0; i < n; i += 1) {
+        meanA += a[i];
+        meanB += b[i];
+      }
+      meanA /= n;
+      meanB /= n;
+      let num = 0;
+      let denA = 0;
+      let denB = 0;
+      for (let i = 0; i < n; i += 1) {
+        const da = a[i] - meanA;
+        const db = b[i] - meanB;
+        num += da * db;
+        denA += da * da;
+        denB += db * db;
+      }
+      const den = Math.sqrt(denA * denB);
+      return den === 0 ? 0 : num / den;
+    }
+
+    const videoRows = rowMeans(video);
+    const canvasRows = rowMeans(theater);
+    if (videoRows.length < 8 || canvasRows.length < 8) return empty;
+    const unflipped = corr(videoRows, canvasRows);
+    const flipped = corr(videoRows, [...canvasRows].reverse());
+    return { upright: unflipped > flipped + 0.08, unflipped, flipped };
+  });
+}
+
 export function isMuxHlsAbort(url: string, failure: string | null): boolean {
   const muxMediaHost = /stream\.mux\.com|edgemv\.mux\.com|image\.mux\.com/i.test(url);
   const aborted = /ERR_ABORTED|net::ERR_ABORTED|aborted/i.test(failure ?? "");
