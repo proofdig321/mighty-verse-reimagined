@@ -52,7 +52,7 @@ const STEPS = [
 export function HelpWalkthrough() {
   const [index, setIndex] = useState(0);
   const [speaking, setSpeaking] = useState(false);
-  const [supported, setSupported] = useState(true);
+  const [supported, setSupported] = useState(false);
   const indexRef = useRef(0);
 
   useEffect(() => {
