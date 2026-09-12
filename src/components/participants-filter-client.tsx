@@ -5,7 +5,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 type ParticipantItem = {
   participant_id: string;
-  display_name: string | null;
+  display_name: string;
   role: string | null;
 };
 
@@ -22,9 +22,8 @@ const ROLE_MAP: Record<Tab, string | null> = {
   Organizations: "organization",
 };
 
-function initials(name: string | null): string {
-  if (!name) return "?";
-  return name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+function initials(name: string): string {
+  return name.split(" ").map((w) => w[0]).filter(Boolean).slice(0, 2).join("").toUpperCase() || "?";
 }
 
 export default function ParticipantsFilterClient({ participants }: Props) {
@@ -90,7 +89,7 @@ export default function ParticipantsFilterClient({ participants }: Props) {
                 </Avatar>
                 <div>
                   <p className="text-sm font-medium text-foreground truncate max-w-[9rem]">
-                    {p.display_name ?? `${p.participant_id.slice(0, 8)}…`}
+                    {p.display_name}
                   </p>
                   {p.role && (
                     <p className="text-xs text-muted-foreground capitalize mt-0.5">

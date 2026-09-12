@@ -42,11 +42,11 @@ async function downloadToFile(url: string, filePath: string) {
   await writeFile(filePath, bytes);
 }
 
-async function ffmpeg(args: string[]) {
-  await execFileAsync("ffmpeg", args, { timeout: 45_000 });
+async function ffmpeg(args: string[], timeoutMs = 45_000) {
+  await execFileAsync("ffmpeg", args, { timeout: timeoutMs });
 }
 
-async function stillToClip(dir: string, stillUrl: string, filePath: string) {
+async function stillToClip(dir: string, stillUrl: string, filePath: string, seconds = 2) {
   const imagePath = join(dir, "panel-source.bin");
   await downloadToFile(stillUrl, imagePath);
   await ffmpeg([
@@ -56,12 +56,12 @@ async function stillToClip(dir: string, stillUrl: string, filePath: string) {
     "-f", "lavfi",
     "-i", "anullsrc=r=44100:cl=stereo",
     "-vf", "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
-    "-t", "2",
+    "-t", String(seconds),
     "-c:v", "libx264",
     "-c:a", "aac",
     "-shortest",
     filePath,
-  ]);
+  ], seconds >= 30 ? 120_000 : 45_000);
 }
 
 export async function generateStoryboardMedia(input: {
@@ -182,6 +182,7 @@ export async function generateStoryboardMedia(input: {
       };
     }
 
+    const clipSeconds = type === "animation" ? 4 : type === "clip" ? 30 : 3;
     const filePath = join(dir, type === "reel" ? "reel.mp4" : "clip.mp4");
     if (type === "reel" && sources.length > 1) {
       const listPath = join(dir, "concat.txt");
@@ -205,13 +206,15 @@ export async function generateStoryboardMedia(input: {
         "-i", sources[0],
         "-f", "lavfi",
         "-i", "anullsrc=r=44100:cl=stereo",
-        "-vf", "zoompan=z='min(zoom+0.0012,1.12)':d=75:s=1280x720,format=yuv420p",
-        "-t", type === "animation" ? "4" : "3",
+        "-vf", type === "clip"
+          ? "scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,format=yuv420p"
+          : "zoompan=z='min(zoom+0.0012,1.12)':d=75:s=1280x720,format=yuv420p",
+        "-t", String(clipSeconds),
         "-c:v", "libx264",
         "-c:a", "aac",
         "-shortest",
         filePath,
-      ]);
+      ], type === "clip" ? 120_000 : 45_000);
     }
 
     return {
@@ -220,7 +223,7 @@ export async function generateStoryboardMedia(input: {
       status: "ready",
       file_path: filePath,
       mime: "video/mp4",
-      duration_ms: type === "reel" ? 1200 * Math.max(1, sources.length) : type === "animation" ? 4000 : 3000,
+      duration_ms: type === "reel" ? 1200 * Math.max(1, sources.length) : clipSeconds * 1000,
       still_only: false,
       creates_canonical: false,
     };
@@ -266,7 +269,7 @@ export function storyboardCapabilityStatus() {
       label: ai.text ? ai.label : "Chrome Prompt API in the browser, or Gemini API on the server",
     },
     panel: { status: ai.image ? "ready" as const : "unavailable" as const, label: ai.image ? "Gemini image" : "Gemini image generation is not configured" },
-    clip: { status: "ready" as const, label: "ffmpeg + Mux from an existing still" },
+    clip: { status: "ready" as const, label: "ffmpeg + Mux 30-second clip from an existing still" },
     gif: { status: "ready" as const, label: "ffmpeg GIF from an existing still" },
     reel: { status: "ready" as const, label: "ffmpeg sequence + Mux" },
     animation: { status: "ready" as const, label: "ffmpeg motion + Mux" },

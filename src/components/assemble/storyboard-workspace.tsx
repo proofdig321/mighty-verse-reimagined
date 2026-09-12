@@ -613,7 +613,7 @@ export function StoryboardWorkspace({
                     Animate
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
-                    Generate clip
+                    Generate 30s clip
                   </Button>
                   <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
                     Generate GIF

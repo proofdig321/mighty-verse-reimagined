@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
+import { AUDIENCE_HELP_HREF, PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
 import { ThemePresetControl } from "@/components/theme/theme-preset-control";
 
 type Props = { activePath?: string };
@@ -24,13 +24,13 @@ export default function PageTopNav({ activePath = "" }: Props) {
             >
               MV
             </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground hidden sm:block">
+            <span className="text-sm font-semibold tracking-tight text-foreground hidden xl:block">
               Mighty Verse
             </span>
           </Link>
 
           {/* Desktop nav — hidden on mobile */}
-          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center" aria-label="Product">
+          <nav className="hidden md:flex min-w-0 items-center gap-0.5 flex-1 justify-start overflow-x-auto scrollbar-hidden" aria-label="Product">
             {PUBLIC_PRODUCT_NAV.map((link) => {
               const isActive =
                 link.href === "/"
@@ -42,7 +42,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
                   href={link.href}
                   data-product-nav={link.surface}
                   className={[
-                    "shrink-0 px-3 py-1.5 text-sm transition-colors rounded-md",
+                    "shrink-0 px-2 py-1.5 text-[13px] transition-colors rounded-md",
                     isActive
                       ? "text-foreground font-semibold bg-accent/60"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
@@ -56,7 +56,19 @@ export default function PageTopNav({ activePath = "" }: Props) {
 
           {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="hidden lg:block">
+            <Link
+              href={AUDIENCE_HELP_HREF}
+              data-product-nav="help"
+              className={[
+                "hidden sm:block shrink-0 px-2.5 py-1.5 text-sm rounded-md transition-colors",
+                activePath === AUDIENCE_HELP_HREF || activePath.startsWith(`${AUDIENCE_HELP_HREF}/`)
+                  ? "text-foreground font-semibold bg-accent/60"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
+              ].join(" ")}
+            >
+              Help
+            </Link>
+            <div className="hidden xl:block">
               <ThemePresetControl />
             </div>
             <Link
@@ -110,6 +122,14 @@ export default function PageTopNav({ activePath = "" }: Props) {
                   </Link>
                 );
               })}
+              <Link
+                href={AUDIENCE_HELP_HREF}
+                data-product-nav="help"
+                onClick={() => setMobileOpen(false)}
+                className="px-3 py-2.5 text-sm rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/30"
+              >
+                Help
+              </Link>
               <div className="pt-2 pb-1 border-t border-border mt-1">
                 <Link
                   href="/auth/sign-in?next=/studio"

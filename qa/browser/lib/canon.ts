@@ -177,6 +177,10 @@ export const ROUTES = {
   authorityCurateMuxAsset: `/authority/curate?asset=${CANON.muxAssetId}`,
   authorityCurateUnboundAsset: `/authority/curate?asset=${CANON.unboundLivepeerAssetId}`,
   editor: "/editor",
+  storyboard: "/storyboard",
+  help: "/help",
+  participants: "/participants",
+  authorityParticipants: "/authority/participants",
   signIn: "/auth/sign-in",
   authorityCreate: "/authority/create",
 } as const;
