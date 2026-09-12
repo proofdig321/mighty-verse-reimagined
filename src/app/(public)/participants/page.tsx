@@ -14,7 +14,7 @@ async function getData(): Promise<ParticipantItem[]> {
 
   const { data: participants } = await svc
     .from("participant")
-    .select("participant_id")
+    .select("participant_id, label")
     .eq("status", "active");
 
   if (!participants?.length) return [];
@@ -29,12 +29,12 @@ async function getData(): Promise<ParticipantItem[]> {
   return participants.map((p) => {
     const entry = (attrEntries ?? []).find((e) => e.participant_id === p.participant_id);
     const rawDesc = entry?.contribution_description ?? null;
-    const display_name = rawDesc?.includes("—")
+    const fromAttribution = rawDesc?.includes("—")
       ? rawDesc.split("—").pop()?.trim() ?? null
       : rawDesc;
     return {
       participant_id: p.participant_id,
-      display_name,
+      display_name: p.label?.trim() || fromAttribution,
       role: (roles ?? []).find((r) => r.participant_id === p.participant_id)?.role_type ?? null,
     };
   });
