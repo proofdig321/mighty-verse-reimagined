@@ -193,8 +193,9 @@ html[data-theme="tangerine"] {
 
 @layer components {
   .public-page {
-    min-height: 0;
+    min-height: calc(100vh - 3.5rem);
     overflow-x: hidden;
+    background: color-mix(in oklch, var(--background) 94%, var(--primary));
   }
 
   .public-hero {
