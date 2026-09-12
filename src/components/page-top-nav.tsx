@@ -24,13 +24,13 @@ export default function PageTopNav({ activePath = "" }: Props) {
             >
               MV
             </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground hidden sm:block">
+            <span className="text-sm font-semibold tracking-tight text-foreground hidden xl:block">
               Mighty Verse
             </span>
           </Link>
 
           {/* Desktop nav — hidden on mobile */}
-          <nav className="hidden md:flex min-w-0 items-center gap-0.5 flex-1 justify-center overflow-x-auto scrollbar-hidden" aria-label="Product">
+          <nav className="hidden md:flex min-w-0 items-center gap-0.5 flex-1 justify-start overflow-x-auto scrollbar-hidden" aria-label="Product">
             {PUBLIC_PRODUCT_NAV.map((link) => {
               const isActive =
                 link.href === "/"
@@ -42,7 +42,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
                   href={link.href}
                   data-product-nav={link.surface}
                   className={[
-                    "shrink-0 px-2.5 py-1.5 text-sm transition-colors rounded-md",
+                    "shrink-0 px-2 py-1.5 text-[13px] transition-colors rounded-md",
                     isActive
                       ? "text-foreground font-semibold bg-accent/60"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
@@ -68,7 +68,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
             >
               Help
             </Link>
-            <div className="hidden lg:block">
+            <div className="hidden xl:block">
               <ThemePresetControl />
             </div>
             <Link
