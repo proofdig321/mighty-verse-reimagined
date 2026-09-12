@@ -180,6 +180,7 @@ export const ROUTES = {
   storyboard: "/storyboard",
   help: "/help",
   participants: "/participants",
+  authorityParticipants: "/authority/participants",
   signIn: "/auth/sign-in",
   authorityCreate: "/authority/create",
 } as const;

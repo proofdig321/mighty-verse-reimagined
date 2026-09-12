@@ -14,12 +14,12 @@ type ParticipantRow = {
 
 const ROLE_OPTIONS = [
   { value: "", label: "No role" },
-  { value: "artist", label: "Artist" },
+  { value: "canonical-creator", label: "Canonical creator" },
+  { value: "featured-artist", label: "Featured artist" },
   { value: "director", label: "Director" },
-  { value: "producer", label: "Producer" },
-  { value: "featured-artist", label: "Featured Artist" },
   { value: "collaborator", label: "Collaborator" },
-  { value: "operator", label: "Operator" },
+  { value: "interpretation-creator", label: "Interpretation creator" },
+  { value: "authorised-canonical-authority", label: "Authorised authority" },
   { value: "other", label: "Other" },
 ];
 
@@ -80,7 +80,7 @@ export default function ParticipantsClient({ participants: initial }: { particip
     setMsg(`Updated ${editLabel.trim() || "participant"}.`);
   }
 
-  async function setStatus(participant: ParticipantRow, status: "active" | "inactive") {
+  async function setStatus(participant: ParticipantRow, status: "active" | "suspended") {
     setBusy(true);
     setMsg(null);
     const res = await fetch("/api/authority/participants", {
@@ -215,13 +215,13 @@ export default function ParticipantsClient({ participants: initial }: { particip
                           >
                             Edit
                           </Button>
-                          {p.status === "inactive" ? (
+                          {p.status === "suspended" ? (
                             <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "active")}>
                               Activate
                             </Button>
                           ) : (
-                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "inactive")}>
-                              Deactivate
+                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "suspended")}>
+                              Suspend
                             </Button>
                           )}
                         </>

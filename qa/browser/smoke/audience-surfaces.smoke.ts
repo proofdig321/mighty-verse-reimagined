@@ -34,7 +34,12 @@ test("audience chrome restores Discover pages without the operations sidebar", a
   await page.getByRole("navigation", { name: "Product" }).first().getByRole("link", { name: "Participants", exact: true }).click();
   await expect(page).toHaveURL(/\/participants/);
   await expect(page.getByRole("heading", { name: "Creators & Participants" })).toBeVisible();
-  notes.push("Public participants catalogue is restored");
+  await expect(page.getByText("No participants yet.")).toHaveCount(0);
+  await expect(page.getByText("Golden Shovel", { exact: true })).toBeVisible();
+  await expect(page.getByText("Proverb", { exact: true })).toBeVisible();
+  await expect(page.getByText("Reason", { exact: true })).toBeVisible();
+  await expect(page.getByText("Mothipa", { exact: true })).toBeVisible();
+  notes.push("Public participants catalogue shows Super Hero Ego names, not IDs");
 
   await page.goto(ROUTES.storyboard, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/auth\/sign-in/);

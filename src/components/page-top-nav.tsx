@@ -30,7 +30,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
           </Link>
 
           {/* Desktop nav — hidden on mobile */}
-          <nav className="hidden md:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto scrollbar-hidden" aria-label="Product">
+          <nav className="hidden md:flex min-w-0 items-center gap-0.5 flex-1 justify-center overflow-x-auto scrollbar-hidden" aria-label="Product">
             {PUBLIC_PRODUCT_NAV.map((link) => {
               const isActive =
                 link.href === "/"
