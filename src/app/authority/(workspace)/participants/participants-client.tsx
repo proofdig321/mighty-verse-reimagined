@@ -4,12 +4,14 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { ADMIN_CAPABILITIES, OPERATOR_CAPABILITIES, type OperationalAccess } from "@/lib/participants/names";
 
 type ParticipantRow = {
   participant_id: string;
   label: string | null;
   status: string | null;
   role: string | null;
+  access: OperationalAccess;
 };
 
 const ROLE_OPTIONS = [
@@ -19,9 +21,16 @@ const ROLE_OPTIONS = [
   { value: "director", label: "Director" },
   { value: "collaborator", label: "Collaborator" },
   { value: "interpretation-creator", label: "Interpretation creator" },
-  { value: "authorised-canonical-authority", label: "Authorised authority" },
+  { value: "authorised-canonical-authority", label: "Admin" },
+  { value: "delegated-authority", label: "Operator" },
   { value: "other", label: "Other" },
 ];
+
+function accessLabel(access: OperationalAccess) {
+  if (access === "admin") return "Admin";
+  if (access === "operator") return "Operator";
+  return "None";
+}
 
 export default function ParticipantsClient({ participants: initial }: { participants: ParticipantRow[] }) {
   const [participants, setParticipants] = useState(initial);
@@ -29,6 +38,7 @@ export default function ParticipantsClient({ participants: initial }: { particip
   const [label, setLabel] = useState("");
   const [identityRef, setIdentityRef] = useState("");
   const [roleType, setRoleType] = useState("");
+  const [access, setAccess] = useState<OperationalAccess>("none");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -42,18 +52,31 @@ export default function ParticipantsClient({ participants: initial }: { particip
     const res = await fetch("/api/authority/participants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label: label.trim(), identity_ref: identityRef.trim() || null, role_type: roleType || null }),
+      body: JSON.stringify({
+        label: label.trim(),
+        identity_ref: identityRef.trim() || null,
+        role_type: roleType || null,
+        access,
+      }),
     });
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setMsg(`Error: ${data.error}`); return; }
     setParticipants((prev) => [
-      { participant_id: data.participant_id, label: label.trim(), status: "active", role: roleType || null },
+      {
+        participant_id: data.participant_id,
+        label: label.trim(),
+        status: "active",
+        role: data.role ?? (roleType || null),
+        access: data.access ?? "none",
+      },
       ...prev,
     ]);
-    setLabel(""); setIdentityRef(""); setRoleType("");
+    setLabel(""); setIdentityRef(""); setRoleType(""); setAccess("none");
     setShowForm(false);
-    setMsg(`Participant "${label.trim()}" registered.`);
+    setMsg(data.grant_error
+      ? `Participant "${label.trim()}" registered, but access was not granted: ${data.grant_error}`
+      : `Participant "${label.trim()}" registered.`);
   }
 
   async function saveEdit(participant: ParticipantRow) {
@@ -97,18 +120,40 @@ export default function ParticipantsClient({ participants: initial }: { particip
     setMsg(`${participant.label ?? "Participant"} is now ${status}.`);
   }
 
+  async function grantAccess(participant: ParticipantRow, next: Exclude<OperationalAccess, "none">) {
+    setBusy(true);
+    setMsg(null);
+    const res = await fetch("/api/authority/grant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        target_participant_id: participant.participant_id,
+        scope_type: "platform",
+        capabilities: next === "admin" ? ADMIN_CAPABILITIES : OPERATOR_CAPABILITIES,
+        authorisation_evidence: `Dashboard ${next} grant`,
+      }),
+    });
+    const data = await res.json();
+    setBusy(false);
+    if (!res.ok) { setMsg(`Error: ${data.error}`); return; }
+    setParticipants((prev) => prev.map((row) => (
+      row.participant_id === participant.participant_id ? { ...row, access: next } : row
+    )));
+    setMsg(`${participant.label ?? "Participant"} is now ${next}.`);
+  }
+
   return (
     <div className="space-y-8">
       <div className="space-y-1">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Authority</p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Participants</h1>
         <p className="text-sm text-muted-foreground">
-          Add and manage people in the operational scope. Registration does not assign rights or ISRC eligibility.
+          Add people, then grant operator or admin access. Registration alone does not open the dashboard.
         </p>
       </div>
 
       {msg && (
-        <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-emerald-400"}`}>{msg}</p>
+        <p className={`text-sm ${msg.startsWith("Error") || msg.includes("not granted") ? "text-destructive" : "text-emerald-400"}`}>{msg}</p>
       )}
 
       {!showForm ? (
@@ -128,14 +173,14 @@ export default function ParticipantsClient({ participants: initial }: { particip
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground uppercase tracking-widest">Identity reference (optional)</label>
-              <Input value={identityRef} onChange={(e) => setIdentityRef(e.target.value)} placeholder="e.g. @goldenshovel or known identifier" disabled={busy} />
+              <Input value={identityRef} onChange={(e) => setIdentityRef(e.target.value)} placeholder="e.g. name@studio.org" disabled={busy} />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs text-muted-foreground uppercase tracking-widest">Role (optional)</label>
               <select
                 value={roleType}
                 onChange={(e) => setRoleType(e.target.value)}
-                disabled={busy}
+                disabled={busy || access !== "none"}
                 className="border-input bg-background text-foreground h-8 w-full rounded-md border px-2.5 text-sm"
               >
                 {ROLE_OPTIONS.map((r) => (
@@ -143,8 +188,21 @@ export default function ParticipantsClient({ participants: initial }: { particip
                 ))}
               </select>
             </div>
+            <div className="space-y-1.5">
+              <label className="text-xs text-muted-foreground uppercase tracking-widest">Dashboard access</label>
+              <select
+                value={access}
+                onChange={(e) => setAccess(e.target.value as OperationalAccess)}
+                disabled={busy}
+                className="border-input bg-background text-foreground h-8 w-full rounded-md border px-2.5 text-sm"
+              >
+                <option value="none">None — catalogue only</option>
+                <option value="operator">Operator — Create, Curate, Studio</option>
+                <option value="admin">Admin — operators plus grant/revoke</option>
+              </select>
+            </div>
             <p className="text-[10px] text-muted-foreground/60">
-              Registering a participant does not automatically assign rights or ISRC eligibility.
+              Operator and admin grants use AuthorityRecord. They do not assign ISRC eligibility or rewrite canonical works.
             </p>
             <Button size="sm" disabled={busy || !label.trim()} onClick={() => void register()}>
               {busy ? "Registering…" : "Register"}
@@ -162,6 +220,7 @@ export default function ParticipantsClient({ participants: initial }: { particip
               <tr>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Participant</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Role</th>
+                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Access</th>
                 <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Status</th>
                 <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Manage</th>
               </tr>
@@ -191,11 +250,12 @@ export default function ParticipantsClient({ participants: initial }: { particip
                       p.role ?? <span className="italic text-muted-foreground/50">—</span>
                     )}
                   </td>
+                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{accessLabel(p.access)}</td>
                   <td className="px-4 py-3 text-muted-foreground hidden md:table-cell capitalize">
                     {p.status ?? <span className="italic text-muted-foreground/50">—</span>}
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2">
+                    <div className="flex justify-end gap-2 flex-wrap">
                       {editingId === p.participant_id ? (
                         <>
                           <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditingId(null)}>Cancel</Button>
@@ -215,6 +275,16 @@ export default function ParticipantsClient({ participants: initial }: { particip
                           >
                             Edit
                           </Button>
+                          {p.access === "none" ? (
+                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void grantAccess(p, "operator")}>
+                              Make operator
+                            </Button>
+                          ) : null}
+                          {p.access !== "admin" ? (
+                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void grantAccess(p, "admin")}>
+                              Make admin
+                            </Button>
+                          ) : null}
                           {p.status === "suspended" ? (
                             <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "active")}>
                               Activate

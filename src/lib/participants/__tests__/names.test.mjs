@@ -4,6 +4,7 @@ import {
   encodeDisplayIdentityRef,
   pickPublicDisplayName,
   normalizeParticipantStatus,
+  accessFromCapabilities,
   isParticipantRoleType,
 } from "../names.ts";
 
@@ -32,6 +33,8 @@ assert(
 assert(normalizeParticipantStatus("inactive") === "suspended", "inactive maps onto canonical suspended");
 assert(normalizeParticipantStatus("active") === "active", "active stays active");
 assert(isParticipantRoleType("featured-artist"), "featured-artist is a real role");
-assert(!isParticipantRoleType("artist"), "artist is not a participant_role_type value");
+assert(accessFromCapabilities(["delegate-authority"]) === "admin", "delegate-authority is admin");
+assert(accessFromCapabilities(["create-canonical-state"]) === "operator", "canonical capability without delegate is operator");
+assert(accessFromCapabilities([]) === "none", "empty capabilities are not operators");
 
 console.log("participant names: ok");

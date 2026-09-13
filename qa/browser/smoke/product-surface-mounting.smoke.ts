@@ -178,10 +178,14 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
   await applyAuthoritySession(context, baseURL);
 
   await page.goto(ROUTES.home, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("navigation", { name: "Product" }).getByRole("link", { name: "Creative Studio" })).toHaveCount(0);
+  notes.push("Home does not mount Creative Studio in the audience header");
+
+  await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await page.locator('[data-product-nav="studio"]').first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.studio}$`));
   await expect(page.getByRole("main").getByText("Creative Studio").first()).toBeVisible();
-  notes.push("Home header Creative Studio → Studio home");
+  notes.push("Dashboard Creative Studio → Studio home");
 
   await page.getByRole("link", { name: CANON.universeTitle, exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
@@ -197,7 +201,7 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
   await expectPublicExperience(page);
   notes.push("Dashboard → Experience → Super Hero Ego → Enter Experience");
 
-  await page.goto(ROUTES.home, { waitUntil: "domcontentloaded" });
+  await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await page.locator('[data-product-nav="studio"]').first().click();
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   await page.locator('[data-dashboard-surface="studio"]').first().click();

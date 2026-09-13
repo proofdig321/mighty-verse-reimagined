@@ -3,10 +3,15 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { validateAuthority, getServiceClient } from "@/lib/authority/validate";
 import {
+  ADMIN_CAPABILITIES,
   isParticipantRoleType,
   normalizeParticipantStatus,
+  OPERATOR_CAPABILITIES,
+  type OperationalAccess,
 } from "@/lib/participants/names";
 import { setParticipantStatus, upsertParticipantDisplayName } from "@/lib/participants/operational";
+import { grantAuthority } from "@/lib/authority/operations";
+import type { AuthorityCapability } from "@/lib/authority/validate";
 
 function identityTypeForRef(identityRef: string): "email" | "other" {
   return identityRef.includes("@") ? "email" : "other";
@@ -32,6 +37,10 @@ export async function POST(request: Request) {
   if (roleType && !isParticipantRoleType(roleType)) {
     return NextResponse.json({ error: "role_type is not a recognised participant role" }, { status: 400 });
   }
+  const access: OperationalAccess =
+    body.access === "admin" ? "admin" : body.access === "operator" ? "operator" : "none";
+  const grantRole =
+    access === "admin" ? "authorised-canonical-authority" : access === "operator" ? "delegated-authority" : roleType;
 
   const svc = getServiceClient();
   const { data: participant, error: pErr } = await svc
@@ -60,19 +69,45 @@ export async function POST(request: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  if (roleType) {
+  if (grantRole) {
     const { error } = await svc.from("participant_role").insert({
       participant_id: participant.participant_id,
-      role_type: roleType,
+      role_type: grantRole,
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  let granted: OperationalAccess = "none";
+  if (access !== "none") {
+    const capabilities = (access === "admin" ? ADMIN_CAPABILITIES : OPERATOR_CAPABILITIES) as unknown as AuthorityCapability[];
+    const result = await grantAuthority(
+      participantId,
+      participant.participant_id,
+      "platform",
+      null,
+      capabilities,
+      "delegated",
+      `Dashboard ${access} grant`,
+    );
+    if ("error" in result) {
+      return NextResponse.json({
+        participant_id: participant.participant_id,
+        label,
+        status: "active",
+        role: grantRole || null,
+        access: "none",
+        grant_error: result.error,
+      }, { status: 201 });
+    }
+    granted = access;
   }
 
   return NextResponse.json({
     participant_id: participant.participant_id,
     label,
     status: "active",
-    role: roleType || null,
+    role: grantRole || null,
+    access: granted,
   }, { status: 201 });
 }
 

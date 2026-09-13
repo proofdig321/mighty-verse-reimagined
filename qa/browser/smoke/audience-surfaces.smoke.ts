@@ -13,11 +13,14 @@ test("audience chrome restores Discover pages without the operations sidebar", a
   await expect(product.getByRole("link", { name: "Murals", exact: true })).toBeVisible();
   await expect(product.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
   await expect(product.getByRole("link", { name: "Creative Moments", exact: true })).toBeVisible();
-  await expect(product.getByRole("link", { name: "Storyboard", exact: true })).toBeVisible();
-  await expect(product.getByRole("link", { name: "Participants", exact: true })).toBeVisible();
+  await expect(product.getByRole("link", { name: "Gallery" })).toHaveCount(0);
+  await expect(product.getByRole("link", { name: "Storyboard" })).toHaveCount(0);
+  await expect(product.getByRole("link", { name: "Participants" })).toHaveCount(0);
+  await expect(product.getByRole("link", { name: "Creative Studio" })).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Discover" })).toHaveCount(0);
+  await expect(page.getByText("Search surfaces")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /Every Song is a Universe/i })).toBeVisible();
-  notes.push("Home uses audience top nav, not the operations sidebar");
+  notes.push("Home uses Discover Product nav only; operations stay off the audience header");
 
   await product.getByRole("link", { name: "Scenes", exact: true }).click();
   await expect(page).toHaveURL(/\/scenes/);
@@ -31,19 +34,15 @@ test("audience chrome restores Discover pages without the operations sidebar", a
   await expect(page.getByRole("button", { name: /Play narrator/i })).toBeVisible();
   notes.push("Help walkthrough exposes the browser narrator");
 
-  await page.getByRole("navigation", { name: "Product" }).first().getByRole("link", { name: "Participants", exact: true }).click();
-  await expect(page).toHaveURL(/\/participants/);
+  await page.goto(ROUTES.participants, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Creators & Participants" })).toBeVisible();
   await expect(page.getByText("No participants yet.")).toHaveCount(0);
   await expect(page.getByText("Golden Shovel", { exact: true })).toBeVisible();
-  await expect(page.getByText("Proverb", { exact: true })).toBeVisible();
-  await expect(page.getByText("Reason", { exact: true })).toBeVisible();
-  await expect(page.getByText("Mothipa", { exact: true })).toBeVisible();
-  notes.push("Public participants catalogue shows Super Hero Ego names, not IDs");
+  notes.push("Public participants catalogue remains a page, not a primary nav item");
 
   await page.goto(ROUTES.storyboard, { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/auth\/sign-in/);
-  notes.push("Audience storyboard stays signed-in; it reuses the existing workspace");
+  notes.push("Audience storyboard stays signed-in and off the public header");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Audience Discover chrome", page.url(), notes, observe);

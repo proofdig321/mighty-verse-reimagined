@@ -21,15 +21,15 @@ const STEPS = [
     linkLabel: "Open Murals",
     script:
       "Reveal. Open a Mural, then Scenes, then Creative Moments. The Mural is the full audiovisual expression. Scenes have canonical timing. Creative Moments are contributor units, and one Moment can appear in more than one Scene.",
-    body: "Murals, Scenes, Gallery, and Participants deepen understanding. Shuffle on Scene Deck is presentation only. It does not rewrite canonical order.",
+    body: "Murals, Scenes, and Creative Moments deepen understanding. Shuffle on Scene Deck is presentation only. It does not rewrite canonical order.",
   },
   {
     title: "Assemble",
     href: "/scenes",
     linkLabel: "Open Scene Deck",
     script:
-      "Assemble. On Scenes, flip cards, add them to your custom sequence, and play that timeline. Build Experience opens the timeline editor. Storyboard lets you generate shots from gallery artifacts and a thirty second clip. Creative Studio is for authorised production.",
-    body: "Scene Deck, Timeline editor, and audience Storyboard are Experience assembly. They do not create Scenes or change Super Hero Ego timing.",
+      "Assemble. On Scenes, flip cards, add them to your custom sequence, and play that timeline. Build Experience opens the timeline editor. Signed-in storyboard can make a thirty second clip. Creative Studio stays in the dashboard.",
+    body: "Scene Deck and the timeline editor are Experience assembly. They do not create Scenes or change Super Hero Ego timing.",
   },
   {
     title: "Experience",
@@ -44,8 +44,8 @@ const STEPS = [
     href: "/authority",
     linkLabel: "Open Dashboard",
     script:
-      "Operations. The dashboard is gated. Authority holders Create, Curate, manage Participants, and run Creative Studio. Audience pages stay public. Dashboard pages stay operational.",
-    body: "Connect to enter Studio or Dashboard. Registering a participant does not assign rights. Sentinel observes. It does not decide meaning.",
+      "Operations. The dashboard is gated. Authority holders Create, Curate, add operators, manage Participants, and run Creative Studio. Audience pages stay public. Dashboard pages stay operational.",
+    body: "Connect signs you in. Operators enter the dashboard. Registering a participant does not assign rights until an admin grants operator access. Sentinel observes. It does not decide meaning.",
   },
 ] as const;
 

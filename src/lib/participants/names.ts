@@ -60,6 +60,32 @@ export function encodeDisplayIdentityRef(name: string): string {
   return `${PARTICIPANT_DISPLAY_PREFIX}${name.trim()}`;
 }
 
+export type OperationalAccess = "none" | "operator" | "admin";
+
+export const OPERATOR_CAPABILITIES = [
+  "create-canonical-state",
+  "advance-master-state",
+  "authorise-projection",
+  "authorise-interpretation",
+] as const;
+
+export const ADMIN_CAPABILITIES = [
+  "create-canonical-state",
+  "advance-master-state",
+  "authorise-projection",
+  "designate-collectible",
+  "authorise-interpretation",
+  "delegate-authority",
+  "revoke-delegation",
+] as const;
+
+export function accessFromCapabilities(capabilities: string[] | null | undefined): OperationalAccess {
+  const caps = capabilities ?? [];
+  if (caps.includes("delegate-authority")) return "admin";
+  if (caps.length > 0) return "operator";
+  return "none";
+}
+
 export function pickPublicDisplayName(attributions: Array<{ contribution_description: string | null }>): string | null {
   for (const entry of attributions) {
     const name = parseAttributionDisplayName(entry.contribution_description);

@@ -15,7 +15,7 @@ export function StudioShell({ children }: { children: ReactNode }) {
         {
           label: "Studio",
           items: [
-            { href: "/studio", label: "Studio home", icon: MonitorPlay, exact: true },
+            { href: "/studio", label: "Studio home", icon: MonitorPlay, exact: true, surface: "studio" },
             { href: "/studio/work", label: "New creative work", icon: Plus },
             { href: "/authority", label: "Dashboard", icon: LayoutDashboard },
             { href: "/scenes", label: "Scene Deck", icon: Clapperboard },

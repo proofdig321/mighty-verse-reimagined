@@ -3,8 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
-import { AUDIENCE_HELP_HREF, PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
-import { ThemePresetControl } from "@/components/theme/theme-preset-control";
+import { AUDIENCE_CONNECT_HREF, AUDIENCE_HELP_HREF, PUBLIC_PRODUCT_NAV } from "@/lib/product-nav";
 
 type Props = { activePath?: string };
 
@@ -16,7 +15,6 @@ export default function PageTopNav({ activePath = "" }: Props) {
       <div className="sticky top-0 z-30 border-b border-border backdrop-blur-md bg-background/90">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
 
-          {/* Logo */}
           <Link href="/" className="flex items-center gap-2.5 shrink-0 group" onClick={() => setMobileOpen(false)}>
             <div
               className="w-7 h-7 rounded-md flex items-center justify-center text-xs font-bold text-white transition-opacity group-hover:opacity-85"
@@ -24,13 +22,12 @@ export default function PageTopNav({ activePath = "" }: Props) {
             >
               MV
             </div>
-            <span className="text-sm font-semibold tracking-tight text-foreground hidden xl:block">
+            <span className="text-sm font-semibold tracking-tight text-foreground hidden sm:block">
               Mighty Verse
             </span>
           </Link>
 
-          {/* Desktop nav — hidden on mobile */}
-          <nav className="hidden md:flex min-w-0 items-center gap-0.5 flex-1 justify-start overflow-x-auto scrollbar-hidden" aria-label="Product">
+          <nav className="hidden md:flex min-w-0 items-center gap-0.5 flex-1 justify-center" aria-label="Product">
             {PUBLIC_PRODUCT_NAV.map((link) => {
               const isActive =
                 link.href === "/"
@@ -42,7 +39,7 @@ export default function PageTopNav({ activePath = "" }: Props) {
                   href={link.href}
                   data-product-nav={link.surface}
                   className={[
-                    "shrink-0 px-2 py-1.5 text-[13px] transition-colors rounded-md",
+                    "shrink-0 px-3 py-1.5 text-sm transition-colors rounded-md",
                     isActive
                       ? "text-foreground font-semibold bg-accent/60"
                       : "text-muted-foreground hover:text-foreground hover:bg-accent/30",
@@ -54,7 +51,6 @@ export default function PageTopNav({ activePath = "" }: Props) {
             })}
           </nav>
 
-          {/* Right side */}
           <div className="flex items-center gap-2 shrink-0">
             <Link
               href={AUDIENCE_HELP_HREF}
@@ -68,17 +64,13 @@ export default function PageTopNav({ activePath = "" }: Props) {
             >
               Help
             </Link>
-            <div className="hidden xl:block">
-              <ThemePresetControl />
-            </div>
             <Link
-              href="/auth/sign-in?next=/studio"
+              href={AUDIENCE_CONNECT_HREF}
               className="hidden sm:block px-3 py-1.5 rounded-md text-xs font-semibold text-white transition-opacity hover:opacity-85"
               style={{ background: "var(--accent-mv)" }}
             >
               Connect
             </Link>
-            {/* Mobile hamburger */}
             <button
               className="md:hidden p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent/40 transition-colors"
               onClick={() => setMobileOpen((v) => !v)}
@@ -91,7 +83,6 @@ export default function PageTopNav({ activePath = "" }: Props) {
         </div>
       </div>
 
-      {/* Mobile drawer */}
       {mobileOpen && (
         <div className="fixed inset-0 z-20 md:hidden" onClick={() => setMobileOpen(false)}>
           <div
@@ -132,12 +123,12 @@ export default function PageTopNav({ activePath = "" }: Props) {
               </Link>
               <div className="pt-2 pb-1 border-t border-border mt-1">
                 <Link
-                  href="/auth/sign-in?next=/studio"
+                  href={AUDIENCE_CONNECT_HREF}
                   onClick={() => setMobileOpen(false)}
                   className="block w-full text-center px-3 py-2 rounded-md text-sm font-semibold text-white"
                   style={{ background: "var(--accent-mv)" }}
                 >
-                  Connect Wallet
+                  Connect
                 </Link>
               </div>
             </nav>

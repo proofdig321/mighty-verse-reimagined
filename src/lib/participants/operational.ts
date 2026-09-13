@@ -1,9 +1,11 @@
 import { getServiceClient } from "@/lib/authority/validate";
 import {
+  accessFromCapabilities,
   displayNameFromIdentityRef,
   encodeDisplayIdentityRef,
   PARTICIPANT_DISPLAY_PREFIX,
   pickPublicDisplayName,
+  type OperationalAccess,
   type ParticipantStatus,
 } from "@/lib/participants/names";
 
@@ -12,6 +14,7 @@ export type OperationalParticipant = {
   label: string | null;
   status: string | null;
   role: string | null;
+  access: OperationalAccess;
 };
 
 type IdentityLinkRow = {
@@ -33,7 +36,7 @@ export async function loadOperationalParticipants(): Promise<OperationalParticip
   if (error || !participants?.length) return [];
 
   const ids = participants.map((p) => p.participant_id);
-  const [{ data: roles }, { data: links }, { data: attrEntries }] = await Promise.all([
+  const [{ data: roles }, { data: links }, { data: attrEntries }, { data: authorityRows }] = await Promise.all([
     svc.from("participant_role").select("participant_id, role_type").in("participant_id", ids),
     svc
       .from("identity_link")
@@ -45,18 +48,32 @@ export async function loadOperationalParticipants(): Promise<OperationalParticip
       .select("participant_id, contribution_description, public")
       .in("participant_id", ids)
       .eq("public", true),
+    svc
+      .from("authority_record")
+      .select("holder_ref, capabilities, revoked, effective_to")
+      .in("holder_ref", ids)
+      .eq("revoked", false),
   ]);
 
+  const now = Date.now();
   return participants.map((p) => {
     const displayLink = ((links ?? []) as IdentityLinkRow[]).find(
       (link) => link.participant_id === p.participant_id && displayNameFromIdentityRef(link.identity_ref),
     );
     const attributions = (attrEntries ?? []).filter((entry) => entry.participant_id === p.participant_id);
+    const liveCaps = (authorityRows ?? [])
+      .filter((row) => {
+        if (row.holder_ref !== p.participant_id) return false;
+        if (row.effective_to && new Date(row.effective_to).getTime() < now) return false;
+        return true;
+      })
+      .flatMap((row) => (row.capabilities ?? []) as string[]);
     return {
       participant_id: p.participant_id,
       label: displayNameFromIdentityRef(displayLink?.identity_ref) ?? pickPublicDisplayName(attributions),
       status: p.status,
       role: (roles ?? []).find((r) => r.participant_id === p.participant_id)?.role_type ?? null,
+      access: accessFromCapabilities(liveCaps),
     };
   });
 }

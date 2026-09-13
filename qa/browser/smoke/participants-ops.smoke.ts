@@ -22,9 +22,10 @@ test("dashboard keeps operations chrome and participant management", async ({ pa
   await expect(page.getByRole("heading", { name: "Participants" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Register participant" })).toBeVisible();
   await expect(page.getByText("Golden Shovel", { exact: true })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Edit" }).first()).toBeVisible();
-  await expect(page.getByRole("button", { name: "Suspend" }).first()).toBeVisible();
-  notes.push("Authority can register, edit, and suspend participants");
+  await expect(page.getByText("Admin", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Make operator" }).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "Make admin" }).first()).toBeVisible();
+  notes.push("Authority can register people and grant operator or admin access");
 
   await page.getByRole("button", { name: "Register participant" }).click();
   await expect(page.getByText("Display name (required)")).toBeVisible();

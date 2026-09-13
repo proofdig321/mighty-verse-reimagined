@@ -37,7 +37,7 @@ export default function AuthorityShell({ children }: { children: ReactNode }) {
             { href: "/authority", label: "Dashboard", icon: LayoutDashboard, exact: true },
             { href: "/authority/create", label: "Create Work", icon: Plus },
             { href: "/authority/curate", label: "Curate", icon: Wand2 },
-            { href: "/studio", label: "Creative Studio", icon: MonitorPlay },
+            { href: "/studio", label: "Creative Studio", icon: MonitorPlay, surface: "studio" },
           ],
         },
         {
