@@ -21,7 +21,25 @@ async function openStudioWorkspace(page: Page, name: "Overview" | "Storyboard" |
   await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name, exact: true }).click();
 }
 
+function fromCurateOnPage(page: Page): boolean {
+  try {
+    return new URL(page.url()).searchParams.get("from") === "curate";
+  } catch {
+    return false;
+  }
+}
+
+function suitePath(path: string, fromCurate: boolean): string {
+  return fromCurate ? `${path}?from=curate` : path;
+}
+
+function suitePathRe(path: string, fromCurate: boolean, anchored = false): RegExp {
+  const query = fromCurate ? "\\?from=curate" : "";
+  return new RegExp(`${path}${query}${anchored ? "$" : ""}`);
+}
+
 export async function expectCreativeSuiteComposition(page: Page) {
+  const fromCurate = fromCurateOnPage(page);
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true }).first()).toBeVisible();
   await expect(page.getByText("Creative Studio").first()).toBeVisible();
   await expect(page.getByText(CANON.universeDescription).first()).toBeVisible();
@@ -76,7 +94,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(sentinel.locator("[data-proposal-scene]")).toHaveCount(4);
   await expect(sentinel.getByRole("link", { name: "Open 2.5D Studio Preview" })).toHaveAttribute(
     "href",
-    ROUTES.authorityUniversePreview,
+    suitePath(ROUTES.authorityUniversePreview, fromCurate),
   );
   await expect(sentinel.getByRole("button", { name: /Authorise Sentinel windows/i })).toBeVisible();
   await expect(sentinel.getByText("System proposal").or(sentinel.getByText("Canonical", { exact: true })).first()).toBeVisible();
@@ -122,7 +140,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(preview.getByRole("link", { name: "Open Universe" }).first()).toHaveAttribute("href", ROUTES.universeLive);
 
   await openStudioWorkspace(page, "Scenes");
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseScenes}$`));
+  await expect(page).toHaveURL(suitePathRe(ROUTES.authorityUniverseScenes, fromCurate, true));
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");
   const moments = page.locator("section[aria-labelledby='universe-moments']");
   await expect(scenes.locator("table")).toHaveCount(0);
@@ -135,7 +153,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
     const card = scenes.locator(`#universe-scene-${scene.sceneMasterId}`);
     await expect(card).toBeVisible();
     await expect(card.locator(".suite-scene-ordinal")).toHaveText(String(index + 1).padStart(2, "0"));
-    await expect(card).toHaveAttribute("href", `${ROUTES.authorityUniverseScenes}/${scene.sceneMasterId}`);
+    await expect(card).toHaveAttribute("href", suitePath(`${ROUTES.authorityUniverseScenes}/${scene.sceneMasterId}`, fromCurate));
   }
 
   await expect(moments.getByRole("heading", { name: "Proverb", exact: true })).toHaveCount(1);
@@ -158,7 +176,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   );
 
   await scenes.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`).click();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniversePowerhouse}$`));
+  await expect(page).toHaveURL(suitePathRe(ROUTES.authorityUniversePowerhouse, fromCurate, true));
   const powerhouse = page.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`);
   await expect(powerhouse.getByRole("heading", { name: /Scene 01\. Powerhouse/ })).toBeVisible();
   await expect(powerhouse.getByText(SCENE_MOMENTS.powerhouse.sceneTitle, { exact: true })).toBeVisible();
@@ -190,5 +208,5 @@ export async function expectCreativeSuiteComposition(page: Page) {
   );
 
   await openStudioWorkspace(page, "Overview");
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
+  await expect(page).toHaveURL(suitePathRe(ROUTES.authorityUniverseWorkspace, fromCurate, true));
 }

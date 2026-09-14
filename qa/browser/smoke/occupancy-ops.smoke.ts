@@ -67,15 +67,12 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
       universe_id: CANON.fatherRaymondUniverseId,
     },
   });
-  expect([200, 409], `Father Raymond attach HTTP ${bind.status()}`).toContain(bind.status());
+  expect([200, 201], `Father Raymond attach HTTP ${bind.status()}`).toContain(bind.status());
   const bindBody = await bind.json();
-  if (bind.status() === 200) {
-    expect(bindBody.asset_id ?? CANON.fatherRaymondAssetId).toBeTruthy();
-    notes.push("Father Raymond ingested Mux binds to Father Raymond's Mural, not Super Hero Ego");
-  } else {
-    expect(bindBody.code).not.toBe("mural_occupied");
-    notes.push(`Father Raymond attach did not occupy Super Hero Ego (HTTP ${bind.status()} ${bindBody.code ?? bindBody.error ?? ""})`);
-  }
+  expect(bindBody.universe_id).toBe(CANON.fatherRaymondUniverseId);
+  expect(bindBody.mural_id).not.toBe(CANON.muralId);
+  expect(bindBody.asset_id).toBe(CANON.fatherRaymondAssetId);
+  notes.push("Father Raymond ingested Mux binds to Father Raymond's Mural, not Super Hero Ego");
 
   const occupied = await page.request.post("/api/authority/media", {
     data: {
