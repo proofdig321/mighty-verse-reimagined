@@ -104,12 +104,20 @@ test("authenticated Storyboard generates panels without creating Scenes", async 
   await expect(page.getByRole("tab", { name: "AI Assist" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Sentinel" })).toBeVisible();
   notes.push("standalone /studio/work exposes Script, AI Assist, Sentinel, and generation actions");
+  if (process.env.STORYBOARD_ARTIFACT_DIR) {
+    await page.screenshot({ path: `${process.env.STORYBOARD_ARTIFACT_DIR}/storyboard_standalone_studio.png`, fullPage: true });
+  }
 
   await page.goto(`/authority/universes/${CANON.universeId}/storyboard`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Storyboard" })).toBeVisible();
   await expect(page.locator(".storyboard-panel-strip [data-panel-kind='scene']")).toHaveCount(4);
   await expect(page.getByText("Canonical Scene").first()).toBeVisible();
   notes.push("SHE Storyboard still shows exactly four Canonical Scene evidence cards");
+  if (process.env.STORYBOARD_ARTIFACT_DIR) {
+    await page.screenshot({ path: `${process.env.STORYBOARD_ARTIFACT_DIR}/storyboard_she_workspace.png`, fullPage: true });
+    await page.getByRole("tab", { name: "AI Assist" }).click();
+    await page.screenshot({ path: `${process.env.STORYBOARD_ARTIFACT_DIR}/storyboard_ai_assist.png`, fullPage: true });
+  }
 
   reportEvidence(testInfo, "BROWSER VERIFIED", "Storyboard generation pipeline", page.url(), notes, observe);
 });
