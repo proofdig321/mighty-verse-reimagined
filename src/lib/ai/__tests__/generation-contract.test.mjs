@@ -1,4 +1,5 @@
 import { canRetryJob, generationIdempotencyKey, jobProgressPercent, jobUiLabel, transitionJob } from "../jobs";
+import { aiServiceCapability } from "../config";
 import { classifyGeminiHttpError, unconfiguredFailure } from "../errors";
 import { composeMotionPrompt, composeStillPrompt } from "../prompt-composer";
 import { veoRequestBody } from "../gemini";
@@ -57,5 +58,13 @@ const refs = veoRequestBody({
 });
 assert(refs.parameters.aspectRatio === "16:9", "reference images stay on 16:9");
 assert(refs.instances[0].referenceImages.length === 1, "reference images are capped in the instance");
+
+const capability = aiServiceCapability();
+assert(capability.modes["text-to-video"], "video mode exists even when the current key is missing");
+assert(capability.models.video.includes("veo"), "video model is configurable, not hidden");
+if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY && !process.env.GOOGLE_API_KEY) {
+  assert(capability.configured === false, "missing key is configuration, not a missing product");
+  assert(capability.modes["text-to-video"].available === false, "unconfigured video reports unavailable honestly");
+}
 
 console.log("AI job/error/prompt tests: all passed");

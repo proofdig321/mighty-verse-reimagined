@@ -58,6 +58,16 @@ type JobCard = {
   retryable: boolean;
 };
 
+type CapabilityCard = {
+  provider: string;
+  configured: boolean;
+  text?: boolean;
+  image?: boolean;
+  video?: boolean;
+  label: string;
+  models?: { text: string; image: string; video: string };
+};
+
 export function StoryboardWorkspace({
   universeId,
   universeTitle,
@@ -108,6 +118,7 @@ export function StoryboardWorkspace({
   const [draftPanel, setDraftPanel] = useState<Partial<StoryboardPanelRecord>>({});
   const [firstFrame, setFirstFrame] = useState<string>("");
   const [lastFrame, setLastFrame] = useState<string>("");
+  const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
 
   const persistedPanels = work?.panels ?? [];
@@ -189,6 +200,7 @@ export function StoryboardWorkspace({
       }
       if (Array.isArray(payload.jobs)) setJobs(payload.jobs);
       if (Array.isArray(payload.artifacts)) setGenerated(payload.artifacts);
+      if (payload.capability) setCapability(payload.capability);
     })();
   }, [universeId]);
 
@@ -240,7 +252,7 @@ export function StoryboardWorkspace({
     setSaveState({ status: "idle", message: "" });
   }
 
-  async function saveBody(nextBody = script) {
+  async function saveBody(nextBody = script): Promise<StoryboardWorkRecord | null> {
     setSaveState({ status: "generating", message: "Saving story body…" });
     const response = await fetch("/api/authority/storyboard", {
       method: "POST",
@@ -250,11 +262,11 @@ export function StoryboardWorkspace({
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
       setSaveState({ status: "failed", message: payload.error ?? "Could not save the story body." });
-      return false;
+      return null;
     }
     if (payload.work) applyWork(payload.work);
     setSaveState({ status: "ready", message: "Story body saved as a creative artifact. It is not a Scene." });
-    return true;
+    return payload.work ?? work;
   }
 
   async function generateStoryboard() {
@@ -348,8 +360,11 @@ export function StoryboardWorkspace({
   }
 
   async function enqueue(kind: GenerationJobKind, extra: Record<string, unknown> = {}) {
-    if (!work?.work_id) {
-      await saveBody();
+    const saved = work?.work_id ? work : await saveBody();
+    const workId = saved?.work_id;
+    if (!workId) {
+      setMediaState({ status: "failed", message: "Save the story before generating media." });
+      return;
     }
     const panelId = selectedId;
     setMediaState({ status: "generating", message: `Queuing ${kind}…` });
@@ -358,7 +373,7 @@ export function StoryboardWorkspace({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         universe_id: universeId,
-        work_id: work?.work_id,
+        work_id: workId,
         panel_id: panelId,
         kind,
         still_url: extra.still_url ?? selected?.still,
@@ -372,15 +387,22 @@ export function StoryboardWorkspace({
     });
     const payload = await response.json().catch(() => ({}));
     if (payload.job_id) setJobs((current) => [payload, ...current.filter((job) => job.job_id !== payload.job_id)]);
-    if (!response.ok && response.status !== 202) {
+    const jobStatus = typeof payload.status === "string" ? payload.status : "";
+    const honestFailure =
+      jobStatus === "failed" ||
+      jobStatus === "blocked" ||
+      jobStatus === "needs_configuration" ||
+      jobStatus === "unavailable" ||
+      jobStatus === "cancelled";
+    if ((!response.ok && response.status !== 202) || honestFailure) {
       setMediaState({
-        status: payload.status === "unavailable" || payload.status === "needs_configuration" ? payload.status : "failed",
+        status: jobStatus === "unavailable" || jobStatus === "needs_configuration" || jobStatus === "blocked" ? jobStatus : "failed",
         message: payload.error?.message ?? payload.error ?? payload.message ?? "Generation did not complete.",
       });
       return;
     }
     setMediaState({
-      status: payload.status === "completed" ? "ready" : payload.status === "blocked" ? "blocked" : "generating",
+      status: payload.status === "completed" ? "ready" : "generating",
       message: payload.status === "completed"
         ? "Artifact ready. It is not a Scene."
         : payload.error?.message ?? `${jobUiLabel(payload.status)} — progress is the real job, not a timer.`,
@@ -529,6 +551,14 @@ export function StoryboardWorkspace({
           </>
         )}
       </div>
+
+      {capability ? (
+        <p className="text-xs text-muted-foreground" data-ai-capability={capability.configured ? "gemini" : "none"}>
+          {capability.configured
+            ? `Gemini is configured · text ${capability.models?.text ?? "ready"} · image ${capability.models?.image ?? "ready"} · video ${capability.models?.video ?? "ready"}. Unavailable generations report the provider error, not a missing product.`
+            : `${capability.label} Generation actions stay available and report the real configuration or quota state.`}
+        </p>
+      ) : null}
 
       <div className="storyboard-progress" data-storyboard-progress={`${progress.completeCount}/${progress.total}`}>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
@@ -938,6 +968,8 @@ export function StoryboardWorkspace({
             <summary className="cursor-pointer text-xs text-muted-foreground">Technical inspector</summary>
             <p className="mt-2 font-mono text-[10px] text-muted-foreground">
               work {work?.work_id ?? "—"} · panel {selectedId ?? "—"} · job {selectedJob?.job_id ?? "—"}
+              {selectedJob?.result?.playback_id ? ` · mux ${selectedJob.result.playback_id}` : ""}
+              {capability?.models ? ` · text ${capability.models.text} · image ${capability.models.image} · video ${capability.models.video}` : ""}
             </p>
             <button type="button" className="sr-only" onClick={() => setInspectorOpen(!inspectorOpen)}>
               Toggle inspector
