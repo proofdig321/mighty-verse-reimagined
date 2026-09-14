@@ -1,6 +1,6 @@
 import { classifyUniverseOccupancy, hasSourceMediaFromSession } from "../occupancy";
 import { isProtectedMaster } from "../protected-work";
-import { decideWithdraw } from "../withdraw";
+import { canWithdrawMaster, decideWithdraw } from "../withdraw";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -71,6 +71,9 @@ assert(orphanWithdraw.ok === true && orphanWithdraw.action === "withdraw", "orph
 
 const already = decideWithdraw({ masterId: UNTITLED, currentStateId: null });
 assert(already.ok === true && already.action === "already_withdrawn", "second withdraw is idempotent");
+assert(canWithdrawMaster(FR, "state") === true, "Father Raymond Universe can be withdrawn from the dashboard");
+assert(canWithdrawMaster(SHE, "state") === false, "Super Hero Ego cannot be withdrawn from the dashboard");
+assert(canWithdrawMaster(UNTITLED, null) === false, "already withdrawn work has no withdraw act");
 
 const missing = decideWithdraw({ masterId: null });
 assert(missing.ok === false && missing.code === "invalid_master", "withdraw without a master is rejected");

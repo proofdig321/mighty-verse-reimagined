@@ -118,7 +118,7 @@ export {
   occupancyLabel,
 } from "./occupancy";
 export type { UniverseOccupancy, UniverseOccupancyInput } from "./occupancy";
-export { decideWithdraw } from "./withdraw";
+export { decideWithdraw, canWithdrawMaster } from "./withdraw";
 export { isProtectedMaster, isPlayableStorageRef } from "./protected-work";
 export { loadInspectWorkScope } from "./load-inspect-scope";
 export type { InspectWorkScope } from "@/lib/media/inspect-scope";

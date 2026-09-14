@@ -5,6 +5,10 @@ import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HierarchyBreadcrumb, type HierarchyBreadcrumbItem } from "@/components/assemble/breadcrumb";
+import { WithdrawWork } from "@/components/assemble/withdraw-work";
+import ProjectionMediaPlayer from "@/components/player/projection-media-player";
+import { toAuthorityProjectionMedia } from "@/lib/assemble/authority-work-media";
+import { canWithdrawMaster } from "@/lib/assemble/withdraw";
 import {
   api, responseData, shortId, operatorError,
   WORK_TYPE_LABELS, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS,
@@ -335,6 +339,8 @@ export default function AuthorityWorkClient({
   const title = presentation?.title ?? projPres?.title ?? typeLabel;
   const journey = getJourneySteps(master, status);
   const nextStep = getNextAction(master, status);
+  const playback = toAuthorityProjectionMedia(binding);
+  const withdrawable = canWithdrawMaster(master.master_id, master.current_state_id);
 
   // B5: breadcrumb list page per type
   const listHref: Record<string, string> = {
@@ -396,7 +402,26 @@ export default function AuthorityWorkClient({
             Open Creative Studio →
           </Link>
         )}
+        {parentMasterId && parentCanonicalType === "universe" && (
+          <div className="flex flex-wrap gap-3 pt-1">
+            <Link href={`/authority/curate/${parentMasterId}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Open Curate Hub →
+            </Link>
+            <Link href={`/authority/universes/${parentMasterId}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Open Creative Studio →
+            </Link>
+          </div>
+        )}
       </div>
+
+      {playback && projection && state && (
+        <ProjectionMediaPlayer
+          media={playback}
+          projectionId={projection.projection_id}
+          masterId={master.master_id}
+          canonicalStateId={state.canonical_state_id}
+        />
+      )}
 
       {projection && uploadSessions[0] && (
         <ResumeMediaPanel
@@ -579,11 +604,20 @@ export default function AuthorityWorkClient({
               const d = await api("/api/authority/media/rights", { binding_id: binding.binding_id, master_id: master.master_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis });
               setBusy(false);
               if (d.error) { setMsg(operatorError(d.error, { workTitle: title, operation: "Rights update" })); return; }
-              setEditingRights(false);
-              setMsg("Rights updated. Refresh to see updated state.");
+              window.location.reload();
             }}>Save rights</Button>
             <Button size="sm" variant="outline" onClick={() => setEditingRights(false)}>Cancel</Button>
           </div>
+        </div>
+      )}
+
+      {withdrawable && (
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Discover</p>
+          <p className="text-sm text-muted-foreground">
+            Withdraw removes this work from Discover. Records stay. This is not a delete. Super Hero Ego cannot be withdrawn.
+          </p>
+          <WithdrawWork masterId={master.master_id} title={title} layout="panel" />
         </div>
       )}
 

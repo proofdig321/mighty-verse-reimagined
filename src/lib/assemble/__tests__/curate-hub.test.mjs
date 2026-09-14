@@ -64,6 +64,7 @@ const she = deriveCurateHub({
 
 assert(she.universeTitle === "Super Hero Ego", "SHE title comes from live assembly");
 assert(she.nextAction.label === "Open Creative Studio", "complete SHE continues in Studio, not Create Work");
+assert(she.withdrawable === false, "Super Hero Ego hub does not offer withdraw");
 assert(she.nextAction.href.includes(`/authority/universes/${UNIVERSE}`), "Studio continuation stays on SHE");
 assert(she.rows.find((row) => row.key === "mural")?.tone === "complete", "registered mural is complete, not minted");
 assert(!she.rows.some((row) => /mint/i.test(`${row.summary}${row.actionLabel ?? ""}`)), "hub never says mint");
@@ -115,6 +116,7 @@ const ingested = deriveCurateHub({
   inspectCount: 0,
   incomingAssetId: FR_ASSET,
 });
+assert(ingested.withdrawable === true, "Father Raymond hub can withdraw this work from Discover");
 assert(ingested.nextAction.title === "Register a Mural", "ingested Father Raymond still needs a Mural before attach");
 assert(ingested.nextAction.label === "Register Mural", "mural registration precedes attaching ingested media");
 assert(ingested.nextAction.href === `/authority/curate/${FR}/mural`, "FR mural registration stays on Father Raymond");

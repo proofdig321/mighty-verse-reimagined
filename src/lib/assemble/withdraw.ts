@@ -55,3 +55,8 @@ export function decideWithdraw(input: {
     message: "Withdraw this work from Discover. Records are preserved. This is not a delete.",
   };
 }
+
+export function canWithdrawMaster(masterId: string | null, currentStateId?: string | null): boolean {
+  const decided = decideWithdraw({ masterId, currentStateId });
+  return decided.ok && decided.action === "withdraw";
+}

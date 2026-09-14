@@ -312,7 +312,7 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
     occupancy,
     occupancyLabel: occupancyLabel(occupancy),
     identityHref: creativeSuiteIdentityHref(universeId, "curate"),
-    withdrawable: occupancy === "orphan" && !isProtectedMaster(universeId),
+    withdrawable: occupancy !== "withdrawn" && !isProtectedMaster(universeId),
     incomingAssetId,
     boundAssetId,
     rows: [

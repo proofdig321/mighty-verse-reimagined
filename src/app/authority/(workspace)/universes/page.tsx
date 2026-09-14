@@ -89,7 +89,7 @@ async function getData(): Promise<UniverseRow[]> {
         muralCount,
         momentCount,
         occupancy,
-        withdrawable: occupancy === "orphan" && !isProtectedMaster(m.master_id),
+        withdrawable: occupancy !== "withdrawn" && !isProtectedMaster(m.master_id),
       };
     })
     .filter((row) => row.occupancy !== "withdrawn");
@@ -109,7 +109,7 @@ export default async function UniversesPage() {
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Creative Studio</p>
         <h1 className="text-3xl font-semibold tracking-tight">Universes</h1>
         <p className="text-sm text-muted-foreground">
-          Curated work opens Creative Studio. In-progress work stays on Curate Hub. Orphans can be withdrawn — not deleted.
+          Curated work opens Creative Studio. In-progress work stays on Curate Hub. Withdraw removes a work from Discover — records stay. Super Hero Ego cannot be withdrawn.
           {universes.length > 0 && <span className="ml-2 text-muted-foreground/60">{universes.length} universe{universes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>

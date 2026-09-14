@@ -74,7 +74,12 @@ export function CurateHub({ snapshot }: { snapshot: CurateHubSnapshot }) {
           {snapshot.nextAction.label}
         </Link>
         {snapshot.withdrawable ? (
-          <WithdrawWork masterId={snapshot.universeId} title={snapshot.universeTitle} />
+          <div className="space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Withdraw removes this Universe from Discover. Records stay. This is not a delete.
+            </p>
+            <WithdrawWork masterId={snapshot.universeId} title={snapshot.universeTitle} />
+          </div>
         ) : null}
       </div>
 
