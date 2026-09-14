@@ -269,10 +269,10 @@ export function storyboardCapabilityStatus() {
       label: ai.text ? ai.label : "Chrome Prompt API in the browser, or Gemini API on the server",
     },
     panel: { status: ai.image ? "ready" as const : "unavailable" as const, label: ai.image ? "Gemini image" : "Gemini image generation is not configured" },
-    clip: { status: "ready" as const, label: "ffmpeg + Mux 30-second clip from an existing still" },
-    gif: { status: "ready" as const, label: "ffmpeg GIF from an existing still" },
-    reel: { status: "ready" as const, label: "ffmpeg sequence + Mux" },
-    animation: { status: "ready" as const, label: "ffmpeg motion + Mux" },
+    clip: { status: ai.video ? "ready" as const : "unavailable" as const, label: ai.video ? "Veo text-to-video via Mux" : "Veo is not configured. The motion action remains in the product." },
+    gif: { status: "ready" as const, label: "ffmpeg GIF derivation from an existing still" },
+    reel: { status: "ready" as const, label: "ffmpeg reel assembly + Mux" },
+    animation: { status: ai.video ? "ready" as const : "unavailable" as const, label: ai.video ? "Veo animation-oriented motion" : "Veo is not configured. The animation action remains in the product." },
     creates_scene: false,
   };
 }

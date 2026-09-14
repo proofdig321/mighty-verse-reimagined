@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-14 (constant Scene edit, gallery pick, storyboard path, holographic single cinema)
+STATUS: current as of 2026-09-14 (Gemini/Veo storyboard pipeline, generation jobs, single holographic cinema)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -186,7 +186,9 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/authority/universes` — Creative Studio entry (existing Universe catalogue)
 - `/authority/universes/[masterId]` — Creative Studio Overview (command centre). Child workspaces: `/storyboard`, `/scenes`, `/scenes/[sceneId]`, `/production`, `/preview` (playable 2.5D), `/experience`. Identity stays `/identity`. Sentinel evidence lives on Storyboard materials (`?source=sentinel`). Mux IDs stay in inspector details. Public `/worlds/{id}` and `/worlds/{id}/holographic` remain Experience destinations. Sentinel does not create Scenes. Scene Deck shuffle is not imported. Preview does not rewrite timing.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
-- `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, Sentinel intelligence load, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
+- `/studio` and `/studio/work` — standalone Creative Studio. Storyboard can start without a Universe.
+- Gemini/Veo server AI layer (`src/lib/ai/`) — text, structured storyboard, image, Veo long-running video. Jobs persist in `generation_job`. Stills/GIFs store in `creative-artifacts`. Motion ingests to Mux. AI never creates Scenes.
+- Storyboard panels persist in `storyboard_work` / `storyboard_panel`. User edits are locked against silent overwrite.
 
 ### Sentinel Evidence Layer (Phase 1, 2026-09-10)
 - `inspection_session` table — one row per inspection run against a media_asset
@@ -212,10 +214,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 ## 7. INTENTIONALLY DEFERRED (do not implement without explicit decision)
 
 - `media_realization` population (requires ISRC/rights product decision)
-- AI classification / object detection / embeddings
-- Full Creative Studio expansion
-- Sentinel dashboard UI
-- Auto-creating Scenes from Sentinel candidates
+- Auto-creating Scenes from Sentinel candidates or Storyboard panels
 - `inspection_session` entity in canonical ontology (it is evidence, not canonical)
 
 ---
@@ -234,6 +233,8 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `delivery_variant` — HLS endpoints (endpoint_ref)
 - `consumption_signal` — play/pause/complete telemetry
 - `inspection_session` — Sentinel inspection runs
+- `storyboard_work` / `storyboard_panel` — creative storyboard documents (not canonical ontology)
+- `generation_job` — async Gemini/Veo/ffmpeg jobs
 - `frame_observation` — per-frame evidence from inspections
 - `canonical_operation_log` — append-only authority operation log
 

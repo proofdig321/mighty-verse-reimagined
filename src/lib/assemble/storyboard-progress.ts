@@ -1,16 +1,15 @@
 /**
- * Storyboard progress is derived from live workspace state.
- * Not a wizard table and not a fake percentage.
- *
- * SCRIPT → PANELS → GALLERY STILLS → MOTION ARTIFACT
- * Canonical Scenes remain a separate authoring path.
+ * Storyboard progress is derived from live persisted state.
+ * SCRIPT → PANELS → REFERENCES → STILLS → MOTION → ASSEMBLY
  */
 
 export const STORYBOARD_PROGRESS_STEPS = [
-  { id: "script", label: "Story body" },
+  { id: "script", label: "Script" },
   { id: "panels", label: "Panels" },
-  { id: "stills", label: "Gallery stills" },
+  { id: "references", label: "References" },
+  { id: "stills", label: "Stills" },
   { id: "motion", label: "Motion" },
+  { id: "assembly", label: "Assembly" },
 ] as const;
 
 export type StoryboardProgressStepId = (typeof STORYBOARD_PROGRESS_STEPS)[number]["id"];
@@ -27,7 +26,8 @@ export type StoryboardProgress = {
   total: number;
 };
 
-const MOTION_TYPES = new Set(["animation", "clip", "reel", "gif"]);
+const MOTION_TYPES = new Set(["animation", "clip", "motion", "animate-still", "first-last-frame", "reference-motion", "extend"]);
+const ASSEMBLY_TYPES = new Set(["gif", "reel"]);
 
 export function deriveStoryboardProgress(input: {
   script?: string | null;
@@ -35,16 +35,22 @@ export function deriveStoryboardProgress(input: {
   referenceStillCount?: number;
   artifactStillCount?: number;
   artifactTypes?: string[];
+  jobKinds?: string[];
 }): StoryboardProgress {
+  const types = [...(input.artifactTypes ?? []), ...(input.jobKinds ?? [])];
   const scriptReady = Boolean(input.script?.trim());
   const panelsReady = (input.panelCount ?? 0) > 0;
-  const stillsReady = (input.referenceStillCount ?? 0) > 0 || (input.artifactStillCount ?? 0) > 0;
-  const motionReady = (input.artifactTypes ?? []).some((type) => MOTION_TYPES.has(type));
+  const referencesReady = (input.referenceStillCount ?? 0) > 0;
+  const stillsReady = (input.artifactStillCount ?? 0) > 0 || types.includes("still") || types.includes("panel") || types.includes("variation");
+  const motionReady = types.some((type) => MOTION_TYPES.has(type));
+  const assemblyReady = types.some((type) => ASSEMBLY_TYPES.has(type));
   const complete = {
     script: scriptReady,
     panels: panelsReady,
+    references: referencesReady,
     stills: stillsReady,
     motion: motionReady,
+    assembly: assemblyReady,
   };
   const steps = STORYBOARD_PROGRESS_STEPS.map((step) => ({
     id: step.id,
