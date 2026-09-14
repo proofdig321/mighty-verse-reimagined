@@ -387,7 +387,7 @@ export async function processGenerationJob(jobId: string, participantId: string)
       const still = (typeof request.still_url === "string" && request.still_url) || panel?.still_url;
       if (!still) throw new Error("GIF derivation needs a still.");
       const derived = await deriveGif(still);
-      const bytes = await readFile(derived.filePath);
+      const bytes = await readFile(/* turbopackIgnore: true */ derived.filePath);
       await unlink(derived.filePath).catch(() => undefined);
       const stored = await storeCreativeBytes({
         path: `${participantId}/${work?.work_id ?? "work"}/${panel?.panel_id ?? "reel"}/${Date.now()}.gif`,
