@@ -1,5 +1,6 @@
 export const dynamic = "force-dynamic";
 
+import { PublicHero } from "@/components/public-hero";
 import { StoryboardWorkspace } from "@/components/assemble/storyboard-workspace";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
 import { serverAiCapability } from "@/lib/ai/provider";
@@ -16,17 +17,12 @@ export default async function AudienceStoryboardPage() {
 
   return (
     <div className="public-page">
+      <PublicHero
+        eyebrow="Create"
+        title="Storyboard"
+        description="Write a story, GENERATE shots from gallery artifacts, and produce a 30-second clip. This is an Experience artifact. It does not create Scenes or change canonical timing."
+      />
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-        <div className="space-y-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Create</p>
-          <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-display, inherit)" }}>
-            Storyboard
-          </h1>
-          <p className="max-w-2xl text-sm text-muted-foreground">
-            Write a story, GENERATE shots from gallery artifacts, and produce a 30-second clip.
-            This is an Experience artifact. It does not create Scenes or change canonical timing.
-          </p>
-        </div>
         <StoryboardWorkspace
           universeId={null}
           scenes={[]}

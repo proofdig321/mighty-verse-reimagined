@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import SceneDeckClient from "@/components/scene-deck-client";
+import { PublicHero } from "@/components/public-hero";
 import { buttonVariants } from "@/components/ui/button";
 
 type SceneItem = {
@@ -132,34 +133,30 @@ export default async function UniverseScenesPage({
 
   return (
     <div className="public-page">
+      <PublicHero
+        kicker={
+          <Link
+            href={`/worlds/${masterId}`}
+            className="hover:text-foreground transition-colors"
+          >
+            ← Back to Universe{universeTitle ? ` · ${universeTitle}` : ""}
+          </Link>
+        }
+        eyebrow="Scenes in the Mural"
+        title="Scene Deck"
+        description="Reveal the Scenes of this Universe. Shuffle is presentation, not canonical order. Create your own timeline."
+        aside={
+          <>
+            <Link href="/editor" className={buttonVariants({ size: "sm", variant: "outline" })}>
+              Build Experience →
+            </Link>
+            <Link href={`/worlds/${masterId}/holographic`} className={buttonVariants({ size: "sm" })} data-experience-entry="experience">
+              Enter Experience
+            </Link>
+          </>
+        }
+      />
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-            <div className="space-y-3">
-              <Link
-                href={`/worlds/${masterId}`}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-              >
-                ← Back to Universe{universeTitle ? ` · ${universeTitle}` : ""}
-              </Link>
-              <h1
-                className="text-3xl font-semibold text-foreground"
-                style={{ fontFamily: "var(--font-display, inherit)" }}
-              >
-                Scene Deck
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Reveal the Scenes of this Universe. Shuffle is presentation, not canonical order. Create your own timeline.
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Link href="/editor" className={buttonVariants({ size: "lg", variant: "outline" })}>
-                Build Experience →
-              </Link>
-              <Link href={`/worlds/${masterId}/holographic`} className={buttonVariants({ size: "lg" })} data-experience-entry="experience">
-                Enter Experience
-              </Link>
-            </div>
-          </div>
         <SceneDeckClient scenes={scenes} hideHeader faceDownUntilSelected={false} />
       </div>
     </div>

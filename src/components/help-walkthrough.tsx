@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Pause, Play, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PublicHero } from "@/components/public-hero";
 
 const STEPS = [
   {
@@ -97,16 +98,12 @@ export function HelpWalkthrough() {
 
   return (
     <div className="public-page">
-      <section className="public-hero">
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">Audience walkthrough</p>
-          <h1 className="mt-3 text-4xl font-semibold md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
-            How Mighty Verse works
-          </h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            A compact tour of Discover, Reveal, Assemble, and Experience. The browser narrator reads each step aloud.
-          </p>
-          <div className="mt-6 flex flex-wrap gap-2">
+      <PublicHero
+        eyebrow="Audience walkthrough"
+        title="How Mighty Verse works"
+        description="A compact tour of Discover, Reveal, Assemble, and Experience. The browser narrator reads each step aloud."
+        actions={
+          <>
             <Button type="button" onClick={() => (speaking ? stop() : speakFrom(index))} disabled={!supported}>
               {speaking ? <Pause size={14} /> : <Play size={14} />}
               {speaking ? "Pause narrator" : "Play narrator"}
@@ -116,9 +113,9 @@ export function HelpWalkthrough() {
               Stop
             </Button>
             {!supported ? <p className="text-sm text-muted-foreground">This browser does not expose speech synthesis.</p> : null}
-          </div>
-        </div>
-      </section>
+          </>
+        }
+      />
 
       <div className="mx-auto max-w-7xl space-y-6 px-6 py-10">
         <ol className="grid gap-4 md:grid-cols-2">

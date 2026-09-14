@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import SceneDeckClient from "@/components/scene-deck-client";
+import { PublicHero } from "@/components/public-hero";
 import { Button } from "@/components/ui/button";
 
 type SceneItem = {
@@ -84,23 +85,23 @@ export default async function ScenesPage() {
   const scenes = await getData();
 
   return (
-    <div className="public-page space-y-8">
-      <div>
-        <div className="mb-8 flex items-start justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.25em] mb-1" style={{ color: "var(--accent-mv)" }}>Scenes in the Mural</p>
-            <h1 className="text-3xl font-semibold" style={{ fontFamily: "var(--font-display, inherit)" }}>Scene Deck</h1>
-            <p className="text-sm text-muted-foreground mt-1">Shuffle the deck to reveal hidden creative moments. Create your own timeline.</p>
-          </div>
-          <div className="flex shrink-0 flex-wrap gap-2 mt-1">
+    <div className="public-page">
+      <PublicHero
+        eyebrow="Scenes in the Mural"
+        title="Scene Deck"
+        description="Shuffle the deck to reveal hidden creative moments. Create your own timeline."
+        aside={
+          <>
             <Link href="/editor">
               <Button size="sm">Build Experience →</Button>
             </Link>
             <Link href="/universes">
               <Button variant="outline" size="sm">Explore Universes</Button>
             </Link>
-          </div>
-        </div>
+          </>
+        }
+      />
+      <div className="mx-auto max-w-7xl px-6 py-10">
         <SceneDeckClient scenes={scenes} faceDownUntilSelected label="From the Mural" hideHeader />
       </div>
     </div>

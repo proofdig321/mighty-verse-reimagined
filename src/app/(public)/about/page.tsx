@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getDiscovery } from "@/lib/discovery";
 import type { DiscoveryUniverse } from "@/lib/discovery";
 import { Button } from "@/components/ui/button";
+import { PublicHero } from "@/components/public-hero";
 
 export default async function AboutPage() {
   const universes = await getDiscovery();
@@ -20,18 +21,11 @@ export default async function AboutPage() {
   return (
     <div className="public-page">
 
-      {/* Page header */}
-      <div className="public-hero">
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-14">
-          <p className="text-xs font-semibold uppercase tracking-[0.25em] text-accent-mv">The Mighty Verse model</p>
-          <h1 className="mt-3 text-4xl font-semibold text-foreground md:text-5xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
-            About Mighty Verse
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            A canonical cultural universe where every song is a world.
-          </p>
-        </div>
-      </div>
+      <PublicHero
+        eyebrow="The Mighty Verse model"
+        title="About Mighty Verse"
+        description="A canonical cultural universe where every song is a world."
+      />
 
       <div className="mx-auto max-w-7xl space-y-14 px-6 py-12">
 

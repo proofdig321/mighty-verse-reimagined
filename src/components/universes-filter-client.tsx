@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
+import { PublicHero } from "@/components/public-hero";
 
 type UniverseItem = {
   master_id: string;
@@ -30,26 +31,16 @@ export default function UniversesFilterClient({ universes }: Props) {
 
   return (
     <div data-experience-journey={experienceJourney ? "true" : "false"}>
-      {/* Header band — heading + description left, controls right */}
-      <div className="border-b border-border bg-card/20">
-        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              {experienceJourney ? "Experience" : "Discover the canon"}
-            </p>
-            <h1
-              className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
-              style={{ fontFamily: "var(--font-display, inherit)" }}
-            >
-              {experienceJourney ? "Enter Experience" : "All Universes"}
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {experienceJourney
-                ? "Open a Universe, then enter its public Experience. This is not Studio preview."
-                : "Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter Experience."}
-            </p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
+      <PublicHero
+        eyebrow={experienceJourney ? "Experience" : "Discover the canon"}
+        title={experienceJourney ? "Enter Experience" : "All Universes"}
+        description={
+          experienceJourney
+            ? "Open a Universe, then enter its public Experience. This is not Studio preview."
+            : "Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter Experience."
+        }
+        aside={
+          <>
             <Input
               placeholder="Search universes…"
               value={query}
@@ -62,9 +53,9 @@ export default function UniversesFilterClient({ universes }: Props) {
             >
               <option value="">All Genres</option>
             </select>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Grid */}
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-4">
