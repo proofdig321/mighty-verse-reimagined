@@ -115,11 +115,47 @@ const ingested = deriveCurateHub({
   inspectCount: 0,
   incomingAssetId: FR_ASSET,
 });
-assert(ingested.nextAction.title === "Source media ready", "ingested unbound media asks for attachment");
-assert(ingested.nextAction.label === "Attach media", "attachment is curator work");
+assert(ingested.nextAction.title === "Register a Mural", "ingested Father Raymond still needs a Mural before attach");
+assert(ingested.nextAction.label === "Register Mural", "mural registration precedes attaching ingested media");
+assert(ingested.nextAction.href === `/authority/curate/${FR}/mural`, "FR mural registration stays on Father Raymond");
+assert(ingested.nextAction.body.includes("do not attach it to another work"), "ingested media must not land on Super Hero Ego");
 assert(ingested.rows.find((row) => row.key === "mural")?.actionLabel === "Register Mural", "unregistered mural is register, not mint");
 assert(ingested.rows.find((row) => row.key === "mural")?.href === `/authority/curate/${FR}/mural`, "mural registration is a child page");
-assert(ingested.nextAction.href.includes(FR_ASSET), "FR ingested attach stays on incoming media, not Super Hero Ego");
+assert(ingested.rows.find((row) => row.key === "source_media")?.actionLabel === "Attach media", "source row still records ingested media waiting to attach");
+
+const ingestedWithMural = deriveCurateHub({
+  assembly: {
+    master_id: FR,
+    title: "Father Raymond",
+    description: null,
+    created_at: "2026-09-09T00:00:00Z",
+    murals: [
+      {
+        master_id: "fr-mural",
+        title: "Father Raymond",
+        has_media: false,
+        provider: null,
+        storage_ref: null,
+        scenes: [],
+      },
+    ],
+    creative_moments: [],
+  },
+  sessions: [
+    {
+      session_id: "7fa7c456-0000-4000-8000-000000000001",
+      phase: "ingested",
+      asset_id: FR_ASSET,
+      updated_at: "2026-09-09T12:00:00Z",
+    },
+  ],
+  inspectCount: 0,
+  incomingAssetId: FR_ASSET,
+});
+assert(ingestedWithMural.nextAction.title === "Source media ready", "after mural registration, ingested media asks for attachment");
+assert(ingestedWithMural.nextAction.label === "Attach media", "attachment is curator work on this Universe");
+assert(ingestedWithMural.nextAction.href.includes(FR_ASSET), "FR ingested attach stays on incoming media, not Super Hero Ego");
+assert(!ingestedWithMural.nextAction.href.includes(UNIVERSE), "Father Raymond attach does not open Super Hero Ego");
 
 const noScenes = deriveCurateHub({
   assembly: {

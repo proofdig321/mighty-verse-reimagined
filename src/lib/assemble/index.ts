@@ -109,6 +109,8 @@ export type {
 } from "./scene-order";
 export { deriveCurateHub } from "./curate-hub";
 export { loadCurateHub } from "./load-curate-hub";
+export { loadInspectWorkScope } from "./load-inspect-scope";
+export type { InspectWorkScope } from "@/lib/media/inspect-scope";
 export type {
   CurateHubInput,
   CurateHubNextAction,

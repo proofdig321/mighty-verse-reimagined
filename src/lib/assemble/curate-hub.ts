@@ -350,24 +350,26 @@ function resolveNextAction(input: {
     };
   }
 
+  if (!input.mural) {
+    return {
+      title: "Register a Mural",
+      body: input.ingestedUnbound
+        ? "A Mural is the audiovisual expression of this Universe. Register it first. Ingested media waits for that Mural — do not attach it to another work. Registration is canonical, not minting."
+        : "A Mural is the complete audiovisual expression of this Universe. Registration is canonical, not minting.",
+      href: curateMuralHref(universeId),
+      label: "Register Mural",
+    };
+  }
+
   if (input.ingestedUnbound) {
     const href = input.incomingAssetId
       ? curateIncomingHref(input.incomingAssetId)
       : CURATE_STUDIO_HREF;
     return {
       title: "Source media ready",
-      body: "Attach it to the appropriate canonical expression. Media is not the Universe.",
+      body: "Attach it to this Universe's Mural. Media is not the Universe, and it is not another work's Mural.",
       href,
       label: "Attach media",
-    };
-  }
-
-  if (!input.mural) {
-    return {
-      title: "Register a Mural",
-      body: "A Mural is the complete audiovisual expression of this Universe. Registration is canonical, not minting.",
-      href: curateMuralHref(universeId),
-      label: "Register Mural",
     };
   }
 

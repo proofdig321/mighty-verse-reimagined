@@ -19,6 +19,7 @@ import {
   effectiveBoundary,
   type SceneCandidate,
 } from "@/lib/media/scene-candidates";
+import { CURATE_NEAREST_SCENE_MS, nearestCanonicalScene } from "@/lib/media/inspect-scope";
 import type {
   CurateMural,
   CurateScene,
@@ -604,15 +605,9 @@ export default function CurateClient({
                   const isCreating = creatingFromId === candidate.candidateId;
                   const isAdjusting = adjustingId === candidate.candidateId;
 
-                  // Nearest canonical scene
-                  let nearest: CurateScene | null = null;
-                  let nearestDiff = Infinity;
-                  for (const s of scenes) {
-                    if (s.start_ms == null) continue;
-                    const diff = Math.abs(s.start_ms - startMs);
-                    if (diff < nearestDiff) { nearestDiff = diff; nearest = s; }
-                  }
-                  if (nearestDiff > 15000) nearest = null;
+                  const nearestMatch = nearestCanonicalScene(scenes, startMs, CURATE_NEAREST_SCENE_MS);
+                  const nearest = nearestMatch?.scene ?? null;
+                  const nearestDiff = nearestMatch?.deltaMs ?? Infinity;
 
                   // Mux thumbnail if available
                   const candidateThumb = mural?.storage_ref
