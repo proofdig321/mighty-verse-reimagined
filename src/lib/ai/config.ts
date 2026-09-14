@@ -49,6 +49,7 @@ export function textModelFallbacks(primary: string): string[] {
 export function imageModelFallbacks(primary: string): string[] {
   return uniqueModels(primary, [
     "gemini-2.5-flash-image",
+    "gemini-2.5-flash-preview-image",
     "gemini-3.1-flash-image",
     "gemini-2.0-flash-exp-image-generation",
   ]);

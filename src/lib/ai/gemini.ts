@@ -205,6 +205,7 @@ export async function generateGeminiImageBytes(input: {
   if (!key) return unconfiguredFailure("Google Gemini image generation is not configured.");
   const models = imageModelFallbacks(aiModelConfig().imageModel);
   let last: ProviderFailure | null = null;
+  let quota: ProviderFailure | null = null;
   for (const model of models) {
     try {
       const response = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
@@ -216,6 +217,7 @@ export async function generateGeminiImageBytes(input: {
       });
       if (response.status === 404 || response.status === 403 || response.status === 429) {
         last = await readError(response);
+        if (last.code === "quota" || last.code === "rate_limit") quota = last;
         continue;
       }
       if (!response.ok) return readError(response);
@@ -251,7 +253,7 @@ export async function generateGeminiImageBytes(input: {
       };
     }
   }
-  return last ?? {
+  return quota ?? last ?? {
     ok: false,
     code: "unsupported",
     status: "unavailable",
@@ -340,6 +342,7 @@ export async function submitVeoGeneration(input: VeoSubmitInput): Promise<Gemini
           const audioRejected =
             includeAudioParameter && last.message.toLowerCase().includes("generateaudio");
           if (audioRejected) continue;
+          if (response.status === 429 || last.code === "quota" || last.code === "rate_limit") break;
           return last;
         }
         const payload = (await response.json()) as { name?: string };
