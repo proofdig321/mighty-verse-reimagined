@@ -51,6 +51,8 @@ assert(body.instances[0].image.bytesBase64Encoded, "first frame is instance.imag
 assert(body.instances[0].lastFrame.bytesBase64Encoded, "last frame is instance.lastFrame");
 assert(body.parameters.durationSeconds === 8, "first/last interpolation uses 8 seconds");
 assert(body.parameters.generateAudio === true, "audio intention is requested when supported");
+const noAudioParam = veoRequestBody({ prompt: "A mural breathes", includeAudioParameter: false });
+assert(!("generateAudio" in noAudioParam.parameters), "unsupported generateAudio is omitted on retry");
 
 const refs = veoRequestBody({
   prompt: "Character continuity",

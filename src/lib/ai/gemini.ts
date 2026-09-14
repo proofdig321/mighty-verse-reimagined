@@ -214,7 +214,7 @@ export async function generateGeminiImageBytes(input: {
           generationConfig: { responseModalities: ["IMAGE", "TEXT"] },
         }),
       });
-      if (response.status === 404 || response.status === 403) {
+      if (response.status === 404 || response.status === 403 || response.status === 429) {
         last = await readError(response);
         continue;
       }
@@ -269,6 +269,7 @@ export type VeoSubmitInput = {
   resolution?: "720p" | "1080p" | "4k";
   durationSeconds?: 4 | 6 | 8;
   generateAudio?: boolean;
+  includeAudioParameter?: boolean;
   firstFrame?: VeoImageRef | null;
   lastFrame?: VeoImageRef | null;
   referenceImages?: VeoImageRef[];
@@ -302,15 +303,19 @@ export function veoRequestBody(input: VeoSubmitInput) {
   const aspectRatio =
     input.referenceImages?.length && input.aspectRatio === "9:16" ? "16:9" : input.aspectRatio ?? "16:9";
 
+  const parameters: Record<string, unknown> = {
+    aspectRatio,
+    resolution: input.resolution ?? "720p",
+    durationSeconds,
+    sampleCount: 1,
+  };
+  if (input.includeAudioParameter !== false) {
+    parameters.generateAudio = input.generateAudio !== false;
+  }
+
   return {
     instances: [instance],
-    parameters: {
-      aspectRatio,
-      resolution: input.resolution ?? "720p",
-      durationSeconds,
-      sampleCount: 1,
-      ...(input.generateAudio === false ? { generateAudio: false } : { generateAudio: true }),
-    },
+    parameters,
   };
 }
 
@@ -320,38 +325,47 @@ export async function submitVeoGeneration(input: VeoSubmitInput): Promise<Gemini
   const models = videoModelFallbacks(aiModelConfig().videoModel);
   let last: ProviderFailure | null = null;
   for (const model of models) {
-    try {
-      const response = await geminiFetch(`models/${encodeURIComponent(model)}:predictLongRunning`, {
-        method: "POST",
-        body: JSON.stringify(veoRequestBody(input)),
-      });
-      if (response.status === 404 || response.status === 403) {
-        last = await readError(response);
-        continue;
-      }
-      if (!response.ok) return readError(response);
-      const payload = (await response.json()) as { name?: string };
-      if (!payload.name) {
+    for (const includeAudioParameter of [true, false]) {
+      try {
+        const response = await geminiFetch(`models/${encodeURIComponent(model)}:predictLongRunning`, {
+          method: "POST",
+          body: JSON.stringify(veoRequestBody({ ...input, includeAudioParameter })),
+        });
+        if (response.status === 404 || response.status === 403) {
+          last = await readError(response);
+          break;
+        }
+        if (!response.ok) {
+          last = await readError(response);
+          const audioRejected =
+            includeAudioParameter && last.message.toLowerCase().includes("generateaudio");
+          if (audioRejected) continue;
+          return last;
+        }
+        const payload = (await response.json()) as { name?: string };
+        if (!payload.name) {
+          last = {
+            ok: false,
+            code: "unknown",
+            status: "failed",
+            retryable: true,
+            message: "Veo did not return an operation name.",
+            provider: "gemini",
+          };
+          break;
+        }
+        return { ok: true, provider: "gemini", model, operationName: payload.name, creates_canonical: false };
+      } catch (caught) {
         last = {
           ok: false,
           code: "unknown",
           status: "failed",
           retryable: true,
-          message: "Veo did not return an operation name.",
+          message: caught instanceof Error ? caught.message : "Veo submit failed.",
           provider: "gemini",
         };
-        continue;
+        break;
       }
-      return { ok: true, provider: "gemini", model, operationName: payload.name, creates_canonical: false };
-    } catch (caught) {
-      last = {
-        ok: false,
-        code: "unknown",
-        status: "failed",
-        retryable: true,
-        message: caught instanceof Error ? caught.message : "Veo submit failed.",
-        provider: "gemini",
-      };
     }
   }
   return last ?? {
