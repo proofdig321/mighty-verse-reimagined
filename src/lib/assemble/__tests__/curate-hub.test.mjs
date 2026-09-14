@@ -68,7 +68,9 @@ assert(she.withdrawable === false, "Super Hero Ego hub does not offer withdraw")
 assert(she.nextAction.href.includes(`/authority/universes/${UNIVERSE}`), "Studio continuation stays on SHE");
 assert(she.rows.find((row) => row.key === "mural")?.tone === "complete", "registered mural is complete, not minted");
 assert(!she.rows.some((row) => /mint/i.test(`${row.summary}${row.actionLabel ?? ""}`)), "hub never says mint");
-assert(she.rows.find((row) => row.key === "source_media")?.tone === "complete", "bound Mux media is attached");
+assert(she.rows.find((row) => row.key === "source_media")?.href === `/authority/media/${ASSET}`, "bound source opens the media record, not a fake master id");
+assert(she.rows.find((row) => row.key === "source_media")?.actionLabel === "Open media record", "source row names the media/ISRC record");
+assert(she.rows.find((row) => row.key === "universe")?.actionLabel === "Edit metadata", "universe row is the work-record metadata path");
 assert(she.rows.find((row) => row.key === "experience")?.href === `/worlds/${UNIVERSE}`, "experience stays public");
 assert(she.processingNote === null, "attached work is not processing");
 
@@ -186,6 +188,7 @@ const boundNoInspect = deriveCurateHub({
         master_id: "fr-mural",
         title: "Father Raymond",
         has_media: true,
+        asset_id: FR_ASSET,
         provider: "mux",
         storage_ref: "014sJhmHHRL2g52G14xG00L6MTyq4zvunCsZtFStk4Wds",
         scenes: [],
@@ -195,11 +198,13 @@ const boundNoInspect = deriveCurateHub({
   },
   sessions: [],
   inspectCount: 0,
-  boundAssetId: FR_ASSET,
 });
 assert(boundNoInspect.nextAction.label === "Establish Scene", "a mural-bound Universe with zero Scenes goes to Sentinel, not a dead inspect gate");
 assert(boundNoInspect.nextAction.href === `/authority/curate/${FR}/sentinel`, "Father Raymond scene establishment stays on its own Sentinel");
 assert(boundNoInspect.nextAction.body.includes("Intro"), "operator is told to name Intro/Verse/Hook windows");
+assert(boundNoInspect.rows.find((row) => row.key === "sentinel")?.href === `/authority/curate/${FR}/sentinel`, "Sentinel row with zero Scenes goes to Establish Scene, not inspect-first");
+assert(boundNoInspect.rows.find((row) => row.key === "sentinel")?.actionLabel === "Establish Scene", "mural-only work establishes Scenes from Sentinel");
+assert(boundNoInspect.rows.find((row) => row.key === "source_media")?.href === `/authority/media/${FR_ASSET}`, "Father Raymond source row opens the media record");
 
 const noMoments = deriveCurateHub({
   assembly: {

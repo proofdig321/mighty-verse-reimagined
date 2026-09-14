@@ -48,7 +48,7 @@ export type HolographicProgram = {
 export type ExperienceSurfaceLinks = {
   universeHref: string;
   muralHref: string | null;
-  sceneDeckHref: string;
+  sceneDeckHref: string | null;
   sceneHref: Record<string, string>;
   momentHref: Record<string, string>;
 };

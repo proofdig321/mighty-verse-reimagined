@@ -91,9 +91,15 @@ export function UniverseWorldExperience({
             Enter Experience
             <span className="sr-only">{` for ${title}`}</span>
           </Link>
-          <Link href={sceneDeckHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
-            Enter Scene Deck
-          </Link>
+          {scenes.length > 0 ? (
+            <Link
+              href={sceneDeckHref}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+              data-scene-deck-cta="live"
+            >
+              Enter Scene Deck
+            </Link>
+          ) : null}
           {muralHref ? (
             <Link href={muralHref} className={cn(buttonVariants({ variant: "outline", size: "lg" }))}>
               View Mural

@@ -419,9 +419,11 @@ export default async function WorldPage({
                   >
                     Enter Experience
                   </Link>
-                  <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
-                    Scene Deck
-                  </Link>
+                  {data.scenes.length > 0 ? (
+                    <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
+                      Scene Deck
+                    </Link>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -478,11 +480,13 @@ export default async function WorldPage({
                 <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
               )}
             </div>
-            <div className="px-5 py-4 border-t border-border">
-              <Link href={`/worlds/${data.universe_master_id}/scenes`}>
-                <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
-              </Link>
-            </div>
+            {data.scenes.length > 0 ? (
+              <div className="px-5 py-4 border-t border-border">
+                <Link href={`/worlds/${data.universe_master_id}/scenes`}>
+                  <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
+                </Link>
+              </div>
+            ) : null}
           </div>
 
         </div>

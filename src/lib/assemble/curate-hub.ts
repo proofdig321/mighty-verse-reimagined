@@ -15,7 +15,6 @@ import {
   curateMomentHref,
   curateMuralHref,
   curateSentinelHref,
-  mediaInspectHref,
 } from "./studio";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
@@ -108,10 +107,9 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
   );
   const bound =
     Boolean(mural?.has_media) || scenes.some((scene) => Boolean(scene.asset_id));
-  const boundAssetId = input.boundAssetId ?? scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
+  const boundAssetId =
+    input.boundAssetId ?? mural?.asset_id ?? scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
   const incomingAssetId = input.incomingAssetId ?? null;
-  const inspectAssetId = boundAssetId ?? incomingAssetId;
-
   const phase = session?.phase ?? null;
   const phaseKind = phase ? classifyProcessingPhase(phase) : null;
   const processing = Boolean(phase) && phaseKind === "in_progress";
@@ -124,9 +122,9 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         key: "source_media",
         label: "Source media",
         tone: "complete",
-        summary: "Attached to this Universe.",
-        href: boundAssetId ? `/authority/${encodeURIComponent(boundAssetId)}` : curateHubHref(universeId),
-        actionLabel: "Open asset",
+        summary: "Attached to this Universe. ISRC, technical identity, and Replace media live on the media and work records — not on the public page.",
+        href: boundAssetId ? `/authority/media/${encodeURIComponent(boundAssetId)}` : `/authority/${universeId}`,
+        actionLabel: boundAssetId ? "Open media record" : "Open work record",
       }
     : processing
       ? {
@@ -170,28 +168,35 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
             };
 
   const sentinelRow: CurateHubRow =
-    inspectCount > 0
-      ? {
-          key: "sentinel",
-          label: "Sentinel",
-          tone: sceneCount === 0 ? "attention" : "complete",
-          summary:
-            sceneCount === 0
-              ? "Evidence is available. Review candidates before establishing canonical Scenes."
-              : "Evidence is on record. Canonical Scenes already exist.",
-          href: curateSentinelHref(universeId),
-          actionLabel: sceneCount === 0 ? "Establish Scene" : "Open Sentinel",
-        }
+    bound || incomingAssetId
+      ? sceneCount === 0
+        ? {
+            key: "sentinel",
+            label: "Sentinel",
+            tone: "attention",
+            summary:
+              inspectCount > 0
+                ? "Evidence is available. You still name Intro, Verse, Hook windows and set start/end before Accept as Scene."
+                : "Name Intro, Verse 1, Hook, Verse 2 windows and set start/end on the mural. Visual inspection is optional evidence — it does not create Scenes.",
+            href: curateSentinelHref(universeId),
+            actionLabel: "Establish Scene",
+          }
+        : {
+            key: "sentinel",
+            label: "Sentinel",
+            tone: "complete",
+            summary:
+              inspectCount > 0
+                ? "Evidence is on record. Canonical Scenes already exist."
+                : "Canonical Scenes exist. Sentinel can still retain stills and adjust windows.",
+            href: curateSentinelHref(universeId),
+            actionLabel: "Open Sentinel",
+          }
       : {
           key: "sentinel",
           label: "Sentinel",
-          tone: bound || incomingAssetId ? "attention" : "pending",
-          summary:
-            bound || incomingAssetId
-              ? "Source is present. Persist an inspect so Sentinel evidence can inform Scene work."
-              : "Sentinel needs source media first.",
-          href: inspectAssetId ? mediaInspectHref(inspectAssetId) : undefined,
-          actionLabel: inspectAssetId ? "Inspect source" : undefined,
+          tone: "pending",
+          summary: "Sentinel needs source media first.",
         };
 
   const muralRow: CurateHubRow = mural
@@ -320,9 +325,9 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         key: "universe",
         label: "Universe",
         tone: "complete",
-        summary: "Canonical work is established.",
+        summary: "Canonical work is established. Title, description, rights, and Replace media live on this record.",
         href: `/authority/${universeId}`,
-        actionLabel: "Open record",
+        actionLabel: "Edit metadata",
       },
       sourceRow,
       sentinelRow,

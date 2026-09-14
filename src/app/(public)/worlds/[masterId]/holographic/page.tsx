@@ -50,7 +50,7 @@ export default async function HolographicWorldPage({
   const links: ExperienceSurfaceLinks = {
     universeHref: `/worlds/${data.master_id}`,
     muralHref: mural ? `/worlds/${mural.master_id}` : null,
-    sceneDeckHref: `/worlds/${data.master_id}/scenes`,
+    sceneDeckHref: scenes.length > 0 ? `/worlds/${data.master_id}/scenes` : null,
     sceneHref: Object.fromEntries(
       scenes.map((scene) => [
         scene.master_id,
@@ -122,9 +122,11 @@ export default async function HolographicWorldPage({
               View Mural
             </Link>
           ) : null}
-          <Link href={`/worlds/${data.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Scene Deck
-          </Link>
+          {scenes.length > 0 ? (
+            <Link href={`/worlds/${data.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              Scene Deck
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>

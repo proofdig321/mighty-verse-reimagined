@@ -157,7 +157,14 @@ export default async function UniverseScenesPage({
         }
       />
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-8 sm:px-6">
-        <SceneDeckClient scenes={scenes} hideHeader faceDownUntilSelected={false} />
+        {scenes.length > 0 ? (
+          <SceneDeckClient scenes={scenes} hideHeader faceDownUntilSelected={false} />
+        ) : (
+          <p className="text-sm text-muted-foreground" data-universe-scenes="empty">
+            No canonical Scenes are authorised yet. The Mural still plays in full. Intro, Verse, Hook,
+            and other windows are curator decisions — they are not inferred from the file.
+          </p>
+        )}
       </div>
     </div>
   );
