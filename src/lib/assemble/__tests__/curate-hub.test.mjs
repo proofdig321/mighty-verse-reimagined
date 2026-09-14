@@ -70,7 +70,9 @@ assert(she.rows.find((row) => row.key === "mural")?.tone === "complete", "regist
 assert(!she.rows.some((row) => /mint/i.test(`${row.summary}${row.actionLabel ?? ""}`)), "hub never says mint");
 assert(she.rows.find((row) => row.key === "source_media")?.href === `/authority/media/${ASSET}`, "bound source opens the media record, not a fake master id");
 assert(she.rows.find((row) => row.key === "source_media")?.actionLabel === "Open media record", "source row names the media/ISRC record");
-assert(she.rows.find((row) => row.key === "universe")?.actionLabel === "Edit metadata", "universe row is the work-record metadata path");
+assert(she.rows.find((row) => row.key === "universe")?.actionLabel === "Edit identity", "universe row is identity, not a mural media attach");
+assert(she.rows.find((row) => row.key === "mural")?.href === `/authority/${MURAL}`, "mural row opens the mural work record");
+assert(she.rows.find((row) => row.key === "mural")?.actionLabel === "Replace media", "bound mural is where Replace media lives");
 assert(she.rows.find((row) => row.key === "experience")?.href === `/worlds/${UNIVERSE}`, "experience stays public");
 assert(she.processingNote === null, "attached work is not processing");
 
@@ -205,6 +207,8 @@ assert(boundNoInspect.nextAction.body.includes("Intro"), "operator is told to na
 assert(boundNoInspect.rows.find((row) => row.key === "sentinel")?.href === `/authority/curate/${FR}/sentinel`, "Sentinel row with zero Scenes goes to Establish Scene, not inspect-first");
 assert(boundNoInspect.rows.find((row) => row.key === "sentinel")?.actionLabel === "Establish Scene", "mural-only work establishes Scenes from Sentinel");
 assert(boundNoInspect.rows.find((row) => row.key === "source_media")?.href === `/authority/media/${FR_ASSET}`, "Father Raymond source row opens the media record");
+assert(boundNoInspect.rows.find((row) => row.key === "mural")?.href === `/authority/fr-mural`, "Father Raymond Replace media opens the mural record");
+assert(boundNoInspect.rows.find((row) => row.key === "mural")?.actionLabel === "Replace media", "mural-only work replaces media on the mural, not the Universe");
 
 const noMoments = deriveCurateHub({
   assembly: {

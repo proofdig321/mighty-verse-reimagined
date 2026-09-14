@@ -204,9 +204,11 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         key: "mural",
         label: "Mural",
         tone: "complete",
-        summary: `Registered: ${mural.title ?? "Mural"}.`,
-        href: studioHref(universeId),
-        actionLabel: "Open in Studio",
+        summary: bound
+          ? `Registered: ${mural.title ?? "Mural"}. Replace media and presentation live on the Mural record — not the Universe record.`
+          : `Registered: ${mural.title ?? "Mural"}.`,
+        href: `/authority/${mural.master_id}`,
+        actionLabel: bound ? "Replace media" : "Open mural record",
       }
     : {
         key: "mural",
@@ -325,9 +327,9 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         key: "universe",
         label: "Universe",
         tone: "complete",
-        summary: "Canonical work is established. Title, description, rights, and Replace media live on this record.",
-        href: `/authority/${universeId}`,
-        actionLabel: "Edit metadata",
+        summary: "Canonical work is established. Title and description live on identity. Media binds to the Mural, not this Universe record.",
+        href: creativeSuiteIdentityHref(universeId, "curate"),
+        actionLabel: "Edit identity",
       },
       sourceRow,
       sentinelRow,
