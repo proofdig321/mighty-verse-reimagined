@@ -27,8 +27,8 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
 
   await page.goto(ROUTES.universes, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("link", { name: new RegExp(CANON.universeTitle, "i") })).toBeVisible();
-  await expect(page.getByRole("link", { name: /Father Raymond/i })).toHaveCount(0);
-  notes.push("public Universes lists Super Hero Ego only");
+  await expect(page.locator(`a[href*="${CANON.untitledUniverseId}"]`)).toHaveCount(0);
+  notes.push("public Universes lists Super Hero Ego and hides untitled orphan work");
 
   await page.goto(ROUTES.authorityUniverses, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Universes", exact: true })).toBeVisible();
@@ -60,6 +60,33 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
   } else {
     notes.push("Father Raymond hub is past attach in this environment");
   }
+
+  const bind = await page.request.post("/api/authority/media", {
+    data: {
+      asset_id: CANON.fatherRaymondAssetId,
+      universe_id: CANON.fatherRaymondUniverseId,
+    },
+  });
+  expect([200, 409], `Father Raymond attach HTTP ${bind.status()}`).toContain(bind.status());
+  const bindBody = await bind.json();
+  if (bind.status() === 200) {
+    expect(bindBody.asset_id ?? CANON.fatherRaymondAssetId).toBeTruthy();
+    notes.push("Father Raymond ingested Mux binds to Father Raymond's Mural, not Super Hero Ego");
+  } else {
+    expect(bindBody.code).not.toBe("mural_occupied");
+    notes.push(`Father Raymond attach did not occupy Super Hero Ego (HTTP ${bind.status()} ${bindBody.code ?? bindBody.error ?? ""})`);
+  }
+
+  const occupied = await page.request.post("/api/authority/media", {
+    data: {
+      asset_id: CANON.fatherRaymondAssetId,
+      universe_id: CANON.universeId,
+    },
+  });
+  expect(occupied.status()).toBe(409);
+  const occupiedBody = await occupied.json();
+  expect(occupiedBody.code).toBe("mural_occupied");
+  notes.push("Father Raymond media cannot replace Super Hero Ego Mural media");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Clinical occupancy", page.url(), notes, observe);
