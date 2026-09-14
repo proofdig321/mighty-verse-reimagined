@@ -36,11 +36,18 @@ export async function loadCurateHub(universeId: string): Promise<CurateHubSnapsh
       ? latest.asset_id
       : null;
 
+  const { data: master } = await svc
+    .from("master")
+    .select("master_id, current_state_id")
+    .eq("master_id", universeId)
+    .maybeSingle();
+
   return deriveCurateHub({
     assembly,
     sessions: sessions ?? [],
     inspectCount: inspections?.length ?? 0,
     incomingAssetId,
     boundAssetId: sceneAssetIds[0] ?? incomingAssetId,
+    currentStateId: master?.current_state_id ?? null,
   });
 }

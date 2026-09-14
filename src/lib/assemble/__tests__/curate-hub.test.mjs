@@ -121,7 +121,8 @@ assert(ingested.nextAction.href === `/authority/curate/${FR}/mural`, "FR mural r
 assert(ingested.nextAction.body.includes("do not attach it to another work"), "ingested media must not land on Super Hero Ego");
 assert(ingested.rows.find((row) => row.key === "mural")?.actionLabel === "Register Mural", "unregistered mural is register, not mint");
 assert(ingested.rows.find((row) => row.key === "mural")?.href === `/authority/curate/${FR}/mural`, "mural registration is a child page");
-assert(ingested.rows.find((row) => row.key === "source_media")?.actionLabel === "Attach media", "source row still records ingested media waiting to attach");
+assert(ingested.rows.find((row) => row.key === "source_media")?.actionLabel === "Register Mural first", "ingested source without a Mural does not jump to another work");
+assert(ingested.rows.find((row) => row.key === "source_media")?.href === `/authority/curate/${FR}/mural`, "ingested source without a Mural stays on Father Raymond mural registration");
 
 const ingestedWithMural = deriveCurateHub({
   assembly: {
@@ -152,10 +153,12 @@ const ingestedWithMural = deriveCurateHub({
   inspectCount: 0,
   incomingAssetId: FR_ASSET,
 });
-assert(ingestedWithMural.nextAction.title === "Source media ready", "after mural registration, ingested media asks for attachment");
+assert(ingestedWithMural.nextAction.title === "Attach this media", "after mural registration, ingested media asks for attachment");
 assert(ingestedWithMural.nextAction.label === "Attach media", "attachment is curator work on this Universe");
-assert(ingestedWithMural.nextAction.href.includes(FR_ASSET), "FR ingested attach stays on incoming media, not Super Hero Ego");
+assert(ingestedWithMural.nextAction.href === `/authority/curate/${FR}/attach`, "FR ingested attach stays on this Universe");
 assert(!ingestedWithMural.nextAction.href.includes(UNIVERSE), "Father Raymond attach does not open Super Hero Ego");
+assert(ingestedWithMural.rows.find((row) => row.key === "source_media")?.href === `/authority/curate/${FR}/attach`, "after mural registration, source attach stays on Father Raymond");
+assert(she.occupancy === "curated", "Super Hero Ego remains curated");
 
 const noScenes = deriveCurateHub({
   assembly: {

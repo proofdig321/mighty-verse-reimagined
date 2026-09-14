@@ -38,6 +38,7 @@ export {
   creativeSuiteWorkspaceHref,
   curateHubHref,
   curateIncomingHref,
+  curateAttachHref,
   curateMomentHref,
   curateMuralHref,
   curateSentinelHref,
@@ -109,6 +110,16 @@ export type {
 } from "./scene-order";
 export { deriveCurateHub } from "./curate-hub";
 export { loadCurateHub } from "./load-curate-hub";
+export {
+  classifyUniverseOccupancy,
+  hasSourceMediaFromSession,
+  isAssociateTarget,
+  isPubliclyCurated,
+  occupancyLabel,
+} from "./occupancy";
+export type { UniverseOccupancy, UniverseOccupancyInput } from "./occupancy";
+export { decideWithdraw } from "./withdraw";
+export { isProtectedMaster, isPlayableStorageRef } from "./protected-work";
 export { loadInspectWorkScope } from "./load-inspect-scope";
 export type { InspectWorkScope } from "@/lib/media/inspect-scope";
 export type {

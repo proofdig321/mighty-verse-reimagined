@@ -74,6 +74,10 @@ export function curateMomentHref(universeId: string): string {
   return `${curateHubHref(universeId)}/moment`;
 }
 
+export function curateAttachHref(universeId: string): string {
+  return `${curateHubHref(universeId)}/attach`;
+}
+
 export function curateSentinelHref(universeId: string): string {
   return `${curateHubHref(universeId)}/sentinel`;
 }

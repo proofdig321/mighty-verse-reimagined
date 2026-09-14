@@ -6,6 +6,7 @@
 import {
   creativeSuiteHref,
   creativeSuiteSentinelHref,
+  curateAttachHref,
   curateHubHref,
   curateSentinelHref,
   mediaInspectHref,
@@ -49,10 +50,10 @@ export function curateContinuation(input: {
 
   if (input.muralRegistered && !input.mediaAttached && !input.assetId) {
     return {
-      copy: "Mural registered. Media is not attached. Next: associate incoming media, then inspect, then continue in Creative Studio for storyboard, animation planning, and 2.5D Preview.",
+      copy: "Mural registered. Media is not attached. Next: attach this Universe's ingested source to its Mural, then inspect, then continue in Creative Studio.",
       actions: [
         { href: curateHubHref(universeId), label: "Back to Curate" },
-        { href: "/authority/curate", label: "Incoming media" },
+        { href: curateAttachHref(universeId), label: "Attach media" },
         { href: creativeSuiteHref(universeId, "curate"), label: "Open Creative Studio" },
       ],
     };

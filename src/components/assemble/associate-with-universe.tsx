@@ -19,14 +19,16 @@ export function AssociateWithUniverse({
   media,
   universes,
   defaultOpen = false,
+  lockedUniverseId,
 }: {
   media: CurateStudioMedia;
   universes: CurateStudioUniverse[];
   defaultOpen?: boolean;
+  lockedUniverseId?: string | null;
 }) {
   const router = useRouter();
-  const [open, setOpen] = useState(defaultOpen);
-  const [universeId, setUniverseId] = useState("");
+  const [open, setOpen] = useState(defaultOpen || Boolean(lockedUniverseId));
+  const [universeId, setUniverseId] = useState(lockedUniverseId ?? "");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +116,7 @@ export function AssociateWithUniverse({
           id={`associate-universe-${media.asset_id}`}
           aria-label="Select Universe to associate"
           value={universeId}
-          disabled={busy}
+          disabled={busy || Boolean(lockedUniverseId)}
           onChange={(event) => {
             setUniverseId(event.target.value);
             setError(null);
@@ -126,7 +128,11 @@ export function AssociateWithUniverse({
           {universes.map((universe) => (
             <option key={universe.master_id} value={universe.master_id}>
               {universe.title ?? "Untitled universe"}
-              {universe.target.compatible ? "" : " — no compatible Mural"}
+              {universe.target.bound_asset_id && universe.target.bound_asset_id !== media.asset_id
+                ? " — already has media"
+                : universe.target.compatible
+                  ? ""
+                  : " — no compatible Mural"}
             </option>
           ))}
         </select>

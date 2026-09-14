@@ -9,6 +9,8 @@ test("universes lists real Universe content", async ({ page, observe }, testInfo
 
   await expect(page.getByRole("heading", { name: /All Universes/i })).toBeVisible();
   await expect(page.getByRole("link", { name: new RegExp(CANON.universeTitle, "i") })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Father Raymond/i })).toHaveCount(0);
+  await expect(page.locator(`a[href*="${CANON.untitledUniverseId}"]`)).toHaveCount(0);
 
   const universeLink = page.locator(`a[href="${ROUTES.universeLive}"]`).first();
   await expect(universeLink).toBeVisible();

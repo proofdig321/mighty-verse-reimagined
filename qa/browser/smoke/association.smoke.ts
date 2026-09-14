@@ -76,16 +76,19 @@ test("unassociated media can associate to an existing Universe without creating 
   await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
   notes.push("Curate Studio shows Super Hero Ego as occupied for unbound media");
 
-  await associateForm.getByLabel("Select Universe to associate").selectOption(CANON.untitledUniverseId);
-  const untitledNoMural = associateForm.getByRole("alert").filter({ hasText: /no Mural/i });
-  if (await untitledNoMural.count()) {
-    await expect(untitledNoMural).toBeVisible();
-    await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
-    await expect(associateForm.getByRole("button", { name: "Register Mural" })).toBeVisible();
-    notes.push("Universe without Mural is blocked; Register Mural is offered without creating a binding");
+  const untitledOption = associateForm.locator(`option[value="${CANON.untitledUniverseId}"]`);
+  if (await untitledOption.count()) {
+    await associateForm.getByLabel("Select Universe to associate").selectOption(CANON.untitledUniverseId);
+    const untitledNoMural = associateForm.getByRole("alert").filter({ hasText: /no Mural/i });
+    if (await untitledNoMural.count()) {
+      await expect(untitledNoMural).toBeVisible();
+      await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeDisabled();
+      notes.push("Universe without Mural is blocked; Register Mural is offered without creating a binding");
+    } else {
+      notes.push("untitled Universe is listed; association smoke does not bind unbound Livepeer");
+    }
   } else {
-    await expect(associateForm.getByRole("button", { name: "Confirm association" })).toBeVisible();
-    notes.push("untitled Universe already has a Mural; association smoke does not bind unbound Livepeer");
+    notes.push("untitled orphan Universe is not an association target");
   }
 
   await muxRow.getByRole("link", { name: "Open Creative Studio", exact: true }).click();

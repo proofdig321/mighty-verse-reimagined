@@ -10,6 +10,7 @@ test("home loads primary content and real Universe data", async ({ page, observe
   await expect(page.getByRole("heading", { name: /Every Song is a Universe/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /Explore Universes/i })).toBeVisible();
   await expect(page.getByText(CANON.universeTitle).first()).toBeVisible();
+  await expect(page.getByText(/Father Raymond/i)).toHaveCount(0);
 
   await page.waitForTimeout(1500);
 

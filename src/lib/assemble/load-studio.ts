@@ -2,10 +2,17 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { buildUniverseAssociationTarget, type UniverseAssociationTarget } from "./association";
 import { associateAssetWithCanonicalWork, type CurateStudioMedia, type StudioInspectionSummary } from "./studio";
+import {
+  classifyUniverseOccupancy,
+  hasSourceMediaFromSession,
+  isAssociateTarget,
+  type UniverseOccupancy,
+} from "./occupancy";
 
 export type CurateStudioUniverse = {
   master_id: string;
   title: string | null;
+  occupancy: UniverseOccupancy;
   target: UniverseAssociationTarget;
 };
 
@@ -20,7 +27,7 @@ export async function loadCurateStudioMedia(): Promise<{
   const svc = getServiceClient();
 
   const [{ data: universeMasters }, { data: rawAssets }, { data: intakes }] = await Promise.all([
-    svc.from("master").select("master_id").eq("canonical_type", "universe").order("created_at", { ascending: true }),
+    svc.from("master").select("master_id, current_state_id").eq("canonical_type", "universe").order("created_at", { ascending: true }),
     svc
       .from("media_asset")
       .select("asset_id, provider, storage_ref, duration_ms, rights_holder_ref, asset_type, intake_id")
@@ -53,15 +60,31 @@ export async function loadCurateStudioMedia(): Promise<{
     : [{ data: [] }, { data: [] }];
 
   const muralProjIds = (muralProjs ?? []).map((row) => row.projection_id);
-  const { data: muralBindings } = muralProjIds.length
-    ? await svc
-        .from("projection_media_binding")
-        .select("projection_id, asset_id")
-        .in("projection_id", muralProjIds)
-        .eq("binding_type", "primary")
-    : { data: [] };
+  const [{ data: muralBindings }, { data: uploadSessions }] = await Promise.all([
+    muralProjIds.length
+      ? svc
+          .from("projection_media_binding")
+          .select("projection_id, asset_id")
+          .in("projection_id", muralProjIds)
+          .eq("binding_type", "primary")
+      : Promise.resolve({ data: [] }),
+    universeIds.length
+      ? svc.from("media_upload_session").select("master_id, phase, asset_id, updated_at").in("master_id", universeIds)
+      : Promise.resolve({ data: [] }),
+  ]);
 
-  const universes: CurateStudioUniverse[] = (universeMasters ?? []).map((row) => {
+  const latestSessionByUniverse = new Map<string, { phase: string | null; asset_id: string | null }>();
+  const sessionsNewestFirst = [...(uploadSessions ?? [])].sort(
+    (a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at),
+  );
+  for (const session of sessionsNewestFirst) {
+    if (!session.master_id) continue;
+    if (!latestSessionByUniverse.has(session.master_id)) {
+      latestSessionByUniverse.set(session.master_id, { phase: session.phase, asset_id: session.asset_id });
+    }
+  }
+
+  const allUniverses: CurateStudioUniverse[] = (universeMasters ?? []).map((row) => {
     const title = (universePres ?? []).find((pres) => pres.master_id === row.master_id)?.title ?? null;
     const mural = (muralMasters ?? []).find((item) => item.parent_master_id === row.master_id) ?? null;
     const projection = mural
@@ -70,9 +93,20 @@ export async function loadCurateStudioMedia(): Promise<{
     const binding = projection
       ? (muralBindings ?? []).find((item) => item.projection_id === projection.projection_id) ?? null
       : null;
+    const session = latestSessionByUniverse.get(row.master_id);
+    const occupancy = classifyUniverseOccupancy({
+      title,
+      currentStateId: row.current_state_id,
+      muralHasPlayableMedia: Boolean(binding?.asset_id),
+      hasSourceMedia: Boolean(binding?.asset_id) || hasSourceMediaFromSession({
+        phase: session?.phase,
+        assetId: session?.asset_id,
+      }),
+    });
     return {
       master_id: row.master_id,
       title,
+      occupancy,
       target: buildUniverseAssociationTarget({
         universeId: row.master_id,
         universeTitle: title,
@@ -87,6 +121,7 @@ export async function loadCurateStudioMedia(): Promise<{
       }),
     };
   });
+  const universes = allUniverses.filter((universe) => isAssociateTarget(universe.occupancy));
 
   const assets = rawAssets ?? [];
   const assetIds = assets.map((asset) => asset.asset_id);

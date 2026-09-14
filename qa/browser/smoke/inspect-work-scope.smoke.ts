@@ -42,16 +42,24 @@ test("inspect scopes Super Hero Ego Scenes to Super Hero Ego media only", async 
 
   const frHub = await page.goto(ROUTES.authorityFatherRaymondHub, { waitUntil: "domcontentloaded" });
   if (frHub && frHub.ok() && !/\/auth\/sign-in/.test(page.url())) {
-    const next = page.getByRole("heading", { name: /Register a Mural/i });
-    if (await next.count()) {
-      await expect(next).toBeVisible();
+    const attach = page.getByRole("heading", { name: /Attach this media/i });
+    const mural = page.getByRole("heading", { name: /Register a Mural/i });
+    if (await attach.count()) {
+      await expect(attach).toBeVisible();
+      await expect(page.getByRole("link", { name: "Attach media" }).first()).toHaveAttribute(
+        "href",
+        ROUTES.authorityFatherRaymondAttach,
+      );
+      notes.push("Father Raymond Curate Hub next action is Attach media on this Universe");
+    } else if (await mural.count()) {
+      await expect(mural).toBeVisible();
       await expect(page.getByRole("link", { name: "Register Mural" }).first()).toHaveAttribute(
         "href",
         ROUTES.authorityFatherRaymondMural,
       );
       notes.push("Father Raymond Curate Hub next action is Register Mural, not Super Hero Ego");
     } else {
-      notes.push("Father Raymond hub loaded; next action is not Register Mural in this environment");
+      notes.push("Father Raymond hub loaded; next action is not Register Mural or Attach in this environment");
     }
   } else {
     notes.push(`Father Raymond hub not live in this environment (HTTP ${frHub?.status() ?? "none"})`);

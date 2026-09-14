@@ -57,10 +57,10 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   await expect(page.locator("tr[aria-current='true']").getByRole("link", { name: "Open Creative Studio", exact: true })).toBeVisible();
   notes.push("Path B: Inspect Continue in Curate retains the same Mux asset context");
 
-  await page.goto(`${ROUTES.curate}?asset=${CANON.muxAssetId}&universe=${CANON.untitledUniverseId}`, {
+  await page.goto(`${ROUTES.curate}?asset=${CANON.muxAssetId}&universe=${CANON.fatherRaymondUniverseId}`, {
     waitUntil: "domcontentloaded",
   });
-  await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.untitledUniverseId}$`));
+  await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.fatherRaymondUniverseId}$`));
   await expect(page.getByText("Curate Hub", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "Associate with Universe" })).toHaveCount(0);
   notes.push("legacy universe query opens that work's hub and cannot re-associate Super Hero Ego media");

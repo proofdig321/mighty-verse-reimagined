@@ -103,12 +103,12 @@ test("a Universe without a Mural can register one without attaching media", asyn
 
   await page.goto(ROUTES.curate, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /^Curate$/ })).toBeVisible();
-  await page.getByLabel("Select Universe for Curate Studio").selectOption(CANON.untitledUniverseId);
-  await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.untitledUniverseId}$`));
+  await page.getByLabel("Select Universe for Curate Studio").selectOption(CANON.fatherRaymondUniverseId);
+  await expect(page).toHaveURL(new RegExp(`/authority/curate/${CANON.fatherRaymondUniverseId}$`));
   await expect(page.getByText("Curate Hub", { exact: true })).toBeVisible();
-  await expect(page.getByText(/no Mural yet/i)).toHaveCount(0);
+  await expect(page.locator("[data-occupancy]").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Open Creative Studio" }).first()).toBeVisible();
-  notes.push("Curate Hub for the registered Universe no longer treats it as mural-less");
+  notes.push("Curate Hub for Father Raymond stays on that Universe and is not Super Hero Ego");
 
   assertRuntimeHealth(observe);
   reportEvidence(

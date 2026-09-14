@@ -1,4 +1,4 @@
-import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref } from "../studio";
+import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref, curateAttachHref } from "../studio";
 import { creativeSuiteNavItems, resolveStudioHash, suiteChildHref } from "../suite";
 
 function assert(condition, message) {
@@ -91,6 +91,7 @@ assert(
   "bound work occupancy prefers the hub over stacking asset query onto the index",
 );
 assert(curateIncomingHref(ASSET) === `/authority/curate?asset=${ASSET}`, "incoming attach stays on the catalogue");
+assert(curateAttachHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/attach`, "source attach is a hub child page");
 assert(curateStudioHref() === "/authority/curate", "Curate without context stays on the incoming catalogue");
 
 const suite = `/authority/universes/${UNIVERSE}`;

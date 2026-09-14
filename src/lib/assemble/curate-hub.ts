@@ -7,11 +7,11 @@
  */
 import { classifyProcessingPhase } from "../media/processing-state";
 import {
-  CURATE_STUDIO_HREF,
   creativeSuiteHref,
+  creativeSuiteIdentityHref,
   creativeSuiteScenesHref,
+  curateAttachHref,
   curateHubHref,
-  curateIncomingHref,
   curateMomentHref,
   curateMuralHref,
   curateSentinelHref,
@@ -19,6 +19,12 @@ import {
 } from "./studio";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
+import {
+  classifyUniverseOccupancy,
+  occupancyLabel,
+  type UniverseOccupancy,
+} from "./occupancy";
+import { isProtectedMaster } from "./protected-work";
 
 export type CurateHubRowKey =
   | "universe"
@@ -51,6 +57,12 @@ export type CurateHubNextAction = {
 export type CurateHubSnapshot = {
   universeId: string;
   universeTitle: string;
+  occupancy: UniverseOccupancy;
+  occupancyLabel: string;
+  identityHref: string;
+  withdrawable: boolean;
+  incomingAssetId: string | null;
+  boundAssetId: string | null;
   rows: CurateHubRow[];
   nextAction: CurateHubNextAction;
   processingNote: string | null;
@@ -70,6 +82,7 @@ export type CurateHubInput = {
   inspectCount: number;
   incomingAssetId?: string | null;
   boundAssetId?: string | null;
+  currentStateId?: string | null;
 };
 
 function latestSession(sessions: CurateHubSession[]) {
@@ -141,11 +154,11 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
               key: "source_media",
               label: "Source media",
               tone: "attention",
-              summary: "Ingested and waiting for curator attachment.",
-              href: incomingAssetId
-                ? curateIncomingHref(incomingAssetId)
-                : CURATE_STUDIO_HREF,
-              actionLabel: "Attach media",
+              summary: mural
+                ? "Ingested and waiting for curator attachment to this Universe's Mural."
+                : "Ingested and waiting. Register a Mural for this Universe before attaching — do not attach it to another work.",
+              href: mural ? curateAttachHref(universeId) : curateMuralHref(universeId),
+              actionLabel: mural ? "Attach media" : "Register Mural first",
             }
           : {
               key: "source_media",
@@ -284,12 +297,24 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
     sceneCount,
     momentCount,
     presenceCount,
-    incomingAssetId,
+  });
+
+  const occupancy = classifyUniverseOccupancy({
+    title: assembly.title,
+    currentStateId: input.currentStateId ?? "present",
+    muralHasPlayableMedia: bound,
+    hasSourceMedia: bound || ingestedUnbound || processing,
   });
 
   return {
     universeId,
     universeTitle,
+    occupancy,
+    occupancyLabel: occupancyLabel(occupancy),
+    identityHref: creativeSuiteIdentityHref(universeId, "curate"),
+    withdrawable: occupancy === "orphan" && !isProtectedMaster(universeId),
+    incomingAssetId,
+    boundAssetId,
     rows: [
       {
         key: "universe",
@@ -328,7 +353,6 @@ function resolveNextAction(input: {
   sceneCount: number;
   momentCount: number;
   presenceCount: number;
-  incomingAssetId: string | null;
 }): CurateHubNextAction {
   const { universeId } = input;
 
@@ -362,13 +386,10 @@ function resolveNextAction(input: {
   }
 
   if (input.ingestedUnbound) {
-    const href = input.incomingAssetId
-      ? curateIncomingHref(input.incomingAssetId)
-      : CURATE_STUDIO_HREF;
     return {
-      title: "Source media ready",
-      body: "Attach it to this Universe's Mural. Media is not the Universe, and it is not another work's Mural.",
-      href,
+      title: "Attach this media",
+      body: "Bind the ingested source to this Universe's Mural. Do not attach it to Super Hero Ego or another work.",
+      href: curateAttachHref(universeId),
       label: "Attach media",
     };
   }

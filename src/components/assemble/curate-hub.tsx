@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
 import type { CurateHubRow, CurateHubSnapshot } from "@/lib/assemble/curate-hub";
+import { WithdrawWork } from "./withdraw-work";
 
 function toneClass(tone: CurateHubRow["tone"]) {
   if (tone === "complete") return "border-emerald-500/40 bg-emerald-500/10";
@@ -35,13 +36,21 @@ export function CurateHub({ snapshot }: { snapshot: CurateHubSnapshot }) {
             Here is the work. Here is what is true. Here is what needs your attention.
             Sentinel observes. You decide canonical meaning.
           </p>
+          <p className="text-xs text-muted-foreground" data-occupancy={snapshot.occupancy}>
+            Occupancy: {snapshot.occupancyLabel}
+          </p>
         </div>
-        <Link
-          href={snapshot.nextAction.href}
-          className={buttonVariants({ size: "sm" })}
-        >
-          {snapshot.nextAction.label}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <Link href={snapshot.identityHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            Edit identity
+          </Link>
+          <Link
+            href={snapshot.nextAction.href}
+            className={buttonVariants({ size: "sm" })}
+          >
+            {snapshot.nextAction.label}
+          </Link>
+        </div>
       </div>
 
       {snapshot.processingNote && (
@@ -64,6 +73,9 @@ export function CurateHub({ snapshot }: { snapshot: CurateHubSnapshot }) {
         <Link href={snapshot.nextAction.href} className={buttonVariants()}>
           {snapshot.nextAction.label}
         </Link>
+        {snapshot.withdrawable ? (
+          <WithdrawWork masterId={snapshot.universeId} title={snapshot.universeTitle} />
+        ) : null}
       </div>
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">

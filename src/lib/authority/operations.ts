@@ -1,5 +1,7 @@
 import { validateAuthority, logOperation, computeHash, getServiceClient } from "./validate";
 import type { AuthorityCapability } from "./validate";
+import { isProtectedMaster } from "@/lib/assemble/protected-work";
+import { decideWithdraw } from "@/lib/assemble/withdraw";
 
 export type OperationResult<T> = { data: T } | { error: string };
 
@@ -568,4 +570,88 @@ export async function designateCollectible(
   await logOperation(auth.authority_id, "designate-collectible", projectionId, "projection", "accepted");
 
   return { data: { projection_id: projectionId } };
+}
+
+async function descendantMasterIds(
+  supabase: ReturnType<typeof getServiceClient>,
+  master: { master_id: string; canonical_type: string },
+): Promise<string[]> {
+  const ids: string[] = [];
+  if (master.canonical_type === "universe") {
+    const { data: children } = await supabase
+      .from("master")
+      .select("master_id, canonical_type")
+      .eq("parent_master_id", master.master_id);
+    for (const child of children ?? []) {
+      ids.push(child.master_id);
+      if (child.canonical_type === "mural") {
+        const { data: scenes } = await supabase
+          .from("master")
+          .select("master_id")
+          .eq("parent_master_id", child.master_id)
+          .eq("canonical_type", "scene");
+        for (const scene of scenes ?? []) ids.push(scene.master_id);
+      }
+    }
+  } else if (master.canonical_type === "mural") {
+    const { data: scenes } = await supabase
+      .from("master")
+      .select("master_id")
+      .eq("parent_master_id", master.master_id)
+      .eq("canonical_type", "scene");
+    for (const scene of scenes ?? []) ids.push(scene.master_id);
+  }
+  return ids;
+}
+
+// ---------------------------------------------------------------------------
+// 6. Withdraw a Master — Authority act, not a CMS delete
+//
+// Clears current_state_id so Discover listings that already require an
+// authorised current state stop presenting the work. Rows, projections,
+// bindings, and provenance remain. Super Hero Ego cannot be withdrawn.
+// ---------------------------------------------------------------------------
+export async function withdrawMaster(
+  participantId: string,
+  masterId: string,
+): Promise<OperationResult<{ master_ids: string[]; already: boolean }>> {
+  const preview = decideWithdraw({ masterId, currentStateId: undefined });
+  if (!preview.ok) return { error: preview.message };
+
+  const auth = await validateAuthority(participantId, "advance-master-state", masterId);
+  if ("error" in auth) return { error: auth.error };
+
+  const supabase = getServiceClient();
+  const { data: master } = await supabase
+    .from("master")
+    .select("master_id, canonical_type, current_state_id")
+    .eq("master_id", masterId)
+    .maybeSingle();
+  if (!master) return { error: "Master not found" };
+  if (isProtectedMaster(master.master_id)) {
+    return { error: "Super Hero Ego is curated canonical work. It cannot be withdrawn." };
+  }
+
+  const decided = decideWithdraw({
+    masterId: master.master_id,
+    currentStateId: master.current_state_id,
+  });
+  if (!decided.ok) return { error: decided.message };
+
+  const descendants = await descendantMasterIds(supabase, master);
+  const subjectIds = [master.master_id, ...descendants].filter((id) => !isProtectedMaster(id));
+
+  if (decided.action === "already_withdrawn") {
+    await logOperation(auth.authority_id, "withdraw-master", master.master_id, "master", "accepted");
+    return { data: { master_ids: subjectIds, already: true } };
+  }
+
+  const { error } = await supabase
+    .from("master")
+    .update({ current_state_id: null })
+    .in("master_id", subjectIds);
+  if (error) return { error: `Failed to withdraw master: ${error.message}` };
+
+  await logOperation(auth.authority_id, "withdraw-master", master.master_id, "master", "accepted");
+  return { data: { master_ids: subjectIds, already: false } };
 }

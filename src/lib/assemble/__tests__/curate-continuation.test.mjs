@@ -35,7 +35,8 @@ const registered = curateContinuation({
   muralRegistered: true,
   mediaAttached: false,
 });
-assert(registered.actions.some((a) => a.label === "Incoming media"), "registered mural without media points back to incoming media");
+assert(registered.actions.some((a) => a.label === "Attach media"), "registered mural without media points to attach on this Universe");
+assert(registered.actions.find((a) => a.label === "Attach media")?.href === `/authority/curate/${UNIVERSE}/attach`, "attach stays on this Universe");
 assert(registered.actions.some((a) => a.label === "Back to Curate"), "registered mural returns to the Curate Hub");
 assert(registered.actions.find((a) => a.label === "Back to Curate")?.href === `/authority/curate/${UNIVERSE}`, "hub return stays on the same Universe");
 assert(registered.actions.some((a) => a.label === "Open Creative Studio"), "registered mural still offers Creative Studio");
