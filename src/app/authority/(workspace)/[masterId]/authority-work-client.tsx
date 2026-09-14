@@ -336,7 +336,7 @@ export default function AuthorityWorkClient({
   const status = getWorkStatus(master, state, projection, binding, presentation, projPres, realizations, master.master_id);
 
   const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
-  const title = presentation?.title ?? projPres?.title ?? typeLabel;
+  const title = presentation?.title ?? projPres?.title ?? parentTitle ?? typeLabel;
   const journey = getJourneySteps(master, status);
   const nextStep = getNextAction(master, status);
   const playback = toAuthorityProjectionMedia(binding);
@@ -415,12 +415,14 @@ export default function AuthorityWorkClient({
       </div>
 
       {playback && projection && state && (
-        <ProjectionMediaPlayer
-          media={playback}
-          projectionId={projection.projection_id}
-          masterId={master.master_id}
-          canonicalStateId={state.canonical_state_id}
-        />
+        <section aria-label="Attached media">
+          <ProjectionMediaPlayer
+            media={playback}
+            projectionId={projection.projection_id}
+            masterId={master.master_id}
+            canonicalStateId={state.canonical_state_id}
+          />
+        </section>
       )}
 
       {projection && uploadSessions[0] && (

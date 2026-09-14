@@ -50,17 +50,33 @@ export default async function AuthorityWorkPage({
 
   const projectionIds = (projections ?? []).map((p) => p.projection_id);
 
-  const [{ data: bindings }, { data: presentations }, { data: projectionPresentations }, { data: realizations }, { data: participants }] = await Promise.all([
+  const [{ data: bindings }, { data: presentationRow }, { data: projectionPresentationRows }, { data: realizations }, { data: participants }] = await Promise.all([
     projectionIds.length
       ? svc.from("projection_media_binding").select("binding_id, projection_id, binding_type, access_level, asset_id, start_ms, end_ms, realization_id, media_asset(storage_ref, asset_type, rights_holder_ref, rights_basis, provider)").in("projection_id", projectionIds)
       : Promise.resolve({ data: [] }),
-    svc.from("work_presentation").select("master_id, title, description, artwork_asset_id, artwork_asset(storage_ref)").eq("master_id", masterId).maybeSingle(),
+    svc.from("work_presentation").select("master_id, title, description, artwork_asset_id").eq("master_id", masterId).maybeSingle(),
     projectionIds.length
-      ? svc.from("projection_presentation").select("projection_id, title, description, artwork_asset_id, artwork_asset(storage_ref)").in("projection_id", projectionIds)
+      ? svc.from("projection_presentation").select("projection_id, title, description, artwork_asset_id").in("projection_id", projectionIds)
       : Promise.resolve({ data: [] }),
     svc.from("media_realization").select("realization_id, master_id, realization_type, rights_holder_ref, rights_basis, production_notes").eq("master_id", masterId),
     svc.from("participant").select("participant_id, identity_link(identity_ref, active)").eq("status", "active"),
   ]);
+
+  const artworkIds = [
+    presentationRow?.artwork_asset_id,
+    ...(projectionPresentationRows ?? []).map((row) => row.artwork_asset_id),
+  ].filter((id): id is string => Boolean(id));
+  const { data: artworkAssets } = artworkIds.length
+    ? await svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", artworkIds)
+    : { data: [] };
+  const artworkById = new Map((artworkAssets ?? []).map((asset) => [asset.asset_id, { storage_ref: asset.storage_ref }]));
+  const presentations = presentationRow
+    ? { ...presentationRow, artwork_asset: presentationRow.artwork_asset_id ? artworkById.get(presentationRow.artwork_asset_id) ?? null : null }
+    : null;
+  const projectionPresentations = (projectionPresentationRows ?? []).map((row) => ({
+    ...row,
+    artwork_asset: row.artwork_asset_id ? artworkById.get(row.artwork_asset_id) ?? null : null,
+  }));
 
   // B5: parent context
   let parentTitle: string | null = null;

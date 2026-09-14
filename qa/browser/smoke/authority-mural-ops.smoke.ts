@@ -45,6 +45,7 @@ test("Father Raymond mural record plays Mux and rights save without HTTP 405", a
 
   await page.goto(ROUTES.authorityFatherRaymondMuralRecord, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: new RegExp(CANON.fatherRaymondTitleIncludes, "i") })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Attached media" })).toBeVisible();
   await expect(page.getByText("Playable media attached")).toBeVisible();
   const player = page.locator('video[aria-label="Mighty Verse media player"]');
   await expect(player).toBeVisible();
