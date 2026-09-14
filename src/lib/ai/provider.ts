@@ -17,6 +17,7 @@ export type AiProviderId = "chrome-prompt" | "gemini" | "none";
 
 export type AiCapability = {
   provider: AiProviderId;
+  configured: boolean;
   text: boolean;
   image: boolean;
   video: boolean;
@@ -31,6 +32,7 @@ export function serverAiCapability(): AiCapability {
   const capability = aiServiceCapability();
   return {
     provider: capability.provider,
+    configured: capability.configured,
     text: capability.text,
     image: capability.image,
     video: capability.video,

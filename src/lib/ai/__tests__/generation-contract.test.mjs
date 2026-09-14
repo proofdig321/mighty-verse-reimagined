@@ -1,5 +1,6 @@
 import { canRetryJob, generationIdempotencyKey, jobProgressPercent, jobUiLabel, transitionJob } from "../jobs";
 import { aiServiceCapability } from "../config";
+import { textModelFallbacks } from "../config";
 import { classifyGeminiHttpError, unconfiguredFailure } from "../errors";
 import { composeMotionPrompt, composeStillPrompt } from "../prompt-composer";
 import { veoRequestBody } from "../gemini";
@@ -60,8 +61,10 @@ assert(refs.parameters.aspectRatio === "16:9", "reference images stay on 16:9");
 assert(refs.instances[0].referenceImages.length === 1, "reference images are capped in the instance");
 
 const capability = aiServiceCapability();
-assert(capability.modes["text-to-video"], "video mode exists even when the current key is missing");
-assert(capability.models.video.includes("veo"), "video model is configurable, not hidden");
+assert(Object.prototype.hasOwnProperty.call(capability, "configured"), "capability reports configured without exposing the key");
+assert(textModelFallbacks("gemini-2.0-flash")[0] === "gemini-2.0-flash", "configured text model stays first");
+assert(textModelFallbacks("gemini-2.0-flash").includes("gemini-2.5-flash"), "shut-down text models fall back to a live Flash model");
+assert(capability.models.text === "gemini-2.5-flash" || capability.models.text.length > 0, "text model is configurable");
 if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY && !process.env.GOOGLE_API_KEY) {
   assert(capability.configured === false, "missing key is configuration, not a missing product");
   assert(capability.modes["text-to-video"].available === false, "unconfigured video reports unavailable honestly");

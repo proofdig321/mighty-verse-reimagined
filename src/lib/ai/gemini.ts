@@ -3,7 +3,7 @@
  * Credentials stay server-side. Never import from client components.
  */
 
-import { aiModelConfig, imageModelFallbacks } from "./config";
+import { aiModelConfig, imageModelFallbacks, textModelFallbacks, videoModelFallbacks } from "./config";
 import { classifyGeminiHttpError, unconfiguredFailure, type ProviderFailure } from "./errors";
 import { geminiApiKey } from "./provider-key";
 import { parseStructuredStoryboardJson, STORYBOARD_JSON_SCHEMA, type StructuredStoryboard } from "./structured-storyboard";
@@ -79,40 +79,56 @@ export async function generateGeminiText(input: {
 }): Promise<GeminiTextOk | ProviderFailure> {
   const key = geminiApiKey();
   if (!key) return unconfiguredFailure();
-  const model = input.model ?? aiModelConfig().textModel;
-  try {
-    const response = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: input.system }] },
-        contents: [{ role: "user", parts: [{ text: input.prompt }] }],
-      }),
-    });
-    if (!response.ok) return readError(response);
-    const payload = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
-    const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
-    if (!text) {
-      return {
+  const models = input.model ? [input.model] : textModelFallbacks(aiModelConfig().textModel);
+  let last: ProviderFailure | null = null;
+  for (const model of models) {
+    try {
+      const response = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: input.system }] },
+          contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+        }),
+      });
+      if (response.status === 404 || response.status === 403) {
+        last = await readError(response);
+        continue;
+      }
+      if (!response.ok) return readError(response);
+      const payload = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
+      const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+      if (!text) {
+        last = {
+          ok: false,
+          code: "unknown",
+          status: "failed",
+          retryable: true,
+          message: "Gemini returned empty text.",
+          provider: "gemini",
+        };
+        continue;
+      }
+      return { ok: true, provider: "gemini", text, model, creates_canonical: false };
+    } catch (caught) {
+      if (caught instanceof Error && caught.message === "unconfigured") return unconfiguredFailure();
+      last = {
         ok: false,
         code: "unknown",
         status: "failed",
         retryable: true,
-        message: "Gemini returned empty text.",
+        message: caught instanceof Error ? caught.message : "Gemini request failed.",
         provider: "gemini",
       };
     }
-    return { ok: true, provider: "gemini", text, model, creates_canonical: false };
-  } catch (caught) {
-    if (caught instanceof Error && caught.message === "unconfigured") return unconfiguredFailure();
-    return {
-      ok: false,
-      code: "unknown",
-      status: "failed",
-      retryable: true,
-      message: caught instanceof Error ? caught.message : "Gemini request failed.",
-      provider: "gemini",
-    };
   }
+  return last ?? {
+    ok: false,
+    code: "unsupported",
+    status: "unavailable",
+    retryable: false,
+    message: "No configured Gemini text model accepted this request.",
+    provider: "gemini",
+  };
 }
 
 export async function generateStructuredStoryboard(input: {
@@ -121,45 +137,65 @@ export async function generateStructuredStoryboard(input: {
 }): Promise<{ ok: true; provider: "gemini"; model: string; storyboard: StructuredStoryboard; creates_canonical: false } | ProviderFailure> {
   const key = geminiApiKey();
   if (!key) return unconfiguredFailure();
-  const model = aiModelConfig().textModel;
-  try {
-    const response = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
-      method: "POST",
-      body: JSON.stringify({
-        systemInstruction: { parts: [{ text: input.system }] },
-        contents: [{ role: "user", parts: [{ text: input.prompt }] }],
-        generationConfig: {
-          responseMimeType: "application/json",
-          responseSchema: STORYBOARD_JSON_SCHEMA,
-        },
-      }),
-    });
-    if (!response.ok) return readError(response);
-    const payload = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
-    const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
-    const storyboard = parseStructuredStoryboardJson(text);
-    if (!storyboard) {
-      return {
+  const models = textModelFallbacks(aiModelConfig().textModel);
+  let last: ProviderFailure | null = null;
+  for (const model of models) {
+    try {
+      const response = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: input.system }] },
+          contents: [{ role: "user", parts: [{ text: input.prompt }] }],
+          generationConfig: {
+            responseMimeType: "application/json",
+            responseSchema: STORYBOARD_JSON_SCHEMA,
+          },
+        }),
+      });
+      if (response.status === 404 || response.status === 403) {
+        last = await readError(response);
+        continue;
+      }
+      if (!response.ok) {
+        last = await readError(response);
+        if (last.code === "unsupported") continue;
+        return last;
+      }
+      const payload = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
+      const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+      const storyboard = parseStructuredStoryboardJson(text);
+      if (!storyboard) {
+        last = {
+          ok: false,
+          code: "invalid_request",
+          status: "failed",
+          retryable: true,
+          message: "Gemini returned storyboard JSON that could not be validated. Nothing was saved.",
+          provider: "gemini",
+        };
+        continue;
+      }
+      return { ok: true, provider: "gemini", model, storyboard, creates_canonical: false };
+    } catch (caught) {
+      if (caught instanceof Error && caught.message === "unconfigured") return unconfiguredFailure();
+      last = {
         ok: false,
-        code: "invalid_request",
+        code: "unknown",
         status: "failed",
         retryable: true,
-        message: "Gemini returned storyboard JSON that could not be validated. Nothing was saved.",
+        message: caught instanceof Error ? caught.message : "Structured storyboard generation failed.",
         provider: "gemini",
       };
     }
-    return { ok: true, provider: "gemini", model, storyboard, creates_canonical: false };
-  } catch (caught) {
-    if (caught instanceof Error && caught.message === "unconfigured") return unconfiguredFailure();
-    return {
-      ok: false,
-      code: "unknown",
-      status: "failed",
-      retryable: true,
-      message: caught instanceof Error ? caught.message : "Structured storyboard generation failed.",
-      provider: "gemini",
-    };
   }
+  return last ?? {
+    ok: false,
+    code: "unsupported",
+    status: "unavailable",
+    retryable: false,
+    message: "No configured Gemini text model accepted structured storyboard generation.",
+    provider: "gemini",
+  };
 }
 
 export async function generateGeminiImageBytes(input: {
@@ -281,35 +317,51 @@ export function veoRequestBody(input: VeoSubmitInput) {
 export async function submitVeoGeneration(input: VeoSubmitInput): Promise<GeminiVideoSubmitOk | ProviderFailure> {
   const key = geminiApiKey();
   if (!key) return unconfiguredFailure("Google Veo video generation is not configured.");
-  const model = aiModelConfig().videoModel;
-  try {
-    const response = await geminiFetch(`models/${encodeURIComponent(model)}:predictLongRunning`, {
-      method: "POST",
-      body: JSON.stringify(veoRequestBody(input)),
-    });
-    if (!response.ok) return readError(response);
-    const payload = (await response.json()) as { name?: string };
-    if (!payload.name) {
-      return {
+  const models = videoModelFallbacks(aiModelConfig().videoModel);
+  let last: ProviderFailure | null = null;
+  for (const model of models) {
+    try {
+      const response = await geminiFetch(`models/${encodeURIComponent(model)}:predictLongRunning`, {
+        method: "POST",
+        body: JSON.stringify(veoRequestBody(input)),
+      });
+      if (response.status === 404 || response.status === 403) {
+        last = await readError(response);
+        continue;
+      }
+      if (!response.ok) return readError(response);
+      const payload = (await response.json()) as { name?: string };
+      if (!payload.name) {
+        last = {
+          ok: false,
+          code: "unknown",
+          status: "failed",
+          retryable: true,
+          message: "Veo did not return an operation name.",
+          provider: "gemini",
+        };
+        continue;
+      }
+      return { ok: true, provider: "gemini", model, operationName: payload.name, creates_canonical: false };
+    } catch (caught) {
+      last = {
         ok: false,
         code: "unknown",
         status: "failed",
         retryable: true,
-        message: "Veo did not return an operation name.",
+        message: caught instanceof Error ? caught.message : "Veo submit failed.",
         provider: "gemini",
       };
     }
-    return { ok: true, provider: "gemini", model, operationName: payload.name, creates_canonical: false };
-  } catch (caught) {
-    return {
-      ok: false,
-      code: "unknown",
-      status: "failed",
-      retryable: true,
-      message: caught instanceof Error ? caught.message : "Veo submit failed.",
-      provider: "gemini",
-    };
   }
+  return last ?? {
+    ok: false,
+    code: "unsupported",
+    status: "unavailable",
+    retryable: false,
+    message: "No configured Veo model accepted this request.",
+    provider: "gemini",
+  };
 }
 
 export async function pollVeoOperation(operationName: string): Promise<GeminiVideoStatus | ProviderFailure> {

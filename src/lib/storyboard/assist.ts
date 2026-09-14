@@ -21,3 +21,17 @@ export type AssistActionId = (typeof ASSIST_ACTIONS)[number]["id"];
 export function assistAction(id: string) {
   return ASSIST_ACTIONS.find((item) => item.id === id) ?? null;
 }
+
+const STORY_REPLACE_ACTIONS = new Set([
+  "assist",
+  "improve",
+  "expand",
+  "condense",
+  "create-storyboard",
+  "continue",
+  "short-form",
+]);
+
+export function assistReplacesStory(actionId: string): boolean {
+  return STORY_REPLACE_ACTIONS.has(actionId);
+}

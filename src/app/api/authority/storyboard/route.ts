@@ -190,6 +190,7 @@ export async function POST(request: Request) {
       body: next.body,
       panels: next.panels,
       provider: "gemini",
+      model: structured.model,
       status: "ready",
       creates_scene: false,
       creates_canonical: false,
@@ -217,6 +218,19 @@ export async function POST(request: Request) {
       }, { status: result.status === "unavailable" ? 409 : 502 });
     }
     const applyMode = typeof body.apply === "string" ? body.apply : "replace";
+    const storyReplace = applyMode === "replace" || applyMode === "append";
+    if (!storyReplace) {
+      return NextResponse.json({
+        work,
+        body: work.body,
+        suggestion: result.text,
+        provider: result.provider,
+        status: "ready",
+        applied: false,
+        creates_scene: false,
+        creates_canonical: false,
+      });
+    }
     const nextBody = applyMode === "append" ? `${script || work.body}\n\n${result.text}` : result.text;
     const saved = await saveStoryboardBody({
       participantId,

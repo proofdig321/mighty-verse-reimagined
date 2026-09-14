@@ -22,7 +22,7 @@ import {
   pickGalleryTheme,
 } from "@/lib/storyboard/gallery-theme";
 import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
-import { ASSIST_ACTIONS } from "@/lib/storyboard/assist";
+import { ASSIST_ACTIONS, assistReplacesStory } from "@/lib/storyboard/assist";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import { jobUiLabel, type GenerationJobKind } from "@/lib/ai/jobs";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
@@ -53,7 +53,7 @@ type JobCard = {
   status: string;
   progress: number | null;
   error: { message?: string } | null;
-  result: { still_url?: string; endpoint_ref?: string; playback_id?: string } | null;
+  result: { still_url?: string; endpoint_ref?: string; playback_id?: string; provider_video_uri?: string | null; has_audio?: boolean | null } | null;
   panel_id: string | null;
   retryable: boolean;
 };
@@ -340,7 +340,7 @@ export function StoryboardWorkspace({
         instruction,
         work_id: work?.work_id,
         panel: selectedPersisted,
-        apply: "replace",
+        apply: assistReplacesStory(actionId) ? "replace" : "suggestion",
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -348,6 +348,13 @@ export function StoryboardWorkspace({
       setAssistState({
         status: payload.status === "unavailable" ? "unavailable" : "failed",
         message: payload.error ?? "AI assist could not complete.",
+      });
+      return;
+    }
+    if (payload.applied === false) {
+      setAssistState({
+        status: "ready",
+        message: `Gemini suggestion (not applied): ${String(payload.suggestion ?? "").slice(0, 280)}`,
       });
       return;
     }
@@ -381,6 +388,8 @@ export function StoryboardWorkspace({
         last_frame_url: lastFrame || undefined,
         reference_urls: references.map((reference) => reference.still_url).filter(Boolean),
         still_urls: generated.map((artifact) => artifact.still_url).filter(Boolean),
+        playback_ids: generated.map((artifact) => artifact.playback_id).filter(Boolean),
+        extension_video_uri: extra.extension_video_uri ?? selectedJob?.result?.provider_video_uri ?? undefined,
         instruction,
         ...extra,
       }),
@@ -421,6 +430,7 @@ export function StoryboardWorkspace({
       "still";
     await enqueue(kind, {
       still_url: selected?.still,
+      playback_id: selectedJob?.result?.playback_id,
       animation_style: outputType === "animation" ? "cinematic animation" : undefined,
     });
   }

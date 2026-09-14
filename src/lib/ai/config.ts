@@ -26,16 +26,40 @@ export type AiModelConfig = {
 
 export function aiModelConfig(): AiModelConfig {
   return {
-    textModel: process.env.GEMINI_TEXT_MODEL?.trim() || "gemini-2.0-flash",
+    textModel: process.env.GEMINI_TEXT_MODEL?.trim() || "gemini-2.5-flash",
     imageModel: process.env.GEMINI_IMAGE_MODEL?.trim() || "gemini-2.5-flash-image",
     videoModel: process.env.GEMINI_VIDEO_MODEL?.trim() || "veo-3.1-generate-preview",
     configured: Boolean(geminiApiKey()),
   };
 }
 
+function uniqueModels(primary: string, extras: string[]): string[] {
+  return [primary, ...extras.filter((model) => model && model !== primary)];
+}
+
+export function textModelFallbacks(primary: string): string[] {
+  return uniqueModels(primary, [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-3.5-flash",
+    "gemini-flash-latest",
+  ]);
+}
+
 export function imageModelFallbacks(primary: string): string[] {
-  const extras = ["gemini-2.5-flash-image", "gemini-2.0-flash-exp-image-generation"];
-  return [primary, ...extras.filter((model) => model !== primary)];
+  return uniqueModels(primary, [
+    "gemini-2.5-flash-image",
+    "gemini-3.1-flash-image",
+    "gemini-2.0-flash-exp-image-generation",
+  ]);
+}
+
+export function videoModelFallbacks(primary: string): string[] {
+  return uniqueModels(primary, [
+    "veo-3.1-generate-preview",
+    "veo-3.1-lite-generate-preview",
+    "veo-3.1-fast-generate-preview",
+  ]);
 }
 
 export type AiServiceCapability = {

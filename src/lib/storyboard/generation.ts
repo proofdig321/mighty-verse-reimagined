@@ -198,7 +198,7 @@ async function persistStillAsset(input: {
     .from("media_asset")
     .insert({
       asset_type: "preview",
-      storage_ref: stored.signed_url ?? stored.storage_path,
+      storage_ref: stored.storage_path,
       integrity_hash: `storyboard-still:${input.panel.panel_id}:${Date.now()}`,
       format: input.mime,
       media_class: "image",
@@ -219,13 +219,26 @@ async function persistStillAsset(input: {
     assetId: asset.asset_id,
     stillUrl: stored.signed_url,
     source: "ai",
-  }).catch(() => undefined);
+  });
   await updateStoryboardPanel({
     participantId: input.participantId,
     panelId: input.panel.panel_id,
     patch: { active_still_asset_id: asset.asset_id, status: "ready" },
   });
   return { asset_id: asset.asset_id, still_url: stored.signed_url, storage_path: stored.storage_path };
+}
+
+async function probeHasAudio(filePath: string): Promise<boolean | null> {
+  try {
+    const { stdout } = await execFileAsync(
+      "ffprobe",
+      ["-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type", "-of", "csv=p=0", filePath],
+      { timeout: 15_000 },
+    );
+    return Boolean(String(stdout).trim());
+  } catch {
+    return null;
+  }
 }
 
 async function persistMotionFile(input: {
@@ -238,7 +251,9 @@ async function persistMotionFile(input: {
   title: string;
   prompt: string;
   providerVideoUri?: string | null;
+  hasAudio?: boolean | null;
 }) {
+  const hasAudio = input.hasAudio ?? (await probeHasAudio(input.filePath));
   const ingested = await muxAdapter.ingestLocalFile({
     filePath: input.filePath,
     passthrough: `storyboard:${input.universeId || "standalone"}:${input.outputType}`,
@@ -276,53 +291,71 @@ async function persistMotionFile(input: {
     still_url: persisted.still_url,
     mux_asset_id: ingested.providerAssetId,
     provider_video_uri: input.providerVideoUri ?? null,
-    has_audio: ingested.mediaClass === "video" ? null : false,
+    has_audio: hasAudio,
   };
 }
 
-async function deriveGif(stillUrl: string) {
+async function deriveGif(sourceUrl: string, fromVideo: boolean) {
   const dir = await mkdtemp(join(tmpdir(), "mv-gif-"));
-  const source = join(dir, "source.bin");
+  const source = join(dir, fromVideo ? "source.mp4" : "source.bin");
   const filePath = join(dir, "panel.gif");
-  const response = await fetch(stillUrl);
-  if (!response.ok) throw new Error("Could not read source still for GIF.");
+  const response = await fetch(sourceUrl);
+  if (!response.ok) throw new Error("Could not read source media for GIF.");
   await writeFile(source, Buffer.from(await response.arrayBuffer()));
+  const vf = fromVideo
+    ? "fps=8,scale=480:-2:flags=lanczos,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse"
+    : "zoompan=z='min(zoom+0.002,1.2)':d=50:s=640x360,fps=12,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse";
   await execFileAsync("ffmpeg", [
     "-y",
-    "-loop", "1",
-    "-t", "2",
+    ...(fromVideo ? ["-t", "3"] : ["-loop", "1", "-t", "2"]),
     "-i", source,
-    "-vf", "zoompan=z='min(zoom+0.002,1.2)':d=50:s=640x360,fps=12,split[s0][s1];[s0]palettegen[p];[s1][p]paletteuse",
+    "-vf", vf,
     filePath,
   ], { timeout: 45_000 });
   return { filePath, mime: "image/gif" as const };
 }
 
-async function deriveReel(urls: string[]) {
+async function deriveReel(urls: string[], fromVideo: boolean) {
   const dir = await mkdtemp(join(tmpdir(), "mv-reel-"));
   const sources: string[] = [];
   for (const [index, url] of urls.entries()) {
-    const filePath = join(dir, `frame-${index}.jpg`);
+    const filePath = join(dir, fromVideo ? `clip-${index}.mp4` : `frame-${index}.jpg`);
     const response = await fetch(url);
-    if (!response.ok) throw new Error("Could not read reel still.");
+    if (!response.ok) throw new Error("Could not read reel source.");
     await writeFile(filePath, Buffer.from(await response.arrayBuffer()));
     sources.push(filePath);
   }
-  const listPath = join(dir, "concat.txt");
-  await writeFile(listPath, sources.map((source) => `file '${source}'\nduration 1.2`).join("\n") + `\nfile '${sources[sources.length - 1]}'\n`);
   const filePath = join(dir, "reel.mp4");
-  await execFileAsync("ffmpeg", [
-    "-y",
-    "-f", "concat",
-    "-safe", "0",
-    "-i", listPath,
-    "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
-    "-r", "24",
-    "-c:v", "libx264",
-    "-pix_fmt", "yuv420p",
-    "-t", String(Math.min(8, sources.length * 1.2)),
-    filePath,
-  ], { timeout: 120_000 });
+  if (fromVideo) {
+    const listPath = join(dir, "concat.txt");
+    await writeFile(listPath, sources.map((source) => `file '${source}'`).join("\n") + "\n");
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-f", "concat",
+      "-safe", "0",
+      "-i", listPath,
+      "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+      "-c:v", "libx264",
+      "-pix_fmt", "yuv420p",
+      "-an",
+      filePath,
+    ], { timeout: 120_000 });
+  } else {
+    const listPath = join(dir, "concat.txt");
+    await writeFile(listPath, sources.map((source) => `file '${source}'\nduration 1.2`).join("\n") + `\nfile '${sources[sources.length - 1]}'\n`);
+    await execFileAsync("ffmpeg", [
+      "-y",
+      "-f", "concat",
+      "-safe", "0",
+      "-i", listPath,
+      "-vf", "scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2,format=yuv420p",
+      "-r", "24",
+      "-c:v", "libx264",
+      "-pix_fmt", "yuv420p",
+      "-t", String(Math.min(8, sources.length * 1.2)),
+      filePath,
+    ], { timeout: 120_000 });
+  }
   return { filePath, mime: "video/mp4" as const };
 }
 
@@ -384,9 +417,11 @@ export async function processGenerationJob(jobId: string, participantId: string)
     }
 
     if (current.kind === "gif") {
+      const playbackId = typeof request.playback_id === "string" ? request.playback_id : null;
       const still = (typeof request.still_url === "string" && request.still_url) || panel?.still_url;
-      if (!still) throw new Error("GIF derivation needs a still.");
-      const derived = await deriveGif(still);
+      const source = playbackId ? `https://stream.mux.com/${playbackId}/low.mp4` : still;
+      if (!source) throw new Error("GIF derivation needs generated motion or a still.");
+      const derived = await deriveGif(source, Boolean(playbackId));
       const bytes = await readFile(/* turbopackIgnore: true */ derived.filePath);
       await unlink(derived.filePath).catch(() => undefined);
       const stored = await storeCreativeBytes({
@@ -399,7 +434,7 @@ export async function processGenerationJob(jobId: string, participantId: string)
         .from("media_asset")
         .insert({
           asset_type: "preview",
-          storage_ref: stored.signed_url ?? stored.storage_path,
+          storage_ref: stored.storage_path,
           integrity_hash: `storyboard-gif:${panel?.panel_id ?? work?.work_id}:${Date.now()}`,
           format: "image/gif",
           media_class: "image",
@@ -430,10 +465,12 @@ export async function processGenerationJob(jobId: string, participantId: string)
     }
 
     if (current.kind === "reel") {
+      const playbackIds = Array.isArray(request.playback_ids) ? request.playback_ids.filter((value) => typeof value === "string") : [];
       const urls = Array.isArray(request.still_urls) ? request.still_urls.filter((value) => typeof value === "string") : [];
-      const frames = urls.length ? urls : work?.panels.map((item) => item.still_url).filter(Boolean) ?? [];
-      if (!frames.length) throw new Error("Assemble Reel needs panel stills.");
-      const derived = await deriveReel(frames as string[]);
+      const motionUrls = playbackIds.map((id) => `https://stream.mux.com/${id}/low.mp4`);
+      const frames = motionUrls.length ? motionUrls : urls.length ? urls : work?.panels.map((item) => item.still_url).filter(Boolean) ?? [];
+      if (!frames.length) throw new Error("Assemble Reel needs generated motion or panel stills.");
+      const derived = await deriveReel(frames as string[], motionUrls.length > 0);
       const persisted = await persistMotionFile({
         participantId,
         universeId: work?.universe_id ?? null,
@@ -472,12 +509,24 @@ export async function processGenerationJob(jobId: string, participantId: string)
       ? request.reference_urls.filter((value): value is string => typeof value === "string")
       : [];
     const extensionUri = typeof request.extension_video_uri === "string" ? request.extension_video_uri : null;
+    if (current.kind === "animate-still" && !firstUrl) {
+      throw new Error("Animate still needs a generated panel still.");
+    }
+    if (current.kind === "first-last-frame" && (!firstUrl || !lastUrl)) {
+      throw new Error("First / last frame needs both a first-frame still and a last-frame still.");
+    }
+    if (current.kind === "reference-motion" && !referenceUrls.length) {
+      throw new Error("Reference motion needs attached character, environment, or style stills.");
+    }
+    if (current.kind === "extend" && !extensionUri) {
+      throw new Error("Extend needs a generated Veo video to continue from. The original clip is not overwritten.");
+    }
     const submitted = await submitVeoGeneration({
       prompt,
       aspectRatio: motion.aspectRatio ?? "16:9",
       durationSeconds: motion.durationSeconds === 4 || motion.durationSeconds === 6 ? motion.durationSeconds : 8,
       generateAudio: request.generate_audio !== false,
-      firstFrame: current.kind === "animate-still" || current.kind === "first-last-frame" || current.kind === "motion"
+      firstFrame: current.kind === "animate-still" || current.kind === "first-last-frame"
         ? firstUrl
           ? await fetchImageRef(firstUrl)
           : null
@@ -548,6 +597,7 @@ async function finishVeoJob(
     title: panel?.title ?? "Motion",
     prompt,
     providerVideoUri: polled.videoUri,
+    hasAudio: polled.hasAudio,
   });
   await writeJob(getServiceClient(), current.job_id, {
     status: "completed",

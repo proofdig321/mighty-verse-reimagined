@@ -1,6 +1,6 @@
 import { composeStoryboardBody, panelsFromStoryBody } from "../script";
 import { parseStoryboardBody, parseStoryboardArtifact, storyboardArtifactNotes, storyboardBodyNotes, STORYBOARD_BODY_KIND } from "../artifact";
-import { assistAction } from "../assist";
+import { assistAction, assistReplacesStory } from "../assist";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -49,5 +49,8 @@ assert(muxArtifact.binds_projection === false, "generated Mux media does not bin
 assert(muxArtifact.playback_id === "playback-id" && muxArtifact.mux_asset_id === "mux-asset-id", "Mux ids stay on the artifact");
 assert(assistAction("create-storyboard")?.label === "Create storyboard", "AI Assist has contextual create-storyboard");
 assert(assistAction("invent-scene") === null, "AI Assist has no create-scene action");
+assert(assistReplacesStory("expand") === true, "expand may replace the story after curator action");
+assert(assistReplacesStory("rewrite-panel") === false, "panel rewrite is a suggestion, not a silent overwrite");
+assert(assistReplacesStory("suggest-camera") === false, "camera suggestion does not replace the story");
 
 console.log("Storyboard tests: all passed");

@@ -4,6 +4,7 @@ import type { StructuredStoryboard } from "../ai/structured-storyboard";
 import { muxThumbnailUrl } from "../media/thumbnail";
 import { composeStoryboardBody } from "./script";
 import { parseStoryboardBody } from "./artifact";
+import { signCreativePath } from "./storage";
 import type {
   StoryboardPanelRecord,
   StoryboardPanelSource,
@@ -111,6 +112,17 @@ async function hydrateWork(db: ServiceClient, work: Record<string, unknown>): Pr
     : { data: [] as { asset_id: string; endpoint_ref: string }[] };
   const assetById = new Map((assets ?? []).map((asset) => [asset.asset_id, asset]));
   const endpointById = new Map((variants ?? []).map((row) => [row.asset_id, row.endpoint_ref]));
+  const signedStills = new Map<string, string | null>();
+  await Promise.all(
+    (assets ?? []).map(async (asset) => {
+      if (asset.provider === "mux") return;
+      if (asset.storage_ref.startsWith("http")) {
+        signedStills.set(asset.asset_id, asset.storage_ref);
+        return;
+      }
+      signedStills.set(asset.asset_id, await signCreativePath(asset.storage_ref));
+    }),
+  );
 
   return {
     work_id: String(work.work_id),
@@ -131,9 +143,7 @@ async function hydrateWork(db: ServiceClient, work: Record<string, unknown>): Pr
       const stillUrl = stillAsset
         ? stillAsset.provider === "mux"
           ? muxThumbnailUrl(stillAsset.storage_ref, 0, 640)
-          : stillAsset.storage_ref.startsWith("http")
-            ? stillAsset.storage_ref
-            : null
+          : signedStills.get(stillAsset.asset_id) ?? (stillAsset.storage_ref.startsWith("http") ? stillAsset.storage_ref : null)
         : null;
       return mapPanel(panel as Record<string, unknown>, stillUrl, {
         playback_id: motionAsset?.provider === "mux" ? motionAsset.storage_ref : null,
@@ -322,7 +332,31 @@ export async function updateStoryboardPanel(input: {
   if (!panel || (panel as { storyboard_work?: { participant_id?: string } }).storyboard_work?.participant_id !== input.participantId) {
     return null;
   }
-  const patch: Record<string, unknown> = { updated_at: new Date().toISOString(), user_locked: true };
+  const creativeLockFields = new Set([
+    "title",
+    "description",
+    "narrative_purpose",
+    "action",
+    "dialogue",
+    "narration",
+    "camera",
+    "camera_movement",
+    "framing",
+    "lens_style",
+    "lighting",
+    "environment",
+    "characters",
+    "mood",
+    "transition",
+    "duration_ms",
+    "aspect_ratio",
+    "sequence",
+    "references",
+  ]);
+  const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+  if (Object.keys(input.patch).some((key) => creativeLockFields.has(key))) {
+    patch.user_locked = true;
+  }
   const allowed = [
     "title",
     "description",
