@@ -47,19 +47,29 @@ export async function POST(request: Request) {
   const auth = await requireStoryboardUser(universeId);
   if ("error" in auth) return auth.error;
 
-  const job = await createGenerationJob({
-    participantId: auth.participantId,
-    workId,
-    panelId: panelId || null,
-    kind,
-    request: { ...body, creates_canonical: false },
-    prompt: typeof body.prompt === "string" ? body.prompt : `${kind}:${panelId}:${body.instruction ?? ""}`,
-  });
-  const processed = await processGenerationJob(job.job_id, auth.participantId);
-  const pending = processed.status === "queued" || processed.status === "submitted" || processed.status === "processing";
-  return NextResponse.json({
-    ...processed,
-    creates_scene: false,
-    creates_canonical: false,
-  }, { status: pending ? 202 : processed.status === "completed" ? 201 : 200 });
+  try {
+    const job = await createGenerationJob({
+      participantId: auth.participantId,
+      workId,
+      panelId: panelId || null,
+      kind,
+      request: { ...body, creates_canonical: false },
+      prompt: typeof body.prompt === "string" ? body.prompt : `${kind}:${panelId}:${body.instruction ?? ""}`,
+    });
+    const processed = await processGenerationJob(job.job_id, auth.participantId);
+    const pending = processed.status === "queued" || processed.status === "submitted" || processed.status === "processing";
+    return NextResponse.json({
+      ...processed,
+      creates_scene: false,
+      creates_canonical: false,
+    }, { status: pending ? 202 : processed.status === "completed" ? 201 : 200 });
+  } catch (caught) {
+    const message = caught instanceof Error ? caught.message : "Generation job failed.";
+    return NextResponse.json({
+      error: { code: "unknown", message },
+      status: "failed",
+      creates_scene: false,
+      creates_canonical: false,
+    }, { status: 500 });
+  }
 }

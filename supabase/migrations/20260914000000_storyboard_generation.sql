@@ -197,6 +197,7 @@ grant select, insert, update, delete on public.storyboard_panel to authenticated
 grant select, insert, update, delete on public.generation_job to authenticated;
 grant select, insert, update, delete on public.storyboard_work to service_role;
 grant select, insert, update, delete on public.storyboard_panel to service_role;
+grant select, insert, update, delete on public.generation_job to service_role;
 grant execute on function public.current_storyboard_participant_id() to authenticated;
 grant execute on function public.current_storyboard_participant_id() to service_role;
 

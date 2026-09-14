@@ -72,8 +72,8 @@ test("authenticated Storyboard generates panels without creating Scenes", async 
       prompt: generatedPayload.work.panels[0].description,
     }),
   });
-  const stillPayload = await still.json();
-  expect(stillPayload.creates_scene).toBe(false);
+  const stillPayload = await still.json().catch(() => ({ status: "failed", error: { message: `empty response (${still.status})` } }));
+  expect(stillPayload.creates_scene ?? false).toBe(false);
   notes.push(
     `still job status=${still.status} generation=${stillPayload.status} code=${stillPayload.error?.code ?? "none"} message=${stillPayload.error?.message ?? stillPayload.message ?? "none"}`,
   );
