@@ -50,7 +50,7 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
   const [{ data: presentations }, { data: sceneProjections }, { data: muralProjections }, { data: momentProjections }, { data: relations }] =
     await Promise.all([
       presentationIds.length
-        ? svc.from("work_presentation").select("master_id, title, description").in("master_id", presentationIds)
+        ? svc.from("work_presentation").select("master_id, title, description, artwork_asset_id").in("master_id", presentationIds)
         : Promise.resolve({ data: [] }),
       sceneIds.length
         ? svc.from("projection").select("projection_id, master_id").in("master_id", sceneIds)
@@ -86,9 +86,22 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
     : { data: [] };
 
   const assetIds = [...new Set((bindings ?? []).map((binding) => binding.asset_id).filter(Boolean) as string[])];
-  const { data: assets } = assetIds.length
-    ? await svc.from("media_asset").select("asset_id, provider, storage_ref").in("asset_id", assetIds)
-    : { data: [] };
+  const artworkIds = [...new Set((presentations ?? []).map((row) => row.artwork_asset_id).filter(Boolean) as string[])];
+  const [{ data: assets }, { data: artworkAssets }] = await Promise.all([
+    assetIds.length
+      ? svc.from("media_asset").select("asset_id, provider, storage_ref").in("asset_id", assetIds)
+      : Promise.resolve({ data: [] }),
+    artworkIds.length
+      ? svc.from("media_asset").select("asset_id, storage_ref").in("asset_id", artworkIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+  const artworkById = new Map((artworkAssets ?? []).map((asset) => [asset.asset_id, asset.storage_ref]));
+  const assembledPresentations = (presentations ?? []).map((row) => ({
+    master_id: row.master_id,
+    title: row.title,
+    description: row.description,
+    artwork_storage_ref: row.artwork_asset_id ? artworkById.get(row.artwork_asset_id) ?? null : null,
+  }));
 
   return buildUniverseAssembly({
     master: { master_id: master.master_id, created_at: master.created_at },
@@ -96,7 +109,7 @@ export async function loadUniverseAssembly(masterId: string): Promise<UniverseAs
     muralMasters,
     momentMasters,
     sceneMasters: sceneMasters ?? [],
-    presentations: presentations ?? [],
+    presentations: assembledPresentations,
     sceneProjections: sceneProjections ?? [],
     muralProjections: muralProjections ?? [],
     momentProjections: momentProjections ?? [],

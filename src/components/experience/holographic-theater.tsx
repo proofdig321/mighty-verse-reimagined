@@ -2,12 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
-import { audienceLayerTitle, layerIsActive } from "@/lib/experience/holographic-program";
 import type { HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
 import {
+  HOLOGRAPHIC_CINEMA_FILL,
   HOLOGRAPHIC_MESH_SEGMENTS,
   HOLOGRAPHIC_PARALLAX_STRENGTH,
   HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y,
+  holographicCinemaPlane,
   holographicMouseUv,
   holographicPanFromPointerX,
   lerp,
@@ -18,29 +19,6 @@ import {
 } from "@/lib/experience/holographic-warp";
 
 export type { TheaterPointer };
-
-const STILL_VERT = `
-attribute vec3 a_pos;
-attribute vec2 a_uv;
-uniform mat4 u_mvp;
-varying vec2 v_uv;
-void main() {
-  v_uv = a_uv;
-  gl_Position = u_mvp * vec4(a_pos, 1.0);
-}
-`;
-
-const STILL_FRAG = `
-precision mediump float;
-varying vec2 v_uv;
-uniform sampler2D u_tex;
-uniform float u_alpha;
-uniform vec3 u_tint;
-void main() {
-  vec4 color = texture2D(u_tex, v_uv);
-  gl_FragColor = vec4(color.rgb * u_tint, color.a * u_alpha);
-}
-`;
 
 const VIDEO_VERT = `
 precision mediump float;
@@ -168,20 +146,6 @@ function createBuffer(gl: WebGLRenderingContext, data: Float32Array) {
   return buffer;
 }
 
-function createQuad(gl: WebGLRenderingContext) {
-  return createBuffer(
-    gl,
-    new Float32Array([
-      -1, -1, 0, 0, 1,
-      1, -1, 0, 1, 1,
-      -1, 1, 0, 0, 0,
-      -1, 1, 0, 0, 0,
-      1, -1, 0, 1, 1,
-      1, 1, 0, 1, 0,
-    ]),
-  );
-}
-
 /**
  * Mux video → GPU unpack. Same contract as Three.js:
  * `texture.flipY = false` + sRGB / browser default color conversion.
@@ -197,52 +161,12 @@ function emptyTexture(gl: WebGLRenderingContext) {
   if (!texture) return null;
   gl.bindTexture(gl.TEXTURE_2D, texture);
   bindVideoTextureUnpack(gl);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([5, 5, 8, 255]));
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array([0, 0, 0, 0]));
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
   gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
   return texture;
-}
-
-function canvasTexture(gl: WebGLRenderingContext, title: string, still: HTMLImageElement | null) {
-  const canvas = document.createElement("canvas");
-  canvas.width = 768;
-  canvas.height = still ? 480 : 768;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return null;
-  ctx.fillStyle = "#0b0b12";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  if (still && still.naturalWidth > 0) {
-    ctx.drawImage(still, 0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(0,0,0,0.42)";
-    ctx.fillRect(0, canvas.height - 72, canvas.width, 72);
-  }
-  ctx.fillStyle = "#f4f0ea";
-  ctx.font = "600 42px ui-sans-serif, system-ui, sans-serif";
-  ctx.textAlign = "left";
-  ctx.textBaseline = "middle";
-  ctx.fillText(title, 28, still ? canvas.height - 36 : canvas.height / 2);
-  const texture = gl.createTexture();
-  if (!texture) return null;
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  bindVideoTextureUnpack(gl);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-  return texture;
-}
-
-function loadImage(url: string): Promise<HTMLImageElement | null> {
-  return new Promise((resolve) => {
-    const image = new Image();
-    image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
-    image.onerror = () => resolve(null);
-    image.src = url;
-  });
 }
 
 function bindMesh(
@@ -274,17 +198,7 @@ export function HolographicTheater({
   audioRef?: { current: HolographicAudioGraph | null };
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const timeRef = useRef(timeMs);
-  const layersRef = useRef(layers);
   const signature = layers.map((layer) => `${layer.layer_id}:${layer.still_url ?? ""}`).join("|");
-
-  useEffect(() => {
-    timeRef.current = timeMs;
-  }, [timeMs]);
-
-  useEffect(() => {
-    layersRef.current = layers;
-  }, [layers]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -301,13 +215,11 @@ export function HolographicTheater({
     }
     const gl: WebGLRenderingContext = glContext;
     const surface: HTMLCanvasElement = canvas;
-    const stillProgram = createProgram(gl, STILL_VERT, STILL_FRAG);
     const videoProgram = createProgram(gl, VIDEO_VERT, VIDEO_FRAG);
-    const quad = createQuad(gl);
     const mesh = createBuffer(gl, tessellatePlane(HOLOGRAPHIC_MESH_SEGMENTS));
     const meshCount = tessellateVertexCount(HOLOGRAPHIC_MESH_SEGMENTS);
     const videoTexture = emptyTexture(gl);
-    if (!stillProgram || !videoProgram || !quad || !mesh || !videoTexture) {
+    if (!videoProgram || !mesh || !videoTexture) {
       surface.dataset.holographicTheater = "unavailable";
       return;
     }
@@ -315,17 +227,11 @@ export function HolographicTheater({
     bindVideoTextureUnpack(gl);
     surface.dataset.holographicFlipY = String(HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y);
     surface.dataset.holographicParallax = HOLOGRAPHIC_PARALLAX_STRENGTH.toFixed(2);
+    surface.dataset.holographicCinemaFill = String(HOLOGRAPHIC_CINEMA_FILL);
+    surface.dataset.holographicOverlays = "none";
     const warpProgram: WebGLProgram = videoProgram;
-    const overlayProgram: WebGLProgram = stillProgram;
     const meshBuffer: WebGLBuffer = mesh;
-    const quadBuffer: WebGLBuffer = quad;
     surface.dataset.holographicTheater = "webgl";
-
-    const stillPos = gl.getAttribLocation(overlayProgram, "a_pos");
-    const stillUv = gl.getAttribLocation(overlayProgram, "a_uv");
-    const stillMvp = gl.getUniformLocation(overlayProgram, "u_mvp");
-    const stillAlpha = gl.getUniformLocation(overlayProgram, "u_alpha");
-    const stillTint = gl.getUniformLocation(overlayProgram, "u_tint");
 
     const videoPos = gl.getAttribLocation(warpProgram, "a_pos");
     const videoUv = gl.getAttribLocation(warpProgram, "a_uv");
@@ -336,11 +242,9 @@ export function HolographicTheater({
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
+    gl.disable(gl.DEPTH_TEST);
 
     let cancelled = false;
-    const textures = new Map<string, WebGLTexture>();
     const mouse = { x: 0.5, y: 0.5 };
     const started = performance.now();
     let allocatedWidth = 0;
@@ -348,19 +252,6 @@ export function HolographicTheater({
     let texUploads = 0;
     let texSkips = 0;
     let draws = 0;
-
-    async function loadTextures() {
-      for (const layer of layersRef.current) {
-        if (cancelled) return;
-        const title = audienceLayerTitle(layer.title, layer.kind === "moment" ? "Creative Moment" : "Scene");
-        const still = layer.still_url ? await loadImage(layer.still_url) : null;
-        if (cancelled) return;
-        const texture = canvasTexture(gl, title, still);
-        if (texture) textures.set(layer.layer_id, texture);
-      }
-    }
-
-    void loadTextures();
 
     let frame = 0;
     function resize() {
@@ -434,45 +325,20 @@ export function HolographicTheater({
         }
       }
 
-      const viewH = 2 * Math.tan(fov / 2) * cameraZ;
-      const viewW = viewH * aspect;
-      const videoAspect = video && video.videoWidth > 0 ? video.videoWidth / video.videoHeight : 16 / 9;
-      let planeW = viewW * 0.94;
-      let planeH = planeW / videoAspect;
-      if (planeH > viewH * 0.94) {
-        planeH = viewH * 0.94;
-        planeW = planeH * videoAspect;
+      if (allocatedWidth > 0 && allocatedHeight > 0) {
+        const viewH = 2 * Math.tan(fov / 2) * cameraZ;
+        const viewW = viewH * aspect;
+        const videoAspect = video && video.videoWidth > 0 ? video.videoWidth / video.videoHeight : 16 / 9;
+        const { planeW, planeH } = holographicCinemaPlane(viewW, viewH, videoAspect);
+        bindMesh(gl, warpProgram, meshBuffer, videoPos, videoUv);
+        gl.uniformMatrix4fv(videoMvp, false, mat4Multiply(vp, mat4Multiply(translation(0, 0, 0.15), scaleMat(planeW / 2, planeH / 2, 1))));
+        gl.uniform2f(videoMouse, mouse.x, mouse.y);
+        gl.uniform1f(videoParallax, HOLOGRAPHIC_PARALLAX_STRENGTH);
+        gl.uniform1f(videoTime, (performance.now() - started) / 1000);
+        gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+        gl.drawArrays(gl.TRIANGLES, 0, meshCount);
       }
 
-      bindMesh(gl, warpProgram, meshBuffer, videoPos, videoUv);
-      gl.uniformMatrix4fv(videoMvp, false, mat4Multiply(vp, mat4Multiply(translation(0, 0, 0.15), scaleMat(planeW / 2, planeH / 2, 1))));
-      gl.uniform2f(videoMouse, mouse.x, mouse.y);
-      gl.uniform1f(videoParallax, HOLOGRAPHIC_PARALLAX_STRENGTH);
-      gl.uniform1f(videoTime, (performance.now() - started) / 1000);
-      gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-      gl.drawArrays(gl.TRIANGLES, 0, meshCount);
-
-      bindMesh(gl, overlayProgram, quadBuffer, stillPos, stillUv);
-      const spatial = layersRef.current.filter((layer) => layer.kind === "scene" || layer.kind === "moment");
-      spatial.forEach((layer, index) => {
-        const texture = textures.get(layer.layer_id);
-        if (!texture) return;
-        const active = layerIsActive(layer, timeRef.current);
-        const isMoment = layer.kind === "moment";
-        const spread = spatial.filter((entry) => entry.kind === layer.kind);
-        const kindIndex = spread.findIndex((entry) => entry.layer_id === layer.layer_id);
-        const x = (kindIndex - (spread.length - 1) / 2) * (isMoment ? 1.55 : 1.85);
-        const y = isMoment ? 0.95 : -0.35;
-        const z = active ? -1.15 : -2.1 - index * 0.08;
-        const width = isMoment ? 0.72 : 1.15;
-        const height = isMoment ? 0.92 : 0.64;
-        const model = mat4Multiply(translation(x, y, z), scaleMat(width * (active ? 1.12 : 1), height * (active ? 1.12 : 1), 1));
-        gl.uniformMatrix4fv(stillMvp, false, mat4Multiply(vp, model));
-        gl.uniform1f(stillAlpha, active ? 0.72 : 0.28);
-        gl.uniform3f(stillTint, active ? 1 : 0.72, active ? 1 : 0.78, active ? 1 : 0.86);
-        gl.bindTexture(gl.TEXTURE_2D, texture);
-        gl.drawArrays(gl.TRIANGLES, 0, 6);
-      });
       draws += 1;
       surface.dataset.holographicDraws = String(draws);
       surface.dataset.holographicTexUploads = String(texUploads);
@@ -484,7 +350,6 @@ export function HolographicTheater({
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(frame);
-      textures.forEach((texture) => gl.deleteTexture(texture));
       gl.deleteTexture(videoTexture);
     };
   }, [signature, pointerRef, videoRef, audioRef]);

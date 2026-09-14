@@ -95,6 +95,9 @@ export type {
   SceneIdentityMaster,
 } from "./scene-identity";
 export { decideSceneTiming } from "./scene-timing";
+export { decideSceneArtwork } from "./scene-artwork";
+export { playableGallerySources } from "./gallery-source";
+export { deriveStoryboardProgress } from "./storyboard-progress";
 export type {
   SceneTimingDecision,
   SceneTimingMaster,

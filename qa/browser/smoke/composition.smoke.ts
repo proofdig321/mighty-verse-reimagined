@@ -21,9 +21,9 @@ test("Creative Suite presents Super Hero Ego as a composition surface", async ({
   await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   const scenes = page.locator("section[aria-labelledby='universe-scenes']");
   const moments = page.locator("section[aria-labelledby='universe-moments']");
-  await expect(scenes.locator("a[data-scene-id]")).toHaveCount(4);
+  await expect(scenes.locator("article[data-scene-id]")).toHaveCount(4);
   await expect(page.getByRole("button", { name: /shuffle/i })).toHaveCount(0);
-  notes.push("B: four named Scene deck cards; no table rows, no shuffle");
+  notes.push("B: four named Scene objects with identity, timing, and still edit; no table rows, no shuffle");
 
   await expect(moments.getByRole("heading", { name: "Proverb", exact: true })).toHaveCount(1);
   await expect(moments.getByRole("heading", { name: "Mothipa", exact: true })).toHaveCount(1);
@@ -57,10 +57,10 @@ test("Creative Suite presents Super Hero Ego as a composition surface", async ({
   await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
-  await expect(scenes.locator("a[data-scene-id]")).toHaveCount(4);
+  await expect(scenes.locator("article[data-scene-id]")).toHaveCount(4);
   const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflowX, `narrow viewport horizontal overflow ${overflowX}px`).toBeLessThan(24);
-  notes.push("G: narrower viewport keeps four Scene deck cards without trapping the suite in nested catalogue tables");
+  notes.push("G: narrower viewport keeps four Scene objects without trapping the suite in nested catalogue tables");
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto(ROUTES.authorityMuxAsset, { waitUntil: "domcontentloaded" });

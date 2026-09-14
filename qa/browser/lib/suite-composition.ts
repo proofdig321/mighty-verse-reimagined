@@ -80,6 +80,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await openStudioWorkspace(page, "Storyboard");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseStoryboard}`));
   await expect(page.getByRole("heading", { name: "Storyboard", exact: true })).toBeVisible();
+  await expect(page.locator("[data-storyboard-progress]")).toBeVisible();
   await expect(page.locator(".storyboard-panel-strip [data-panel-kind='scene']")).toHaveCount(4);
   await expect(page.locator(".storyboard-panel-strip").getByText("Canonical Scene").first()).toBeVisible();
   await expect(page.locator(".storyboard-panel-strip").getByText("Storyboard beat").first()).toBeVisible();
@@ -145,15 +146,21 @@ export async function expectCreativeSuiteComposition(page: Page) {
   const moments = page.locator("section[aria-labelledby='universe-moments']");
   await expect(scenes.locator("table")).toHaveCount(0);
   await expect(moments.locator("table")).toHaveCount(0);
-  await expect(scenes.locator("article[data-scene-id]")).toHaveCount(0);
-  await expect(scenes.locator("a[data-scene-id]")).toHaveCount(4);
+  await expect(scenes.locator("article[data-scene-id]")).toHaveCount(4);
+  await expect(scenes.locator("a[data-scene-id]")).toHaveCount(0);
 
   const sceneValues = Object.values(SCENE_MOMENTS);
   for (const [index, scene] of sceneValues.entries()) {
     const card = scenes.locator(`#universe-scene-${scene.sceneMasterId}`);
     await expect(card).toBeVisible();
     await expect(card.locator(".suite-scene-ordinal")).toHaveText(String(index + 1).padStart(2, "0"));
-    await expect(card).toHaveAttribute("href", suitePath(`${ROUTES.authorityUniverseScenes}/${scene.sceneMasterId}`, fromCurate));
+    await expect(card.getByRole("link", { name: /Open Scene/i })).toHaveAttribute(
+      "href",
+      suitePath(`${ROUTES.authorityUniverseScenes}/${scene.sceneMasterId}`, fromCurate),
+    );
+    await expect(card.getByRole("button", { name: "Edit identity" })).toBeVisible();
+    await expect(card.getByRole("button", { name: "Edit timing" })).toBeVisible();
+    await expect(card.getByRole("button", { name: "Edit still" })).toBeVisible();
   }
 
   await expect(moments.getByRole("heading", { name: "Proverb", exact: true })).toHaveCount(1);
@@ -175,7 +182,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
     `${ROUTES.authorityUniverseScenes}/${SCENE_MOMENTS.handToHand.sceneMasterId}`,
   );
 
-  await scenes.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`).click();
+  await scenes.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`).getByRole("link", { name: /Open Scene/i }).click();
   await expect(page).toHaveURL(suitePathRe(ROUTES.authorityUniversePowerhouse, fromCurate, true));
   const powerhouse = page.locator(`#universe-scene-${SCENE_MOMENTS.powerhouse.sceneMasterId}`);
   await expect(powerhouse.getByRole("heading", { name: /Scene 01\. Powerhouse/ })).toBeVisible();

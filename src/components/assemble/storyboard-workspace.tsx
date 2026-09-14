@@ -23,6 +23,7 @@ import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
 import { AssociateStoryboard } from "./associate-storyboard";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
+import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { cn } from "@/lib/utils";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references";
@@ -286,6 +287,13 @@ export function StoryboardWorkspace({
     { id: "references", label: "References", icon: Images },
   ];
   const sequenceEmpty = scriptPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0;
+  const progress = deriveStoryboardProgress({
+    script,
+    panelCount: scriptPanels.length || sentinelPanels.length || (script ? 0 : scenes.length),
+    referenceStillCount: references.filter((reference) => Boolean(reference.still_url)).length,
+    artifactStillCount: generated.filter((artifact) => Boolean(artifact.still_url)).length,
+    artifactTypes: generated.map((artifact) => artifact.output_type),
+  });
   const shotIds = [
     ...scriptPanels.map((panel) => panel.panel_id),
     ...sentinelPanels.map((panel) => panel.panel_id),
@@ -329,6 +337,22 @@ export function StoryboardWorkspace({
         )}
       </div>
 
+      <div className="storyboard-progress" data-storyboard-progress={`${progress.completeCount}/${progress.total}`}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Storyboard path · {progress.completeCount} of {progress.total} live
+        </p>
+        <ol className="storyboard-progress-track">
+          {progress.steps.map((step) => (
+            <li key={step.id} className="storyboard-progress-step" data-complete={step.complete ? "true" : "false"}>
+              <div className="storyboard-progress-bar" aria-hidden="true">
+                <span />
+              </div>
+              <p>{step.label}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+
       <div className="storyboard-stage">
         <Card className="flex min-h-0 flex-col bg-card/70">
           <CardHeader className="border-b border-border/70">
@@ -345,7 +369,7 @@ export function StoryboardWorkspace({
               }}
               className="flex min-h-0 flex-1 flex-col gap-4"
             >
-              <TabsList className="h-auto w-full justify-start gap-1" aria-label="Storyboard materials">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4" aria-label="Storyboard materials">
                 {tabs.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -357,7 +381,7 @@ export function StoryboardWorkspace({
                 })}
               </TabsList>
 
-              <TabsContent value="script" className="space-y-4">
+              <TabsContent value="script" className="storyboard-tab-panel space-y-4">
                 <section data-column="script" aria-labelledby="storyboard-script-heading" className="space-y-3">
                   <h3 id="storyboard-script-heading" className="sr-only">
                     Script
@@ -386,7 +410,7 @@ export function StoryboardWorkspace({
                 </section>
               </TabsContent>
 
-              <TabsContent value="assist" className="space-y-4">
+              <TabsContent value="assist" className="storyboard-tab-panel space-y-4">
                 <label className="block space-y-2">
                   <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">AI Assist</span>
                   <Textarea
@@ -405,7 +429,7 @@ export function StoryboardWorkspace({
                 </p>
               </TabsContent>
 
-              <TabsContent value="sentinel">
+              <TabsContent value="sentinel" className="storyboard-tab-panel">
                 <section data-column="sentinel" aria-labelledby="universe-sentinel" className="space-y-3">
                   {intelligence && universeId ? (
                     <div className="suite-section">
@@ -441,7 +465,7 @@ export function StoryboardWorkspace({
                 </section>
               </TabsContent>
 
-              <TabsContent value="references" className="space-y-3">
+              <TabsContent value="references" className="storyboard-tab-panel space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">References</p>
                 {references.length === 0 && generated.length === 0 ? (
                   <p className="suite-empty">No curated workspace reference assets indexed yet.</p>

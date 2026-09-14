@@ -43,4 +43,12 @@ const still = sceneStillUrl({
 });
 assert(still && still.provider === "mux" && still.timeSec === 36, "Mux still uses scene start time");
 
+const authoredStill = sceneStillUrl({
+  provider: "mux",
+  storage_ref: "JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4",
+  start_ms: 36000,
+  artwork_storage_ref: "https://image.mux.com/JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4/thumbnail.jpg?time=36",
+});
+assert(authoredStill && authoredStill.storage_ref.startsWith("https://image.mux.com/"), "authored artwork still wins over the mural frame");
+
 console.log("Assemble composition helpers: all passed");

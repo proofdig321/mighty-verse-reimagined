@@ -8,7 +8,7 @@ import { loadCurateHub } from "@/lib/assemble/load-curate-hub";
 import { loadCurateStudioMedia } from "@/lib/assemble/load-studio";
 import { CURATE_STUDIO_HREF, curateHubHref, curateMuralHref } from "@/lib/assemble/studio";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
-import { AssociateWithUniverse } from "@/components/assemble/associate-with-universe";
+import { CurateAttachSources } from "@/components/assemble/curate-attach-sources";
 import { buttonVariants } from "@/components/ui/button";
 
 export default async function CurateAttachPage({
@@ -32,10 +32,6 @@ export default async function CurateAttachPage({
   const title = hub.universeTitle;
   const hubHref = curateHubHref(hub.universeId);
   const target = studio.universes.find((universe) => universe.master_id === hub.universeId) ?? null;
-  const assetId = hub.boundAssetId ?? hub.incomingAssetId;
-  const attachMedia = assetId
-    ? studio.media.find((item) => item.asset_id === assetId) ?? null
-    : null;
 
   return (
     <div className="space-y-8">
@@ -69,13 +65,21 @@ export default async function CurateAttachPage({
               Register Mural
             </Link>
           </div>
-        ) : attachMedia && target ? (
-          <AssociateWithUniverse
-            media={attachMedia}
-            universes={[target]}
-            defaultOpen
-            lockedUniverseId={hub.universeId}
-          />
+        ) : target ? (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Select media that is already in the gallery, or ingest a new file if it is not here yet.
+            </p>
+            <CurateAttachSources
+              media={studio.media}
+              universes={[target]}
+              lockedUniverseId={hub.universeId}
+              initialAssetId={hub.incomingAssetId}
+            />
+            <Link href="/authority/media/intake" className={buttonVariants({ size: "sm", variant: "outline" })}>
+              Add new media
+            </Link>
+          </div>
         ) : (
           <div className="space-y-3" role="status">
             <p className="text-sm text-foreground">

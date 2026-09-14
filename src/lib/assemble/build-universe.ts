@@ -47,6 +47,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       ? rows.bindings.find((row) => row.projection_id === projection.projection_id)
       : null;
     const media = assetFor(rows, projection?.projection_id);
+    const artwork = rows.presentations.find((row) => row.master_id === scene.master_id)?.artwork_storage_ref ?? null;
     const relatedMomentIds = momentsByScene.get(scene.master_id) ?? [];
     const creativeMoments = relatedMomentIds.map((id) => ({
       master_id: id,
@@ -68,6 +69,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       asset_id: binding?.asset_id ?? null,
       provider: media.provider,
       storage_ref: media.storage_ref,
+      artwork_storage_ref: artwork && !artwork.startsWith("seed:placeholder:") ? artwork : null,
     };
     const list = scenesByMural.get(muralId) ?? [];
     list.push(entry);

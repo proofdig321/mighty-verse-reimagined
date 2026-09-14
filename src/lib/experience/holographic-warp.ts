@@ -110,3 +110,27 @@ export function tessellateVertexCount(segments = HOLOGRAPHIC_MESH_SEGMENTS): num
   const count = Math.max(2, Math.floor(segments));
   return count * count * 6;
 }
+
+/**
+ * Size the Mux cinema plane to fill the WebGL view (contain).
+ * A shrink factor left a dark bezel that read as a second display
+ * behind the warped mural. Fill is 1 — letterbox only for aspect mismatch.
+ */
+export const HOLOGRAPHIC_CINEMA_FILL = 1;
+
+export function holographicCinemaPlane(
+  viewW: number,
+  viewH: number,
+  videoAspect: number,
+  fill = HOLOGRAPHIC_CINEMA_FILL,
+): { planeW: number; planeH: number } {
+  const aspect = videoAspect > 0 ? videoAspect : 16 / 9;
+  const usable = Math.max(0, Math.min(1, fill));
+  let planeW = viewW * usable;
+  let planeH = planeW / aspect;
+  if (planeH > viewH * usable) {
+    planeH = viewH * usable;
+    planeW = planeH * aspect;
+  }
+  return { planeW, planeH };
+}

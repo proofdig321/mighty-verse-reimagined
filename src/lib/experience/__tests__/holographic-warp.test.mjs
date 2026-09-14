@@ -1,6 +1,8 @@
 import {
+  HOLOGRAPHIC_CINEMA_FILL,
   HOLOGRAPHIC_PARALLAX_STRENGTH,
   HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y,
+  holographicCinemaPlane,
   holographicPanFromPointerX,
   holographicMouseUv,
   holographicUvShift,
@@ -62,5 +64,13 @@ const mesh = tessellatePlane(4);
 assert(mesh.length === tessellateVertexCount(4) * 5, "tessellated plane stores x,y,z,u,v per vertex");
 assert(tessellateVertexCount(64) === 64 * 64 * 6, "production mesh is a 64x64 triangle grid");
 assert(mesh[1] === 1 && mesh[4] === 0, "v=0 is the top of the plane; do not invert vertex math for orientation");
+
+assert(HOLOGRAPHIC_CINEMA_FILL === 1, "cinema plane fills the WebGL view; no dark bezel shrink");
+const filled = holographicCinemaPlane(16, 9, 16 / 9);
+assert(filled.planeW === 16 && filled.planeH === 9, "matching 16:9 mural occupies the cinema");
+const letterbox = holographicCinemaPlane(16, 9, 4 / 3);
+assert(letterbox.planeH === 9 && Math.abs(letterbox.planeW - 12) < 0.001, "taller source letterboxes horizontally, not a second screen");
+const shrunk = holographicCinemaPlane(16, 9, 16 / 9, 0.94);
+assert(shrunk.planeW < filled.planeW, "legacy 0.94 shrink is no longer the cinema default");
 
 console.log("holographic-warp.test.mjs: ok");

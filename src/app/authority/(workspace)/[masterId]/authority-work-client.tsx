@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HierarchyBreadcrumb, type HierarchyBreadcrumbItem } from "@/components/assemble/breadcrumb";
 import { WithdrawWork } from "@/components/assemble/withdraw-work";
+import { GallerySourcePicker } from "@/components/assemble/gallery-source-picker";
+import type { GallerySource } from "@/lib/assemble/gallery-source";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
 import { toAuthorityProjectionMedia } from "@/lib/assemble/authority-work-media";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
@@ -69,7 +71,25 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   const [progress, setProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<GallerySource[]>([]);
+  const [galleryId, setGalleryId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/authority/media/gallery")
+      .then((response) => response.json())
+      .then((payload) => {
+        if (cancelled || !Array.isArray(payload.sources)) return;
+        setGallery(payload.sources as GallerySource[]);
+      })
+      .catch(() => {
+        if (!cancelled) setGallery([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Accept video and audio
   const ACCEPTED_TYPES = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
@@ -83,6 +103,45 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   return (
     <Card><CardContent className="pt-4 space-y-4">
       <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Attach Media</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
+
+      <GallerySourcePicker
+        sources={gallery}
+        selectedId={galleryId}
+        onSelect={(assetId) => {
+          setGalleryId(assetId);
+          setFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }}
+        disabled={busy}
+      />
+      {galleryId ? (
+        <Button
+          size="sm"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setMsg(null);
+            try {
+              const attach = await api("/api/authority/media", {
+                projection_id: projId,
+                master_id: masterId,
+                asset_id: galleryId,
+              });
+              if (attach.error) throw new Error(attach.error);
+              setMsg("Gallery media attached.");
+              onDone();
+            } catch (err) {
+              setMsg(operatorError(err instanceof Error ? err.message : err, { workTitle, operation: "Attach gallery media" }));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy && !file ? "Attaching…" : "Use selected gallery media"}
+        </Button>
+      ) : null}
+
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Or upload a new file</p>
 
       {/* File drop zone */}
       <div

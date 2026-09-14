@@ -5,57 +5,68 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { decideSceneTiming } from "@/lib/assemble/scene-timing";
-import { formatTimelineMs } from "@/lib/media/timing";
+import { decideSceneArtwork } from "@/lib/assemble/scene-artwork";
+import { muxThumbnailUrl, providerThumbnailUrl } from "@/lib/media/thumbnail";
 
-async function saveSceneTiming(input: {
-  bindingId: string;
+async function saveSceneArtwork(input: {
   masterId: string;
-  startMs: number;
-  endMs: number;
+  projectionId: string | null;
+  thumbnailUrl: string;
 }) {
-  const response = await fetch("/api/authority/media/timeline", {
-    method: "PATCH",
+  const response = await fetch("/api/authority/media/artwork", {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      binding_id: input.bindingId,
       master_id: input.masterId,
-      start_ms: input.startMs,
-      end_ms: input.endMs,
+      projection_id: input.projectionId,
+      thumbnail_url: input.thumbnailUrl,
     }),
   });
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error(typeof payload.error === "string" ? payload.error : "Scene timing could not be saved.");
+    throw new Error(typeof payload.error === "string" ? payload.error : "Scene still could not be saved.");
   }
 }
 
-export function SceneTiming({
+export function SceneArtwork({
   universeId,
   sceneId,
   sceneLabel,
   muralId,
-  bindingId,
+  projectionId,
+  provider,
+  storageRef,
   startMs,
-  endMs,
+  artworkStorageRef,
   canAuthor,
 }: {
   universeId: string;
   sceneId: string;
   sceneLabel: string;
   muralId: string;
-  bindingId: string | null;
+  projectionId: string | null;
+  provider: string | null;
+  storageRef: string | null;
   startMs: number | null;
-  endMs: number | null;
+  artworkStorageRef: string | null;
   canAuthor: boolean;
 }) {
   const router = useRouter();
   const regionId = useId();
-  const startId = useId();
-  const endId = useId();
+  const stillId = useId();
   const [open, setOpen] = useState(false);
-  const [nextStart, setNextStart] = useState(startMs != null ? formatTimelineMs(startMs) : "");
-  const [nextEnd, setNextEnd] = useState(endMs != null ? formatTimelineMs(endMs) : "");
+  const muralFrame =
+    storageRef && !storageRef.startsWith("seed:placeholder:")
+      ? provider === "mux" || storageRef.startsWith("https://")
+        ? storageRef.startsWith("https://")
+          ? storageRef
+          : muxThumbnailUrl(storageRef, startMs != null ? Math.floor(startMs / 1000) : 0, 640)
+        : providerThumbnailUrl(provider, storageRef, {
+            timeSec: startMs != null ? Math.floor(startMs / 1000) : 0,
+            width: 640,
+          })
+      : null;
+  const [nextUrl, setNextUrl] = useState(artworkStorageRef ?? muralFrame ?? "");
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -72,32 +83,13 @@ export function SceneTiming({
 
   if (!canAuthor) return null;
 
-  if (!bindingId) {
-    return (
-      <div className="suite-identity-actions">
-        <Button type="button" variant="outline" size="sm" disabled>
-          Edit timing
-        </Button>
-        <p className="suite-presence-status">
-          This Scene has no media window yet. Bind mural media, then the start and end clocks can be shaped here.
-        </p>
-      </div>
-    );
-  }
-
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const decision = decideSceneTiming({
+  async function persist(url: string) {
+    const decision = decideSceneArtwork({
       universe_id: universeId,
       scene_master_id: sceneId,
-      binding_id: bindingId,
-      start_ms: nextStart,
-      end_ms: nextEnd,
+      thumbnail_url: url,
       scene: { master_id: sceneId, canonical_type: "scene", parent_master_id: muralId },
       mural: { master_id: muralId, canonical_type: "mural", parent_master_id: universeId },
-      binding: bindingId
-        ? { binding_id: bindingId, projection_id: sceneId, master_id: sceneId }
-        : null,
     });
     if (!decision.ok) {
       setFieldError(decision.message);
@@ -107,20 +99,24 @@ export function SceneTiming({
     setSaveError(null);
     setBusy(true);
     try {
-      await saveSceneTiming({
-        bindingId: decision.binding_id,
+      await saveSceneArtwork({
         masterId: sceneId,
-        startMs: decision.start_ms,
-        endMs: decision.end_ms,
+        projectionId,
+        thumbnailUrl: decision.thumbnail_url,
       });
-      setStatus(`${formatTimelineMs(decision.start_ms)} → ${formatTimelineMs(decision.end_ms)}`);
+      setStatus("Still saved");
       setOpen(false);
       router.refresh();
     } catch (caught) {
-      setSaveError(caught instanceof Error ? caught.message : "Scene timing could not be saved.");
+      setSaveError(caught instanceof Error ? caught.message : "Scene still could not be saved.");
     } finally {
       setBusy(false);
     }
+  }
+
+  async function onSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await persist(nextUrl);
   }
 
   if (!open) {
@@ -137,11 +133,10 @@ export function SceneTiming({
             setStatus(null);
             setFieldError(null);
             setSaveError(null);
-            setNextStart(startMs != null ? formatTimelineMs(startMs) : "");
-            setNextEnd(endMs != null ? formatTimelineMs(endMs) : "");
+            setNextUrl(artworkStorageRef ?? muralFrame ?? "");
           }}
         >
-          Edit timing
+          Edit still
         </Button>
         {status ? (
           <p className="suite-presence-status" role="status">
@@ -156,50 +151,32 @@ export function SceneTiming({
     <form
       className="suite-identity-panel"
       id={regionId}
-      aria-label={`Edit timing for ${sceneLabel}`}
+      aria-label={`Edit still for ${sceneLabel}`}
       onSubmit={(event) => void onSubmit(event)}
     >
-      <p className="suite-relation-kicker">When does this Scene live on the Mural?</p>
+      <p className="suite-relation-kicker">Which picture stands for this Scene?</p>
       <div className="space-y-2">
-        <Label htmlFor={startId} className="text-xs">
-          Window start
+        <Label htmlFor={stillId} className="text-xs">
+          Still URL
         </Label>
         <Input
-          id={startId}
-          name="start_ms"
-          value={nextStart}
+          id={stillId}
+          name="thumbnail_url"
+          value={nextUrl}
           onChange={(event) => {
-            setNextStart(event.target.value);
+            setNextUrl(event.target.value);
             if (fieldError) setFieldError(null);
           }}
-          placeholder="0:36.000"
+          placeholder="https://image.mux.com/…/thumbnail.jpg?time=36"
           disabled={busy}
           autoComplete="off"
           aria-invalid={fieldError ? true : undefined}
-          aria-describedby={fieldError ? `${startId}-error` : `${startId}-hint`}
         />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor={endId} className="text-xs">
-          Window end
-        </Label>
-        <Input
-          id={endId}
-          name="end_ms"
-          value={nextEnd}
-          onChange={(event) => {
-            setNextEnd(event.target.value);
-            if (fieldError) setFieldError(null);
-          }}
-          placeholder="1:19.000"
-          disabled={busy}
-          autoComplete="off"
-        />
-        <p id={`${startId}-hint`} className="text-xs text-muted-foreground">
-          Use 0:36.000, 0:36, or milliseconds. This shapes the existing window. Sentinel does not create Scenes.
+        <p className="text-xs text-muted-foreground">
+          HTTPS stills only. Use the mural frame at this window, or a gallery still already in Mighty Verse.
         </p>
         {fieldError ? (
-          <p id={`${startId}-error`} role="alert" className="text-xs text-destructive">
+          <p role="alert" className="text-xs text-destructive">
             {fieldError}
           </p>
         ) : null}
@@ -210,8 +187,13 @@ export function SceneTiming({
         </p>
       ) : null}
       <div className="suite-presence-actions">
+        {muralFrame ? (
+          <Button type="button" size="sm" variant="outline" disabled={busy} onClick={() => void persist(muralFrame)}>
+            Use mural frame
+          </Button>
+        ) : null}
         <Button type="submit" size="sm" disabled={busy}>
-          {busy ? "Saving…" : "Save timing"}
+          {busy ? "Saving…" : "Save still"}
         </Button>
         <Button
           type="button"
@@ -220,8 +202,7 @@ export function SceneTiming({
           disabled={busy}
           onClick={() => {
             setOpen(false);
-            setNextStart(startMs != null ? formatTimelineMs(startMs) : "");
-            setNextEnd(endMs != null ? formatTimelineMs(endMs) : "");
+            setNextUrl(artworkStorageRef ?? muralFrame ?? "");
           }}
         >
           Cancel

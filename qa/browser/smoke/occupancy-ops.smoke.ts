@@ -66,6 +66,7 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
     await attach.first().click();
     await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityFatherRaymondAttach}$`));
     await expect(page.getByRole("heading", { name: "Attach media" })).toBeVisible();
+    await expect(page.locator("[data-gallery-picker]")).toBeVisible();
     await expect(page.getByRole("form", { name: "Associate media with Universe" })).toBeVisible();
     await expect(page.getByLabel("Select Universe to associate")).toHaveValue(CANON.fatherRaymondUniverseId);
     notes.push("Father Raymond attach stays locked to Father Raymond");

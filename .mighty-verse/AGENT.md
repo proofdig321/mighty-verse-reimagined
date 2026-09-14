@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-14 (publishing journey hardening: mural-only Scenes, public mural stage, footer, distribution readiness)
+STATUS: current as of 2026-09-14 (constant Scene edit, gallery pick, storyboard path, holographic single cinema)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -200,7 +200,7 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - Extra Sentinel candidates become storyboard beats, never new Scenes
 - Authorise writes existing `projection_media_binding.start_ms/end_ms` via `decideSceneTiming`
 - Public 2.5D uses canonical stills. Suite uses the latest completed inspection session when present. Stage 4.0 exposes the same 2.5D as Studio Preview inside Creative Suite; `/worlds/{id}/holographic` remains the audience Experience.
-- Mux cinema is a custom WebGL1 compositor (`HolographicTheater`), not Three.js / R3F. `texture.flipY` stays false. Steady frames use `texSubImage2D` (allocate on size change). Do not skip uploads on HLS `currentTime`. Parallax strength is 0.75. No new tables.
+- Mux cinema is a custom WebGL1 compositor (`HolographicTheater`), not Three.js / R3F. `texture.flipY` stays false. Steady frames use `texSubImage2D` (allocate on size change). Do not skip uploads on HLS `currentTime`. Parallax strength is 0.75. Cinema fill is 1 (no dark bezel). Do not draw a second dark overlay display in the cinema; Scene/Moment composition stays under the mural. No new tables.
 
 ### Media Intelligence (browser-side, ephemeral)
 - `src/lib/media/intelligence.ts` — sampleFrames, computeFrameDeltas, detectBoundaryTimestamps
@@ -278,6 +278,7 @@ applied migration.
 - Stage 4.2: Product-facing journey is CREATE → CURATE → CREATIVE STUDIO → EXPERIENCE. Curate Hub is derived from live canonical records (no `UniverseProjectState` table, no Zustand). Create Work completion continues in Curate. Creative Studio is presentation language for the existing `/authority/universes/{id}` Suite. No minting, no NLE timeline, no Three.js, no migration. Fresh browser Create Work upload remains **not proven**.
 - Stage 4.3: Curate no longer stacks Hub + incoming + forms + Sentinel on one page. Occupied work uses `/authority/curate/{id}` child routes. `?universe=` redirects. Bound `?asset=` stays on the incoming catalogue. Scene creation remains Curate Sentinel, not Studio. No new ontology, no migration.
 - Stage 4.4 (2026-09-14): Publishing journey hardening. Mural-only work (Father Raymond) can establish Scenes from Curate Sentinel with curator-named structure (Intro/Verse/Hook) and adjustable times. Storyboard Authorise stays PATCH-only. Public Universe stages mural Mux. Public footer is real. Distribution readiness is a checklist, not YouTube/Spotify adapters. Sentinel still does not auto-create Scenes. Super Hero Ego windows unchanged. Hub source media opens `/authority/media/{assetId}` (ISRC / Replace media), not `/authority/{assetId}`. Public Scene Deck CTAs stay hidden until Scenes exist.
+- Stage 4.5 (2026-09-14): Scene authoring is constant — identity, timing, and still on every Scene object (Studio list + focused Scene). Gallery pick reuses ingested media on attach/replace. Public Scene Deck scrolling actually moves; many Scenes default to grid. Storyboard tabs share one height with a derived SCRIPT→PANELS→STILLS→MOTION path. Holographic cinema no longer paints a dark second screen over Mux. Super Hero Ego windows unchanged. Duplicate Father Raymond Intro stays on Universe `91027ced…` until an explicit reparent.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---
@@ -430,7 +431,7 @@ Do not use screenshots to prove orientation or audio/lyric sync. Chrome smoke
 `qa/browser/smoke/holographic-playback.smoke.ts` is the proof path:
 
 - luma-row correlation of Mux `<video>` vs the theater canvas (upright)
-- `data-holographic-flip-y=false` and `data-holographic-parallax=0.75`
+- `data-holographic-flip-y=false`, `data-holographic-parallax=0.75`, `data-holographic-overlays=none`, `data-holographic-cinema-fill=1`
 - cursor left/right stereo pan
 - `texSubImage2D` in-place uploads (`data-holographic-tex-path=subimage`); paused Mux clock holds while rAF continues
 
