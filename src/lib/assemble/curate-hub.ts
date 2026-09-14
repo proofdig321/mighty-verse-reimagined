@@ -403,19 +403,10 @@ function resolveNextAction(input: {
     };
   }
 
-  if (input.sceneCount === 0 && input.inspectCount === 0 && input.boundAssetId) {
-    return {
-      title: "Inspect the source",
-      body: "Persist Sentinel evidence before treating visual beats as canonical Scenes.",
-      href: mediaInspectHref(input.boundAssetId),
-      label: "Open Sentinel inspect",
-    };
-  }
-
   if (input.sceneCount === 0) {
     return {
       title: "Establish canonical Scenes",
-      body: "Sentinel may propose candidates. You authorise the canonical windows.",
+      body: "Sentinel observes the mural. You name each window (Intro, Verse 1, Hook, Verse 2…) and set start/end. Sentinel does not auto-create Scenes.",
       href: curateSentinelHref(universeId),
       label: "Establish Scene",
     };

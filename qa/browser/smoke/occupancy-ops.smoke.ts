@@ -48,6 +48,10 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
   await expect(page.getByText("Curate Hub", { exact: true })).toBeVisible();
   await expect(page.locator("[data-occupancy]").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Edit identity" }).first()).toBeVisible();
+  const establish = page.getByRole("link", { name: /Establish Scene/i });
+  await expect(establish.first()).toBeVisible();
+  await expect(establish.first()).toHaveAttribute("href", ROUTES.authorityFatherRaymondSentinel);
+  notes.push("Father Raymond hub next work is Establish Scene on its own Sentinel");
   const attach = page.getByRole("link", { name: "Attach media" });
   if (await attach.count()) {
     await expect(attach.first()).toHaveAttribute("href", ROUTES.authorityFatherRaymondAttach);

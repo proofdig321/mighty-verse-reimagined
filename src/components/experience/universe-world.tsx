@@ -109,7 +109,9 @@ export function UniverseWorldExperience({
             The Mural
           </h2>
           <p className="world-section-note">
-            The complete audiovisual expression of this Universe. Playback lives on the Mural.
+            {scenes.length > 0
+              ? "The complete audiovisual expression of this Universe. Playback lives on the Mural and in Experience."
+              : "The complete audiovisual expression of this Universe. Play it here, on the Mural, or in Experience. Canonical Scenes are established by a curator — they are not inferred from the file."}
           </p>
           <Link href={`/worlds/${mural.master_id}`} className="world-mural-stage">
             <EncounterStill url={muralStillUrl} alt="" />
@@ -180,6 +182,17 @@ export function UniverseWorldExperience({
               );
             })}
           </ol>
+        </section>
+      ) : mural ? (
+        <section className="world-section" aria-labelledby="world-encounters-heading" data-universe-scenes="empty">
+          <p className="world-kicker">Reveal</p>
+          <h2 id="world-encounters-heading" className="world-section-title">
+            Scenes
+          </h2>
+          <p className="world-section-note">
+            No canonical Scenes are authorised yet. The Mural still plays in full. Intro, Verse, Hook, and other
+            windows are curator decisions — they are not inferred from the file.
+          </p>
         </section>
       ) : null}
 

@@ -43,6 +43,7 @@ export function StoryboardWorkspace({
   canAuthoriseSentinel,
   inspectHref,
   previewHref,
+  establishHref,
   references,
   initialTab = "script",
   initialBody = "",
@@ -57,6 +58,7 @@ export function StoryboardWorkspace({
   canAuthoriseSentinel: boolean;
   inspectHref?: string | null;
   previewHref: string;
+  establishHref?: string | null;
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
   initialTab?: MaterialTab;
   initialBody?: string;
@@ -412,7 +414,10 @@ export function StoryboardWorkspace({
                           Sentinel
                         </h2>
                         <p className="suite-section-note">
-                          Observational evidence for this source. Sentinel does not create Scenes. Authorise windows only when the curator agrees.
+                          Observational evidence for this source. Sentinel does not create Scenes.
+                          {scenes.length === 0
+                            ? " This Universe has no Scenes yet — establish Intro / Verse / Hook windows on Curate Sentinel, then Authorise can patch them."
+                            : " Authorise windows only when the curator agrees."}
                         </p>
                       </div>
                       <SentinelIntelligencePanel
@@ -422,6 +427,7 @@ export function StoryboardWorkspace({
                         canRetainReference={canAuthoriseSentinel}
                         inspectHref={inspectHref}
                         previewHref={previewHref}
+                        establishHref={establishHref}
                       />
                     </div>
                   ) : (

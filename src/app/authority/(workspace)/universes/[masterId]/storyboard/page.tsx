@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { StoryboardWorkspace } from "@/components/assemble/storyboard-workspace";
 import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
-import { mediaInspectHref, creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
+import { mediaInspectHref, creativeSuiteWorkspaceHref, curateSentinelHref } from "@/lib/assemble/studio";
 import { suiteScenes } from "@/lib/assemble/suite";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
 import { serverAiCapability } from "@/lib/ai/provider";
@@ -41,6 +41,7 @@ export default async function UniverseStoryboardPage({
         canAuthoriseSentinel
         inspectHref={workspace.inspectAssetId ? mediaInspectHref(workspace.inspectAssetId) : null}
         previewHref={creativeSuiteWorkspaceHref(workspace.data.master_id, "preview", from)}
+        establishHref={curateSentinelHref(workspace.data.master_id)}
         references={workspace.references}
         initialTab={query.source === "sentinel" ? "sentinel" : "script"}
         initialBody={materials.body?.body ?? ""}

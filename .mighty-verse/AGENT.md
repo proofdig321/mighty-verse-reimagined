@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-10 (holographic Experience playback + routed Studio + Storyboard artifacts)
+STATUS: current as of 2026-09-14 (publishing journey hardening: mural-only Scenes, public mural stage, footer, distribution readiness)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -94,6 +94,17 @@ MEDIA ≠ CREATIVE WORK. A Mux asset is not a Universe, Mural, Scene, or Creativ
 These values are immutable verification targets. Any implementation that changes them
 without explicit canonical authority is a defect.
 
+### Father Raymond (own Universe — do not merge into Super Hero Ego)
+
+**Universe:** `e22e080c-715c-4045-ba82-20474d25b2e0`
+**Mural:** `14938419-9477-431a-be04-511b1e205bbd`
+**Mux asset:** `5f85a6f1-1f2a-4da7-af9b-8467e58d3b9c` / playback `014sJhmHHRL2g52G14xG00L6MTyq4zvunCsZtFStk4Wds`
+**Duration:** `198400` ms
+**Canonical Scenes:** none until a curator Accepts as Scene on Curate Sentinel.
+
+Do not invent Intro/Verse/Hook Scenes in the database. The curator names structure and times.
+Do not reparent this work into Super Hero Ego because the title contains “Golden Shovel”.
+
 ---
 
 ## 4. ARCHITECTURE LAYERS
@@ -166,11 +177,15 @@ Never use `canPlayType` as the primary gate. This was a confirmed Chrome bug.
 - `/authority/curate/[universeId]` — Curate Hub for one Universe (derived live state). Not a stacked page.
 - `/authority/curate/[universeId]/mural` — Register Mural (existing mural API). Not minting.
 - `/authority/curate/[universeId]/moment` — Add Creative Moment (existing master/state/projection APIs).
-- `/authority/curate/[universeId]/sentinel` — Sentinel Scene establishment workstation (existing CurateClient). Evidence only.
+- `/authority/curate/[universeId]/sentinel` — Sentinel Scene establishment workstation. Curator names Intro / Verse / Hook / Other and sets start/end, then Accept as Scene (`POST /api/authority/scenes`). Visual candidates are evidence. Sentinel does not classify musical structure and does not auto-create Scenes.
+- `POST /api/authority/sentinel/authorise` — curator authorises Sentinel-proposed windows onto **existing** Scene bindings. Writes `start_ms`/`end_ms` only. Does not create Scenes. Disabled until Scenes exist.
+- Studio Storyboard Sentinel tab continues to Curate Sentinel when the Universe has zero Scenes. Keep as reference still works.
+- Public `/worlds/{id}` stages mural Mux when the Universe master has no own playback (Father Raymond). Empty Scenes are stated honestly.
+- Public footer is site chrome on `PublicShell`. Operations stay off `PUBLIC_PRODUCT_NAV`.
+- Asset Distribution panel is a readiness checklist (identity, rights, bind, ISRC, public Experience). YouTube / Spotify / Vimeo are named as future projections, not live adapters.
 - `/authority/universes` — Creative Studio entry (existing Universe catalogue)
 - `/authority/universes/[masterId]` — Creative Studio Overview (command centre). Child workspaces: `/storyboard`, `/scenes`, `/scenes/[sceneId]`, `/production`, `/preview` (playable 2.5D), `/experience`. Identity stays `/identity`. Sentinel evidence lives on Storyboard materials (`?source=sentinel`). Mux IDs stay in inspector details. Public `/worlds/{id}` and `/worlds/{id}/holographic` remain Experience destinations. Sentinel does not create Scenes. Scene Deck shuffle is not imported. Preview does not rewrite timing.
 - `/authority/universes/[masterId]/identity` — Universe identity curation (title + description)
-- `POST /api/authority/sentinel/authorise` — curator authorises Sentinel-proposed windows onto existing Scene bindings. Writes `start_ms`/`end_ms` only. Does not create Scenes.
 - `src/lib/assemble/` — shared Universe assembly, identity, Creative Suite nav, Sentinel intelligence load, and Curate Studio association (Authority now; public curation later). Map: `src/lib/assemble/CAPABILITIES.md`
 
 ### Sentinel Evidence Layer (Phase 1, 2026-09-10)
@@ -262,6 +277,7 @@ applied migration.
 - Stage 4.1: Create Work processing no longer depends on Mux webhooks or a single open browser request. Polling advances `media_upload_session` from live Mux state. A request timeout is not a processing failure. Retry resumes the existing master/session. Curate associate/register expose Inspect → Sentinel → Creative Suite continuation. No migration. No job table. No Three.js. Super Hero Ego remains the regression reference.
 - Stage 4.2: Product-facing journey is CREATE → CURATE → CREATIVE STUDIO → EXPERIENCE. Curate Hub is derived from live canonical records (no `UniverseProjectState` table, no Zustand). Create Work completion continues in Curate. Creative Studio is presentation language for the existing `/authority/universes/{id}` Suite. No minting, no NLE timeline, no Three.js, no migration. Fresh browser Create Work upload remains **not proven**.
 - Stage 4.3: Curate no longer stacks Hub + incoming + forms + Sentinel on one page. Occupied work uses `/authority/curate/{id}` child routes. `?universe=` redirects. Bound `?asset=` stays on the incoming catalogue. Scene creation remains Curate Sentinel, not Studio. No new ontology, no migration.
+- Stage 4.4 (2026-09-14): Publishing journey hardening. Mural-only work (Father Raymond) can establish Scenes from Curate Sentinel with curator-named structure (Intro/Verse/Hook) and adjustable times. Storyboard Authorise stays PATCH-only. Public Universe stages mural Mux. Public footer is real. Distribution readiness is a checklist, not YouTube/Spotify adapters. Sentinel still does not auto-create Scenes. Super Hero Ego windows unchanged.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
 
 ---

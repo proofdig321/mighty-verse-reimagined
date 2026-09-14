@@ -175,6 +175,32 @@ const noScenes = deriveCurateHub({
 assert(noScenes.nextAction.label === "Establish Scene", "evidence without scenes needs human authorisation");
 assert(noScenes.nextAction.href === `/authority/curate/${UNIVERSE}/sentinel`, "scene establishment is a Curate Sentinel child page");
 
+const boundNoInspect = deriveCurateHub({
+  assembly: {
+    master_id: FR,
+    title: "Father Raymond",
+    description: null,
+    created_at: "2026-09-09T00:00:00Z",
+    murals: [
+      {
+        master_id: "fr-mural",
+        title: "Father Raymond",
+        has_media: true,
+        provider: "mux",
+        storage_ref: "014sJhmHHRL2g52G14xG00L6MTyq4zvunCsZtFStk4Wds",
+        scenes: [],
+      },
+    ],
+    creative_moments: [],
+  },
+  sessions: [],
+  inspectCount: 0,
+  boundAssetId: FR_ASSET,
+});
+assert(boundNoInspect.nextAction.label === "Establish Scene", "a mural-bound Universe with zero Scenes goes to Sentinel, not a dead inspect gate");
+assert(boundNoInspect.nextAction.href === `/authority/curate/${FR}/sentinel`, "Father Raymond scene establishment stays on its own Sentinel");
+assert(boundNoInspect.nextAction.body.includes("Intro"), "operator is told to name Intro/Verse/Hook windows");
+
 const noMoments = deriveCurateHub({
   assembly: {
     ...sheAssembly,

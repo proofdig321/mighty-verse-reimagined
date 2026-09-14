@@ -78,7 +78,7 @@ Schema: `master`, `work_presentation`, `projection`, `projection_media_binding`,
 
 - Create Work still registers canonical master/state/projection before media finishes. Stage 4.1 polling remains the processing path. A brand-new browser file upload is still **not proven** end-to-end.
 - Curate Hub is a derived view of live records on `/authority/curate/{id}`. Do not add `UniverseProjectState` persistence or Zustand to drive it.
-- **Question A — Scene creation.** Keep it on Curate Sentinel (`/authority/curate/{id}/sentinel`). Studio authors existing Scenes. Moving creation into Studio would mix Sentinel canonicalisation with composition.
+- **Question A — Scene creation.** Keep it on Curate Sentinel (`/authority/curate/{id}/sentinel`). Studio authors existing Scenes. Moving creation into Studio would mix Sentinel canonicalisation with composition. Curator names Intro / Verse / Hook / Other and sets start/end; Sentinel does not classify musical structure.
 - **Question B — Studio timeline tracks.** Deferred. A visual projection of Scene timing/order/`scene_moment` may be appropriate later. Do not invent a new media model.
 - **Question C — `/authority/{id}` rights checklist vs public Experience.** Semantic/presentation distinction (creative completeness vs media readiness vs publication vs economic realization). Do not change the backend in this stage.
 - Creative Studio is the existing Creative Suite at `/authority/universes/{id}`. Product language is Studio; Studio routes are unchanged. This is not an NLE / multi-track editor.

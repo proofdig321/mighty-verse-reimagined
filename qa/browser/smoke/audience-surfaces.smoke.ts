@@ -34,6 +34,7 @@ test("audience chrome restores Discover pages without the operations sidebar", a
   await expect(page).toHaveURL(/\/help/);
   await expect(page.getByRole("heading", { name: "How Mighty Verse works" })).toBeVisible();
   await expect(page.getByRole("button", { name: /Play narrator/i })).toBeVisible();
+  await expect(page.locator("[data-public-footer=site]")).toBeVisible();
   notes.push("Help walkthrough exposes the browser narrator");
 
   await page.goto(ROUTES.participants, { waitUntil: "domcontentloaded" });
