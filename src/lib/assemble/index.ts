@@ -5,6 +5,7 @@ export { buildUniverseAssembly } from "./build-universe";
 export { loadUniverseAssembly } from "./load-universe";
 export { loadSentinelIntelligence } from "./load-sentinel-intelligence";
 export { loadSuiteSourcePreview } from "./load-source-preview";
+export { resolveSuiteSourceAssetId } from "./source-preview";
 export type { SuiteSourcePreview, SuiteSourceWindow } from "./load-source-preview";
 export {
   PRODUCTION_PATH_STEPS,

@@ -180,6 +180,23 @@ export function composeHolographicProgram(input: {
     });
   }
 
+  if (input.source && !layers.some((layer) => layer.kind === "mural")) {
+    layers.unshift({
+      layer_id: `mural-${input.source.mural_id}`,
+      kind: "mural",
+      master_id: input.source.mural_id,
+      title: input.source.mural_title,
+      still_url: stillAtTime(input.source.playback_id, 0, 960),
+      depth: 0,
+      offset_x: 0,
+      offset_y: 28,
+      related_scene_ids: windows.map((window) => window.scene_master_id),
+      start_ms: 0,
+      end_ms: durationMs || null,
+      playback_endpoint: input.source.endpoint_ref,
+    });
+  }
+
   return {
     title: audienceLabel(input.title, "Experience"),
     duration_ms: durationMs,

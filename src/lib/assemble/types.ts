@@ -32,6 +32,7 @@ export type UniverseAssemblyMural = {
   title: string | null;
   scenes: UniverseAssemblyScene[];
   has_media: boolean;
+  asset_id: string | null;
   provider: string | null;
   storage_ref: string | null;
 };

@@ -106,7 +106,7 @@ export default async function HolographicWorldPage({
         </div>
       </div>
 
-      {intelligence ? (
+      {program.clock || program.layers.length > 0 ? (
         <HolographicStage program={program} mode="public" links={links} />
       ) : (
         <p className="mx-auto max-w-7xl px-6 py-10 text-sm text-muted-foreground">This Universe has no spatial stage yet.</p>

@@ -188,6 +188,7 @@ export const ROUTES = {
   authorityFatherRaymondMuralRecord: `/authority/${CANON.fatherRaymondMuralId}`,
   authoritySheMuralRecord: `/authority/${CANON.muralId}`,
   authorityMurals: "/authority/murals",
+  fatherRaymondHolographic: `/worlds/${CANON.fatherRaymondUniverseId}/holographic`,
   authorityCurateMuxAsset: `/authority/curate?asset=${CANON.muxAssetId}`,
   authorityCurateUnboundAsset: `/authority/curate?asset=${CANON.unboundLivepeerAssetId}`,
   editor: "/editor",

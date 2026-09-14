@@ -77,6 +77,9 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
   const murals: UniverseAssemblyMural[] = rows.muralMasters.map((mural) => {
     const scenes = scenesByMural.get(mural.master_id) ?? [];
     const muralProjection = (rows.muralProjections ?? []).find((row) => row.master_id === mural.master_id);
+    const muralBinding = muralProjection
+      ? rows.bindings.find((row) => row.projection_id === muralProjection.projection_id)
+      : null;
     const muralMedia = assetFor(rows, muralProjection?.projection_id);
     const sceneMedia = scenes.find((scene) => scene.storage_ref) ?? null;
     const provider = muralMedia.provider ?? sceneMedia?.provider ?? null;
@@ -86,6 +89,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       title: titleFor(mural.master_id),
       scenes,
       has_media: Boolean(storage_ref),
+      asset_id: muralBinding?.asset_id ?? sceneMedia?.asset_id ?? null,
       provider,
       storage_ref,
     };
