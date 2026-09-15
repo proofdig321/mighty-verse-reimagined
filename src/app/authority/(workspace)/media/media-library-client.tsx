@@ -361,7 +361,7 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
       </div>
       <p className="text-xs text-muted-foreground">
         These intake records exist but have not yet been linked to a media asset.
-        If Mux could not pull YouTube, upload the file, retry Mux, or delete the shell.
+        If YouTube file fetch is blocked, paste a signed-in YouTube session, upload the file, retry Mux, or delete the shell.
         Delete does not remove a Universe.
       </p>
 
