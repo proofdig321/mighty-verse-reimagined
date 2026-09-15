@@ -6,13 +6,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "../../_shared/authority-utils";
 import { UrlIngestProgress } from "@/components/assemble/url-ingest-progress";
+import Link from "next/link";
 import {
   classifyPollBudget,
   classifyUrlIngestStage,
-  PROCESSING_FAILED_COPY,
   PROCESSING_POLL_ATTEMPTS,
   PROCESSING_POLL_MS,
-  REQUEST_TIMEOUT_COPY,
+  URL_INGEST_FAILED_COPY,
+  URL_INGEST_TIMEOUT_COPY,
   type UrlIngestStage,
 } from "@/lib/media/processing-state";
 
@@ -178,11 +179,11 @@ export default function MediaIntakeClient({ participants }: { participants: Part
         if (budget === "failed") {
           setStage("failed");
           setBusy(false);
-          setMessage(PROCESSING_FAILED_COPY);
+          setMessage(URL_INGEST_FAILED_COPY);
           return;
         }
         if (budget === "request_timeout") {
-          setMessage(REQUEST_TIMEOUT_COPY);
+          setMessage(URL_INGEST_TIMEOUT_COPY);
           setBusy(false);
           return;
         }
@@ -211,7 +212,7 @@ export default function MediaIntakeClient({ participants }: { participants: Part
           }
           if (next === "failed") {
             setBusy(false);
-            setMessage(PROCESSING_FAILED_COPY);
+            setMessage(URL_INGEST_FAILED_COPY);
             return;
           }
         } catch {
@@ -220,7 +221,7 @@ export default function MediaIntakeClient({ participants }: { participants: Part
           return;
         }
       }
-      setMessage(REQUEST_TIMEOUT_COPY);
+      setMessage(URL_INGEST_TIMEOUT_COPY);
       setBusy(false);
     }
 
@@ -371,6 +372,14 @@ export default function MediaIntakeClient({ participants }: { participants: Part
         </div>
 
         {message && <p role="alert" className="text-sm text-destructive">{message}</p>}
+        {stage === "failed" ? (
+          <p className="text-xs">
+            <Link href="/authority/media" className="underline underline-offset-2 hover:text-foreground">
+              Open Gallery
+            </Link>
+            {" "}to upload the file, retry Mux, or delete the shell.
+          </p>
+        ) : null}
         {stage ? <UrlIngestProgress stage={stage} elapsedMs={elapsedMs} sourceUrl={sourceUrl} /> : null}
 
         <div className="flex justify-between gap-2">

@@ -2,7 +2,10 @@ import {
   classifyPollBudget,
   classifyProcessingPhase,
   classifyUrlIngestStage,
+  PROCESSING_FAILED_COPY,
   REQUEST_TIMEOUT_COPY,
+  URL_INGEST_FAILED_COPY,
+  URL_INGEST_TIMEOUT_COPY,
   urlIngestStageIndex,
   urlIngestStageLabel,
 } from "../processing-state";
@@ -28,6 +31,18 @@ assert(classifyPollBudget({ phase: "ingested", attempt: 60, maxAttempts: 60 }) =
 assert(
   REQUEST_TIMEOUT_COPY.includes("not a processing failure"),
   "timeout copy distinguishes request timeout from processing failure",
+);
+assert(
+  URL_INGEST_FAILED_COPY.includes("Gallery") && !URL_INGEST_FAILED_COPY.includes("this work"),
+  "URL ingest failure sends the operator to Gallery, not a Universe",
+);
+assert(
+  URL_INGEST_TIMEOUT_COPY.includes("Gallery") && !URL_INGEST_TIMEOUT_COPY.includes("this work"),
+  "URL ingest timeout is not a Create Work failure",
+);
+assert(
+  PROCESSING_FAILED_COPY.includes("this work"),
+  "Create Work still keeps work-scoped processing failure copy",
 );
 
 assert(classifyUrlIngestStage({ phase: "created" }) === "submitted", "created URL ingest is submitted");

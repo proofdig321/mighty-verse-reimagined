@@ -79,6 +79,7 @@ test("Gallery awaiting upload shows Delete for unlinked duplicate shells", async
   await expect(row.getByText(title)).toBeVisible();
   await expect(row.getByRole("button", { name: "Upload media" })).toBeVisible();
   await expect(row.getByRole("button", { name: "Delete" })).toBeVisible();
+  await expect(row.getByRole("button", { name: /Retry Mux/i })).toHaveCount(0);
   notes.push("awaiting upload row offers Upload and Delete");
 
   await row.getByRole("button", { name: "Delete" }).click();

@@ -59,7 +59,7 @@ async function getData() {
       .order("created_at", { ascending: false }),
     svc
       .from("media_intake")
-      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes, search_status")
+      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes, search_status, source_url, source_type")
       .order("created_at", { ascending: false }),
   ]);
 

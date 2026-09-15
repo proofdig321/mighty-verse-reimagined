@@ -103,3 +103,10 @@ export const REQUEST_TIMEOUT_COPY =
 
 export const PROCESSING_FAILED_COPY =
   "The media provider reported that processing failed. The canonical work is preserved. Retry the upload against this work — do not create a new Universe.";
+
+/** Curate / Add Media URL ingest. No Universe is involved. Operator finishes on Gallery. */
+export const URL_INGEST_FAILED_COPY =
+  "Mux could not pull this file. The intake stays in Gallery. Upload the file there, retry Mux, or delete the shell. This did not create a Universe.";
+
+export const URL_INGEST_TIMEOUT_COPY =
+  "This page stopped waiting. Mux may still be pulling. A request timeout is not a processing failure. Check Incoming and Gallery. This did not create a Universe.";

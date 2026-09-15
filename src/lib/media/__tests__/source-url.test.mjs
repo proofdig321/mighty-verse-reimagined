@@ -26,4 +26,13 @@ assert(!missing.ok, "YouTube URLs without a video id are rejected");
 assert(youtubeVideoIdFromUrl("https://youtu.be/dQw4w9WgXcQ") === "dQw4w9WgXcQ", "youtu.be yields the video id");
 assert(youtubeVideoIdFromUrl("https://cdn.example.com/clip.mp4") === null, "direct files have no YouTube id");
 
+const mix = parseMediaSourceUrl(
+  "https://www.youtube.com/watch?v=EEnwb0Uknew&list=RDEEnwb0Uknew&start_radio=1",
+);
+assert(mix.ok && mix.kind === "youtube", "YouTube Mix / radio URLs are ingest sources");
+assert(
+  mix.ok && mix.url === "https://www.youtube.com/watch?v=EEnwb0Uknew",
+  "playlist and start_radio params are stripped before Mux sees the URL",
+);
+
 console.log("source-url.test.mjs: ok");

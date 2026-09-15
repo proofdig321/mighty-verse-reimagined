@@ -7,14 +7,15 @@ import { isUsableMediaSourceUrl } from "@/lib/media/source-url";
 import {
   classifyPollBudget,
   classifyUrlIngestStage,
-  PROCESSING_FAILED_COPY,
   PROCESSING_POLL_ATTEMPTS,
   PROCESSING_POLL_MS,
-  REQUEST_TIMEOUT_COPY,
+  URL_INGEST_FAILED_COPY,
+  URL_INGEST_TIMEOUT_COPY,
   type UrlIngestStage,
 } from "@/lib/media/processing-state";
 import { UrlIngestProgress } from "./url-ingest-progress";
 import type { CuratePendingIngest } from "@/lib/assemble/load-studio";
+import Link from "next/link";
 
 const STORAGE_KEY = "mighty-verse:curate-youtube-ingest";
 
@@ -110,11 +111,12 @@ export function CurateYoutubeIngest({
           setStage("failed");
           writeStored(null);
           setBusy(false);
-          setMessage(PROCESSING_FAILED_COPY);
+          setMessage(URL_INGEST_FAILED_COPY);
+          router.refresh();
           return;
         }
         if (budget === "request_timeout") {
-          setMessage(REQUEST_TIMEOUT_COPY);
+          setMessage(URL_INGEST_TIMEOUT_COPY);
           setBusy(false);
           return;
         }
@@ -146,7 +148,8 @@ export function CurateYoutubeIngest({
           if (next === "failed") {
             writeStored(null);
             setBusy(false);
-            setMessage(PROCESSING_FAILED_COPY);
+            setMessage(URL_INGEST_FAILED_COPY);
+            router.refresh();
             return;
           }
         } catch {
@@ -155,7 +158,7 @@ export function CurateYoutubeIngest({
           return;
         }
       }
-      setMessage(REQUEST_TIMEOUT_COPY);
+      setMessage(URL_INGEST_TIMEOUT_COPY);
       setBusy(false);
     }
 
@@ -180,19 +183,24 @@ export function CurateYoutubeIngest({
         body: JSON.stringify({ url, name: "YouTube ingest" }),
       });
       const data = await response.json().catch(() => ({}));
+      const canonical = typeof data.url === "string" ? data.url : url;
+      setActiveUrl(canonical);
+      if (typeof canonical === "string") setUrl(canonical);
       if (!response.ok) {
         setStage("failed");
-        setMessage(typeof data.error === "string" ? data.error : "Mux could not ingest this URL.");
+        setMessage(typeof data.error === "string" ? data.error : URL_INGEST_FAILED_COPY);
         setBusy(false);
+        router.refresh();
         return;
       }
       if (typeof data.session_id !== "string") {
         setStage("failed");
-        setMessage("Mux accepted the URL but did not return an ingest session.");
+        setMessage("Mux accepted the URL but did not return an ingest session. Check Gallery for the intake shell.");
         setBusy(false);
+        router.refresh();
         return;
       }
-      writeStored({ sessionId: data.session_id, url, startedAt: started });
+      writeStored({ sessionId: data.session_id, url: canonical, startedAt: started });
       setSessionId(data.session_id);
       setStage("pulling");
     } catch {
@@ -236,6 +244,14 @@ export function CurateYoutubeIngest({
       ) : null}
       {message ? (
         <p className={`text-xs ${stage === "failed" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>
+      ) : null}
+      {stage === "failed" ? (
+        <p className="text-xs">
+          <Link href="/authority/media" className="underline underline-offset-2 hover:text-foreground">
+            Open Gallery
+          </Link>
+          {" "}to upload the file, retry Mux, or delete the shell.
+        </p>
       ) : null}
     </form>
   );

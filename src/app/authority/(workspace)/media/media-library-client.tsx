@@ -10,8 +10,18 @@ import type { MediaLibraryItem } from "./page";
 import { galleryRoleLabel, type GalleryAssetRole } from "@/lib/production/lifecycle";
 import { DiscardMedia } from "@/components/assemble/discard-media";
 import { DiscardIntake } from "@/components/assemble/discard-intake";
+import { RetryUrlIngest } from "@/components/assemble/retry-url-ingest";
+import { isUsableMediaSourceUrl } from "@/lib/media/source-url";
 
-type UnlinkedIntake = { intake_id: string; title: string; work_type: string; creator_name: string | null; created_at: string };
+type UnlinkedIntake = {
+  intake_id: string;
+  title: string;
+  work_type: string;
+  creator_name: string | null;
+  created_at: string;
+  source_url: string | null;
+  source_type: string | null;
+};
 
 type Props = {
   items: MediaLibraryItem[];
@@ -351,7 +361,8 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
       </div>
       <p className="text-xs text-muted-foreground">
         These intake records exist but have not yet been linked to a media asset.
-        Upload a file, or delete duplicate shells. Delete does not remove a Universe.
+        If Mux could not pull YouTube, upload the file, retry Mux, or delete the shell.
+        Delete does not remove a Universe.
       </p>
 
       <div className="space-y-2" data-awaiting-upload="">
@@ -370,28 +381,36 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
             <div
               key={intake.intake_id}
               data-intake-id={intake.intake_id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-4 py-3"
+              className="space-y-3 rounded-lg border border-border bg-card/50 px-4 py-3"
             >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{intake.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}
-                </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{intake.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}
+                  </p>
+                  {intake.source_url ? (
+                    <p className="text-[10px] text-muted-foreground/70 truncate">{intake.source_url}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setActiveIntakeId(intake.intake_id)}
+                  >
+                    <Upload size={13} /> Upload media
+                  </Button>
+                  <DiscardIntake
+                    intakeId={intake.intake_id}
+                    title={intake.title}
+                    onDiscarded={() => setDone((prev) => new Set([...prev, intake.intake_id]))}
+                  />
+                </div>
               </div>
-              <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => setActiveIntakeId(intake.intake_id)}
-                >
-                  <Upload size={13} /> Upload media
-                </Button>
-                <DiscardIntake
-                  intakeId={intake.intake_id}
-                  title={intake.title}
-                  onDiscarded={() => setDone((prev) => new Set([...prev, intake.intake_id]))}
-                />
-              </div>
+              {intake.source_url && isUsableMediaSourceUrl(intake.source_url) ? (
+                <RetryUrlIngest intakeId={intake.intake_id} sourceUrl={intake.source_url} />
+              ) : null}
             </div>
           )
         )}
