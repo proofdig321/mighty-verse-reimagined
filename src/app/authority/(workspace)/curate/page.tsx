@@ -26,7 +26,7 @@ export default async function CuratePage({
   if (!await getParticipantId(supabase)) redirect("/auth/sign-in");
 
   const { universe, asset } = await searchParams;
-  const { media, universes } = await loadCurateStudioMedia();
+  const { media, universes, pendingIngest } = await loadCurateStudioMedia();
   const requestedUniverseId =
     typeof universe === "string" && UUID_RE.test(universe.trim()) ? universe.trim() : null;
   const knownUniverse =
@@ -75,6 +75,7 @@ export default async function CuratePage({
         universes={universes}
         selectedUniverseId={null}
         focusedAsset={focusedAsset}
+        pendingIngest={pendingIngest}
       />
     </div>
   );

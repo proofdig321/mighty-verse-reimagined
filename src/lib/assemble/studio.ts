@@ -56,7 +56,12 @@ export type CurateStudioMedia = {
   readiness_blockers: string[];
   inspection: StudioInspectionSummary | null;
   association: StudioAssociation;
+  deletable: boolean;
 };
+
+export function mediaRecordHref(assetId: string): string {
+  return `/authority/media/${assetId}`;
+}
 
 export function mediaInspectHref(assetId: string): string {
   return `${MEDIA_INSPECT_HREF}?assetId=${assetId}`;

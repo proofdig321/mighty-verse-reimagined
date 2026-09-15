@@ -45,6 +45,7 @@ export {
   curateSentinelHref,
   curateStudioHref,
   mediaInspectHref,
+  mediaRecordHref,
   mediaIsCanonicalUniverse,
   studioInspectionLabel,
   studioReadinessLabel,

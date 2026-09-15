@@ -7,17 +7,19 @@ import {
   creativeSuiteHref,
   curateSentinelHref,
   mediaInspectHref,
+  mediaRecordHref,
   studioInspectionLabel,
   studioReadinessLabel,
   type CurateStudioMedia,
 } from "@/lib/assemble/studio";
 import { associationStatusLabel } from "@/lib/assemble/association";
 import type { CurateAssetFocus } from "@/lib/assemble/curate-context";
-import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
+import type { CuratePendingIngest, CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
 import { CurateContinuationLinks } from "./curate-continuation";
 import { CurateYoutubeIngest } from "./curate-youtube-ingest";
+import { DiscardMedia } from "./discard-media";
 
 function untitled(kind: string) {
   return <span className="italic text-muted-foreground">Untitled {kind}</span>;
@@ -73,11 +75,13 @@ export default function CurateStudioGateway({
   universes,
   selectedUniverseId,
   focusedAsset,
+  pendingIngest = [],
 }: {
   media: CurateStudioMedia[];
   universes: CurateStudioUniverse[];
   selectedUniverseId: string | null;
   focusedAsset: CurateAssetFocus | null;
+  pendingIngest?: CuratePendingIngest[];
 }) {
   return (
     <div className="space-y-10">
@@ -89,7 +93,7 @@ export default function CurateStudioGateway({
             </h2>
             <p className="text-sm text-muted-foreground max-w-3xl">
               What has arrived. These are media assets — not Universes. YouTube is the primary ingest path; Mux pulls the file. Uploading media does not create a Universe.
-              Sentinel inspects them. Creative meaning is assembled in Creative Studio.
+              Sentinel inspects them. Creative meaning is assembled in Creative Studio. Each row has Edit and Delete. Canonical Super Hero Ego and Father Raymond media cannot be deleted.
             </p>
           </div>
           <Link href={MEDIA_INTAKE_HREF} className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -97,7 +101,7 @@ export default function CurateStudioGateway({
           </Link>
         </div>
 
-        <CurateYoutubeIngest />
+        <CurateYoutubeIngest initialSessions={pendingIngest} />
 
         {focusedAsset ? <CurateAssetContextBanner focusedAsset={focusedAsset} /> : null}
 
@@ -162,11 +166,18 @@ export default function CurateStudioGateway({
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-wrap justify-end gap-3">
                           <Link
+                            href={mediaRecordHref(item.asset_id)}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Edit
+                          </Link>
+                          <Link
                             href={mediaInspectHref(item.asset_id)}
                             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                           >
                             Inspect
                           </Link>
+                          {item.deletable ? <DiscardMedia assetId={item.asset_id} title={item.title} /> : null}
                           {item.association.universe_id && (
                             <Link
                               href={curateSentinelHref(item.association.universe_id)}

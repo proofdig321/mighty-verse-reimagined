@@ -35,5 +35,7 @@ export function isProtectedMaster(masterId: string | null | undefined): boolean 
 
 export function isPlayableStorageRef(storageRef: string | null | undefined): boolean {
   if (!storageRef) return false;
-  return !storageRef.startsWith("seed:placeholder:");
+  if (storageRef.startsWith("seed:placeholder:")) return false;
+  if (storageRef.startsWith("operator:discarded:")) return false;
+  return true;
 }

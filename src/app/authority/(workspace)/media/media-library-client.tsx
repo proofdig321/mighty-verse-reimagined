@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import type { MediaLibraryItem } from "./page";
 import { galleryRoleLabel, type GalleryAssetRole } from "@/lib/production/lifecycle";
+import { DiscardMedia } from "@/components/assemble/discard-media";
 
 type UnlinkedIntake = { intake_id: string; title: string; work_type: string; creator_name: string | null; created_at: string };
 
@@ -80,13 +81,13 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
   const showThumb = item.thumbnail_url && !thumbError && !isAudio;
 
   return (
-    <Link
-      href={`/authority/media/${item.asset_id}`}
+    <div
       data-gallery-role={item.production_role}
       data-gallery-bound={item.bound ? "bound" : "unbound"}
       data-gallery-approval={item.production_approval ?? "none"}
       className="group flex flex-col rounded-lg border border-border bg-card/50 overflow-hidden hover:border-border/80 hover:bg-card/80 transition-colors"
     >
+      <Link href={`/authority/media/${item.asset_id}`} className="flex flex-col flex-1 min-h-0">
       {/* Thumbnail / media representation */}
       <div className="relative aspect-video bg-muted/30 flex items-center justify-center overflow-hidden">
         {showThumb ? (
@@ -172,6 +173,13 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
         )}
       </div>
     </Link>
+      <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
+        <Link href={`/authority/media/${item.asset_id}`} className="text-xs text-muted-foreground hover:text-foreground">
+          Edit
+        </Link>
+        {item.deletable ? <DiscardMedia assetId={item.asset_id} title={item.title} /> : null}
+      </div>
+    </div>
   );
 }
 

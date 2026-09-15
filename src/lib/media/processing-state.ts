@@ -48,6 +48,55 @@ export function processingStageLabel(kind: ProcessingKind, phase?: string | null
   return "Processing video…";
 }
 
+/**
+ * YouTube / HTTPS URL ingest stages.
+ * Mux does not report a byte percentage for URL pull. These are labeled
+ * operator stages, not a fake 0–100 bar.
+ */
+export const URL_INGEST_STAGES = [
+  { id: "submitted", label: "Submitted to Mux" },
+  { id: "pulling", label: "Mux is pulling the video" },
+  { id: "ready", label: "Playable in Incoming" },
+] as const;
+
+export type UrlIngestStage = (typeof URL_INGEST_STAGES)[number]["id"] | "failed";
+
+export function classifyUrlIngestStage(input: {
+  phase?: string | null;
+  providerStatus?: string | null;
+  outcome?: string | null;
+}): UrlIngestStage {
+  const phase = input.phase ?? "";
+  const outcome = input.outcome ?? "";
+  const provider = (input.providerStatus ?? "").toLowerCase();
+  if (phase === "failed" || outcome === "failed" || provider === "errored") return "failed";
+  if (
+    phase === "ingested" ||
+    phase === "ready" ||
+    outcome === "ingested"
+  ) {
+    return "ready";
+  }
+  if (phase === "processing" || provider === "preparing" || provider === "asset_created") {
+    return "pulling";
+  }
+  return "submitted";
+}
+
+export function urlIngestStageIndex(stage: UrlIngestStage): number {
+  if (stage === "failed") return 1;
+  if (stage === "submitted") return 0;
+  if (stage === "pulling") return 1;
+  return 2;
+}
+
+export function urlIngestStageLabel(stage: UrlIngestStage): string {
+  if (stage === "failed") return "Mux could not ingest this URL";
+  if (stage === "submitted") return "Submitted to Mux";
+  if (stage === "pulling") return "Mux is pulling the video";
+  return "Playable in Incoming";
+}
+
 /** Honest copy when the browser stops waiting while the job may still run. */
 export const REQUEST_TIMEOUT_COPY =
   "This page stopped waiting. Video processing may still be running. A request timeout is not a processing failure. You can leave and return to this work.";

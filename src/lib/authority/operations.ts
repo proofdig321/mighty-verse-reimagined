@@ -2,6 +2,16 @@ import { validateAuthority, logOperation, computeHash, getServiceClient } from "
 import type { AuthorityCapability } from "./validate";
 import { isProtectedMaster } from "@/lib/assemble/protected-work";
 import { decideWithdraw } from "@/lib/assemble/withdraw";
+import {
+  classifyUniverseOccupancy,
+  hasSourceMediaFromSession,
+} from "@/lib/assemble/occupancy";
+import {
+  decideDiscardMedia,
+  markDiscardedStorageRef,
+  mediaHasLiveCanonicalBinding,
+} from "@/lib/media/discard-asset";
+import { associateAssetWithCanonicalWork } from "@/lib/assemble/studio";
 
 export type OperationResult<T> = { data: T } | { error: string };
 
@@ -654,4 +664,135 @@ export async function withdrawMaster(
 
   await logOperation(auth.authority_id, "withdraw-master", master.master_id, "master", "accepted");
   return { data: { master_ids: subjectIds, already: false } };
+}
+
+async function assetHasLiveCanonicalBinding(
+  supabase: ReturnType<typeof getServiceClient>,
+  assetId: string,
+): Promise<boolean> {
+  const { data: bindings } = await supabase
+    .from("projection_media_binding")
+    .select("asset_id, projection_id")
+    .eq("asset_id", assetId);
+  if (!bindings?.length) return false;
+
+  const projIds = [...new Set(bindings.map((row) => row.projection_id))];
+  const { data: projections } = await supabase
+    .from("projection")
+    .select("projection_id, master_id")
+    .in("projection_id", projIds);
+  const boundMasterIds = [...new Set((projections ?? []).map((row) => row.master_id))];
+  const { data: boundMasters } = boundMasterIds.length
+    ? await supabase
+        .from("master")
+        .select("master_id, canonical_type, parent_master_id, current_state_id")
+        .in("master_id", boundMasterIds)
+    : { data: [] };
+
+  const parentIds = [
+    ...new Set((boundMasters ?? []).map((row) => row.parent_master_id).filter(Boolean) as string[]),
+  ];
+  const { data: parentMasters } = parentIds.length
+    ? await supabase
+        .from("master")
+        .select("master_id, canonical_type, parent_master_id, current_state_id")
+        .in("master_id", parentIds)
+    : { data: [] };
+
+  const grandparentIds = [
+    ...new Set((parentMasters ?? []).map((row) => row.parent_master_id).filter(Boolean) as string[]),
+  ];
+  const { data: grandparentMasters } = grandparentIds.length
+    ? await supabase
+        .from("master")
+        .select("master_id, canonical_type, parent_master_id, current_state_id")
+        .in("master_id", grandparentIds)
+    : { data: [] };
+
+  const allMasters = [...(boundMasters ?? []), ...(parentMasters ?? []), ...(grandparentMasters ?? [])];
+  const uniqueMasters = [...new Map(allMasters.map((row) => [row.master_id, row])).values()];
+  const titleIds = uniqueMasters.map((row) => row.master_id);
+  const { data: presentations } = titleIds.length
+    ? await supabase.from("work_presentation").select("master_id, title").in("master_id", titleIds)
+    : { data: [] };
+
+  const association = associateAssetWithCanonicalWork({
+    assetId,
+    bindings,
+    projections: projections ?? [],
+    masters: uniqueMasters,
+    presentations: presentations ?? [],
+  });
+  if (!association.universe_id) return false;
+
+  const universe = uniqueMasters.find((row) => row.master_id === association.universe_id);
+  const { data: session } = await supabase
+    .from("media_upload_session")
+    .select("phase, asset_id, updated_at")
+    .eq("master_id", association.universe_id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const occupancy = classifyUniverseOccupancy({
+    title: association.universe_title,
+    currentStateId: universe?.current_state_id ?? null,
+    muralHasPlayableMedia: Boolean(association.mural_id),
+    hasSourceMedia: Boolean(association.mural_id) || hasSourceMediaFromSession({
+      phase: session?.phase,
+      assetId: session?.asset_id,
+    }),
+  });
+
+  return mediaHasLiveCanonicalBinding({
+    boundUniverses: [
+      {
+        title: association.universe_title,
+        occupancy,
+        protected: isProtectedMaster(association.universe_id),
+      },
+    ],
+  });
+}
+
+// ---------------------------------------------------------------------------
+// 7. Discard incoming media — Authority act, not a CMS hard-delete
+//
+// Prefixes storage_ref so Incoming / Gallery skip the row. Bindings and the
+// media_asset row remain. Super Hero Ego and Father Raymond assets stay.
+// ---------------------------------------------------------------------------
+export async function discardMediaAsset(
+  participantId: string,
+  assetId: string,
+): Promise<OperationResult<{ asset_id: string }>> {
+  const preview = decideDiscardMedia({ assetId });
+  if (!preview.ok && preview.code === "invalid_asset") return { error: preview.message };
+
+  const auth = await validateAuthority(participantId, "create-canonical-state", null);
+  if ("error" in auth) return { error: auth.error };
+
+  const supabase = getServiceClient();
+  const { data: asset } = await supabase
+    .from("media_asset")
+    .select("asset_id, storage_ref")
+    .eq("asset_id", assetId)
+    .maybeSingle();
+  if (!asset) return { error: "Asset not found" };
+
+  const liveCanonicalBinding = await assetHasLiveCanonicalBinding(supabase, asset.asset_id);
+  const decided = decideDiscardMedia({
+    assetId: asset.asset_id,
+    storageRef: asset.storage_ref,
+    liveCanonicalBinding,
+  });
+  if (!decided.ok) return { error: decided.message };
+
+  const { error } = await supabase
+    .from("media_asset")
+    .update({ storage_ref: markDiscardedStorageRef(asset.storage_ref) })
+    .eq("asset_id", asset.asset_id);
+  if (error) return { error: `Failed to remove media: ${error.message}` };
+
+  await logOperation(auth.authority_id, "discard-media-asset", asset.asset_id, "media-asset", "accepted");
+  return { data: { asset_id: asset.asset_id } };
 }

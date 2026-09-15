@@ -14,6 +14,7 @@ import { classifyGalleryAssetRole, type GalleryAssetRole } from "@/lib/productio
 import { parseReferenceProvenance } from "@/lib/production/reference";
 import { parseProductionProvenance, type ProductionApproval } from "@/lib/production/result";
 import MediaLibraryClient from "./media-library-client";
+import { isDiscardedStorageRef, mediaIsDeletable } from "@/lib/media/discard-asset";
 
 export type MediaLibraryItem = {
   asset_id: string;
@@ -45,6 +46,7 @@ export type MediaLibraryItem = {
   bound: boolean;
   production_approval: ProductionApproval | null;
   video_infrastructure: "mux" | null;
+  deletable: boolean;
 };
 
 async function getData() {
@@ -62,7 +64,7 @@ async function getData() {
   ]);
 
   const realAssets = (assets ?? []).filter(
-    (a) => !a.storage_ref.startsWith("seed:placeholder:")
+    (a) => !a.storage_ref.startsWith("seed:placeholder:") && !isDiscardedStorageRef(a.storage_ref)
   );
   const assetIds = realAssets.map((a) => a.asset_id);
 
@@ -249,6 +251,11 @@ async function getData() {
       bound: boundAssetIds.has(a.asset_id),
       production_approval: productionProvenance?.approval ?? null,
       video_infrastructure: production_role === "production" ? "mux" : null,
+      deletable: mediaIsDeletable({
+        assetId: a.asset_id,
+        storageRef: a.storage_ref,
+        liveCanonicalBinding: boundAssetIds.has(a.asset_id),
+      }),
     };
   });
 

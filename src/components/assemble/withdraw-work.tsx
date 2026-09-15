@@ -3,15 +3,20 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import type { UniverseOccupancy } from "@/lib/assemble/occupancy";
 
 export function WithdrawWork({
   masterId,
   title,
   layout = "inline",
+  actionLabel = "Withdraw",
+  occupancy = null,
 }: {
   masterId: string;
   title: string | null;
   layout?: "inline" | "panel";
+  actionLabel?: string;
+  occupancy?: UniverseOccupancy | null;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -20,6 +25,8 @@ export function WithdrawWork({
   const [done, setDone] = useState(false);
 
   const workName = title ?? "this work";
+  const isOrphan = occupancy === "orphan";
+  const buttonLabel = actionLabel !== "Withdraw" ? actionLabel : isOrphan ? "Remove orphan" : "Withdraw";
 
   async function confirm() {
     setBusy(true);
@@ -50,7 +57,7 @@ export function WithdrawWork({
   if (!open) {
     return (
       <Button type="button" variant="destructive" size="sm" onClick={() => setOpen(true)}>
-        Withdraw
+        {buttonLabel}
       </Button>
     );
   }
@@ -65,8 +72,9 @@ export function WithdrawWork({
       }}
     >
       <p className="text-sm text-foreground">
-        Withdraw {workName} from Discover. This is an Authority act, not a delete.
-        Super Hero Ego cannot be withdrawn.
+        {isOrphan
+          ? `Remove orphan ${workName} from operator catalogues. This is an Authority withdraw, not a CMS hard-delete. Super Hero Ego cannot be withdrawn.`
+          : `Withdraw ${workName} from Discover. This is an Authority act, not a delete. Super Hero Ego cannot be withdrawn.`}
       </p>
       {error && (
         <p role="alert" className="text-xs text-destructive">
@@ -75,7 +83,7 @@ export function WithdrawWork({
       )}
       <div className="flex flex-wrap gap-2">
         <Button type="submit" size="sm" variant="destructive" disabled={busy}>
-          {busy ? "Withdrawing…" : "Confirm withdraw"}
+          {busy ? (isOrphan ? "Removing…" : "Withdrawing…") : isOrphan ? "Confirm remove" : "Confirm withdraw"}
         </Button>
         <Button type="button" variant="ghost" size="sm" disabled={busy} onClick={() => setOpen(false)}>
           Cancel

@@ -8,12 +8,23 @@ import {
   isAssociateTarget,
   type UniverseOccupancy,
 } from "./occupancy";
+import { isProtectedMaster } from "./protected-work";
+import { DISCARDED_STORAGE_PREFIX, mediaHasLiveCanonicalBinding, mediaIsDeletable } from "@/lib/media/discard-asset";
 
 export type CurateStudioUniverse = {
   master_id: string;
   title: string | null;
   occupancy: UniverseOccupancy;
   target: UniverseAssociationTarget;
+};
+
+export type CuratePendingIngest = {
+  session_id: string;
+  phase: string;
+  source_url: string | null;
+  created_at: string;
+  updated_at: string;
+  asset_id: string | null;
 };
 
 /**
@@ -23,6 +34,7 @@ export type CurateStudioUniverse = {
 export async function loadCurateStudioMedia(): Promise<{
   media: CurateStudioMedia[];
   universes: CurateStudioUniverse[];
+  pendingIngest: CuratePendingIngest[];
 }> {
   const svc = getServiceClient();
 
@@ -33,6 +45,7 @@ export async function loadCurateStudioMedia(): Promise<{
       .select("asset_id, provider, storage_ref, duration_ms, rights_holder_ref, asset_type, intake_id")
       .in("asset_type", ["original", "streaming-variant"])
       .not("storage_ref", "like", "seed:placeholder:%")
+      .not("storage_ref", "like", `${DISCARDED_STORAGE_PREFIX}%`)
       .order("created_at", { ascending: false }),
     svc.from("media_intake").select("intake_id, asset_id, title, work_type, isrc_status"),
   ]);
@@ -195,6 +208,25 @@ export async function loadCurateStudioMedia(): Promise<{
       isrcStatus: intake?.isrc_status ?? null,
       workType: intake?.work_type ?? null,
     });
+    const association = associateAssetWithCanonicalWork({
+      assetId: asset.asset_id,
+      bindings: bindings ?? [],
+      projections: projections ?? [],
+      masters: uniqueMasters,
+      presentations: presentations ?? [],
+    });
+    const boundUniverse = association.universe_id
+      ? allUniverses.find((universe) => universe.master_id === association.universe_id) ?? null
+      : null;
+    const liveCanonicalBinding = mediaHasLiveCanonicalBinding({
+      boundUniverses: boundUniverse
+        ? [{
+            title: boundUniverse.title,
+            occupancy: boundUniverse.occupancy,
+            protected: isProtectedMaster(boundUniverse.master_id),
+          }]
+        : [],
+    });
     return {
       asset_id: asset.asset_id,
       title: intake?.title ?? null,
@@ -205,17 +237,33 @@ export async function loadCurateStudioMedia(): Promise<{
       readiness_overall: readiness.overall,
       readiness_blockers: readiness.blockers,
       inspection: latestInspection.get(asset.asset_id) ?? null,
-      association: associateAssetWithCanonicalWork({
+      association,
+      deletable: mediaIsDeletable({
         assetId: asset.asset_id,
-        bindings: bindings ?? [],
-        projections: projections ?? [],
-        masters: uniqueMasters,
-        presentations: presentations ?? [],
+        storageRef: asset.storage_ref,
+        liveCanonicalBinding,
       }),
     };
   });
 
-  return { media, universes };
+  const { data: pendingSessions } = await svc
+    .from("media_upload_session")
+    .select("session_id, phase, provider_upload_url, created_at, updated_at, asset_id, master_id")
+    .in("phase", ["created", "uploading", "processing"])
+    .is("master_id", null)
+    .order("created_at", { ascending: false })
+    .limit(12);
+
+  const pendingIngest: CuratePendingIngest[] = (pendingSessions ?? []).map((session) => ({
+    session_id: session.session_id,
+    phase: session.phase,
+    source_url: session.provider_upload_url ?? null,
+    created_at: session.created_at,
+    updated_at: session.updated_at,
+    asset_id: session.asset_id ?? null,
+  }));
+
+  return { media, universes, pendingIngest };
 }
 
 /**

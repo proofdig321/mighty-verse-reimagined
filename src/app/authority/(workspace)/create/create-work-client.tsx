@@ -1,15 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { api, responseData } from "../_shared/authority-utils";
 import {
   classifyPollBudget,
+  classifyUrlIngestStage,
   PROCESSING_FAILED_COPY,
   PROCESSING_POLL_ATTEMPTS,
   PROCESSING_POLL_MS,
   REQUEST_TIMEOUT_COPY,
+  type UrlIngestStage,
 } from "@/lib/media/processing-state";
 import {
   createWorkContinuations,
@@ -18,6 +20,10 @@ import {
   type CreateWorkCheckpoint,
 } from "@/lib/authority/create-work-progress";
 import { parseMediaSourceUrl } from "@/lib/media/source-url";
+import { UrlIngestProgress } from "@/components/assemble/url-ingest-progress";
+import { WithdrawWork } from "@/components/assemble/withdraw-work";
+import Link from "next/link";
+import { curateHubHref } from "@/lib/assemble/studio";
 
 type Universe = { master_id: string; title: string | null };
 type Mural = { master_id: string; parent_master_id: string | null; title: string | null };
@@ -28,6 +34,7 @@ type Props = {
   murals: Mural[];
   participants: Participant[];
   currentParticipantId: string;
+  orphanUniverses: Universe[];
 };
 
 type WorkType = "universe" | "mural" | "scene" | "creative-moment";
@@ -64,7 +71,7 @@ const STEP_LABELS: Record<Step, string> = {
 
 const VISIBLE_STEPS: Step[] = ["type", "placement", "identity", "media", "review"];
 
-export default function CreateWorkClient({ universes, murals, participants, currentParticipantId }: Props) {
+export default function CreateWorkClient({ universes, murals, participants, currentParticipantId, orphanUniverses }: Props) {
   const router = useRouter();
 
   // ── Form state ──────────────────────────────────────────────────────────────
@@ -90,12 +97,25 @@ export default function CreateWorkClient({ universes, murals, participants, curr
   const [createdMasterId, setCreatedMasterId] = useState<string | null>(null);
   const [checkpoint, setCheckpoint] = useState<CreateWorkCheckpoint | null>(null);
   const [createdAssetId, setCreatedAssetId] = useState<string | null>(null);
+  const [allowAnotherUniverse, setAllowAnotherUniverse] = useState(false);
+  const [urlIngestStage, setUrlIngestStage] = useState<UrlIngestStage | null>(null);
+  const [ingestStartedAt, setIngestStartedAt] = useState<number | null>(null);
+  const [ingestElapsedMs, setIngestElapsedMs] = useState(0);
 
   const _needsParent = workType === "mural" || workType === "scene" || workType === "creative-moment";
   const canHaveMedia = HAS_MEDIA.includes(workType);
   const parsedSource = parseMediaSourceUrl(sourceUrl);
   const hasSourceUrl = parsedSource.ok;
   const wantsMedia = canHaveMedia && hasVideo && Boolean(videoFile || hasSourceUrl || checkpoint?.uploaded || checkpoint?.sessionId);
+  const creatingAnotherUniverse = workType === "universe" && orphanUniverses.length > 0 && !checkpoint?.masterId;
+
+  useEffect(() => {
+    if (!ingestStartedAt || step !== "creating") return;
+    const tick = () => setIngestElapsedMs(Date.now() - ingestStartedAt);
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [ingestStartedAt, step]);
 
   function loadStoredCheckpoint(type: WorkType, workTitle: string): CreateWorkCheckpoint | null {
     if (typeof window === "undefined" || !workTitle.trim()) return null;
@@ -197,7 +217,13 @@ export default function CreateWorkClient({ universes, murals, participants, curr
       if (s.error) throw new Error(s.error);
       phase = s.phase ?? "unknown";
       if (s.asset_id) setCreatedAssetId(s.asset_id);
-      setStatusLine("Processing video…");
+      const ingestStage = classifyUrlIngestStage({
+        phase: s.phase,
+        providerStatus: s.provider_status,
+        outcome: s.outcome,
+      });
+      setUrlIngestStage(ingestStage);
+      setStatusLine(ingestStage === "pulling" ? "Mux is pulling the video…" : "Processing video…");
     }
     return "request_timeout";
   }
@@ -257,6 +283,8 @@ export default function CreateWorkClient({ universes, murals, participants, curr
         if (!cp.sessionId) {
           if (useUrlIngest) {
             setStatusLine("Asking Mux to pull the YouTube video…");
+            setUrlIngestStage("submitted");
+            setIngestStartedAt(Date.now());
             const session = await api("/api/authority/media/ingest-url", {
               url: source.url,
               name: title.trim() || "YouTube ingest",
@@ -269,6 +297,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
             }
             cp = { ...cp, sessionId: session.session_id, uploadUrl: null, uploaded: true };
             persistCheckpoint(cp);
+            setUrlIngestStage("pulling");
           } else {
             setStatusLine("Starting upload session…");
             const session = await api("/api/authority/media/upload-session", {
@@ -533,7 +562,11 @@ export default function CreateWorkClient({ universes, murals, participants, curr
           </div>
         )}
 
-        {isProcessing && !isUploading && (
+        {isProcessing && !isUploading && urlIngestStage && (
+          <UrlIngestProgress stage={urlIngestStage} elapsedMs={ingestElapsedMs} sourceUrl={sourceUrl || null} />
+        )}
+
+        {isProcessing && !isUploading && !urlIngestStage && (
           <div className="w-full space-y-2">
             <p className="text-sm text-center text-foreground">Processing video…</p>
             <div className="h-2 w-full overflow-hidden rounded-full" style={{ background: "var(--muted)" }}>
@@ -601,6 +634,27 @@ export default function CreateWorkClient({ universes, murals, participants, curr
               </button>
             ))}
           </div>
+          {workType === "universe" && orphanUniverses.length > 0 && (
+            <div className="rounded-lg border border-border bg-card/50 px-4 py-3 space-y-2" role="status">
+              <p className="text-sm text-foreground">
+                {orphanUniverses.length} untitled or empty Universe{orphanUniverses.length === 1 ? "" : "s"} already exist.
+                Create Work mints a new Universe. Open or remove an orphan instead of duplicating.
+              </p>
+              <ul className="space-y-2">
+                {orphanUniverses.slice(0, 6).map((orphan) => (
+                  <li key={orphan.master_id} className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                    <span className="italic text-muted-foreground">{orphan.title ?? "Untitled universe"}</span>
+                    <span className="flex items-center gap-2">
+                      <Link href={curateHubHref(orphan.master_id)} className="text-muted-foreground hover:text-foreground">
+                        Open
+                      </Link>
+                      <WithdrawWork masterId={orphan.master_id} title={orphan.title} occupancy="orphan" />
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <Button onClick={nextStep}>Continue →</Button>
         </div>
       )}
@@ -890,6 +944,20 @@ export default function CreateWorkClient({ universes, murals, participants, curr
             </div>
           </div>
 
+          {creatingAnotherUniverse && (
+            <label className="flex items-start gap-3 rounded-lg border border-border bg-card/40 px-4 py-3 text-sm">
+              <input
+                type="checkbox"
+                checked={allowAnotherUniverse}
+                onChange={(event) => setAllowAnotherUniverse(event.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-border"
+              />
+              <span>
+                I still need a new Universe. Existing orphans stay unless I remove them. Retry media against an existing work instead of creating another shell.
+              </span>
+            </label>
+          )}
+
           {error && (
             <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-4 py-3">
               <p className="text-sm text-destructive">{error}</p>
@@ -898,7 +966,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
 
           <div className="flex gap-3">
             <Button variant="outline" onClick={prevStep}>← Back</Button>
-            <Button onClick={createWork}>
+            <Button onClick={createWork} disabled={creatingAnotherUniverse && !allowAnotherUniverse}>
               {checkpoint?.masterId ? "Continue this work" : `Create ${TYPE_LABELS[workType]}`}
             </Button>
           </div>

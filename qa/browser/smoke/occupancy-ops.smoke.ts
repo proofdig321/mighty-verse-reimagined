@@ -14,6 +14,8 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
   });
   expect(unauthorized.status(), `unauthenticated withdraw HTTP ${unauthorized.status()}`).toBe(401);
   notes.push("unauthenticated withdraw is rejected");
+  const unauthorizedDiscard = await page.request.post(`/api/authority/media/${CANON.muxAssetId}/discard`);
+  expect(unauthorizedDiscard.status(), `unauthenticated discard HTTP ${unauthorizedDiscard.status()}`).toBe(401);
 
   await applyAuthoritySession(context, baseURL);
 
@@ -25,6 +27,10 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
   expect(String(sheBody.error)).toMatch(/Super Hero Ego/i);
   notes.push("Super Hero Ego cannot be withdrawn");
 
+  const sheDiscard = await page.request.post(`/api/authority/media/${CANON.muxAssetId}/discard`);
+  expect(sheDiscard.status(), `Super Hero Ego media discard HTTP ${sheDiscard.status()}`).toBe(409);
+  notes.push("Super Hero Ego media cannot be deleted");
+
   await page.goto(ROUTES.universes, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("link", { name: new RegExp(CANON.universeTitle, "i") })).toBeVisible();
   await expect(page.locator(`a[href*="${CANON.untitledUniverseId}"]`)).toHaveCount(0);
@@ -35,6 +41,11 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
   const sheRow = page.locator("tr[data-occupancy='curated']").filter({ hasText: CANON.universeTitle });
   await expect(sheRow).toBeVisible();
   await expect(sheRow.getByRole("link", { name: /Open Creative Studio/i })).toBeVisible();
+  await expect(sheRow.getByRole("link", { name: /^Edit$/ })).toHaveAttribute(
+    "href",
+    ROUTES.authorityUniverseIdentity,
+  );
+  await expect(sheRow.getByRole("button", { name: /Withdraw|Remove orphan/i })).toHaveCount(0);
   const frRow = page.locator("tr").filter({ hasText: CANON.fatherRaymondTitleIncludes });
   if (await frRow.count()) {
     await expect(frRow.first()).toHaveAttribute("data-occupancy", /in_progress|curated/);

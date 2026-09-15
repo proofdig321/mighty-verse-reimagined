@@ -5,6 +5,7 @@
 
 import { mediaAssociationEligibility } from "./association";
 import type { CurateStudioMedia } from "./studio";
+import { isDiscardedStorageRef } from "../media/discard-asset";
 
 export type GallerySource = {
   asset_id: string;
@@ -20,6 +21,7 @@ export function playableGallerySources(media: CurateStudioMedia[]): GallerySourc
   return media
     .filter((item) => {
       if (item.storage_ref.startsWith("seed:placeholder:")) return false;
+      if (isDiscardedStorageRef(item.storage_ref)) return false;
       const eligibility = mediaAssociationEligibility({
         readiness_overall: item.readiness_overall,
         readiness_blockers: item.readiness_blockers,

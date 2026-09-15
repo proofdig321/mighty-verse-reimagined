@@ -1,5 +1,5 @@
 import { classifyUniverseOccupancy, hasSourceMediaFromSession } from "../occupancy";
-import { isProtectedMaster } from "../protected-work";
+import { isPlayableStorageRef, isProtectedMaster } from "../protected-work";
 import { canWithdrawMaster, decideWithdraw } from "../withdraw";
 
 function assert(condition, message) {
@@ -17,6 +17,8 @@ assert(isProtectedMaster(SHE) === true, "Super Hero Ego Universe is protected");
 assert(isProtectedMaster(SHE_MURAL) === true, "Super Hero Ego Mural is protected");
 assert(isProtectedMaster(FR) === false, "Father Raymond is not Super Hero Ego");
 assert(isProtectedMaster(UNTITLED) === false, "untitled Livepeer Universe is not protected");
+assert(isPlayableStorageRef("operator:discarded:abc") === false, "discarded media is not playable");
+assert(isPlayableStorageRef("JHSfFnrz00ovBfPYcp44w85ueRr01XlqSXPgKYoVFgfN4") === true, "Mux playback id remains playable");
 
 const she = classifyUniverseOccupancy({
   title: "Super Hero Ego",
