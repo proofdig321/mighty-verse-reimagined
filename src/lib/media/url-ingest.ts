@@ -1,10 +1,12 @@
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 import { muxAdapter } from "@/lib/media/providers/mux/adapter";
+import { muxUploadCorsOrigin } from "@/lib/media/providers/mux/cors-origin";
 import { DEFAULT_PROVIDER } from "@/lib/media/providers";
 import { isExcludedIntake } from "@/lib/media/discard-asset";
 import { decideUrlIngestIntake, defaultUrlIngestWorkType } from "@/lib/media/gallery-intake";
+import { decideMuxUrlIngestMethod } from "@/lib/media/url-ingest-method";
+import { YoutubeFileError, materializeYoutubeFile } from "@/lib/media/youtube-file";
 import {
-  MUX_YOUTUBE_INGEST_FAILURE,
   parseMediaSourceUrl,
   resolveUrlIngestTitle,
   youtubeVideoIdFromUrl,
@@ -17,6 +19,7 @@ export type MuxUrlIngestInput = {
   projectionId?: string | null;
   masterId?: string | null;
   intakeId?: string | null;
+  youtubeCookies?: string | null;
 };
 
 export type MuxUrlIngestResult =
@@ -114,10 +117,18 @@ export async function ensureUrlIngestIntake(input: {
   return { ok: true, intake_id: created.intake_id };
 }
 
+async function failSession(sessionId: string): Promise<void> {
+  const svc = getServiceClient();
+  await svc
+    .from("media_upload_session")
+    .update({ phase: "failed", updated_at: new Date().toISOString() })
+    .eq("session_id", sessionId);
+}
+
 /**
- * Ask Mux to pull a YouTube or direct HTTPS video URL.
- * Creates a media_upload_session so webhook/reconcile can finish ingest.
- * Does not create a Universe, Scene, or projection binding.
+ * Ingest a YouTube or direct HTTPS URL into Mux without creating a Universe.
+ * YouTube watch pages are fetched as a file then Direct Uploaded.
+ * Direct HTTPS media files are pulled by Mux.
  */
 export async function beginMuxUrlIngest(input: MuxUrlIngestInput): Promise<MuxUrlIngestResult> {
   const parsed = parseMediaSourceUrl(input.url);
@@ -143,6 +154,7 @@ export async function beginMuxUrlIngest(input: MuxUrlIngestInput): Promise<MuxUr
       .lt("updated_at", staleThreshold);
   }
 
+  const method = decideMuxUrlIngestMethod(parsed.kind);
   const { data: session, error: sessionError } = await svc
     .from("media_upload_session")
     .insert({
@@ -152,7 +164,7 @@ export async function beginMuxUrlIngest(input: MuxUrlIngestInput): Promise<MuxUr
       provider: DEFAULT_PROVIDER,
       provider_asset_id: "pending",
       provider_upload_url: parsed.url,
-      phase: "processing",
+      phase: method === "youtube-file" ? "uploading" : "processing",
       created_by: input.participantId,
     })
     .select("session_id")
@@ -163,6 +175,37 @@ export async function beginMuxUrlIngest(input: MuxUrlIngestInput): Promise<MuxUr
   }
 
   try {
+    if (method === "youtube-file") {
+      const file = await materializeYoutubeFile({
+        url: parsed.url,
+        cookies: input.youtubeCookies,
+      });
+      try {
+        const uploaded = await muxAdapter.uploadLocalFile({
+          filePath: file.filePath,
+          passthrough: session.session_id,
+          corsOrigin: muxUploadCorsOrigin(),
+          contentType: file.contentType,
+        });
+        await svc
+          .from("media_upload_session")
+          .update({
+            provider_asset_id: uploaded.providerAssetId,
+            provider_upload_id: uploaded.providerUploadId,
+            phase: "processing",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("session_id", session.session_id);
+        return {
+          ok: true,
+          session_id: session.session_id,
+          provider_asset_id: uploaded.providerAssetId,
+        };
+      } finally {
+        await file.cleanup();
+      }
+    }
+
     const asset = await muxAdapter.createAssetFromUrl({
       url: parsed.url,
       passthrough: session.session_id,
@@ -180,15 +223,14 @@ export async function beginMuxUrlIngest(input: MuxUrlIngestInput): Promise<MuxUr
       .eq("session_id", session.session_id);
     return { ok: true, session_id: session.session_id, provider_asset_id: asset.providerAssetId };
   } catch (err) {
-    await svc
-      .from("media_upload_session")
-      .update({ phase: "failed", updated_at: new Date().toISOString() })
-      .eq("session_id", session.session_id);
+    await failSession(session.session_id);
+    if (err instanceof YoutubeFileError) {
+      return { ok: false, error: err.message, status: 502 };
+    }
     const message = err instanceof Error ? err.message : String(err);
-    const youtubeHint = parsed.kind === "youtube" ? MUX_YOUTUBE_INGEST_FAILURE : "Mux could not ingest this URL.";
     return {
       ok: false,
-      error: `${youtubeHint} ${message}`,
+      error: `Mux could not ingest this URL. ${message}`,
       status: 502,
     };
   }

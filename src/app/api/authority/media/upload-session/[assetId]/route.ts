@@ -34,6 +34,7 @@ export async function GET(
         updated_at: advanced.updated_at,
         outcome: advanced.outcome,
         provider_status: advanced.provider_status,
+        provider_error: advanced.provider_error,
       });
     }
   } catch (err) {

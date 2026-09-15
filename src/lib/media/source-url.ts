@@ -1,6 +1,7 @@
 /**
- * YouTube is the primary ingest path. Mux pulls the file — Mighty Verse
- * does not treat YouTube as a playback identity, and does not fake HLS.
+ * YouTube is the primary ingest path. Mighty Verse fetches the media file,
+ * then Mux Direct Uploads it. A watch page is not a Mux input.
+ * Mighty Verse does not treat YouTube as a playback identity, and does not fake HLS.
  */
 
 const YOUTUBE_ID = /^[A-Za-z0-9_-]{11}$/;
@@ -80,5 +81,3 @@ export async function resolveUrlIngestTitle(url: string, fallback: string): Prom
   return trimmed || "YouTube ingest";
 }
 
-export const MUX_YOUTUBE_INGEST_FAILURE =
-  "Mux could not ingest this URL. YouTube only becomes playable when Mux can pull the file. Upload the animation file, or use a direct HTTPS video URL Mux can fetch.";

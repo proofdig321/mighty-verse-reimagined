@@ -46,6 +46,7 @@ assert(
 );
 
 assert(classifyUrlIngestStage({ phase: "created" }) === "submitted", "created URL ingest is submitted");
+assert(classifyUrlIngestStage({ phase: "uploading" }) === "pulling", "YouTube file fetch is pulling, not a percentage");
 assert(classifyUrlIngestStage({ phase: "processing" }) === "pulling", "processing URL ingest is Mux pulling");
 assert(
   classifyUrlIngestStage({ phase: "processing", providerStatus: "preparing" }) === "pulling",
@@ -56,7 +57,7 @@ assert(classifyUrlIngestStage({ phase: "failed" }) === "failed", "failed URL ing
 assert(urlIngestStageIndex("submitted") === 0, "submitted is step 1 of 3");
 assert(urlIngestStageIndex("pulling") === 1, "pulling is step 2 of 3");
 assert(urlIngestStageIndex("ready") === 2, "ready is step 3 of 3");
-assert(urlIngestStageLabel("pulling").includes("pulling"), "pulling copy names Mux pull");
+assert(urlIngestStageLabel("pulling").includes("file"), "pulling copy names file fetch into Mux");
 assert(!urlIngestStageLabel("pulling").includes("%"), "URL ingest labels are not fake percentages");
 
 console.log("processing-state.test.mjs: ok");

@@ -14,6 +14,7 @@ import {
   type UrlIngestStage,
 } from "@/lib/media/processing-state";
 import { UrlIngestProgress } from "./url-ingest-progress";
+import { YoutubeCookiesField } from "./youtube-cookies-field";
 import type { CuratePendingIngest } from "@/lib/assemble/load-studio";
 import Link from "next/link";
 
@@ -65,6 +66,7 @@ export function CurateYoutubeIngest({
   );
   const [elapsedMs, setElapsedMs] = useState(0);
   const [activeUrl, setActiveUrl] = useState<string | null>(newestPending?.source_url ?? null);
+  const [youtubeCookies, setYoutubeCookies] = useState("");
 
   useEffect(() => {
     const stored = readStored();
@@ -180,7 +182,11 @@ export function CurateYoutubeIngest({
       const response = await fetch("/api/authority/media/ingest-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url, name: "YouTube ingest" }),
+        body: JSON.stringify({
+          url,
+          name: "YouTube ingest",
+          youtube_cookies: youtubeCookies.trim() || undefined,
+        }),
       });
       const data = await response.json().catch(() => ({}));
       const canonical = typeof data.url === "string" ? data.url : url;
@@ -205,7 +211,7 @@ export function CurateYoutubeIngest({
       setStage("pulling");
     } catch {
       setStage("failed");
-      setMessage("Network error while asking Mux to pull this URL.");
+        setMessage("Network error while fetching this YouTube file into Mux.");
       setBusy(false);
     }
   }
@@ -224,7 +230,7 @@ export function CurateYoutubeIngest({
         YouTube URL
       </label>
       <p className="text-xs text-muted-foreground">
-        Primary ingest path. Mux pulls the file for playback. Pasting a link does not create a Universe.
+        Primary ingest path. Mighty Verse fetches the YouTube file, then Mux processes it. Pasting a link does not create a Universe.
       </p>
       <div className="flex flex-col gap-2 sm:flex-row">
         <input
@@ -239,6 +245,12 @@ export function CurateYoutubeIngest({
           {busy && stage !== "ready" && stage !== "failed" ? "Ingesting…" : "Ingest with Mux"}
         </Button>
       </div>
+      <YoutubeCookiesField
+        id="curate-youtube-cookies"
+        value={youtubeCookies}
+        onChange={setYoutubeCookies}
+        disabled={busy && stage !== "failed" && stage !== "ready"}
+      />
       {showProgress ? (
         <UrlIngestProgress stage={stage} elapsedMs={elapsedMs} sourceUrl={activeUrl} />
       ) : null}

@@ -13,6 +13,7 @@ import {
   type UrlIngestStage,
 } from "@/lib/media/processing-state";
 import { UrlIngestProgress } from "./url-ingest-progress";
+import { YoutubeCookiesField } from "./youtube-cookies-field";
 
 /**
  * Operator retry of a Mux URL pull from Gallery. Does not invent a Universe
@@ -32,6 +33,7 @@ export function RetryUrlIngest({
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [message, setMessage] = useState<string | null>(null);
+  const [youtubeCookies, setYoutubeCookies] = useState("");
 
   useEffect(() => {
     if (!startedAt || stage === "ready" || stage === "failed" || !stage) return;
@@ -91,6 +93,9 @@ export function RetryUrlIngest({
             outcome: data.outcome,
           });
           setStage(next);
+          if (typeof data.provider_error === "string" && data.provider_error && next === "failed") {
+            setMessage(data.provider_error);
+          }
           if (next === "ready") {
             setBusy(false);
             setMessage("Playable in Gallery. This did not create a Universe.");
@@ -130,7 +135,11 @@ export function RetryUrlIngest({
       const response = await fetch("/api/authority/media/ingest-url", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ url: sourceUrl, intake_id: intakeId }),
+        body: JSON.stringify({
+          url: sourceUrl,
+          intake_id: intakeId,
+          youtube_cookies: youtubeCookies.trim() || undefined,
+        }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
@@ -150,7 +159,7 @@ export function RetryUrlIngest({
       setStage("pulling");
     } catch {
       setStage("failed");
-      setMessage("Network error while asking Mux to pull this URL.");
+      setMessage("Network error while fetching this YouTube file into Mux.");
       setBusy(false);
     }
   }
@@ -167,6 +176,12 @@ export function RetryUrlIngest({
       >
         {busy && stage !== "ready" && stage !== "failed" ? "Retrying…" : "Retry Mux"}
       </Button>
+      <YoutubeCookiesField
+        id={`youtube-cookies-${intakeId}`}
+        value={youtubeCookies}
+        onChange={setYoutubeCookies}
+        disabled={busy && stage !== "ready" && stage !== "failed"}
+      />
       {stage ? <UrlIngestProgress stage={stage} elapsedMs={elapsedMs} sourceUrl={sourceUrl} /> : null}
       {message ? (
         <p className={`text-xs ${stage === "failed" ? "text-destructive" : "text-muted-foreground"}`}>{message}</p>

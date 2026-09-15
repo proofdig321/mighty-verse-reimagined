@@ -4,6 +4,8 @@ import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 import { beginMuxUrlIngest } from "@/lib/media/url-ingest";
 
+export const maxDuration = 300;
+
 const ISRC_PATTERN = /^[A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9]{5}$/;
 const WORK_TYPES = new Set(["song", "audio", "video", "animation", "other"]);
 const SOURCE_TYPES = new Set(["upload", "external-url", "livepeer-asset", "other"]);

@@ -83,7 +83,7 @@ export function UrlIngestProgress({
       </ol>
 
       <p className="text-xs text-muted-foreground">
-        Mux does not report a download percentage for a YouTube pull. This bar is the ingest stage, not a fake 0–100.
+        A YouTube watch page is not a media file. Mighty Verse fetches the file, then Mux processes it. This bar is the ingest stage, not a fake 0–100.
         {sourceUrl ? ` Source: ${sourceUrl}` : ""} This does not create a Universe.
       </p>
     </div>

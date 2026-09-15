@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
   // Unauthorized on /_next/static chunks (including hls.js). This is a local-dev
   // host allowlist only; it does not change production routing or media behaviour.
   allowedDevOrigins: ["127.0.0.1"],
+  serverExternalPackages: ["youtubei.js"],
   turbopack: {
     resolveAlias: {
       "@x402/core/client": { browser: "./src/lib/web3/empty.ts", default: "./src/lib/web3/empty.ts" },

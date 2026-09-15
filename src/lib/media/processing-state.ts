@@ -54,8 +54,8 @@ export function processingStageLabel(kind: ProcessingKind, phase?: string | null
  * operator stages, not a fake 0–100 bar.
  */
 export const URL_INGEST_STAGES = [
-  { id: "submitted", label: "Submitted to Mux" },
-  { id: "pulling", label: "Mux is pulling the video" },
+  { id: "submitted", label: "Submitted ingest" },
+  { id: "pulling", label: "Fetching the file into Mux" },
   { id: "ready", label: "Playable in Incoming and Gallery" },
 ] as const;
 
@@ -80,6 +80,7 @@ export function classifyUrlIngestStage(input: {
   if (phase === "processing" || provider === "preparing" || provider === "asset_created") {
     return "pulling";
   }
+  if (phase === "uploading") return "pulling";
   return "submitted";
 }
 
@@ -91,9 +92,9 @@ export function urlIngestStageIndex(stage: UrlIngestStage): number {
 }
 
 export function urlIngestStageLabel(stage: UrlIngestStage): string {
-  if (stage === "failed") return "Mux could not ingest this URL";
-  if (stage === "submitted") return "Submitted to Mux";
-  if (stage === "pulling") return "Mux is pulling the video";
+  if (stage === "failed") return "Could not ingest this video";
+  if (stage === "submitted") return "Submitted ingest";
+  if (stage === "pulling") return "Fetching the file into Mux";
   return "Playable in Incoming and Gallery";
 }
 
@@ -106,7 +107,7 @@ export const PROCESSING_FAILED_COPY =
 
 /** Curate / Add Media URL ingest. No Universe is involved. Operator finishes on Gallery. */
 export const URL_INGEST_FAILED_COPY =
-  "Mux could not pull this file. The intake stays in Gallery. Upload the file there, retry Mux, or delete the shell. This did not create a Universe.";
+  "The file did not become playable in Mux. The intake stays in Gallery. Upload the file there, retry with a signed-in YouTube session, or delete the shell. This did not create a Universe.";
 
 export const URL_INGEST_TIMEOUT_COPY =
-  "This page stopped waiting. Mux may still be pulling. A request timeout is not a processing failure. Check Incoming and Gallery. This did not create a Universe.";
+  "This page stopped waiting. Mux may still be processing the file. A request timeout is not a processing failure. Check Incoming and Gallery. This did not create a Universe.";

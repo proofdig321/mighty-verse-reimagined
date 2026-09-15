@@ -223,7 +223,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
         outcome: s.outcome,
       });
       setUrlIngestStage(ingestStage);
-      setStatusLine(ingestStage === "pulling" ? "Mux is pulling the video…" : "Processing video…");
+      setStatusLine(ingestStage === "pulling" ? "Fetching the file into Mux…" : "Processing video…");
     }
     return "request_timeout";
   }
@@ -760,7 +760,7 @@ export default function CreateWorkClient({ universes, murals, participants, curr
                   Attach a video now
                 </label>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  YouTube is the primary path — Mux pulls the file. You can also attach a local file, or add media later from the work record.
+                  YouTube is the primary path — Mighty Verse fetches the file, then Mux processes it. You can also attach a local file, or add media later from the work record.
                 </p>
               </div>
             </div>

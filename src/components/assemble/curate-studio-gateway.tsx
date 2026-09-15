@@ -92,7 +92,7 @@ export default function CurateStudioGateway({
               Incoming / Media
             </h2>
             <p className="text-sm text-muted-foreground max-w-3xl">
-              What has arrived. These are media assets — not Universes. YouTube is the primary ingest path; Mux pulls the file. Uploading media does not create a Universe.
+              What has arrived. These are media assets — not Universes. YouTube is the primary ingest path; Mighty Verse fetches the file, then Mux processes it. Uploading media does not create a Universe.
               Sentinel inspects them. Creative meaning is assembled in Creative Studio. Each row has Edit and Delete. Canonical Super Hero Ego and Father Raymond media cannot be deleted.
             </p>
           </div>
