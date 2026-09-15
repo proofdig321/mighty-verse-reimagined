@@ -14,8 +14,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { resolveYoutubeCookieInput } from "@/lib/media/youtube-cookies";
-import { youtubeVideoIdFromUrl } from "@/lib/media/source-url";
+import { resolveYoutubeCookieInput } from "./youtube-cookies";
+import { youtubeVideoIdFromUrl } from "./source-url";
 
 export class YoutubeFileError extends Error {
   readonly code: "bot_gate" | "fetch_failed";
