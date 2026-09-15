@@ -56,7 +56,7 @@ export function processingStageLabel(kind: ProcessingKind, phase?: string | null
 export const URL_INGEST_STAGES = [
   { id: "submitted", label: "Submitted to Mux" },
   { id: "pulling", label: "Mux is pulling the video" },
-  { id: "ready", label: "Playable in Incoming" },
+  { id: "ready", label: "Playable in Incoming and Gallery" },
 ] as const;
 
 export type UrlIngestStage = (typeof URL_INGEST_STAGES)[number]["id"] | "failed";
@@ -94,7 +94,7 @@ export function urlIngestStageLabel(stage: UrlIngestStage): string {
   if (stage === "failed") return "Mux could not ingest this URL";
   if (stage === "submitted") return "Submitted to Mux";
   if (stage === "pulling") return "Mux is pulling the video";
-  return "Playable in Incoming";
+  return "Playable in Incoming and Gallery";
 }
 
 /** Honest copy when the browser stops waiting while the job may still run. */
