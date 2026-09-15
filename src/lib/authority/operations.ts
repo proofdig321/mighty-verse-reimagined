@@ -7,6 +7,7 @@ import {
   hasSourceMediaFromSession,
 } from "@/lib/assemble/occupancy";
 import {
+  decideDiscardIntake,
   decideDiscardMedia,
   markDiscardedStorageRef,
   mediaHasLiveCanonicalBinding,
@@ -795,4 +796,46 @@ export async function discardMediaAsset(
 
   await logOperation(auth.authority_id, "discard-media-asset", asset.asset_id, "media-asset", "accepted");
   return { data: { asset_id: asset.asset_id } };
+}
+
+// ---------------------------------------------------------------------------
+// 8. Discard unlinked intake — Authority act, not a CMS hard-delete
+//
+// Sets search_status to excluded so Gallery awaiting-upload hides the row.
+// Linked intakes are refused; delete the media asset instead.
+// Super Hero Ego and Father Raymond playback assets stay.
+// ---------------------------------------------------------------------------
+export async function discardMediaIntake(
+  participantId: string,
+  intakeId: string,
+): Promise<OperationResult<{ intake_id: string }>> {
+  const preview = decideDiscardIntake({ intakeId });
+  if (!preview.ok && preview.code === "invalid_intake") return { error: preview.message };
+
+  const auth = await validateAuthority(participantId, "create-canonical-state", null);
+  if ("error" in auth) return { error: auth.error };
+
+  const supabase = getServiceClient();
+  const { data: intake } = await supabase
+    .from("media_intake")
+    .select("intake_id, asset_id, search_status")
+    .eq("intake_id", intakeId)
+    .maybeSingle();
+  if (!intake) return { error: "Intake not found" };
+
+  const decided = decideDiscardIntake({
+    intakeId: intake.intake_id,
+    assetId: intake.asset_id,
+    searchStatus: intake.search_status,
+  });
+  if (!decided.ok) return { error: decided.message };
+
+  const { error } = await supabase
+    .from("media_intake")
+    .update({ search_status: "excluded", updated_at: new Date().toISOString() })
+    .eq("intake_id", intake.intake_id);
+  if (error) return { error: `Failed to remove intake: ${error.message}` };
+
+  await logOperation(auth.authority_id, "discard-media-intake", intake.intake_id, "media-intake", "accepted");
+  return { data: { intake_id: intake.intake_id } };
 }

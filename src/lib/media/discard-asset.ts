@@ -111,3 +111,83 @@ export function mediaIsDeletable(input: {
 }): boolean {
   return decideDiscardMedia(input).ok;
 }
+
+export const EXCLUDED_INTAKE_SEARCH_STATUS = "excluded";
+
+export function isExcludedIntake(searchStatus: string | null | undefined): boolean {
+  return searchStatus === EXCLUDED_INTAKE_SEARCH_STATUS;
+}
+
+export function isAwaitingUploadIntake(input: {
+  assetId?: string | null;
+  searchStatus?: string | null;
+}): boolean {
+  return !input.assetId && !isExcludedIntake(input.searchStatus);
+}
+
+export type DiscardIntakeDecision =
+  | { ok: true; action: "discard"; intakeId: string; message: string }
+  | {
+      ok: false;
+      code: "invalid_intake" | "already_discarded" | "linked_media" | "protected_media";
+      intakeId: string | null;
+      message: string;
+    };
+
+export function decideDiscardIntake(input: {
+  intakeId: string | null | undefined;
+  assetId?: string | null;
+  searchStatus?: string | null;
+}): DiscardIntakeDecision {
+  const intakeId = input.intakeId?.trim() || null;
+  if (!intakeId) {
+    return {
+      ok: false,
+      code: "invalid_intake",
+      intakeId: null,
+      message: "An intake record is required to delete.",
+    };
+  }
+
+  if (isExcludedIntake(input.searchStatus)) {
+    return {
+      ok: false,
+      code: "already_discarded",
+      intakeId,
+      message: "This intake is already removed from Gallery.",
+    };
+  }
+
+  if (isProtectedMediaAsset(input.assetId)) {
+    return {
+      ok: false,
+      code: "protected_media",
+      intakeId,
+      message: "Canonical playback media cannot be deleted. Super Hero Ego and Father Raymond stay.",
+    };
+  }
+
+  if (input.assetId) {
+    return {
+      ok: false,
+      code: "linked_media",
+      intakeId,
+      message: "This intake is already linked to media. Delete the media from Gallery if it is an orphan.",
+    };
+  }
+
+  return {
+    ok: true,
+    action: "discard",
+    intakeId,
+    message: "Remove this intake from Gallery. This does not delete a Universe. Records stay.",
+  };
+}
+
+export function intakeIsDeletable(input: {
+  intakeId: string | null | undefined;
+  assetId?: string | null;
+  searchStatus?: string | null;
+}): boolean {
+  return decideDiscardIntake(input).ok;
+}

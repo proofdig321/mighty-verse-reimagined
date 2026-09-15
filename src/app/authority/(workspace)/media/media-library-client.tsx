@@ -9,6 +9,7 @@ import { formatDuration } from "@/lib/media/timing";
 import type { MediaLibraryItem } from "./page";
 import { galleryRoleLabel, type GalleryAssetRole } from "@/lib/production/lifecycle";
 import { DiscardMedia } from "@/components/assemble/discard-media";
+import { DiscardIntake } from "@/components/assemble/discard-intake";
 
 type UnlinkedIntake = { intake_id: string; title: string; work_type: string; creator_name: string | null; created_at: string };
 
@@ -350,10 +351,10 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
       </div>
       <p className="text-xs text-muted-foreground">
         These intake records exist but have not yet been linked to a media asset.
-        Select an intake to upload the file directly.
+        Upload a file, or delete duplicate shells. Delete does not remove a Universe.
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-2" data-awaiting-upload="">
         {visible.map((intake) =>
           activeIntakeId === intake.intake_id ? (
             <IntakeUploadPanel
@@ -368,6 +369,7 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
           ) : (
             <div
               key={intake.intake_id}
+              data-intake-id={intake.intake_id}
               className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-4 py-3"
             >
               <div className="min-w-0">
@@ -376,13 +378,20 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
                   {intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setActiveIntakeId(intake.intake_id)}
-              >
-                <Upload size={13} /> Upload media
-              </Button>
+              <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setActiveIntakeId(intake.intake_id)}
+                >
+                  <Upload size={13} /> Upload media
+                </Button>
+                <DiscardIntake
+                  intakeId={intake.intake_id}
+                  title={intake.title}
+                  onDiscarded={() => setDone((prev) => new Set([...prev, intake.intake_id]))}
+                />
+              </div>
             </div>
           )
         )}

@@ -14,7 +14,7 @@ import { classifyGalleryAssetRole, type GalleryAssetRole } from "@/lib/productio
 import { parseReferenceProvenance } from "@/lib/production/reference";
 import { parseProductionProvenance, type ProductionApproval } from "@/lib/production/result";
 import MediaLibraryClient from "./media-library-client";
-import { isDiscardedStorageRef, mediaIsDeletable } from "@/lib/media/discard-asset";
+import { isAwaitingUploadIntake, isDiscardedStorageRef, mediaIsDeletable } from "@/lib/media/discard-asset";
 
 export type MediaLibraryItem = {
   asset_id: string;
@@ -59,7 +59,7 @@ async function getData() {
       .order("created_at", { ascending: false }),
     svc
       .from("media_intake")
-      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes")
+      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes, search_status")
       .order("created_at", { ascending: false }),
   ]);
 
@@ -259,7 +259,9 @@ async function getData() {
     };
   });
 
-  const unlinkedIntakes = (intakes ?? []).filter((i) => !i.asset_id);
+  const unlinkedIntakes = (intakes ?? []).filter((i) =>
+    isAwaitingUploadIntake({ assetId: i.asset_id, searchStatus: i.search_status })
+  );
 
   return { items, unlinkedIntakes };
 }

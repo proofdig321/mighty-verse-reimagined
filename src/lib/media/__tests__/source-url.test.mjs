@@ -1,4 +1,4 @@
-import { parseMediaSourceUrl } from "../source-url";
+import { parseMediaSourceUrl, youtubeVideoIdFromUrl } from "../source-url";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -22,5 +22,8 @@ assert(!http.ok, "HTTP is rejected");
 
 const missing = parseMediaSourceUrl("https://youtube.com/watch");
 assert(!missing.ok, "YouTube URLs without a video id are rejected");
+
+assert(youtubeVideoIdFromUrl("https://youtu.be/dQw4w9WgXcQ") === "dQw4w9WgXcQ", "youtu.be yields the video id");
+assert(youtubeVideoIdFromUrl("https://cdn.example.com/clip.mp4") === null, "direct files have no YouTube id");
 
 console.log("source-url.test.mjs: ok");

@@ -1,7 +1,10 @@
 import {
   decideDiscardMedia,
+  decideDiscardIntake,
+  isAwaitingUploadIntake,
   isDiscardedStorageRef,
   isProtectedMediaAsset,
+  intakeIsDeletable,
   markDiscardedStorageRef,
   mediaHasLiveCanonicalBinding,
   mediaIsDeletable,
@@ -72,5 +75,25 @@ assert(
   "untitled playable shell is still an operator orphan for delete",
 );
 assert(mediaHasLiveCanonicalBinding({ boundUniverses: [] }) === false, "unbound media is not live");
+
+const unlinked = decideDiscardIntake({ intakeId: "intake-orphan", assetId: null, searchStatus: "pending" });
+assert(unlinked.ok === true && unlinked.action === "discard", "unlinked awaiting intake can be deleted");
+assert(intakeIsDeletable({ intakeId: "intake-orphan", assetId: null, searchStatus: "pending" }) === true, "intake deletable helper matches");
+
+const excluded = decideDiscardIntake({ intakeId: "intake-orphan", searchStatus: "excluded" });
+assert(excluded.ok === false && excluded.code === "already_discarded", "excluded intake is already discarded");
+
+const linked = decideDiscardIntake({ intakeId: "intake-linked", assetId: ORPHAN, searchStatus: "pending" });
+assert(linked.ok === false && linked.code === "linked_media", "linked intake is deleted via media, not intake");
+
+const sheIntake = decideDiscardIntake({ intakeId: "intake-she", assetId: SHE, searchStatus: "pending" });
+assert(sheIntake.ok === false && sheIntake.code === "protected_media", "Super Hero Ego intake cannot be discarded");
+
+const missingIntake = decideDiscardIntake({ intakeId: null });
+assert(missingIntake.ok === false && missingIntake.code === "invalid_intake", "discard without an intake is rejected");
+
+assert(isAwaitingUploadIntake({ assetId: null, searchStatus: "pending" }) === true, "unlinked pending intake awaits upload");
+assert(isAwaitingUploadIntake({ assetId: ORPHAN, searchStatus: "pending" }) === false, "linked intake is not awaiting upload");
+assert(isAwaitingUploadIntake({ assetId: null, searchStatus: "excluded" }) === false, "excluded intake is hidden from awaiting upload");
 
 console.log("discard-asset.test.mjs: ok");

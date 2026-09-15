@@ -101,7 +101,7 @@ export function CurateYoutubeIngest({
           setStage("ready");
           writeStored(null);
           setBusy(false);
-          setMessage("Playable in Incoming. This did not create a Universe.");
+          setMessage("Playable in Incoming and Gallery. This did not create a Universe.");
           setUrl("");
           router.refresh();
           return;
@@ -138,7 +138,7 @@ export function CurateYoutubeIngest({
           if (next === "ready") {
             writeStored(null);
             setBusy(false);
-            setMessage("Playable in Incoming. This did not create a Universe.");
+            setMessage("Playable in Incoming and Gallery. This did not create a Universe.");
             setUrl("");
             router.refresh();
             return;

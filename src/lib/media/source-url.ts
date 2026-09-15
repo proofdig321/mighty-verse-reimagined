@@ -50,5 +50,35 @@ export function isUsableMediaSourceUrl(raw: string): boolean {
   return parseMediaSourceUrl(raw).ok;
 }
 
+export function youtubeVideoIdFromUrl(raw: string): string | null {
+  const parsed = parseMediaSourceUrl(raw);
+  if (!parsed.ok || parsed.kind !== "youtube") return null;
+  try {
+    return new URL(parsed.url).searchParams.get("v");
+  } catch {
+    return null;
+  }
+}
+
+export async function resolveUrlIngestTitle(url: string, fallback: string): Promise<string> {
+  const trimmed = fallback.trim();
+  const parsed = parseMediaSourceUrl(url);
+  if (!parsed.ok) return trimmed || "YouTube ingest";
+  if (trimmed && trimmed !== "YouTube ingest") return trimmed;
+  if (parsed.kind !== "youtube") return trimmed || "YouTube ingest";
+  try {
+    const response = await fetch(
+      `https://www.youtube.com/oembed?format=json&url=${encodeURIComponent(parsed.url)}`,
+      { signal: AbortSignal.timeout(4000) },
+    );
+    if (!response.ok) return trimmed || "YouTube ingest";
+    const payload = (await response.json()) as { title?: unknown };
+    if (typeof payload.title === "string" && payload.title.trim()) return payload.title.trim();
+  } catch {
+    // oEmbed is presentation only; ingest still proceeds with the fallback title.
+  }
+  return trimmed || "YouTube ingest";
+}
+
 export const MUX_YOUTUBE_INGEST_FAILURE =
   "Mux could not ingest this URL. YouTube only becomes playable when Mux can pull the file. Upload the animation file, or use a direct HTTPS video URL Mux can fetch.";
