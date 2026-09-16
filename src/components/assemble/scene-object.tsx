@@ -3,16 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MoreHorizontal } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLinkItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { StudioOverflowItem, StudioOverflowLink, StudioOverflowMenu } from "./studio-overflow-menu";
 import { sceneOrdinal, sceneShortTitle, sceneStillUrl, sceneCreativeMomentIds } from "@/lib/assemble/composition";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
 import { formatTimelineMs } from "@/lib/media/timing";
@@ -107,44 +99,32 @@ export function SceneObject({
   }
 
   const actionsMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(buttonVariants({ variant: "outline", size: compact ? "icon-sm" : "sm" }))}
-        aria-label={`Scene actions for ${shortTitle}`}
-        disabled={moveBusy}
-      >
-        {compact ? <MoreHorizontal /> : "Actions"}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" side="bottom">
-        {canAuthorIdentity ? (
-          <>
-            <DropdownMenuItem onClick={() => setPanel("identity")}>Edit identity</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPanel("still")}>Edit still</DropdownMenuItem>
-          </>
-        ) : null}
-        {canAuthorTiming ? (
-          <DropdownMenuItem onClick={() => setPanel("timing")}>Edit timing</DropdownMenuItem>
-        ) : null}
-        {canAuthorOrder ? (
-          <>
-            <DropdownMenuItem disabled={!canEarlier || moveBusy} onClick={() => void move("earlier")}>
-              Move earlier
-            </DropdownMenuItem>
-            <DropdownMenuItem disabled={!canLater || moveBusy} onClick={() => void move("later")}>
-              Move later
-            </DropdownMenuItem>
-          </>
-        ) : null}
-        {canAuthorPresence ? (
-          <DropdownMenuItem onClick={() => setPanel("presence")}>Add presence</DropdownMenuItem>
-        ) : null}
-        <DropdownMenuItem onClick={() => setPanel("details")}>Details</DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuLinkItem href={openHref} closeOnClick>
-          {openLabel}
-        </DropdownMenuLinkItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <StudioOverflowMenu label={`Scene actions for ${shortTitle}`}>
+      {canAuthorIdentity ? (
+        <>
+          <StudioOverflowItem onSelect={() => setPanel("identity")}>Edit identity</StudioOverflowItem>
+          <StudioOverflowItem onSelect={() => setPanel("still")}>Edit still</StudioOverflowItem>
+        </>
+      ) : null}
+      {canAuthorTiming ? (
+        <StudioOverflowItem onSelect={() => setPanel("timing")}>Edit timing</StudioOverflowItem>
+      ) : null}
+      {canAuthorOrder ? (
+        <>
+          <StudioOverflowItem disabled={!canEarlier || moveBusy} onSelect={() => void move("earlier")}>
+            Move earlier
+          </StudioOverflowItem>
+          <StudioOverflowItem disabled={!canLater || moveBusy} onSelect={() => void move("later")}>
+            Move later
+          </StudioOverflowItem>
+        </>
+      ) : null}
+      {canAuthorPresence ? (
+        <StudioOverflowItem onSelect={() => setPanel("presence")}>Add presence</StudioOverflowItem>
+      ) : null}
+      <StudioOverflowItem onSelect={() => setPanel("details")}>Details</StudioOverflowItem>
+      <StudioOverflowLink href={openHref}>{openLabel}</StudioOverflowLink>
+    </StudioOverflowMenu>
   );
 
   const panelBody = (

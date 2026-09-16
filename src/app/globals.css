@@ -1575,7 +1575,7 @@ html[data-theme="tangerine"] {
   .suite-scene-object {
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     background: var(--card);
@@ -1586,6 +1586,91 @@ html[data-theme="tangerine"] {
     background: color-mix(in oklch, var(--card) 88%, transparent);
   }
 
+  .suite-scene-object.is-workspace {
+    align-items: start;
+  }
+
+  .suite-scene-object.is-workspace .suite-scene-still {
+    max-height: 14rem;
+    overflow: hidden;
+  }
+
+  .suite-scene-body {
+    position: relative;
+    z-index: 1;
+  }
+
+  .studio-overflow {
+    position: relative;
+  }
+
+  .studio-overflow-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border: 1px solid var(--border);
+    border-radius: calc(var(--radius) - 2px);
+    background: var(--background);
+    color: var(--foreground);
+    cursor: pointer;
+    list-style: none;
+  }
+
+  .studio-overflow-trigger::-webkit-details-marker {
+    display: none;
+  }
+
+  .studio-overflow-trigger:hover,
+  .studio-overflow-trigger:focus-visible {
+    background: var(--muted);
+  }
+
+  .studio-overflow-panel {
+    position: absolute;
+    right: 0;
+    z-index: 20;
+    display: grid;
+    min-width: 12rem;
+    margin-top: 0.25rem;
+    padding: 0.3rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--popover);
+    color: var(--popover-foreground);
+    box-shadow: 0 10px 24px color-mix(in oklch, var(--background) 55%, transparent);
+  }
+
+  .studio-overflow-item {
+    display: block;
+    width: 100%;
+    border: 0;
+    border-radius: calc(var(--radius) - 4px);
+    padding: 0.4rem 0.55rem;
+    background: transparent;
+    color: inherit;
+    font-size: 0.8125rem;
+    text-align: left;
+    text-decoration: none;
+    cursor: pointer;
+  }
+
+  .studio-overflow-item:hover,
+  .studio-overflow-item:focus-visible {
+    background: var(--accent);
+    color: var(--accent-foreground);
+  }
+
+  .studio-overflow-item:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .studio-overflow-item.is-destructive {
+    color: var(--destructive);
+  }
+
   .suite-scene-object.is-compact .suite-scene-title {
     font-size: 0.95rem;
   }
@@ -1593,6 +1678,7 @@ html[data-theme="tangerine"] {
   .suite-scene-still {
     position: relative;
     aspect-ratio: 16 / 9;
+    overflow: hidden;
     background: var(--background);
   }
 
@@ -1748,6 +1834,7 @@ html[data-theme="tangerine"] {
     list-style: none;
     margin: 0;
     padding: 0;
+    scroll-margin-top: 6rem;
   }
 
   .suite-presence-panel,

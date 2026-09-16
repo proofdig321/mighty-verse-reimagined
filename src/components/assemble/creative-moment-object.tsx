@@ -2,22 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { MoreHorizontal } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLinkItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { UniverseAssemblyMoment } from "@/lib/assemble";
 import type { PresenceOption } from "@/lib/assemble/presence";
 import { cn } from "@/lib/utils";
 import { CreativeMomentIdentity } from "./creative-moment-identity-authoring";
 import { MomentPresence } from "./presence-authoring";
+import { StudioOverflowItem, StudioOverflowLink, StudioOverflowMenu } from "./studio-overflow-menu";
 
 export function CreativeMomentObject({
   moment,
@@ -48,26 +39,15 @@ export function CreativeMomentObject({
   }));
 
   const actions = (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        className={cn(buttonVariants({ variant: "outline", size: compact ? "icon-sm" : "sm" }))}
-        aria-label={`Creative Moment actions for ${title}`}
-      >
-        {compact ? <MoreHorizontal /> : "Actions"}
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {canAuthorIdentity ? (
-          <DropdownMenuItem onClick={() => setPanel("identity")}>Edit identity</DropdownMenuItem>
-        ) : null}
-        {canAuthorPresence ? (
-          <DropdownMenuItem onClick={() => setPanel("presence")}>Add presence</DropdownMenuItem>
-        ) : null}
-        <DropdownMenuSeparator />
-        <DropdownMenuLinkItem href={openHref} closeOnClick>
-          {openLabel}
-        </DropdownMenuLinkItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <StudioOverflowMenu label={`Creative Moment actions for ${title}`}>
+      {canAuthorIdentity ? (
+        <StudioOverflowItem onSelect={() => setPanel("identity")}>Edit identity</StudioOverflowItem>
+      ) : null}
+      {canAuthorPresence ? (
+        <StudioOverflowItem onSelect={() => setPanel("presence")}>Add presence</StudioOverflowItem>
+      ) : null}
+      <StudioOverflowLink href={openHref}>{openLabel}</StudioOverflowLink>
+    </StudioOverflowMenu>
   );
 
   return (

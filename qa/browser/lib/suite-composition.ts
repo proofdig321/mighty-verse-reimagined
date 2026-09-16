@@ -161,10 +161,10 @@ export async function expectCreativeSuiteComposition(page: Page) {
     );
     await expect(card.getByRole("button", { name: /Scene actions/i })).toBeVisible();
     await card.getByRole("button", { name: /Scene actions/i }).click();
-    await expect(page.getByRole("menuitem", { name: "Edit identity" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Edit timing" })).toBeVisible();
-    await expect(page.getByRole("menuitem", { name: "Edit still" })).toBeVisible();
-    await page.keyboard.press("Escape");
+    await expect(card.getByRole("menuitem", { name: "Edit identity" })).toBeVisible();
+    await expect(card.getByRole("menuitem", { name: "Edit timing" })).toBeVisible();
+    await expect(card.getByRole("menuitem", { name: "Edit still" })).toBeVisible();
+    await card.getByRole("button", { name: /Scene actions/i }).click();
   }
 
   await expect(moments.getByRole("heading", { name: "Proverb", exact: true })).toHaveCount(1);
