@@ -4,11 +4,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import { ChevronRight } from "lucide-react";
 import { formatDuration } from "@/lib/media/timing";
 import SceneOrderClient from "./scene-order-client";
-import { WithdrawWork } from "@/components/assemble/withdraw-work";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
+import { CatalogueRecordCard } from "@/components/assemble/catalogue-record-card";
+import { PaginatedItems } from "@/components/assemble/collection-pager";
 
 function formatMs(ms: number | null) {
   if (ms == null) return null;
@@ -84,7 +84,7 @@ export default async function ScenesPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Scenes</h1>
         <p className="text-sm text-muted-foreground">
           Canonical Scenes. Each Scene belongs to a Mural. Timing is a media-realization observation, not canonical Scene identity.
-          Each row has Edit and Withdraw. Super Hero Ego Scenes cannot be withdrawn.
+          Edit opens the record. Withdraw removes a Scene from Discover — records stay. Super Hero Ego Scenes cannot be withdrawn.
           {scenes.length > 0 && <span className="ml-2 text-muted-foreground/60">{scenes.length} scene{scenes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>
@@ -95,58 +95,48 @@ export default async function ScenesPage() {
         <>
           <SceneOrderClient scenes={scenes.map((s) => ({ master_id: s.master_id, title: s.title, sort_order: s.sort_order }))} />
 
-          <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/20">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Scene</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Mural</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Timing</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden lg:table-cell">Media</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {scenes.map((s) => (
-                <tr key={s.master_id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {s.title ?? <span className="italic text-muted-foreground">Untitled scene</span>}
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
-                    {s.muralTitle ? (
-                      <a href={`/authority/${s.parent_master_id}`} className="hover:text-foreground transition-colors">
-                        {s.muralTitle}
-                      </a>
-                    ) : (
-                      <span className="italic">No parent</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell text-xs text-muted-foreground font-mono">
-                    {s.startMs != null && s.endMs != null
-                      ? <>{formatMs(s.startMs)} → {formatMs(s.endMs)}</>
-                      : <span className="italic not-italic font-sans text-muted-foreground/50">Not set</span>}
-                  </td>
-                  <td className="px-4 py-3 hidden lg:table-cell">
-                    {s.playable
-                      ? <span className="text-xs text-emerald-400">Playable</span>
-                      : <span className="text-xs text-muted-foreground/50">Missing</span>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      {s.withdrawable ? <WithdrawWork masterId={s.master_id} title={s.title} /> : null}
-                      <a href={`/authority/${s.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        Edit
-                      </a>
-                      <a href={`/authority/${s.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        Open <ChevronRight size={13} />
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+          <PaginatedItems items={scenes} label="Scenes">
+            {(page) => (
+              <ul className="grid gap-3 md:grid-cols-2">
+                {page.map((s) => (
+                  <li key={s.master_id}>
+                    <CatalogueRecordCard
+                      kicker="Scene"
+                      title={s.title}
+                      untitled="Untitled scene"
+                      badges={[s.playable ? "Playable" : "Missing media"]}
+                      meta={[
+                        {
+                          label: "Mural",
+                          value: s.muralTitle && s.parent_master_id ? (
+                            <a href={`/authority/${s.parent_master_id}`} className="hover:underline">
+                              {s.muralTitle}
+                            </a>
+                          ) : (
+                            <span className="italic text-muted-foreground">No parent</span>
+                          ),
+                        },
+                        {
+                          label: "Timing",
+                          value:
+                            s.startMs != null && s.endMs != null ? (
+                              <span className="font-mono">
+                                {formatMs(s.startMs)} → {formatMs(s.endMs)}
+                              </span>
+                            ) : (
+                              <span className="italic text-muted-foreground">Not set</span>
+                            ),
+                        },
+                      ]}
+                      editHref={`/authority/${s.master_id}`}
+                      masterId={s.master_id}
+                      withdrawable={s.withdrawable}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PaginatedItems>
         </>
       )}
     </div>

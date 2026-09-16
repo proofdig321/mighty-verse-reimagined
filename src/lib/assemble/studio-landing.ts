@@ -3,11 +3,21 @@
  * Storyboard work. Attached work is not a second Universe card.
  */
 import type { StoryboardWorkSummary } from "../storyboard/document";
+import type { UniverseOccupancy } from "./occupancy";
+
+const OCCUPANCY_RANK: Record<UniverseOccupancy, number> = {
+  orphan: 0,
+  in_progress: 1,
+  curated: 2,
+  withdrawn: 3,
+};
 
 export type StudioUniverseCard = {
   master_id: string;
   title: string;
   description: string | null;
+  occupancy?: UniverseOccupancy;
+  withdrawable?: boolean;
 };
 
 export type StudioStandaloneCard = {
@@ -24,6 +34,8 @@ export type StudioUniverseLandingCard = {
   href: string;
   attached_work_count: number;
   attached_work_ids: string[];
+  occupancy: UniverseOccupancy;
+  withdrawable: boolean;
 };
 
 export type StudioLanding = {
@@ -66,8 +78,12 @@ export function composeStudioLanding(
       href: `/authority/universes/${universe.master_id}`,
       attached_work_count: attached.length,
       attached_work_ids: attached,
+      occupancy: universe.occupancy ?? "curated",
+      withdrawable: universe.withdrawable ?? false,
     });
   }
+
+  universeCards.sort((a, b) => OCCUPANCY_RANK[a.occupancy] - OCCUPANCY_RANK[b.occupancy]);
 
   return { standalone, universes: universeCards };
 }

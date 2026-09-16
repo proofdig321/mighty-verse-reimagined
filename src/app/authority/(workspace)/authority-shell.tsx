@@ -16,7 +16,6 @@ import {
   Wand2,
 } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
-import { WorkspaceJourney } from "@/components/assemble/workspace-journey";
 
 export default function AuthorityShell({ children }: { children: ReactNode }) {
   return (
@@ -24,12 +23,7 @@ export default function AuthorityShell({ children }: { children: ReactNode }) {
       brandTitle="Mighty Verse"
       brandKicker="Authority Console"
       headerEyebrow="Authority"
-      headerTitle="Create → Curate → Studio → Experience"
-      footer={
-        <div className="space-y-3 border-t border-border px-3 py-4">
-          <WorkspaceJourney compact />
-        </div>
-      }
+      headerTitle="Authority Console"
       groups={[
         {
           label: "Workspace",

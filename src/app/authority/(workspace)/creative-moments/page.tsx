@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import { ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { WithdrawWork } from "@/components/assemble/withdraw-work";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
+import { CatalogueRecordCard } from "@/components/assemble/catalogue-record-card";
+import { PaginatedItems } from "@/components/assemble/collection-pager";
 
 async function getData() {
   const svc = getServiceClient();
@@ -67,7 +66,7 @@ export default async function CreativeMomentsPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Creative Moments</h1>
         <p className="text-sm text-muted-foreground">
           Canonical Creative Moments. Each belongs to a Universe. A Creative Moment does not require media — its projection is its representation.
-          Each row has Edit and Withdraw. Super Hero Ego moments cannot be withdrawn.
+          Edit opens the record. Super Hero Ego moments cannot be withdrawn.
           {moments.length > 0 && <span className="ml-2 text-muted-foreground/60">{moments.length} moment{moments.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>
@@ -75,55 +74,38 @@ export default async function CreativeMomentsPage() {
       {moments.length === 0 ? (
         <p className="text-sm text-muted-foreground">No creative moments registered yet.</p>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/20">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Creative Moment</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Universe</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Experience</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {moments.map((m) => (
-                <tr key={m.master_id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3">
-                    <p className="font-medium text-foreground">
-                      {m.title ?? <span className="italic text-muted-foreground">Untitled moment</span>}
-                    </p>
-                    {m.description && <p className="mt-0.5 text-xs text-muted-foreground line-clamp-1">{m.description}</p>}
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
-                    {m.parentTitle ? (
-                      <a href={`/authority/universes/${m.parent_master_id}`} className="hover:text-foreground transition-colors">
-                        {m.parentTitle}
-                      </a>
-                    ) : (
-                      <span className="italic">No parent</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    {m.hasExperience
-                      ? <Badge variant="secondary">Created</Badge>
-                      : <Badge variant="outline">Missing</Badge>}
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      {m.withdrawable ? <WithdrawWork masterId={m.master_id} title={m.title} /> : null}
-                      <a href={`/authority/${m.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        Edit
-                      </a>
-                      <a href={`/authority/${m.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        Open <ChevronRight size={13} />
-                      </a>
-                    </div>
-                  </td>
-                </tr>
+        <PaginatedItems items={moments} label="Creative Moments">
+          {(page) => (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {page.map((m) => (
+                <li key={m.master_id}>
+                  <CatalogueRecordCard
+                    kicker="Creative Moment"
+                    title={m.title}
+                    untitled="Untitled moment"
+                    description={m.description}
+                    badges={[m.hasExperience ? "Experience created" : "Experience missing"]}
+                    meta={[
+                      {
+                        label: "Universe",
+                        value: m.parentTitle && m.parent_master_id ? (
+                          <a href={`/authority/universes/${m.parent_master_id}`} className="hover:underline">
+                            {m.parentTitle}
+                          </a>
+                        ) : (
+                          <span className="italic text-muted-foreground">No parent</span>
+                        ),
+                      },
+                    ]}
+                    editHref={`/authority/${m.master_id}`}
+                    masterId={m.master_id}
+                    withdrawable={m.withdrawable}
+                  />
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          )}
+        </PaginatedItems>
       )}
     </div>
   );

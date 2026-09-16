@@ -37,6 +37,7 @@ export function StudioWorkspaceShell({
   lead,
   sceneCount,
   showIdentityAction = true,
+  headerProminence = "experience",
   actions,
   children,
 }: {
@@ -50,6 +51,7 @@ export function StudioWorkspaceShell({
   lead?: string;
   sceneCount?: number;
   showIdentityAction?: boolean;
+  headerProminence?: "experience" | "identity";
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -99,6 +101,7 @@ export function StudioWorkspaceShell({
               universeId={universeId}
               identityHref={showIdentityAction ? creativeSuiteIdentityHref(universeId, fromCurate ? "curate" : null) : null}
               showIdentityAction={showIdentityAction}
+              prominence={headerProminence}
               extra={actions}
             />
           </div>

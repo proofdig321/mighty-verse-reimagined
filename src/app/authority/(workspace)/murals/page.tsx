@@ -4,10 +4,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import { ChevronRight } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { WithdrawWork } from "@/components/assemble/withdraw-work";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
+import { CatalogueRecordCard } from "@/components/assemble/catalogue-record-card";
+import { PaginatedItems } from "@/components/assemble/collection-pager";
 
 async function getData() {
   const svc = getServiceClient();
@@ -64,7 +63,7 @@ export default async function MuralsPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Murals</h1>
         <p className="text-sm text-muted-foreground">
           Canonical Murals. Each Mural belongs to a Universe and contains Scenes.
-          Withdraw removes a Mural from Discover — records stay. Each row has Edit and Withdraw. Super Hero Ego cannot be withdrawn.
+          Edit opens the record. Withdraw removes a Mural from Discover — records stay. Super Hero Ego cannot be withdrawn.
           {murals.length > 0 && <span className="ml-2 text-muted-foreground/60">{murals.length} mural{murals.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>
@@ -72,50 +71,37 @@ export default async function MuralsPage() {
       {murals.length === 0 ? (
         <p className="text-sm text-muted-foreground">No murals registered yet.</p>
       ) : (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/20">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Mural</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Universe</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Scenes</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground"></th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {murals.map((m) => (
-                <tr key={m.master_id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {m.title ?? <span className="italic text-muted-foreground">Untitled mural</span>}
-                  </td>
-                  <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground text-xs">
-                    {m.universeTitle ? (
-                      <a href={`/authority/universes/${m.parent_master_id}`} className="hover:text-foreground transition-colors">
-                        {m.universeTitle}
-                      </a>
-                    ) : (
-                      <span className="italic">No parent</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 hidden md:table-cell">
-                    <Badge variant="outline">{m.sceneCount}</Badge>
-                  </td>
-                  <td className="px-4 py-3 text-right">
-                    <div className="flex flex-wrap items-center justify-end gap-3">
-                      {m.withdrawable ? <WithdrawWork masterId={m.master_id} title={m.title} /> : null}
-                      <a href={`/authority/${m.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        Edit
-                      </a>
-                      <a href={`/authority/${m.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        Open <ChevronRight size={13} />
-                      </a>
-                    </div>
-                  </td>
-                </tr>
+        <PaginatedItems items={murals} label="Murals">
+          {(page) => (
+            <ul className="grid gap-3 md:grid-cols-2">
+              {page.map((m) => (
+                <li key={m.master_id}>
+                  <CatalogueRecordCard
+                    kicker="Mural"
+                    title={m.title}
+                    untitled="Untitled mural"
+                    badges={[`${m.sceneCount} Scene${m.sceneCount === 1 ? "" : "s"}`]}
+                    meta={[
+                      {
+                        label: "Universe",
+                        value: m.universeTitle && m.parent_master_id ? (
+                          <a href={`/authority/universes/${m.parent_master_id}`} className="hover:underline">
+                            {m.universeTitle}
+                          </a>
+                        ) : (
+                          <span className="italic text-muted-foreground">No parent</span>
+                        ),
+                      },
+                    ]}
+                    editHref={`/authority/${m.master_id}`}
+                    masterId={m.master_id}
+                    withdrawable={m.withdrawable}
+                  />
+                </li>
               ))}
-            </tbody>
-          </table>
-        </div>
+            </ul>
+          )}
+        </PaginatedItems>
       )}
     </div>
   );

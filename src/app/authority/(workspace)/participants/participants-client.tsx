@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { ADMIN_CAPABILITIES, OPERATOR_CAPABILITIES, type OperationalAccess } from "@/lib/participants/names";
+import { PaginatedItems } from "@/components/assemble/collection-pager";
 
 type ParticipantRow = {
   participant_id: string;
@@ -214,6 +215,8 @@ export default function ParticipantsClient({ participants: initial }: { particip
       {participants.length === 0 ? (
         <p className="text-sm text-muted-foreground">No participants registered yet.</p>
       ) : (
+        <PaginatedItems items={participants} pageSize={12} label="Participants">
+          {(page) => (
         <div className="rounded-lg border border-border overflow-hidden">
           <table className="w-full text-sm">
             <thead className="border-b border-border bg-muted/20">
@@ -226,7 +229,7 @@ export default function ParticipantsClient({ participants: initial }: { particip
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {participants.map((p) => (
+              {page.map((p) => (
                 <tr key={p.participant_id} className="hover:bg-muted/20 transition-colors">
                   <td className="px-4 py-3 font-medium text-foreground">
                     {editingId === p.participant_id ? (
@@ -303,6 +306,8 @@ export default function ParticipantsClient({ participants: initial }: { particip
             </tbody>
           </table>
         </div>
+          )}
+        </PaginatedItems>
       )}
     </div>
   );

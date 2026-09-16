@@ -122,24 +122,23 @@ export function SentinelEvidencePage({
 
   return (
     <div className="space-y-8" data-sentinel-page="true">
-      <SentinelSummary
-        observationCount={cinematic?.shots.length ?? intelligence?.storyboard.length ?? 0}
-        referenceCount={work?.frames?.length ?? 0}
-        mediaFactCount={source?.playback_id ? 1 : 0}
-        href={storyboardHref}
-      />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel</p>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Observational evidence for {universeTitle}. Sentinel describes what is happening in the attached Storyboard source.
-            It does not create Scenes, mutate Super Hero Ego, or author transformations.
+            Observational evidence for {universeTitle}. Sentinel describes the attached Storyboard source. It does not create Scenes.
           </p>
         </div>
         <Link href={storyboardHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
           Open Storyboard References
         </Link>
       </div>
+      <SentinelSummary
+        observationCount={cinematic?.shots.length ?? intelligence?.storyboard.length ?? 0}
+        referenceCount={work?.frames?.length ?? 0}
+        mediaFactCount={source?.playback_id ? 1 : 0}
+        showCta={false}
+      />
 
       <SentinelWorkspace
         source={source}

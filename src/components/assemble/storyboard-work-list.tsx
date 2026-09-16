@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { StoryboardWorkSummary } from "@/lib/storyboard/document";
 import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
+import { PaginatedItems } from "./collection-pager";
 
 export function StoryboardWorkList({
   universes,
@@ -122,8 +123,10 @@ export function StoryboardWorkList({
           </CardHeader>
         </Card>
       ) : (
+        <PaginatedItems items={works} label="Storyboard works">
+          {(page) => (
         <ul className="grid gap-3 md:grid-cols-2">
-          {works.map((work) => (
+          {page.map((work) => (
             <li key={work.work_id}>
               <Card className="h-full bg-card/70">
                 <CardHeader>
@@ -180,6 +183,8 @@ export function StoryboardWorkList({
             </li>
           ))}
         </ul>
+          )}
+        </PaginatedItems>
       )}
       {universes.length ? (
         <p className="text-xs text-muted-foreground">

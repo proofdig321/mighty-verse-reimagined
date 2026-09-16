@@ -4,23 +4,31 @@ import Link from "next/link";
 import { Clapperboard, Film, MonitorPlay, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
-import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
+import { loadUniverseCatalogue } from "@/lib/assemble/load-universe-catalogue";
 import { composeStudioLanding } from "@/lib/assemble/studio-landing";
 import { studioInteractionLabel } from "@/lib/assemble/studio-interaction";
 import { listStoryboardWorks } from "@/lib/storyboard/commands";
-import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
+import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StoryboardWorkList } from "@/components/assemble/storyboard-work-list";
+import { UniverseProjectList } from "@/components/assemble/universe-project-list";
 
 export default async function StudioHomePage() {
   const supabase = await createClient();
   const participantId = await getParticipantId(supabase);
   const [projects, works] = await Promise.all([
-    loadUniverseProjectCards(),
+    loadUniverseCatalogue(),
     participantId ? listStoryboardWorks({ participantId }) : Promise.resolve([]),
   ]);
-  const landing = composeStudioLanding(projects, works);
+  const landing = composeStudioLanding(
+    projects.map((project) => ({
+      master_id: project.master_id,
+      title: project.title ?? "Untitled universe",
+      description: project.description,
+      occupancy: project.occupancy,
+      withdrawable: project.withdrawable,
+    })),
+    works,
+  );
 
   return (
     <div className="space-y-8">
@@ -98,36 +106,13 @@ export default async function StudioHomePage() {
         </h2>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Open an established Universe to compose Storyboard, Scenes, Production, 2.5D Preview, and Experience.
-          Attached Storyboard stays non-canonical. This does not replace standalone work.
+          Edit identity or remove orphan shells here so they do not accumulate. Attached Storyboard stays non-canonical.
+          Super Hero Ego cannot be withdrawn.
         </p>
         {landing.universes.length === 0 ? (
           <p className="text-sm text-muted-foreground">No Universes yet. Start with an idea, or establish a Universe first.</p>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {landing.universes.map((project) => (
-              <li key={project.master_id}>
-                <Link href={project.href} aria-label={project.title}>
-                  <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
-                    <CardHeader>
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Universe</p>
-                      <CardTitle>{project.title}</CardTitle>
-                      {project.description ? (
-                        <CardDescription className="line-clamp-2">{project.description}</CardDescription>
-                      ) : null}
-                    </CardHeader>
-                    <CardContent>
-                      <p className="mb-3 text-xs text-muted-foreground">
-                        {project.attached_work_count
-                          ? `${project.attached_work_count} attached storyboard${project.attached_work_count === 1 ? "" : "s"} · non-canonical`
-                          : "No attached storyboard"}
-                      </p>
-                      <span className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>Open workspace</span>
-                    </CardContent>
-                  </Card>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <UniverseProjectList projects={landing.universes} />
         )}
       </section>
     </div>

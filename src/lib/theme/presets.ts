@@ -1,8 +1,13 @@
 export const THEME_PRESETS = [
   { id: "default", label: "Mighty Verse" },
+  { id: "gold-shovel", label: "Golden Shovel" },
+  { id: "midnight", label: "Midnight" },
+  { id: "ember", label: "Ember" },
+  { id: "aurora", label: "Aurora" },
   { id: "soft-pop", label: "Soft Pop" },
   { id: "neo-brutalism", label: "Neo Brutalism" },
   { id: "tangerine", label: "Tangerine" },
+  { id: "paper", label: "Paper" },
 ] as const;
 
 export type ThemePresetId = (typeof THEME_PRESETS)[number]["id"];

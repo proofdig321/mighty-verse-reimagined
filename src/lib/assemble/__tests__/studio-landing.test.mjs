@@ -23,8 +23,20 @@ const works = [
 
 const landing = composeStudioLanding(universes, works);
 assert(landing.universes.length === 2, "each Universe identity appears once");
-assert(landing.universes[0].master_id === SHE && landing.universes[0].attached_work_count === 2, "attached work is counted on Super Hero Ego, not duplicated as Universe cards");
-assert(landing.universes[0].href === `/authority/universes/${SHE_COPY}`, "Universe card opens the existing Studio workspace");
+const sheCard = landing.universes.find((card) => card.master_id === SHE);
+assert(sheCard && sheCard.attached_work_count === 2, "attached work is counted on Super Hero Ego, not duplicated as Universe cards");
+assert(sheCard.href === `/authority/universes/${SHE_COPY}`, "Universe card opens the existing Studio workspace");
+assert(sheCard.withdrawable === false, "missing withdrawable stays false so Super Hero Ego is not treated as removable");
+
+const orphanFirst = composeStudioLanding(
+  [
+    { master_id: SHE, title: "Super Hero Ego", description: null, occupancy: "curated", withdrawable: false },
+    { master_id: "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb", title: "Untitled universe", description: null, occupancy: "orphan", withdrawable: true },
+  ],
+  [],
+);
+assert(orphanFirst.universes[0].occupancy === "orphan", "orphan shells surface first so they can be edited or removed");
+assert(orphanFirst.universes[1].master_id === SHE, "curated Super Hero Ego stays listed after orphans");
 assert(landing.universes.every((card) => card.kind === "universe"), "Universe cards stay Universes");
 assert(landing.standalone.length === 2, "standalone work is listed by work_id");
 assert(landing.standalone.every((card) => card.work.universe_id === null), "attached work is not a standalone card");

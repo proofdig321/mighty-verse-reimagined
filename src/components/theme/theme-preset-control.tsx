@@ -27,7 +27,7 @@ export function ThemePresetControl() {
         aria-label="Theme preset"
         value={preset}
         onChange={(event) => apply(event.target.value as ThemePresetId)}
-        className="h-8 max-w-[10rem] rounded-md border border-border bg-background px-2 text-xs font-medium normal-case tracking-normal text-foreground"
+        className="h-8 max-w-[12rem] rounded-md border border-border bg-background px-2 text-xs font-medium normal-case tracking-normal text-foreground"
       >
         {THEME_PRESETS.map((item) => (
           <option key={item.id} value={item.id}>

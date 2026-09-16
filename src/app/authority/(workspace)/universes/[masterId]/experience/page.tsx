@@ -18,7 +18,10 @@ export default async function UniverseExperiencePage({
   const title = workspace.data.title ?? "Untitled universe";
 
   return (
-    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "experience", "Experience")}>
+    <StudioWorkspaceShell
+      {...studioShellFromWorkspace(workspace, "experience", "Experience")}
+      headerProminence="identity"
+    >
       <ExperienceContinuation
         href={`/worlds/${workspace.data.master_id}/holographic`}
         universeHref={`/worlds/${workspace.data.master_id}`}

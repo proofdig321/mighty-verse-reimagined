@@ -50,7 +50,7 @@ export default function SceneOrderClient({ scenes: initial }: { scenes: SceneIte
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">Drag to reorder. This sets the canonical Scene sequence used across the public experience.</p>
-      <div className="rounded-lg border border-border overflow-hidden divide-y divide-border">
+      <div className="max-h-80 overflow-y-auto rounded-lg border border-border divide-y divide-border">
         {scenes.map((s, i) => (
           <div
             key={s.master_id}
