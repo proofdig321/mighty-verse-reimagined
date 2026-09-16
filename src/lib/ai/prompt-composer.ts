@@ -14,6 +14,19 @@ export type MotionIntent = {
   orientation?: "landscape" | "portrait" | null;
 };
 
+export type SentinelObservationPrompt = {
+  what_happens?: string | null;
+  framing?: string | null;
+  camera?: string | null;
+  camera_explanation?: string | null;
+  action?: string | null;
+  subjects?: string | null;
+  environment?: string | null;
+  motion?: string | null;
+  lighting?: string | null;
+  analysis_mode?: string | null;
+};
+
 export type PanelPromptInput = {
   storyTitle?: string | null;
   storyBody?: string | null;
@@ -38,14 +51,39 @@ export type PanelPromptInput = {
   nextTitle?: string | null;
   selectedReferences?: string[];
   instruction?: string | null;
+  sentinelObservation?: SentinelObservationPrompt | null;
+  sourceLabel?: string | null;
 };
 
 const STILL_PREFIX =
   "Cinematic storyboard still, African futurist music universe, no text overlay, no captions, no watermarks.";
 
+export function composeObservationContext(observation?: SentinelObservationPrompt | null): string {
+  if (!observation) return "";
+  return [
+    "Sentinel observation (evidence only — not a creative instruction):",
+    observation.what_happens,
+    field("Observed subjects", observation.subjects),
+    field("Observed action", observation.action),
+    field("Observed framing", observation.framing),
+    field("Observed motion", observation.motion),
+    field("Observed environment", observation.environment),
+    field("Observed lighting", observation.lighting),
+    `Camera: ${cameraEvidenceLine(observation.camera, observation.camera_explanation)}`,
+    observation.analysis_mode === "sampled-fallback"
+      ? "Evidence mode: sampled-frame fallback, not full-video understanding."
+      : observation.analysis_mode === "gemini-sampled-frames"
+        ? "Evidence mode: Gemini sampled frames, not full-video understanding."
+        : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
 export function composeStillPrompt(input: PanelPromptInput): string {
   return [
     STILL_PREFIX,
+    input.sourceLabel ? `Source: ${input.sourceLabel}` : "",
     input.panel.title,
     input.panel.description,
     field("Subject", input.panel.characters),
@@ -55,8 +93,9 @@ export function composeStillPrompt(input: PanelPromptInput): string {
     field("Lighting", input.panel.lighting),
     field("Mood", input.panel.mood),
     field("Style", input.panel.lens_style),
+    composeObservationContext(input.sentinelObservation),
     input.selectedReferences?.length ? `Visual references in play: ${input.selectedReferences.join("; ")}` : "",
-    input.instruction,
+    input.instruction ? `Creator directive: ${input.instruction}` : "",
   ]
     .filter(Boolean)
     .join("\n");
@@ -77,7 +116,9 @@ export function composeMotionPrompt(input: PanelPromptInput, motion: MotionInten
     audioLine(input.panel.dialogue, input.panel.narration, motion.audioIntention),
     input.panel.transition ? `The shot resolves toward: ${input.panel.transition}.` : "",
     `Aspect ${aspect}. Photoreal texture unless the style is explicitly animation.`,
-    input.instruction,
+    composeObservationContext(input.sentinelObservation).replace(/\n/g, " "),
+    input.selectedReferences?.length ? `Visual references in play: ${input.selectedReferences.join("; ")}.` : "",
+    input.instruction ? `Creator directive: ${input.instruction}` : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -115,9 +156,22 @@ function field(label: string, value?: string | null) {
   return value?.trim() ? `${label}: ${value.trim()}` : "";
 }
 
+function unknownCamera(value?: string | null) {
+  if (!value?.trim()) return true;
+  const text = value.trim().toLowerCase();
+  return text === "unknown" || text.includes("could not be determined") || text.includes("insufficient evidence");
+}
+
+function cameraEvidenceLine(camera?: string | null, explanation?: string | null) {
+  if (unknownCamera(camera) && unknownCamera(explanation)) {
+    return "unknown / insufficient evidence. Do not invent camera movement.";
+  }
+  return [explanation, camera].filter((value) => value && !unknownCamera(value)).join(" — ") || "unknown / insufficient evidence. Do not invent camera movement.";
+}
+
 function cameraLine(camera?: string | null, movement?: string | null, framing?: string | null) {
-  const parts = [camera, movement, framing].filter(Boolean);
-  return parts.length ? `Camera: ${parts.join(", ")}.` : "Camera: motivated cinematic coverage.";
+  const parts = [camera, movement, framing].filter((value) => value && !unknownCamera(value));
+  return parts.length ? `Camera: ${parts.join(", ")}.` : "Camera: unknown / insufficient evidence. Do not invent camera movement.";
 }
 
 function audioLine(dialogue?: string | null, narration?: string | null, intention?: string | null) {

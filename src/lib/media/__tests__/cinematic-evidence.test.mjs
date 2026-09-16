@@ -1,12 +1,16 @@
 import {
   CINEMATIC_KIND,
   attachStillUrls,
+  cameraEvidenceStatus,
   cinematicToPanelProposal,
   composeFallbackCinematic,
+  evidenceStatusLabel,
   parseCinematicAnalysis,
   parseCinematicShot,
   representativeTimeMs,
   sampleTimesMs,
+  temporalEvidenceStatus,
+  visualEvidenceStatus,
 } from "../cinematic-evidence";
 
 function assert(condition, message) {
@@ -34,6 +38,11 @@ assert(fallback.analysis_mode === "sampled-fallback", "fallback is labeled hones
 assert(fallback.shots.length >= 2, "fallback produces a temporal breakdown, not one still");
 assert(fallback.shots.every((shot) => shot.time_ms > 0), "fallback representative frames avoid time=0");
 assert(fallback.shots.every((shot) => shot.camera === "unknown"), "fallback does not invent camera movement");
+assert(fallback.shots.every((shot) => cameraEvidenceStatus(shot) === "unknown"), "fallback camera is insufficient evidence");
+assert(evidenceStatusLabel("unknown").includes("insufficient"), "unknown evidence is labeled");
+assert(visualEvidenceStatus("Johannesburg night") === "observed", "visible environment is observed");
+assert(temporalEvidenceStatus("unknown") === "unknown", "unknown motion stays unknown");
+assert(temporalEvidenceStatus("Lateral entry") === "inferred", "action across time is inferred, not observed camera");
 assert(fallback.shots[0].confidence === "low", "fallback confidence is low");
 assert(fallback.overview.includes("Fallback"), "overview states fallback");
 

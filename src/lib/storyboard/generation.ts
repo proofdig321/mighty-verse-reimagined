@@ -21,7 +21,7 @@ import {
   type GenerationJobKind,
   type GenerationJobStatus,
 } from "../ai/jobs";
-import { composeMotionPrompt, composeStillPrompt, type MotionIntent } from "../ai/prompt-composer";
+import { composeMotionPrompt, composeStillPrompt, type MotionIntent, type PanelPromptInput } from "../ai/prompt-composer";
 import { muxAdapter } from "../media/providers/mux/adapter";
 import { persistGeneratedImageArtifact, persistStoryboardArtifact } from "./persist";
 import { storeCreativeBytes } from "./storage";
@@ -389,6 +389,31 @@ async function deriveReel(urls: string[], fromVideo: boolean) {
   return { filePath, mime: "video/mp4" as const };
 }
 
+function panelPromptInput(
+  work: StoryboardWorkRecord | null,
+  panel: StoryboardPanelRecord,
+  request: Record<string, unknown>,
+): PanelPromptInput {
+  const observation = panel.generation_metadata?.sentinel_observation ?? null;
+  const frameLabels = (work?.frames ?? [])
+    .filter((frame) => !frame.panel_id || frame.panel_id === panel.panel_id)
+    .map((frame) => `${frame.source_title} at ${Math.round(frame.timestamp_ms)}ms`);
+  const panelLabels = panel.references.map((reference) => reference.label);
+  const instruction =
+    typeof request.instruction === "string" && request.instruction.trim()
+      ? request.instruction
+      : panel.generation_metadata?.transformation_instruction ?? null;
+  return {
+    storyTitle: work?.title,
+    storyBody: work?.body,
+    panel,
+    selectedReferences: [...new Set([...panelLabels, ...frameLabels].filter(Boolean))],
+    instruction,
+    sentinelObservation: observation,
+    sourceLabel: work?.sources?.[0]?.title ?? null,
+  };
+}
+
 export async function processGenerationJob(jobId: string, participantId: string): Promise<GenerationJobRecord> {
   const db = getServiceClient();
   const current = await getGenerationJob({ participantId, jobId });
@@ -414,13 +439,7 @@ export async function processGenerationJob(jobId: string, participantId: string)
     if (current.kind === "still") {
       if (!panel) throw new Error("A panel is required to generate a still.");
       await writeJob(db, jobId, { status: transitionJob(current.status, { type: "submit" }), progress: 10 });
-      const prompt = composeStillPrompt({
-        storyTitle: work?.title,
-        storyBody: work?.body,
-        panel,
-        selectedReferences: panel.references.map((reference) => reference.label),
-        instruction: typeof request.instruction === "string" ? request.instruction : null,
-      });
+      const prompt = composeStillPrompt(panelPromptInput(work, panel, request));
       const image = await generateGeminiImageBytes({ prompt });
       if (!image.ok) {
         const mapped = failFromProvider(image);
@@ -516,16 +535,7 @@ export async function processGenerationJob(jobId: string, participantId: string)
     }
 
     const prompt = panel
-      ? composeMotionPrompt(
-          {
-            storyTitle: work?.title,
-            storyBody: work?.body,
-            panel,
-            selectedReferences: panel.references.map((reference) => reference.label),
-            instruction: typeof request.instruction === "string" ? request.instruction : null,
-          },
-          motion,
-        )
+      ? composeMotionPrompt(panelPromptInput(work, panel, request), motion)
       : String(request.prompt ?? "");
 
     if (current.operation_id && (current.status === "submitted" || current.status === "processing")) {
@@ -535,9 +545,14 @@ export async function processGenerationJob(jobId: string, participantId: string)
     await writeJob(db, jobId, { status: "submitted", progress: 10 });
     const firstUrl = typeof request.first_frame_url === "string" ? request.first_frame_url : panel?.still_url;
     const lastUrl = typeof request.last_frame_url === "string" ? request.last_frame_url : null;
-    const referenceUrls = Array.isArray(request.reference_urls)
+    const requestedReferenceUrls = Array.isArray(request.reference_urls)
       ? request.reference_urls.filter((value): value is string => typeof value === "string")
       : [];
+    const frameUrls = (work?.frames ?? [])
+      .filter((frame) => !panel || !frame.panel_id || frame.panel_id === panel.panel_id)
+      .map((frame) => frame.still_url)
+      .filter(Boolean);
+    const referenceUrls = [...new Set([...requestedReferenceUrls, ...frameUrls])];
     const extensionUri = typeof request.extension_video_uri === "string" ? request.extension_video_uri : null;
     if (current.kind === "animate-still" && !firstUrl) {
       throw new Error("Animate still needs a generated panel still.");

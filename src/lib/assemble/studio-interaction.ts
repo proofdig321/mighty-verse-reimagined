@@ -21,8 +21,8 @@ export const STUDIO_INTERACTION_PHASES = [
   {
     id: "directive",
     label: "Directive",
-    defaultTab: "assist",
-    note: "Creator corrections and instructions. Separate from Sentinel observations.",
+    defaultTab: "stills",
+    note: "Creator directive, Generate Still, and Generate Motion. Separate from Sentinel observations.",
   },
 ] as const;
 
@@ -33,9 +33,9 @@ const TAB_PHASE: Record<string, StudioInteractionPhaseId> = {
   references: "context",
   script: "work",
   panels: "work",
-  stills: "work",
-  motion: "work",
   assembly: "work",
+  stills: "directive",
+  motion: "directive",
   assist: "directive",
 };
 

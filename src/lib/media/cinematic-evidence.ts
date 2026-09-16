@@ -43,6 +43,7 @@ export type CameraMotion = (typeof CAMERA_MOTIONS)[number];
 export type ShotTransition = (typeof TRANSITIONS)[number];
 export type ObservationConfidence = "high" | "medium" | "low";
 export type CinematicAnalysisMode = "gemini-sampled-frames" | "sampled-fallback";
+export type EvidenceStatus = "observed" | "inferred" | "unknown";
 
 export type CinematicSubject = {
   subject_id: string;
@@ -134,6 +135,36 @@ export function subjectsLine(subjects: CinematicSubject[]): string {
       return bits.join(" — ");
     })
     .join(" · ");
+}
+
+export function evidenceStatusLabel(status: EvidenceStatus): string {
+  if (status === "observed") return "Observed";
+  if (status === "inferred") return "Inferred";
+  return "Unknown / insufficient evidence";
+}
+
+function unknownValue(value?: string | null) {
+  if (!value?.trim()) return true;
+  const text = value.trim().toLowerCase();
+  return text === "unknown" || text.includes("could not be determined") || text.includes("insufficient");
+}
+
+export function cameraEvidenceStatus(shot: {
+  camera?: string | null;
+  camera_explanation?: string | null;
+  analysis_mode?: string | null;
+}): EvidenceStatus {
+  if (unknownValue(shot.camera) && unknownValue(shot.camera_explanation)) return "unknown";
+  if (shot.analysis_mode === "sampled-fallback") return "unknown";
+  return "inferred";
+}
+
+export function visualEvidenceStatus(value?: string | null): EvidenceStatus {
+  return unknownValue(value) ? "unknown" : "observed";
+}
+
+export function temporalEvidenceStatus(value?: string | null): EvidenceStatus {
+  return unknownValue(value) ? "unknown" : "inferred";
 }
 
 export function parseCinematicAnalysis(value: unknown): CinematicAnalysis | null {

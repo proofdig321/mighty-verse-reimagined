@@ -30,7 +30,13 @@ export default async function StudioWorkEditorPage({
         intelligence={null}
         canAuthoriseSentinel={false}
         previewHref="/studio"
-        references={[]}
+        references={(work?.frames ?? []).map((frame) => ({
+          asset_id: `${frame.playback_id}:${frame.timestamp_ms}`,
+          title: frame.source_title,
+          role: "still",
+          time_ms: frame.timestamp_ms,
+          still_url: frame.still_url,
+        }))}
         initialBody={work?.body ?? materials.body?.body ?? ""}
         artifacts={materials.artifacts.map((artifact) => ({
           title: artifact.title,

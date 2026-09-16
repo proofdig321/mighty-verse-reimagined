@@ -86,3 +86,35 @@ export function motionRequirement(input: {
   }
   return { available: true, reason: null };
 }
+
+export function stillGenerationReady(input: {
+  panelSelected: boolean;
+  hasObservation?: boolean;
+  hasReference?: boolean;
+  hasDirective?: boolean;
+}): { available: boolean; reason: string | null } {
+  if (!input.panelSelected) {
+    return { available: false, reason: "Select a panel from Sentinel or Panels before generating a still." };
+  }
+  if (!input.hasObservation && !input.hasReference) {
+    return { available: false, reason: "Choose a Sentinel observation or reference before generating a still." };
+  }
+  if (!input.hasDirective) {
+    return { available: false, reason: "Write a creator directive before generating a still." };
+  }
+  return { available: true, reason: null };
+}
+
+export function primaryMotionKind(input: { stillUrl?: string | null }): "animate-still" | "motion" {
+  return input.stillUrl ? "animate-still" : "motion";
+}
+
+export function motionGenerationReady(input: {
+  stillUrl?: string | null;
+  hasDirective?: boolean;
+  hasReference?: boolean;
+}): { available: boolean; reason: string | null } {
+  if (input.stillUrl) return { available: true, reason: null };
+  if (input.hasDirective || input.hasReference) return { available: true, reason: null };
+  return { available: false, reason: "Generate or select a still, or write a creator directive, before generating motion." };
+}

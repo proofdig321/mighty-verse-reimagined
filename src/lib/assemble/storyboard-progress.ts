@@ -51,6 +51,7 @@ export function deriveStoryboardProgress(input: {
   artifactStillCount?: number;
   artifactTypes?: string[];
   jobKinds?: string[];
+  assemblyItemCount?: number;
 }): StoryboardProgress {
   const types = [...(input.artifactTypes ?? []), ...(input.jobKinds ?? [])];
   const scriptReady = Boolean(input.script?.trim());
@@ -58,7 +59,7 @@ export function deriveStoryboardProgress(input: {
   const referencesReady = (input.referenceStillCount ?? 0) > 0;
   const stillsReady = (input.artifactStillCount ?? 0) > 0 || types.includes("still") || types.includes("panel") || types.includes("variation");
   const motionReady = types.some((type) => MOTION_TYPES.has(type));
-  const assemblyReady = types.some((type) => ASSEMBLY_TYPES.has(type));
+  const assemblyReady = types.some((type) => ASSEMBLY_TYPES.has(type)) || (input.assemblyItemCount ?? 0) > 0;
   const complete = {
     script: scriptReady,
     panels: panelsReady,

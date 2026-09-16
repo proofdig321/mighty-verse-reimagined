@@ -33,12 +33,12 @@ import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardResetDialog } from "./storyboard-reset-dialog";
 import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
-import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
+import { creativeSuiteWorkspaceHref, curateHubHref } from "@/lib/assemble/studio";
 import { deriveStoryboardProgress, storyboardOperatorChainLabel } from "@/lib/assemble/storyboard-progress";
 import { STUDIO_INTERACTION_PHASES, studioInteractionLabel, studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 import { cn } from "@/lib/utils";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
-import { type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
+import { type CinematicAnalysis, type CinematicShot, cameraEvidenceStatus, evidenceStatusLabel } from "@/lib/media/cinematic-evidence";
 import {
   emptyHistory,
   historyStorageKey,
@@ -52,7 +52,7 @@ import {
   type AuthoringSnapshot,
   type HistoryState,
 } from "@/lib/storyboard/history";
-import { derivePanelUiStatus, motionRequirement, panelUiLabel } from "@/lib/storyboard/panel-state";
+import { derivePanelUiStatus, motionGenerationReady, motionRequirement, panelUiLabel, primaryMotionKind, stillGenerationReady } from "@/lib/storyboard/panel-state";
 import type { ResetScope } from "@/lib/storyboard/mutations";
 import { HierarchyBreadcrumb } from "./breadcrumb";
 
@@ -541,11 +541,14 @@ export function StoryboardWorkspace({
         still_url: extra.still_url ?? selected?.still,
         first_frame_url: firstFrame || selected?.still,
         last_frame_url: lastFrame || undefined,
-        reference_urls: references.map((reference) => reference.still_url).filter(Boolean),
+        reference_urls: [
+          ...references.map((reference) => reference.still_url).filter(Boolean),
+          ...(work?.frames ?? []).map((frame) => frame.still_url),
+        ].filter(Boolean),
         still_urls: generated.map((artifact) => artifact.still_url).filter(Boolean),
         playback_ids: generated.map((artifact) => artifact.playback_id).filter(Boolean),
         extension_video_uri: extra.extension_video_uri ?? selectedJob?.result?.provider_video_uri ?? undefined,
-        instruction: extra.instruction ?? selectedPersisted?.generation_metadata?.transformation_instruction ?? instruction,
+        instruction: extra.instruction ?? draftPanel.generation_metadata?.transformation_instruction ?? selectedPersisted?.generation_metadata?.transformation_instruction ?? instruction,
         ...extra,
       }),
     });
@@ -788,13 +791,17 @@ export function StoryboardWorkspace({
   const progress = deriveStoryboardProgress({
     script,
     panelCount: creativeCount || (script ? 0 : scenes.length),
-    referenceStillCount: references.filter((reference) => Boolean(reference.still_url)).length + persistedPanels.reduce((sum, panel) => sum + panel.references.length, 0),
+    referenceStillCount:
+      references.filter((reference) => Boolean(reference.still_url)).length
+      + persistedPanels.reduce((sum, panel) => sum + panel.references.length, 0)
+      + (work?.frames?.length ?? 0),
     artifactStillCount: generated.filter((artifact) => Boolean(artifact.still_url)).length + persistedPanels.filter((panel) => panel.still_url).length,
     artifactTypes: [
       ...generated.map((artifact) => artifact.output_type),
       ...jobs.filter((job) => job.status === "completed").map((job) => job.kind),
       ...persistedPanels.flatMap((panel) => [panel.still_url ? "still" : "", panel.motion_playback_id ? "motion" : ""]),
     ].filter(Boolean),
+    assemblyItemCount: assemblyItems.length,
   });
   const shotIds = [
     ...persistedPanels.map((panel) => panel.panel_id),
@@ -876,6 +883,23 @@ export function StoryboardWorkspace({
     (job.kind === "motion" || job.kind === "clip" || job.kind === "animation" || job.kind === "animate-still"),
   );
   const interactionPhase = studioPhaseForTab(tab);
+  const stillReady = stillGenerationReady({
+    panelSelected: Boolean(selectedPersisted),
+    hasObservation: Boolean(selectedObservation),
+    hasReference: Boolean(selectedPersisted?.references.length || selectedFrame || (work?.frames?.length ?? 0)),
+    hasDirective: Boolean((editorPanel.generation_metadata?.transformation_instruction || transformationInstruction || instruction).trim()),
+  });
+  const motionReady = motionGenerationReady({
+    stillUrl: selected?.still,
+    hasDirective: Boolean((editorPanel.generation_metadata?.transformation_instruction || transformationInstruction || instruction).trim()),
+    hasReference: Boolean(references.some((item) => item.still_url) || (work?.frames?.length ?? 0)),
+  });
+  const motionKind = primaryMotionKind({ stillUrl: selected?.still });
+  const activeReferenceUrls = [
+    ...references.map((item) => item.still_url).filter(Boolean),
+    ...(work?.frames ?? []).map((frame) => frame.still_url),
+    ...persistedPanels.flatMap((panel) => panel.references.map((ref) => ref.url).filter(Boolean)),
+  ] as string[];
 
   async function confirmDeleteWorkspace() {
     if (!work?.work_id) return;
@@ -1041,11 +1065,9 @@ export function StoryboardWorkspace({
         )}
       </div>
 
-      {capability ? (
-        <p className="text-xs text-muted-foreground" data-ai-capability={capability.configured ? "gemini" : "none"}>
-          {capability.configured
-            ? `Gemini is configured · text ${capability.models?.text ?? "ready"} · image ${capability.models?.image ?? "ready"} · video ${capability.models?.video ?? "ready"}. Unavailable generations report the provider error, not a missing product.`
-            : `${capability.label} Generation actions stay available and report the real configuration or quota state.`}
+      {capability && !capability.configured ? (
+        <p className="text-xs text-muted-foreground" data-ai-capability="none">
+          {capability.label} Generation actions stay available and report the real configuration or quota state.
         </p>
       ) : null}
 
@@ -1388,20 +1410,21 @@ export function StoryboardWorkspace({
                 <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="stills" className="storyboard-tab-panel space-y-3">
-                <p className="text-xs text-muted-foreground">Generate a still for the selected panel. Previous successful stills stay in history.</p>
+                <p className="text-xs text-muted-foreground">Generate a still from the selected source, Sentinel evidence, reference, and creator directive. Previous successful stills stay in history.</p>
                 {!selectedPersisted ? (
                   <p className="suite-empty">Select a panel from Sentinel or Panels before generating a still.</p>
-                ) : !(selectedPersisted.references.length || (work?.frames?.length ?? 0)) ? (
+                ) : !(selectedPersisted.references.length || (work?.frames?.length ?? 0) || selectedObservation) ? (
                   <div className="space-y-2">
                     <p className="suite-empty">No references selected yet.</p>
                     <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>Choose from Sentinel</Button>
                   </div>
-                ) : !transformationInstruction && !selectedPersisted.action ? (
-                  <p className="suite-empty">Reference ready. Define what should change.</p>
+                ) : !(editorPanel.generation_metadata?.transformation_instruction || transformationInstruction || instruction) ? (
+                  <p className="suite-empty">Reference ready. Write a creator directive for what should change.</p>
                 ) : stillJob && (stillJob.status === "failed" || stillJob.status === "unavailable" || stillJob.status === "blocked") ? (
                   <GenerationFailure job={stillJob} />
                 ) : null}
-                <Button type="button" size="sm" onClick={() => void generateMedia("still")} disabled={!selectedPersisted}>Generate still</Button>
+                <Button type="button" size="sm" onClick={() => void generateMedia("still")} disabled={!stillReady.available} title={stillReady.reason ?? "Generate still"}>Generate still</Button>
+                {!stillReady.available && stillReady.reason ? <p className="text-xs text-muted-foreground">{stillReady.reason}</p> : null}
                 <StatusLine state={mediaState} />
                 {selectedPersisted?.generation_metadata?.stills?.length ? (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1420,12 +1443,22 @@ export function StoryboardWorkspace({
                 <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="motion" className="storyboard-tab-panel space-y-3">
-                <p className="text-xs text-muted-foreground">Motion uses the configured Veo model. Unsupported modes stay explained, not mysterious.</p>
-                {!selected?.still ? (
-                  <p className="suite-empty">Generate or select a still before motion can run.</p>
+                <p className="text-xs text-muted-foreground">
+                  {selected?.still
+                    ? "Generate Motion from the selected still, reference, and creator directive."
+                    : "Generate Motion from the selected reference and creator directive, or generate a still first."}
+                </p>
+                {!motionReady.available ? (
+                  <p className="suite-empty">{motionReady.reason}</p>
                 ) : motionJob && (motionJob.status === "failed" || motionJob.status === "unavailable" || motionJob.status === "blocked") ? (
                   <GenerationFailure job={motionJob} />
                 ) : null}
+                <Button type="button" size="sm" disabled={!motionReady.available} onClick={() => void enqueue(motionKind)}>
+                  Generate Motion
+                </Button>
+                <details className="rounded-md border border-border p-3">
+                  <summary className="cursor-pointer text-xs text-muted-foreground">Advanced motion modes</summary>
+                  <div className="mt-3 space-y-2">
                 {([
                   ["motion", "Text to video"],
                   ["animate-still", "Image to video"],
@@ -1437,7 +1470,7 @@ export function StoryboardWorkspace({
                     kind,
                     stillUrl: selected?.still,
                     lastFrameUrl: lastFrame || null,
-                    referenceUrls: [...references.map((item) => item.still_url).filter(Boolean), ...persistedPanels.flatMap((panel) => panel.references.map((ref) => ref.url).filter(Boolean))] as string[],
+                    referenceUrls: activeReferenceUrls,
                     extensionVideoUri: selectedJob?.result?.provider_video_uri ?? null,
                   });
                   return (
@@ -1449,12 +1482,16 @@ export function StoryboardWorkspace({
                     </div>
                   );
                 })}
+                  </div>
+                </details>
                 <StatusLine state={mediaState} />
                 <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="assembly" className="storyboard-tab-panel space-y-3">
-                <p className="text-xs text-muted-foreground">Storyboard assembly is not the public Experience. Select generated artifacts, order them, and save.</p>
-                {assemblyItems.length === 0 ? <p className="suite-empty">No assembly items yet. Add a still or motion from the selected panel.</p> : null}
+                <p className="text-xs text-muted-foreground">Assembly is a production artifact. It is not a Scene and does not become canonical until curation authorises it.</p>
+                {assemblyItems.length === 0 ? <p className="suite-empty">No assembly items yet. Add a still or motion from the selected panel.</p> : (
+                  <p className="text-sm text-foreground">{assemblyItems.length} item{assemblyItems.length === 1 ? "" : "s"} assembled · non-canonical · Ready for Curation</p>
+                )}
                 <Button type="button" size="sm" onClick={() => {
                   if (!selected) return;
                   const next = [...assemblyItems, {
@@ -1481,6 +1518,13 @@ export function StoryboardWorkspace({
                     </li>
                   ))}
                 </ol>
+                {universeId ? (
+                  <Link href={curateHubHref(universeId)} className={cn(buttonVariants({ size: "sm" }))}>
+                    Submit for Curation
+                  </Link>
+                ) : (
+                  <p className="text-xs text-muted-foreground">Associate this Storyboard with a Universe before submitting it for curation. Assembly stays non-canonical.</p>
+                )}
                 <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
             </Tabs>
@@ -1610,8 +1654,11 @@ export function StoryboardWorkspace({
         </div>
       ) : null}
 
-      {selected ? (
-        <aside className="studio-inspector" aria-label="Selected panel">
+      <aside className="studio-inspector" aria-label="Creator directive">
+        {!selected ? (
+          <p className="suite-empty">Select a Sentinel shot or Storyboard panel. This column holds the creator directive, Generate Still, and Generate Motion.</p>
+        ) : (
+          <>
           {selected.endpoint ? (
             <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} motion preview`} />
           ) : selected.still ? (
@@ -1636,7 +1683,7 @@ export function StoryboardWorkspace({
                     <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
                       <div><dt className="inline font-medium text-foreground">Observed subject </dt><dd className="inline">{selectedObservation.subjects || "Unknown"}</dd></div>
                       <div><dt className="inline font-medium text-foreground">Observed action </dt><dd className="inline">{selectedObservation.action}</dd></div>
-                      <div><dt className="inline font-medium text-foreground">Camera </dt><dd className="inline">{selectedObservation.camera_explanation || selectedObservation.camera} · {selectedObservation.framing}</dd></div>
+                      <div><dt className="inline font-medium text-foreground">Camera </dt><dd className="inline">{selectedObservation.camera_explanation || selectedObservation.camera} · {selectedObservation.framing} · {evidenceStatusLabel(cameraEvidenceStatus({ camera: selectedObservation.camera, camera_explanation: selectedObservation.camera_explanation, analysis_mode: selectedObservation.analysis_mode }))}</dd></div>
                       <div><dt className="inline font-medium text-foreground">Confidence </dt><dd className="inline capitalize">{selectedObservation.confidence}</dd></div>
                     </dl>
                   ) : null}
@@ -1647,9 +1694,9 @@ export function StoryboardWorkspace({
               )}
               <Label htmlFor="panel-title">Title</Label>
               <Input id="panel-title" value={editorPanel.title ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, title: event.target.value })} />
-              <Label htmlFor="panel-action">Observed action</Label>
-              <Textarea id="panel-action" className="min-h-16" value={editorPanel.action ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value })} placeholder="Correct Sentinel’s observed action if needed." />
-              <Label htmlFor="panel-transform">Transformation instruction</Label>
+              <Label htmlFor="panel-action">Creator correction · observed action</Label>
+              <Textarea id="panel-action" className="min-h-16" value={editorPanel.action ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value })} placeholder="Correct Sentinel’s observed action if needed. This does not overwrite the original observation." />
+              <Label htmlFor="panel-transform">Creator directive</Label>
               <Textarea
                 id="panel-transform"
                 className="min-h-20"
@@ -1664,14 +1711,14 @@ export function StoryboardWorkspace({
                     transformation_instruction: event.target.value,
                   },
                 })}
-                placeholder="Preserve camera movement, choreography and spatial relationship. Write the creative change. Sentinel does not author this."
+                placeholder="Preserve the performance and composition. Write the creative change. Sentinel does not author this."
               />
               <Label htmlFor="panel-intent">Narrative intent</Label>
               <Input id="panel-intent" value={editorPanel.narrative_purpose ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, narrative_purpose: event.target.value })} />
               <Label htmlFor="panel-camera">Camera</Label>
               <Input id="panel-camera" value={editorPanel.camera ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera: event.target.value })} />
               {selectedObservation && selectedPersisted.user_locked && selectedObservation.camera !== (editorPanel.camera_movement ?? editorPanel.camera) ? (
-                <p className="text-[11px] text-muted-foreground">Sentinel observed: {selectedObservation.camera}. Creator authorised: {editorPanel.camera_movement || editorPanel.camera}.</p>
+                <p className="text-[11px] text-muted-foreground">Sentinel observed: {selectedObservation.camera === "unknown" ? "unknown / insufficient evidence" : selectedObservation.camera}. Creator directive: {editorPanel.camera_movement || editorPanel.camera}.</p>
               ) : null}
               <Label htmlFor="panel-movement">Movement</Label>
               <Input id="panel-movement" value={editorPanel.camera_movement ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera_movement: event.target.value })} />
@@ -1719,14 +1766,11 @@ export function StoryboardWorkspace({
             </div>
           ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("still")}>
+            <Button type="button" size="sm" onClick={() => void generateMedia("still")} disabled={!stillReady.available} title={stillReady.reason ?? "Generate still"}>
               Generate still
             </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void enqueue("animate-still")}>
-              Animate still
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("clip")}>
-              Generate motion
+            <Button type="button" size="sm" variant="outline" disabled={!motionReady.available} title={motionReady.reason ?? "Generate Motion"} onClick={() => void enqueue(motionKind)}>
+              Generate Motion
             </Button>
             <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
               Generate animation
@@ -1782,7 +1826,7 @@ export function StoryboardWorkspace({
                 <p>{selectedPersisted?.references[0]?.label || selectedFrame?.source_title || "None"}{selectedFrame ? ` · ${formatTimelineMs(selectedFrame.timestamp_ms)}` : ""}</p>
               </li>
               <li>
-                <p className="font-medium text-foreground">Transformation</p>
+                <p className="font-medium text-foreground">Creator directive</p>
                 <p>{(transformationInstruction || editorPanel.generation_metadata?.transformation_instruction || "Write this yourself").slice(0, 160)}</p>
               </li>
               <li>
@@ -1816,8 +1860,9 @@ export function StoryboardWorkspace({
             </button>
           </details>
           <StatusLine state={mediaState} />
+          </>
+        )}
         </aside>
-      ) : null}
     </div>
   );
 }

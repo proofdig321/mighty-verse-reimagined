@@ -20,7 +20,9 @@ Analyse timed video frames as a storyboard/shot breakdown.
 Describe only what is visible or reasonably inferred from the frames and timestamps.
 Never invent narrative facts, character identities, or artistic meaning.
 Never recommend transformations, replacements, or what the scene should become.
-If camera movement cannot be determined, use "unknown".
+If camera movement cannot be determined from consecutive sampled frames, use "unknown".
+Never invent pan, tilt, tracking, orbit, push-in, or pull-out merely because a camera field exists.
+Sampled frames cannot prove continuous camera movement; prefer "unknown" over a guessed move.
 If a subject cannot be identified, describe appearance only.
 Return JSON only.`;
 
@@ -29,6 +31,7 @@ function cinematicSchemaPrompt(durationMs: number): string {
 Return JSON with kind "sentinel-cinematic", overview, and shots[]. Each shot needs sequence, start_ms, end_ms, framing, composition, camera, camera_explanation, subjects[], motion, action, environment, lighting, transition, narrative, what_happens, confidence.
 framing: extreme wide | wide | medium | medium close-up | close-up | extreme close-up | other | unknown
 camera: static | pan | tilt | push-in | pull-out | tracking | handheld | crane/elevated | orbit | zoom | rack focus | unknown
+Use unknown whenever temporal evidence is insufficient. Do not fabricate camera movement.
 transition: cut | dissolve | fade | transition | continuous shot | unknown
 confidence: high | medium | low
 Do not create Scenes.`;

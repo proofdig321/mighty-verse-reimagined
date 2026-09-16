@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
-import { formatShotWindow, type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
+import { formatShotWindow, cameraEvidenceStatus, evidenceStatusLabel, temporalEvidenceStatus, visualEvidenceStatus, type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
 import { formatTimelineMs } from "@/lib/media/timing";
 import type { StoryboardSourceRecord } from "@/lib/storyboard/source";
 
@@ -48,7 +48,7 @@ export function SentinelWorkspace({
 }) {
   const [openId, setOpenId] = useState<string | null>(selectedShotId);
   const shots = analysis?.shots ?? [];
-  const selected = shots.find((shot) => shot.shot_id === (openId ?? selectedShotId)) ?? shots[0] ?? null;
+  const selected = shots.find((shot) => shot.shot_id === (selectedShotId ?? openId)) ?? shots[0] ?? null;
   const checked = useMemo(() => new Set(selectedIds), [selectedIds]);
 
   return (
@@ -129,7 +129,7 @@ export function SentinelWorkspace({
                         </button>
                       </td>
                       <td className="px-2 py-2">{shot.what_happens}</td>
-                      <td className="px-2 py-2">{shot.camera}</td>
+                      <td className="px-2 py-2">{shot.camera === "unknown" ? "Unknown" : shot.camera}</td>
                       <td className="px-2 py-2">{shot.motion}</td>
                     </tr>
                   ))}
@@ -158,19 +158,19 @@ export function SentinelWorkspace({
               <dd>{selected.what_happens}</dd>
             </div>
             <div>
-              <dt className="suite-kicker">Camera</dt>
+              <dt className="suite-kicker">Camera · {evidenceStatusLabel(cameraEvidenceStatus(selected))}</dt>
               <dd>{selected.camera_explanation || selected.camera} · {selected.framing}</dd>
             </div>
             <div>
-              <dt className="suite-kicker">Subjects</dt>
+              <dt className="suite-kicker">Subjects · {evidenceStatusLabel(visualEvidenceStatus(selected.subjects[0]?.description))}</dt>
               <dd>{selected.subjects.length ? selected.subjects.map((subject) => `${subject.description}${subject.position ? ` — ${subject.position}` : ""}`).join(" · ") : "None identified"}</dd>
             </div>
             <div>
-              <dt className="suite-kicker">Motion</dt>
+              <dt className="suite-kicker">Motion · {evidenceStatusLabel(temporalEvidenceStatus(selected.motion))}</dt>
               <dd>{selected.motion}</dd>
             </div>
             <div>
-              <dt className="suite-kicker">Environment</dt>
+              <dt className="suite-kicker">Environment · {evidenceStatusLabel(visualEvidenceStatus(selected.environment))}</dt>
               <dd>{selected.environment}{selected.lighting ? ` · ${selected.lighting}` : ""}</dd>
             </div>
             <div>

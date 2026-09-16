@@ -43,4 +43,12 @@ const assembled = deriveStoryboardProgress({
 });
 assert(assembled.completeCount === 6, "reel completes assembly");
 
+const framed = deriveStoryboardProgress({
+  panelCount: 1,
+  referenceStillCount: 1,
+  assemblyItemCount: 2,
+});
+assert(framed.steps.find((step) => step.id === "references")?.complete === true, "frame references complete the reference stage");
+assert(framed.steps.find((step) => step.id === "assembly")?.complete === true, "saved assembly items complete assembly without a gif/reel");
+
 console.log("Assemble storyboard progress tests: all passed");

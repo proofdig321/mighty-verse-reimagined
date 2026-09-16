@@ -42,10 +42,39 @@ const still = composeStillPrompt({
 assert(still.includes("Golden Shovel") && still.includes("neon rim"), "still prompt uses creative fields");
 assert(!still.includes("05ccc0c6"), "prompt composer does not dump UUIDs");
 
+const stillWithContext = composeStillPrompt({
+  panel: { title: "Judas", description: "Performer holds the frame", characters: "Judas", environment: "stage" },
+  sourceLabel: "Give Me My Money Judas",
+  selectedReferences: ["Judas at 12600ms"],
+  instruction: "Preserve the performance, transform visual identity into Super Hero Ego treatment.",
+  sentinelObservation: {
+    what_happens: "Medium framing; subject moves across frame.",
+    framing: "medium",
+    camera: "unknown",
+    camera_explanation: "Camera movement could not be determined from sampled luminance evidence.",
+    action: "subject moves across frame",
+    subjects: "Performer",
+    environment: "stage",
+    analysis_mode: "sampled-fallback",
+  },
+});
+assert(stillWithContext.includes("Give Me My Money Judas"), "still prompt names the source");
+assert(stillWithContext.includes("evidence only"), "still prompt keeps Sentinel observational");
+assert(stillWithContext.includes("Creator directive:"), "still prompt labels the creator directive");
+assert(stillWithContext.includes("Judas at 12600ms"), "still prompt includes reference identity");
+assert(stillWithContext.includes("insufficient evidence"), "unknown camera is not invented as a move");
+assert(!stillWithContext.includes("motivated cinematic coverage"), "still prompt does not fabricate camera coverage");
+
 const motion = composeMotionPrompt({
   panel: { title: "Sword", description: "Reason turns", action: "draws the blade", camera: "orbit", dialogue: "Hold the line" },
 }, { audioIntention: "metallic scrape and crowd hush", aspectRatio: "16:9" });
 assert(motion.includes("draws the blade") && motion.includes("Hold the line"), "motion prompt is composed, not concatenated junk");
+
+const unknownMotion = composeMotionPrompt({
+  panel: { title: "Hold", description: "A performer holds", camera: "unknown", camera_movement: "unknown", framing: "unknown" },
+});
+assert(unknownMotion.includes("insufficient evidence"), "motion does not invent camera movement");
+assert(!unknownMotion.includes("motivated cinematic coverage"), "empty/unknown camera is not a fake coverage instruction");
 
 const body = veoRequestBody({
   prompt: "A mural breathes",
