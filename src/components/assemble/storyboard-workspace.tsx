@@ -883,7 +883,7 @@ export function StoryboardWorkspace({
               }}
               className="flex min-h-0 flex-1 flex-col gap-4"
             >
-              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-8" aria-label="Storyboard materials">
+              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1" aria-label="Storyboard materials">
                 {tabs.map((item) => {
                   const Icon = item.icon;
                   return (
