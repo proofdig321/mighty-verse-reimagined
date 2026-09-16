@@ -237,7 +237,14 @@ export function HolographicStage({
   }
 
   function stillSurface(layer: HolographicLayer, title: string, className?: string) {
-    const still = layer.still_url || muxStillFromPlayback(layer.playback_endpoint, 0, 960);
+    const sceneStill =
+      layer.kind === "production"
+        ? scenes.find((scene) => scene.master_id === layer.master_id)?.still_url ?? null
+        : null;
+    const still =
+      sceneStill ||
+      layer.still_url ||
+      muxStillFromPlayback(layer.playback_endpoint, 1, 960);
     if (still) {
       return (
         // eslint-disable-next-line @next/next/no-img-element
@@ -548,7 +555,11 @@ export function HolographicStage({
                             start_ms: 0,
                             end_ms: null,
                           }}
-                          posterUrl={layer.still_url || muxStillFromPlayback(layer.playback_endpoint, 0, 960)}
+                          posterUrl={
+                            scenes.find((scene) => scene.master_id === layer.master_id)?.still_url ||
+                            layer.still_url ||
+                            muxStillFromPlayback(layer.playback_endpoint, 1, 960)
+                          }
                           title={title}
                           playing={playing && active}
                           muted

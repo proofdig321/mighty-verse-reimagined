@@ -34,12 +34,26 @@ export async function loadUniverseProductionResults(universeId: string): Promise
     .eq("provider", "mux");
 
   const intakeByAsset = new Map((intakes ?? []).map((row) => [row.asset_id, row]));
+  const sourceAssetIds = [...new Set(
+    (assets ?? [])
+      .map((asset) => parseProductionProvenance(intakeByAsset.get(asset.asset_id)?.provenance_notes ?? null)?.source_asset_id)
+      .filter((id): id is string => Boolean(id)),
+  )];
+  const { data: sourceAssets } = sourceAssetIds.length
+    ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", sourceAssetIds)
+    : { data: [] };
+  const sourceById = new Map((sourceAssets ?? []).map((asset) => [asset.asset_id, asset]));
   const results: LoadedProductionResult[] = [];
   for (const asset of assets ?? []) {
     const intake = intakeByAsset.get(asset.asset_id);
     const provenance = parseProductionProvenance(intake?.provenance_notes ?? null);
     if (!provenance && !isProductionIntegrityHash(asset.integrity_hash)) continue;
     if (!provenance) continue;
+    const source = provenance.source_asset_id ? sourceById.get(provenance.source_asset_id) : null;
+    const sceneStill =
+      source?.storage_ref && provenance.canonical_start_ms != null
+        ? muxThumbnailUrl(source.storage_ref, provenance.canonical_start_ms / 1000, 640)
+        : null;
     results.push({
       asset_id: asset.asset_id,
       scene_master_id: provenance.scene_master_id,
@@ -47,7 +61,8 @@ export async function loadUniverseProductionResults(universeId: string): Promise
       mux_asset_id: provenance.mux_asset_id,
       playback_id: asset.storage_ref ?? provenance.playback_id,
       still_url:
-        muxThumbnailUrl(asset.storage_ref || provenance.playback_id, 0, 640) ||
+        sceneStill ||
+        muxThumbnailUrl(asset.storage_ref || provenance.playback_id, 1, 640) ||
         null,
       approval: provenance.approval,
       attached: provenance.attached,

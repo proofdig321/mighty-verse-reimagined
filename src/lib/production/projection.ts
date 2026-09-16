@@ -42,7 +42,7 @@ export function productionLayersFromResults(
     title: (result.title ?? "Production").replace(/ production · .*$/i, " production"),
     still_url:
       result.still_url ??
-      muxStillFromPlayback(result.playback_id ?? result.playback_endpoint, 0, 640),
+      muxStillFromPlayback(result.playback_id ?? result.playback_endpoint, 1, 640),
     playback_endpoint:
       result.playback_endpoint ??
       (result.playback_id ? `https://stream.mux.com/${result.playback_id}.m3u8` : null),
