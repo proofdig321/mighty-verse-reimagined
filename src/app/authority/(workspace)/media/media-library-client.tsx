@@ -13,6 +13,7 @@ import { DiscardIntake } from "@/components/assemble/discard-intake";
 import { RetryUrlIngest } from "@/components/assemble/retry-url-ingest";
 import { isUsableMediaSourceUrl } from "@/lib/media/source-url";
 import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
+import { CollectionPager } from "@/components/assemble/collection-pager";
 
 type UnlinkedIntake = {
   intake_id: string;
@@ -441,6 +442,8 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
   const [roleFilter, setRoleFilter] = useState<GalleryAssetRole | "all">("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [readinessFilter, setReadinessFilter] = useState<string>("all");
+  const [page, setPage] = useState(0);
+  const pageSize = 20;
 
   const filtered = items.filter((item) => {
     const roleMatch = roleFilter === "all" || item.production_role === roleFilter;
@@ -451,6 +454,7 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
     const readinessMatch = readinessFilter === "all" || item.readiness_overall === readinessFilter;
     return roleMatch && typeMatch && readinessMatch;
   });
+  const visible = filtered.slice(page * pageSize, page * pageSize + pageSize);
 
   return (
     <div className="space-y-8">
@@ -463,7 +467,10 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
               type="button"
               role="tab"
               aria-selected={roleFilter === f.value}
-              onClick={() => setRoleFilter(f.value)}
+              onClick={() => {
+                setRoleFilter(f.value);
+                setPage(0);
+              }}
               className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
                 roleFilter === f.value
                   ? "bg-foreground text-background"
@@ -479,7 +486,10 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
             <button
               key={f.value}
               type="button"
-              onClick={() => setTypeFilter(f.value)}
+              onClick={() => {
+                setTypeFilter(f.value);
+                setPage(0);
+              }}
               className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
                 typeFilter === f.value
                   ? "bg-foreground text-background"
@@ -495,7 +505,10 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
             <button
               key={f.value}
               type="button"
-              onClick={() => setReadinessFilter(f.value)}
+              onClick={() => {
+                setReadinessFilter(f.value);
+                setPage(0);
+              }}
               className={`rounded px-3 py-1 text-xs font-medium transition-colors ${
                 readinessFilter === f.value
                   ? "bg-foreground text-background"
@@ -533,11 +546,18 @@ export default function MediaLibraryClient({ items, unlinkedIntakes }: Props) {
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {filtered.map((item) => (
+          {visible.map((item) => (
             <MediaCard key={item.asset_id} item={item} />
           ))}
         </div>
       )}
+      <CollectionPager
+        page={page}
+        pageSize={pageSize}
+        total={filtered.length}
+        onPage={setPage}
+        label="Media library"
+      />
 
       {/* Unlinked intake records */}
       {unlinkedIntakes.length > 0 && (

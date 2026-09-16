@@ -62,7 +62,9 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
     "/studio",
   );
   await expect(page.getByRole("link", { name: "Holographic Experience" }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
-  await expect(page.getByRole("link", { name: "Canonical record" })).toHaveAttribute("href", `/authority/${CANON.universeId}`);
+  await page.getByRole("button", { name: "Studio actions" }).click();
+  await expect(page.getByRole("menuitem", { name: "Open record" })).toHaveAttribute("href", `/authority/${CANON.universeId}`);
+  await page.keyboard.press("Escape");
 
   await expectCreativeSuiteComposition(page);
   for (const scene of Object.values(SCENE_MOMENTS)) {

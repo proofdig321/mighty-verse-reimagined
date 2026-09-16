@@ -56,6 +56,8 @@ import { derivePanelUiStatus, motionGenerationReady, motionRequirement, panelUiL
 import type { ResetScope } from "@/lib/storyboard/mutations";
 import { HierarchyBreadcrumb } from "./breadcrumb";
 import { StudioComposer, type StudioComposeMode } from "./studio-composer";
+import { CollectionPager } from "./collection-pager";
+import { StudioEmptyState } from "./studio-empty-state";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
 type GenerationState = {
@@ -151,7 +153,8 @@ export function StoryboardWorkspace({
   const [durationSeconds, setDurationSeconds] = useState<4 | 6 | 8>(8);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
-  const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [generationPage, setGenerationPage] = useState(0);
   const [workTitle, setWorkTitle] = useState(universeTitle ?? "Untitled storyboard");
   const [history, setHistory] = useState<HistoryState>(emptyHistory);
   const [dirty, setDirty] = useState(false);
@@ -1761,7 +1764,10 @@ export function StoryboardWorkspace({
       ) : null}
         </div>
 
-      <aside className="studio-inspector" aria-label="Inspector">
+      <Button type="button" variant="outline" size="sm" className="studio-inspector-toggle" aria-expanded={inspectorOpen} aria-controls="studio-inspector-panel" onClick={() => setInspectorOpen((value) => !value)}>
+        {inspectorOpen ? "Hide inspector" : "Inspector"}
+      </Button>
+      <aside id="studio-inspector-panel" className={cn("studio-inspector", inspectorOpen && "is-open")} aria-label="Inspector">
         {!selected ? (
           <p className="suite-empty">Select a Sentinel shot or Storyboard panel. This column holds the creator directive, Generate Still, and Generate Motion.</p>
         ) : (
@@ -1879,6 +1885,9 @@ export function StoryboardWorkspace({
             <Button type="button" size="sm" variant="outline" disabled={!motionReady.available} title={motionReady.reason ?? "Generate Motion"} onClick={() => void enqueue(motionKind)}>
               Generate Motion
             </Button>
+            <details className="studio-composer-advanced w-full">
+              <summary>Advanced generation</summary>
+              <div className="mt-2 flex flex-wrap gap-2">
             <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
               Generate animation
             </Button>
@@ -1897,6 +1906,8 @@ export function StoryboardWorkspace({
             <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
               Assemble reel
             </Button>
+              </div>
+            </details>
             {universeId ? (
               <>
                 <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
@@ -1962,25 +1973,29 @@ export function StoryboardWorkspace({
               {selectedJob?.error?.message ? ` · ${selectedJob.error.message}` : ""}
               {capability?.models ? ` · text ${capability.models.text} · image ${capability.models.image} · video ${capability.models.video}` : ""}
             </p>
-            <button type="button" className="sr-only" onClick={() => setInspectorOpen(!inspectorOpen)}>
-              Toggle inspector
-            </button>
           </details>
           <StatusLine state={mediaState} />
           <section className="mt-4 space-y-2" aria-label="Generations">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Generations</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Generations{jobs.length ? ` · ${jobs.length}` : ""}
+            </p>
             {jobs.length === 0 ? (
-              <p className="suite-empty">No generations yet. Results appear here after Gemini or Veo jobs persist.</p>
+              <StudioEmptyState
+                kicker="Generations"
+                title="No generations yet."
+                body="Results appear here after Gemini or Veo jobs persist."
+              />
             ) : (
+              <>
               <ol className="grid gap-2">
-                {jobs.slice(0, 12).map((job, index) => (
+                {jobs.slice(generationPage * 8, generationPage * 8 + 8).map((job, index) => (
                   <li key={job.job_id} className="rounded-md border border-border p-2">
                     {job.result?.still_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={job.result.still_url} alt="" className="mb-2 aspect-video w-full rounded object-cover" />
                     ) : null}
                     <p className="text-xs font-medium text-foreground">
-                      Gen {String(jobs.length - index).padStart(2, "0")} · {generationProviderLabel(job.kind)}
+                      Gen {String(jobs.length - (generationPage * 8 + index)).padStart(2, "0")} · {generationProviderLabel(job.kind)}
                     </p>
                     <p className="text-[11px] text-muted-foreground" data-generation-status={job.status}>
                       {job.kind} · {jobUiLabel(job.status as never)}
@@ -2017,6 +2032,14 @@ export function StoryboardWorkspace({
                   </li>
                 ))}
               </ol>
+              <CollectionPager
+                page={generationPage}
+                pageSize={8}
+                total={jobs.length}
+                onPage={setGenerationPage}
+                label="Generation history"
+              />
+              </>
             )}
           </section>
           </>

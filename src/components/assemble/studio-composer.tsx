@@ -66,13 +66,22 @@ export function StudioComposer({
           placeholder={placeholder}
         />
       </label>
-      {chips ? <div className="studio-composer-chips">{chips}</div> : null}
+      {chips ? (
+        <div className="studio-composer-chips" aria-label="Attachments">
+          {chips}
+        </div>
+      ) : null}
+      {controls ? (
+        <details className="studio-composer-advanced">
+          <summary>Advanced</summary>
+          <div className="studio-composer-controls">{controls}</div>
+        </details>
+      ) : null}
       <div className="studio-composer-bar">
         <p className="text-xs text-muted-foreground">
           <span className="font-medium text-foreground">{provider}</span>
           {mode === "motion" ? " · Mux delivers playable video" : mode === "still" ? " · still artifact, not a Scene" : " · structured Storyboard, not Scenes"}
         </p>
-        {controls ? <div className="studio-composer-controls">{controls}</div> : null}
         <Button type="button" size="sm" disabled={generateDisabled} title={generateTitle ?? generateLabel} onClick={onGenerate}>
           {generateLabel}
         </Button>

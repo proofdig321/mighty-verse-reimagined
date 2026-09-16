@@ -5,8 +5,10 @@ import { suiteScenes } from "@/lib/assemble";
 import { CanonicalIdentifiers, MuralEmpty, MuralPresence } from "./mural-presence";
 import { StudioSceneDeck } from "./studio-scene-deck";
 import { RegisterMural } from "./register-mural";
+import { StudioEmptyState } from "./studio-empty-state";
 import type { StudioWorkspace } from "@/lib/assemble/load-studio-workspace";
 import { mediaInspectHref, creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
+import { Badge } from "@/components/ui/badge";
 
 export function StudioOverview({
   workspace,
@@ -72,10 +74,13 @@ export function StudioOverview({
 
       {scenes.length > 0 ? (
         <section className="suite-section" aria-labelledby="studio-scene-deck">
-          <div className="suite-section-head">
+          <div className="suite-section-head studio-section-head">
             <h2 id="studio-scene-deck" className="suite-section-title">
               Scene deck
             </h2>
+            <Badge variant="secondary">
+              {scenes.length} Scene{scenes.length === 1 ? "" : "s"}
+            </Badge>
           </div>
           <StudioSceneDeck universeId={data.master_id} scenes={scenes} from={from} />
         </section>
@@ -103,7 +108,11 @@ export function StudioOverview({
                 ) : null}
               </p>
             ) : (
-              <p className="suite-empty">No source media is bound to this Universe yet.</p>
+              <StudioEmptyState
+                kicker="Source"
+                title="No source media is bound yet."
+                body="Bind source media before Sentinel can observe it."
+              />
             )}
           </section>
 

@@ -17,6 +17,32 @@ async function saveSceneOrder(orders: { master_id: string; sort_order: number }[
   }
 }
 
+export async function applySceneMove(input: {
+  universeId: string;
+  muralId: string;
+  sceneId: string;
+  orderedSceneIds: string[];
+  direction: "earlier" | "later";
+}) {
+  const nextIds = proposeMovedSceneOrder(input.orderedSceneIds, input.sceneId, input.direction);
+  const scenes = (nextIds ?? input.orderedSceneIds).map((id) => ({
+    master_id: id,
+    canonical_type: "scene",
+    parent_master_id: input.muralId,
+  }));
+  const decision = decideSceneOrder({
+    universe_id: input.universeId,
+    mural_id: input.muralId,
+    ordered_scene_ids: nextIds ?? [],
+    scenes,
+    mural: { master_id: input.muralId, canonical_type: "mural", parent_master_id: input.universeId },
+  });
+  if (!decision.ok) {
+    throw new Error(decision.message);
+  }
+  await saveSceneOrder(decision.orders);
+}
+
 export function SceneOrder({
   universeId,
   muralId,
@@ -44,27 +70,16 @@ export function SceneOrder({
   const canLater = index >= 0 && index < orderedSceneIds.length - 1;
 
   async function move(direction: "earlier" | "later") {
-    const nextIds = proposeMovedSceneOrder(orderedSceneIds, sceneId, direction);
-    const scenes = (nextIds ?? orderedSceneIds).map((id) => ({
-      master_id: id,
-      canonical_type: "scene",
-      parent_master_id: muralId,
-    }));
-    const decision = decideSceneOrder({
-      universe_id: universeId,
-      mural_id: muralId,
-      ordered_scene_ids: nextIds ?? [],
-      scenes,
-      mural: { master_id: muralId, canonical_type: "mural", parent_master_id: universeId },
-    });
-    if (!decision.ok) {
-      setSaveError(decision.message);
-      return;
-    }
     setSaveError(null);
     setBusy(true);
     try {
-      await saveSceneOrder(decision.orders);
+      await applySceneMove({
+        universeId,
+        muralId,
+        sceneId,
+        orderedSceneIds,
+        direction,
+      });
       setStatus(`${sceneLabel} moved ${direction}.`);
       router.refresh();
     } catch (caught) {

@@ -39,6 +39,8 @@ export function SceneArtwork({
   startMs,
   artworkStorageRef,
   canAuthor,
+  startOpen = false,
+  hideTrigger = false,
 }: {
   universeId: string;
   sceneId: string;
@@ -50,11 +52,13 @@ export function SceneArtwork({
   startMs: number | null;
   artworkStorageRef: string | null;
   canAuthor: boolean;
+  startOpen?: boolean;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const regionId = useId();
   const stillId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const muralFrame =
     storageRef && !storageRef.startsWith("seed:placeholder:")
       ? provider === "mux" || storageRef.startsWith("https://")
@@ -120,6 +124,13 @@ export function SceneArtwork({
   }
 
   if (!open) {
+    if (hideTrigger) {
+      return status ? (
+        <p className="suite-presence-status" role="status">
+          {status}
+        </p>
+      ) : null;
+    }
     return (
       <div className="suite-identity-actions">
         <Button

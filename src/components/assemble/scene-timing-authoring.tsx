@@ -39,6 +39,8 @@ export function SceneTiming({
   startMs,
   endMs,
   canAuthor,
+  startOpen = false,
+  hideTrigger = false,
 }: {
   universeId: string;
   sceneId: string;
@@ -48,12 +50,14 @@ export function SceneTiming({
   startMs: number | null;
   endMs: number | null;
   canAuthor: boolean;
+  startOpen?: boolean;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const regionId = useId();
   const startId = useId();
   const endId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [nextStart, setNextStart] = useState(startMs != null ? formatTimelineMs(startMs) : "");
   const [nextEnd, setNextEnd] = useState(endMs != null ? formatTimelineMs(endMs) : "");
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -124,6 +128,13 @@ export function SceneTiming({
   }
 
   if (!open) {
+    if (hideTrigger) {
+      return status ? (
+        <p className="suite-presence-status" role="status">
+          {status}
+        </p>
+      ) : null;
+    }
     return (
       <div className="suite-identity-actions">
         <Button

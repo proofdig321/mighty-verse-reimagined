@@ -35,6 +35,8 @@ export function CreativeMomentIdentity({
   title,
   description,
   canAuthor,
+  startOpen = false,
+  hideTrigger = false,
 }: {
   universeId: string;
   momentId: string;
@@ -42,12 +44,14 @@ export function CreativeMomentIdentity({
   title: string;
   description: string;
   canAuthor: boolean;
+  startOpen?: boolean;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const regionId = useId();
   const titleId = useId();
   const descriptionId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [nextTitle, setNextTitle] = useState(title);
   const [nextDescription, setNextDescription] = useState(description);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -99,6 +103,13 @@ export function CreativeMomentIdentity({
   }
 
   if (!open) {
+    if (hideTrigger) {
+      return status ? (
+        <p className="suite-presence-status" role="status">
+          {status}
+        </p>
+      ) : null;
+    }
     return (
       <div className="suite-identity-actions">
         <Button

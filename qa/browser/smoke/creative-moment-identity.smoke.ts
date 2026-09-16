@@ -26,7 +26,8 @@ test("Creative Suite authors Creative Moment identity without leaving Super Hero
   await page.goto(ROUTES.authorityUniverseScenes, { waitUntil: "domcontentloaded" });
 
   const proverb = page.locator(`#universe-moment-${PROVERB.masterId}`);
-  await proverb.getByRole("button", { name: "Edit identity" }).click();
+  await proverb.getByRole("button", { name: /Creative Moment actions/i }).click();
+  await page.getByRole("menuitem", { name: "Edit identity" }).click();
   const originalTitle = await proverb.getByLabel("Creative Moment name").inputValue();
   const originalDescription = await proverb.getByLabel("How this Creative Moment is introduced").inputValue();
   await proverb.getByRole("button", { name: "Cancel" }).click();
@@ -51,7 +52,8 @@ test("Creative Suite authors Creative Moment identity without leaving Super Hero
     await expect(proverb.getByRole("link", { name: SCENE_MOMENTS.powerhouse.shortName, exact: true })).toBeVisible();
     notes.push("B: Proverb remains identity-only and shared before the rename");
 
-    await proverb.getByRole("button", { name: "Edit identity" }).click();
+    await proverb.getByRole("button", { name: /Creative Moment actions/i }).click();
+    await page.getByRole("menuitem", { name: "Edit identity" }).click();
     await expect(proverb.getByText("What is this Creative Moment called?")).toBeVisible();
     await proverb.getByLabel("Creative Moment name").fill("   ");
     await proverb.getByRole("button", { name: "Save identity" }).click();

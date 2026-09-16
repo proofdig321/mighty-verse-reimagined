@@ -6,6 +6,11 @@ import type { UniverseAssembly } from "@/lib/assemble";
 import { CompositionSurface } from "./composition-surface";
 import { CreativeMomentObject } from "./creative-moment-object";
 import { SceneObject } from "./scene-object";
+import { StudioEmptyState } from "./studio-empty-state";
+import Link from "next/link";
+import { buttonVariants } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export function StudioScenesWorkspace({
   data,
@@ -42,20 +47,30 @@ export function StudioScenesWorkspace({
     ? data.creative_moments.filter((moment) => relatedMomentIds.has(moment.master_id))
     : data.creative_moments;
   const from = fromCurate ? "curate" : null;
+  const compact = !focusSceneId;
 
   return (
     <CompositionSurface>
       <div className="suite-stack">
         <section className="suite-section" aria-labelledby="universe-scenes">
-          <div className="suite-section-head">
+          <div className="suite-section-head studio-section-head">
             <h2 id="universe-scenes" className="suite-section-title">
               {focusSceneId ? "Scene" : "Scenes"}
             </h2>
+            {compact ? (
+              <Badge variant="secondary">
+                {scenes.length} Scene{scenes.length === 1 ? "" : "s"}
+              </Badge>
+            ) : null}
           </div>
           {visibleScenes.length === 0 ? (
-            <p className="suite-empty">No scenes assembled for this Universe yet.</p>
+            <StudioEmptyState
+              kicker="Scenes"
+              title="No Scenes assembled yet."
+              body="Scenes are the visual units of this Universe. They are authored from source media, not generated as canonical truth."
+            />
           ) : (
-            <ol className="suite-scene-grid" data-scene-list={focusSceneId ? "focus" : "all"}>
+            <ol className={compact ? "studio-scene-deck" : "suite-scene-grid"} data-scene-list={focusSceneId ? "focus" : "all"}>
               {visibleScenes.map((scene) => {
                 const index = scenes.findIndex((row) => row.master_id === scene.master_id);
                 return (
@@ -74,6 +89,7 @@ export function StudioScenesWorkspace({
                       openHref={`/authority/${scene.master_id}`}
                       openLabel="Open record"
                       workspaceHref={focusSceneId ? null : creativeSuiteScenesHref(data.master_id, from, scene.master_id)}
+                      compact={compact}
                     />
                   </li>
                 );
@@ -83,15 +99,29 @@ export function StudioScenesWorkspace({
         </section>
 
         <section className="suite-section" aria-labelledby="universe-moments">
-          <div className="suite-section-head">
+          <div className="suite-section-head studio-section-head">
             <h2 id="universe-moments" className="suite-section-title">
               Creative Moments
             </h2>
+            <Badge variant="secondary">
+              {visibleMoments.length} Creative Moment{visibleMoments.length === 1 ? "" : "s"}
+            </Badge>
           </div>
           {visibleMoments.length === 0 ? (
-            <p className="suite-empty">No Creative Moments assembled in this Universe yet.</p>
+            <StudioEmptyState
+              kicker="Creative Moments"
+              title="No Creative Moments assembled yet."
+              body="Creative Moments connect selected Scene material to a deliberate creative realization."
+              action={
+                compact ? (
+                  <Link href={creativeSuiteScenesHref(data.master_id, from)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+                    Explore Scenes
+                  </Link>
+                ) : null
+              }
+            />
           ) : (
-            <ul className="suite-moment-grid">
+            <ul className={compact ? "studio-moment-list" : "suite-moment-grid"}>
               {visibleMoments.map((moment) => (
                 <li key={moment.master_id}>
                   <CreativeMomentObject
@@ -102,6 +132,7 @@ export function StudioScenesWorkspace({
                     canAuthorIdentity={canAuthorIdentity}
                     openHref={`/authority/${moment.master_id}`}
                     openLabel="Open record"
+                    compact={compact}
                   />
                 </li>
               ))}

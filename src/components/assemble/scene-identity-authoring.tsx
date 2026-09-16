@@ -36,6 +36,8 @@ export function SceneIdentity({
   description,
   muralId,
   canAuthor,
+  startOpen = false,
+  hideTrigger = false,
 }: {
   universeId: string;
   sceneId: string;
@@ -44,12 +46,14 @@ export function SceneIdentity({
   description: string;
   muralId: string;
   canAuthor: boolean;
+  startOpen?: boolean;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const regionId = useId();
   const titleId = useId();
   const descriptionId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [nextTitle, setNextTitle] = useState(title);
   const [nextDescription, setNextDescription] = useState(description);
   const [fieldError, setFieldError] = useState<string | null>(null);
@@ -102,6 +106,13 @@ export function SceneIdentity({
   }
 
   if (!open) {
+    if (hideTrigger) {
+      return status ? (
+        <p className="suite-presence-status" role="status">
+          {status}
+        </p>
+      ) : null;
+    }
     return (
       <div className="suite-identity-actions">
         <Button

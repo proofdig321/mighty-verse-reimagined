@@ -1,13 +1,13 @@
 import type { ReactNode } from "react";
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
 import { creativeSuiteIdentityHref, curateHubHref } from "@/lib/assemble/studio";
 import { creativeSuiteNavGroups, studioLibraryHrefs, type CreativeSuiteSectionId } from "@/lib/assemble/suite";
 import type { StudioWorkspace } from "@/lib/assemble/load-studio-workspace";
+import { Badge } from "@/components/ui/badge";
 import { HierarchyBreadcrumb } from "./breadcrumb";
 import { CreativeSuiteNav } from "./creative-suite-nav";
 import { StudioHashRedirect } from "./studio-hash-redirect";
-import { cn } from "@/lib/utils";
+import { StudioHeaderActions } from "./studio-header-actions";
+import { StudioRail } from "./studio-rail";
 
 export function studioShellFromWorkspace(
   workspace: StudioWorkspace,
@@ -69,13 +69,13 @@ export function StudioWorkspaceShell({
   return (
     <div className="studio-workspace" data-studio-layout="composer">
       <StudioHashRedirect suiteHref={suiteHref} />
-      <aside className="studio-workspace-rail">
+      <StudioRail>
         <CreativeSuiteNav groups={groups} current={current === "identity" ? undefined : current} library={studioLibraryHrefs(suiteHref)} />
-      </aside>
+      </StudioRail>
       <div className="studio-workspace-main">
         <header className="studio-workspace-header">
           <HierarchyBreadcrumb items={items} />
-          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+          <div className="studio-workspace-heading">
             <div className="min-w-0 space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Studio</p>
               <h1
@@ -84,37 +84,23 @@ export function StudioWorkspaceShell({
               >
                 {title}
               </h1>
-              {description ? <p className="max-w-3xl text-sm text-foreground/80">{description}</p> : null}
-              <p className="text-xs text-muted-foreground">
-                {workspaceLabel ?? "Source"}
-                {typeof sceneCount === "number" ? ` · ${sceneCount} Scene${sceneCount === 1 ? "" : "s"}` : ""}
-                {lead ? ` · ${lead}` : ""}
-              </p>
+              {description ? <p className="studio-workspace-lead">{description}</p> : null}
+              <div className="studio-workspace-meta">
+                <Badge variant="outline">{workspaceLabel ?? "Source"}</Badge>
+                {typeof sceneCount === "number" ? (
+                  <Badge variant="secondary">
+                    {sceneCount} Scene{sceneCount === 1 ? "" : "s"}
+                  </Badge>
+                ) : null}
+                {lead ? <span className="text-xs text-muted-foreground">{lead}</span> : null}
+              </div>
             </div>
-            <div className="flex shrink-0 flex-wrap gap-2">
-              {actions}
-              <Link href={`/worlds/${universeId}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
-                Enter 2.5D
-              </Link>
-              <Link
-                href={`/worlds/${universeId}/holographic`}
-                className={buttonVariants({ size: "sm" })}
-                data-experience-entry="holographic"
-              >
-                Holographic Experience
-              </Link>
-              {showIdentityAction ? (
-                <Link
-                  href={creativeSuiteIdentityHref(universeId, fromCurate ? "curate" : null)}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  Edit identity
-                </Link>
-              ) : null}
-              <Link href={`/authority/${universeId}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-                Canonical record
-              </Link>
-            </div>
+            <StudioHeaderActions
+              universeId={universeId}
+              identityHref={showIdentityAction ? creativeSuiteIdentityHref(universeId, fromCurate ? "curate" : null) : null}
+              showIdentityAction={showIdentityAction}
+              extra={actions}
+            />
           </div>
         </header>
         <div className="studio-canvas">{children}</div>

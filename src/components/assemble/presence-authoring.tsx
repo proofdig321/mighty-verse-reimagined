@@ -62,6 +62,8 @@ export function ScenePresence({
   candidates,
   sharedIds,
   canAuthor,
+  compact = false,
+  startOpen = false,
 }: {
   universeId: string;
   sceneId: string;
@@ -70,10 +72,41 @@ export function ScenePresence({
   candidates: PresenceOption[];
   sharedIds: string[];
   canAuthor: boolean;
+  compact?: boolean;
+  startOpen?: boolean;
 }) {
   const shared = new Set(sharedIds);
+  const [expanded, setExpanded] = useState(startOpen || !compact);
+  const statusLabel =
+    related.length > 0 ? `Creative Moment · ${related.length}` : "No Creative Moment";
+
+  if (compact && !expanded) {
+    return (
+      <div className="suite-presence">
+        <button
+          type="button"
+          className="suite-meta-status"
+          aria-expanded={false}
+          onClick={() => setExpanded(true)}
+        >
+          {statusLabel}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="suite-presence">
+      {compact ? (
+        <button
+          type="button"
+          className="suite-meta-status"
+          aria-expanded={true}
+          onClick={() => setExpanded(false)}
+        >
+          {statusLabel}
+        </button>
+      ) : null}
       {related.length > 0 ? (
         <>
           <p className="suite-relation-kicker">
@@ -109,6 +142,8 @@ export function ScenePresence({
           sceneId={sceneId}
           hostLabel={sceneLabel}
           candidates={candidates}
+          startOpen={startOpen}
+          hideTrigger={compact}
         />
       ) : null}
     </div>
@@ -179,6 +214,8 @@ function PresenceAdd({
   momentId,
   hostLabel,
   candidates,
+  startOpen = false,
+  hideTrigger = false,
 }: {
   kind: PresenceKind;
   universeId: string;
@@ -186,10 +223,12 @@ function PresenceAdd({
   momentId?: string;
   hostLabel: string;
   candidates: PresenceOption[];
+  startOpen?: boolean;
+  hideTrigger?: boolean;
 }) {
   const router = useRouter();
   const regionId = useId();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(startOpen);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
@@ -233,6 +272,13 @@ function PresenceAdd({
   }
 
   if (!open) {
+    if (hideTrigger) {
+      return status ? (
+        <p className="suite-presence-status" role="status">
+          {status}
+        </p>
+      ) : null;
+    }
     return (
       <div className="suite-presence-actions">
         <Button

@@ -159,9 +159,12 @@ export async function expectCreativeSuiteComposition(page: Page) {
       "href",
       suitePath(`${ROUTES.authorityUniverseScenes}/${scene.sceneMasterId}`, fromCurate),
     );
-    await expect(card.getByRole("button", { name: "Edit identity" })).toBeVisible();
-    await expect(card.getByRole("button", { name: "Edit timing" })).toBeVisible();
-    await expect(card.getByRole("button", { name: "Edit still" })).toBeVisible();
+    await expect(card.getByRole("button", { name: /Scene actions/i })).toBeVisible();
+    await card.getByRole("button", { name: /Scene actions/i }).click();
+    await expect(page.getByRole("menuitem", { name: "Edit identity" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Edit timing" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Edit still" })).toBeVisible();
+    await page.keyboard.press("Escape");
   }
 
   await expect(moments.getByRole("heading", { name: "Proverb", exact: true })).toHaveCount(1);
@@ -169,7 +172,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
     const object = moments.locator(`#universe-moment-${cm.masterId}`);
     await expect(object).toBeVisible();
     await expect(object.getByRole("heading", { name: cm.title, exact: true })).toBeVisible();
-    await expect(object.getByRole("button", { name: "Edit identity" })).toBeVisible();
+    await expect(object.getByRole("button", { name: /Creative Moment actions/i })).toBeVisible();
   }
 
   const proverb = moments.locator(`#universe-moment-${CREATIVE_MOMENTS.proverb.masterId}`);

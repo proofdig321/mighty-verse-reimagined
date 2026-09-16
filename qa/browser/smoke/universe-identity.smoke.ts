@@ -31,7 +31,8 @@ test("Authority curates Super Hero Ego identity without changing canonical value
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   notes.push(`workspace ${ROUTES.authorityUniverseWorkspace}`);
 
-  await page.getByRole("link", { name: "Edit identity" }).click();
+  await page.getByRole("button", { name: "Studio actions" }).click();
+  await page.getByRole("menuitem", { name: "Edit identity" }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseIdentity}$`));
   await expect(page.getByText("Creative Studio").first()).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByText("Identity")).toBeVisible();
