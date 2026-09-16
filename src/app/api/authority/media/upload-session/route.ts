@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     uploadResult = await muxAdapter.createDirectUpload({
       name,
       passthrough: session.session_id,
-      corsOrigin: muxUploadCorsOrigin(),
+      corsOrigin: muxUploadCorsOrigin(request),
     });
   } catch (err) {
     // Clean up the session record if Mux upload creation fails

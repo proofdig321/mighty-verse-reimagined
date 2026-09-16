@@ -86,21 +86,23 @@ export function StoryboardSourceMedia({
       setPhase("failed");
       return;
     }
-    await new Promise<void>((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open("PUT", session.upload_url);
-      xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
-      xhr.upload.onprogress = (event) => {
-        if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
-      };
-      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status}).`)));
-      xhr.onerror = () => reject(new Error("Upload failed."));
-      xhr.send(file);
-    }).catch((caught) => {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("PUT", session.upload_url);
+        xhr.setRequestHeader("Content-Type", file.type || "video/mp4");
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) setProgress(Math.round((event.loaded / event.total) * 100));
+        };
+        xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status}).`)));
+        xhr.onerror = () => reject(new Error("Upload failed."));
+        xhr.send(file);
+      });
+    } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Upload failed.");
       setPhase("failed");
-    });
-    if (phase === "failed") return;
+      return;
+    }
     setPhase("processing");
     await pollSession(session.session_id, title || file.name);
   }

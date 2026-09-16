@@ -49,7 +49,7 @@ export async function POST(request: Request) {
     const upload = await muxAdapter.createDirectUpload({
       name,
       passthrough: session.session_id,
-      corsOrigin: muxUploadCorsOrigin(),
+      corsOrigin: muxUploadCorsOrigin(request),
     });
     await svc
       .from("media_upload_session")
