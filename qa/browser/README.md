@@ -148,11 +148,12 @@ Local (`npm run test:qa:browser`): Chrome against `http://localhost:3000`
 (`next dev`). This is the default. It does not call production.
 
 Production (`npm run test:qa:browser:production`): Chrome against the deployed
-Mighty Verse origin. The origin is the GitHub repository homepage (Vercel
-`*.vercel.app`). It is **opt-in** and requires `QA_PRODUCTION_URL`.
+Mighty Verse origin `https://mightyverse.goldenshovel.co.za`. The retired
+`*.vercel.app` production alias 404s. It is **opt-in** and requires
+`QA_PRODUCTION_URL`.
 
 ```bash
-QA_PRODUCTION_URL="$(gh repo view --json homepageUrl --jq .homepageUrl)"
+QA_PRODUCTION_URL=https://mightyverse.goldenshovel.co.za
 npm run test:qa:browser:production
 ```
 

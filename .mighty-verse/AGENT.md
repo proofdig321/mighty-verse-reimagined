@@ -1,7 +1,7 @@
 # Mighty Verse Reimagined — Agent Context
 
 CANONICAL: yes
-STATUS: current as of 2026-09-14 (Gemini/Veo storyboard pipeline, generation jobs, single holographic cinema)
+STATUS: current as of 2026-09-16 (production origin mightyverse.goldenshovel.co.za; Gemini/Mux in Vercel env)
 MAINTAINED BY: implementation agent (update on each verified checkpoint)
 
 This document is the primary context for any coding agent (Amazon Q, Cursor, or future)
@@ -470,6 +470,11 @@ Canonical public Universe/Mural pages are `/worlds/{masterId}`. `/universes/{mas
 
 Primary development is **Cursor** against this GitHub repository (`origin`).
 Canonical default branch is `main`. Chrome is the primary browser QA client.
+
+Production origin is `https://mightyverse.goldenshovel.co.za`. Do not send
+Supabase magic-link redirects to the retired Vercel production alias
+(`DEPLOYMENT_NOT_FOUND`). Mux and Gemini API keys live in Vercel env;
+do not commit them.
 
 The canonical project instructions live in this file and `.mighty-verse/`.
 They do not depend on conversation memory or the retired Codespaces/`source` remote workflow.

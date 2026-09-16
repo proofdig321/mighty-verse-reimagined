@@ -49,16 +49,31 @@ The `/worlds/[masterId]` surface must handle the placeholder gracefully until re
 - Vercel project created and linked: `proofdig321s-projects/mighty-verse-reimagined`
 - All environment variables pushed to Vercel preview and production environments
 - Build succeeded: Next.js 16.3.1 / Turbopack, 10 routes, TypeScript clean
-- Staging URL: https://mighty-verse-reimagined.vercel.app (HTTP 200 verified)
+- Staging URL: historically the Vercel production alias; production origin is now https://mightyverse.goldenshovel.co.za
 - Inspection URL: https://vercel.com/proofdig321s-projects/mighty-verse-reimagined
 - `.gitignore` corrected: `.env.local`, `.env*.local`, `.next`, `tsconfig.tsbuildinfo` now ignored
 - `.env.local.example` sanitised: all values empty, no real credentials in source control
 - Supabase Auth redirect URLs: not yet updated — must be done before auth flows are tested
 
-`OPEN QUESTION` **Supabase Auth redirect URLs** — The Supabase project's allowed redirect URLs
-must include the staging domain (`https://mighty-verse-reimagined.vercel.app/auth/callback`)
-before sign-in flows can be tested against the deployed app. This is a manual step in the
-Supabase dashboard (Authentication → URL Configuration).
+`CANONICAL` **Production origin + Supabase Auth URLs** (2026-09-16)
+
+Public production origin is `https://mightyverse.goldenshovel.co.za` (Vercel custom domain).
+The retired Vercel production alias (`*.vercel.app`) returns `DEPLOYMENT_NOT_FOUND`.
+Sign-in magic links must not use that hostname.
+
+Supabase Auth URL configuration:
+- Site URL: `https://mightyverse.goldenshovel.co.za`
+- Redirect allow list: `https://mightyverse.goldenshovel.co.za/auth/callback`,
+  `https://mightyverse.goldenshovel.co.za/**`, `http://localhost:3000/auth/callback`,
+  `http://127.0.0.1:3000/auth/callback`, `http://localhost:3000/**`
+
+If `/auth/callback` is missing from the allow list, GoTrue appends `?code=` to Site URL `/`.
+The app proxy now intercepts that PKCE fallback and sends it to `/auth/callback`.
+
+Vercel production env (already present; do not commit values): Mux (`MUX_TOKEN_ID`,
+`MUX_TOKEN_SECRET`, `MUX_WEBHOOK_SECRET`) and new Gemini API keys (`GEMINI_API_KEY` /
+`GOOGLE_GENERATIVE_AI_API_KEY`). `NEXT_PUBLIC_APP_URL` must be
+`https://mightyverse.goldenshovel.co.za` on production.
 
 ---
 

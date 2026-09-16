@@ -1,7 +1,17 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import {
+  authCallbackPath,
+  publicAppOrigin,
+  shouldInterceptAuthCode,
+} from "@/lib/auth-origin";
 
 export async function proxy(request: NextRequest) {
+  if (shouldInterceptAuthCode(request.nextUrl.pathname, request.nextUrl.searchParams)) {
+    const origin = publicAppOrigin(request);
+    return NextResponse.redirect(new URL(authCallbackPath(request.nextUrl.searchParams), origin));
+  }
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(

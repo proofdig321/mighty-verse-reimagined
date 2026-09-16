@@ -3,8 +3,15 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { safeAuthNext } from "@/lib/auth-next";
+import { authEmailRedirectTo } from "@/lib/auth-origin";
 
-export default function SignInForm({ next }: { next?: string | null }) {
+export default function SignInForm({
+  next,
+  redirectOrigin,
+}: {
+  next?: string | null;
+  redirectOrigin: string;
+}) {
   const [email, setEmail] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +27,7 @@ export default function SignInForm({ next }: { next?: string | null }) {
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
-        emailRedirectTo: `${location.origin}/auth/callback?next=${encodeURIComponent(destination)}`,
+        emailRedirectTo: authEmailRedirectTo(redirectOrigin, destination),
       },
     });
 
