@@ -7,8 +7,7 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { formatDuration } from "@/lib/media/timing";
 import SceneOrderClient from "./scene-order-client";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
-import { CatalogueRecordCard } from "@/components/assemble/catalogue-record-card";
-import { PaginatedItems } from "@/components/assemble/collection-pager";
+import { CatalogueRecordList } from "@/components/assemble/catalogue-record-card";
 
 function formatMs(ms: number | null) {
   if (ms == null) return null;
@@ -95,48 +94,29 @@ export default async function ScenesPage() {
         <>
           <SceneOrderClient scenes={scenes.map((s) => ({ master_id: s.master_id, title: s.title, sort_order: s.sort_order }))} />
 
-          <PaginatedItems items={scenes} label="Scenes">
-            {(page) => (
-              <ul className="grid gap-3 md:grid-cols-2">
-                {page.map((s) => (
-                  <li key={s.master_id}>
-                    <CatalogueRecordCard
-                      kicker="Scene"
-                      title={s.title}
-                      untitled="Untitled scene"
-                      badges={[s.playable ? "Playable" : "Missing media"]}
-                      meta={[
-                        {
-                          label: "Mural",
-                          value: s.muralTitle && s.parent_master_id ? (
-                            <a href={`/authority/${s.parent_master_id}`} className="hover:underline">
-                              {s.muralTitle}
-                            </a>
-                          ) : (
-                            <span className="italic text-muted-foreground">No parent</span>
-                          ),
-                        },
-                        {
-                          label: "Timing",
-                          value:
-                            s.startMs != null && s.endMs != null ? (
-                              <span className="font-mono">
-                                {formatMs(s.startMs)} → {formatMs(s.endMs)}
-                              </span>
-                            ) : (
-                              <span className="italic text-muted-foreground">Not set</span>
-                            ),
-                        },
-                      ]}
-                      editHref={`/authority/${s.master_id}`}
-                      masterId={s.master_id}
-                      withdrawable={s.withdrawable}
-                    />
-                  </li>
-                ))}
-              </ul>
-            )}
-          </PaginatedItems>
+          <CatalogueRecordList
+            label="Scenes"
+            items={scenes.map((s) => ({
+              masterId: s.master_id,
+              kicker: "Scene",
+              title: s.title,
+              untitled: "Untitled scene",
+              badges: [s.playable ? "Playable" : "Missing media"],
+              meta: [
+                {
+                  label: "Mural",
+                  value: s.muralTitle ?? "No parent",
+                  href: s.muralTitle && s.parent_master_id ? `/authority/${s.parent_master_id}` : undefined,
+                },
+                {
+                  label: "Timing",
+                  value: s.startMs != null && s.endMs != null ? `${formatMs(s.startMs)} → ${formatMs(s.endMs)}` : "Not set",
+                },
+              ],
+              editHref: `/authority/${s.master_id}`,
+              withdrawable: s.withdrawable,
+            }))}
+          />
         </>
       )}
     </div>

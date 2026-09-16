@@ -5,8 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
-import { CatalogueRecordCard } from "@/components/assemble/catalogue-record-card";
-import { PaginatedItems } from "@/components/assemble/collection-pager";
+import { CatalogueRecordList } from "@/components/assemble/catalogue-record-card";
 
 async function getData() {
   const svc = getServiceClient();
@@ -71,37 +70,25 @@ export default async function MuralsPage() {
       {murals.length === 0 ? (
         <p className="text-sm text-muted-foreground">No murals registered yet.</p>
       ) : (
-        <PaginatedItems items={murals} label="Murals">
-          {(page) => (
-            <ul className="grid gap-3 md:grid-cols-2">
-              {page.map((m) => (
-                <li key={m.master_id}>
-                  <CatalogueRecordCard
-                    kicker="Mural"
-                    title={m.title}
-                    untitled="Untitled mural"
-                    badges={[`${m.sceneCount} Scene${m.sceneCount === 1 ? "" : "s"}`]}
-                    meta={[
-                      {
-                        label: "Universe",
-                        value: m.universeTitle && m.parent_master_id ? (
-                          <a href={`/authority/universes/${m.parent_master_id}`} className="hover:underline">
-                            {m.universeTitle}
-                          </a>
-                        ) : (
-                          <span className="italic text-muted-foreground">No parent</span>
-                        ),
-                      },
-                    ]}
-                    editHref={`/authority/${m.master_id}`}
-                    masterId={m.master_id}
-                    withdrawable={m.withdrawable}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </PaginatedItems>
+        <CatalogueRecordList
+          label="Murals"
+          items={murals.map((m) => ({
+            masterId: m.master_id,
+            kicker: "Mural",
+            title: m.title,
+            untitled: "Untitled mural",
+            badges: [`${m.sceneCount} Scene${m.sceneCount === 1 ? "" : "s"}`],
+            meta: [
+              {
+                label: "Universe",
+                value: m.universeTitle ?? "No parent",
+                href: m.universeTitle && m.parent_master_id ? `/authority/universes/${m.parent_master_id}` : undefined,
+              },
+            ],
+            editHref: `/authority/${m.master_id}`,
+            withdrawable: m.withdrawable,
+          }))}
+        />
       )}
     </div>
   );

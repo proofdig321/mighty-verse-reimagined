@@ -5,8 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import { canWithdrawMaster } from "@/lib/assemble/withdraw";
-import { CatalogueRecordCard } from "@/components/assemble/catalogue-record-card";
-import { PaginatedItems } from "@/components/assemble/collection-pager";
+import { CatalogueRecordList } from "@/components/assemble/catalogue-record-card";
 
 async function getData() {
   const svc = getServiceClient();
@@ -74,38 +73,26 @@ export default async function CreativeMomentsPage() {
       {moments.length === 0 ? (
         <p className="text-sm text-muted-foreground">No creative moments registered yet.</p>
       ) : (
-        <PaginatedItems items={moments} label="Creative Moments">
-          {(page) => (
-            <ul className="grid gap-3 md:grid-cols-2">
-              {page.map((m) => (
-                <li key={m.master_id}>
-                  <CatalogueRecordCard
-                    kicker="Creative Moment"
-                    title={m.title}
-                    untitled="Untitled moment"
-                    description={m.description}
-                    badges={[m.hasExperience ? "Experience created" : "Experience missing"]}
-                    meta={[
-                      {
-                        label: "Universe",
-                        value: m.parentTitle && m.parent_master_id ? (
-                          <a href={`/authority/universes/${m.parent_master_id}`} className="hover:underline">
-                            {m.parentTitle}
-                          </a>
-                        ) : (
-                          <span className="italic text-muted-foreground">No parent</span>
-                        ),
-                      },
-                    ]}
-                    editHref={`/authority/${m.master_id}`}
-                    masterId={m.master_id}
-                    withdrawable={m.withdrawable}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </PaginatedItems>
+        <CatalogueRecordList
+          label="Creative Moments"
+          items={moments.map((m) => ({
+            masterId: m.master_id,
+            kicker: "Creative Moment",
+            title: m.title,
+            untitled: "Untitled moment",
+            description: m.description,
+            badges: [m.hasExperience ? "Experience created" : "Experience missing"],
+            meta: [
+              {
+                label: "Universe",
+                value: m.parentTitle ?? "No parent",
+                href: m.parentTitle && m.parent_master_id ? `/authority/universes/${m.parent_master_id}` : undefined,
+              },
+            ],
+            editHref: `/authority/${m.master_id}`,
+            withdrawable: m.withdrawable,
+          }))}
+        />
       )}
     </div>
   );
