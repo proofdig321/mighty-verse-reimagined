@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { StoryboardWorkspace } from "@/components/assemble/storyboard-workspace";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { mediaInspectHref, creativeSuiteWorkspaceHref, curateSentinelHref } from "@/lib/assemble/studio";
 import { suiteScenes } from "@/lib/assemble/suite";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
@@ -25,14 +25,7 @@ export default async function UniverseStoryboardPage({
   const ai = serverAiCapability();
 
   return (
-    <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      current="storyboard"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-      workspaceLabel="Storyboard"
-    >
+    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "storyboard", "Storyboard")}>
       <StoryboardWorkspace
         universeId={workspace.data.master_id}
         universeTitle={title}

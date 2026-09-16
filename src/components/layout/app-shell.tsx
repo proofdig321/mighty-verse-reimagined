@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, useSyncExternalStore, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import type { LucideIcon } from "lucide-react";
@@ -26,6 +26,24 @@ export type AppNavGroup = {
 };
 
 const COLLAPSE_KEY = "mv-shell-collapsed";
+const COLLAPSE_EVENT = "mv-shell-collapsed";
+
+function subscribeSidebarCollapsed(onChange: () => void) {
+  window.addEventListener(COLLAPSE_EVENT, onChange);
+  window.addEventListener("storage", onChange);
+  return () => {
+    window.removeEventListener(COLLAPSE_EVENT, onChange);
+    window.removeEventListener("storage", onChange);
+  };
+}
+
+function sidebarCollapsedSnapshot() {
+  return window.localStorage.getItem(COLLAPSE_KEY) === "1";
+}
+
+function sidebarCollapsedServerSnapshot() {
+  return false;
+}
 
 export function AppShell({
   children,
@@ -46,24 +64,22 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useSyncExternalStore(
+    subscribeSidebarCollapsed,
+    sidebarCollapsedSnapshot,
+    sidebarCollapsedServerSnapshot,
+  );
   const [mobileNav, setMobileNav] = useState(false);
   const [query, setQuery] = useState("");
   const fullBleed = pathname.includes("/holographic");
   const flush = pathname.startsWith("/editor");
+  const studioCanvas =
+    /^\/authority\/universes\/[^/]+/.test(pathname) || /^\/studio\/work\/[^/]+/.test(pathname);
   const navItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
-  useEffect(() => {
-    const stored = window.localStorage.getItem(COLLAPSE_KEY);
-    if (stored === "1") setCollapsed(true);
-  }, []);
-
   function toggleCollapsed() {
-    setCollapsed((value) => {
-      const next = !value;
-      window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
-      return next;
-    });
+    window.localStorage.setItem(COLLAPSE_KEY, collapsed ? "0" : "1");
+    window.dispatchEvent(new Event(COLLAPSE_EVENT));
   }
 
   function goToSearch(event: FormEvent) {
@@ -215,7 +231,18 @@ export function AppShell({
           </form>
           <ThemePresetControl />
         </header>
-        <main className={cn("flex-1", flush ? "flex min-h-0 flex-col overflow-hidden p-0" : "mx-auto w-full max-w-7xl px-4 py-8 sm:px-6")}>{children}</main>
+        <main
+          className={cn(
+            "flex-1",
+            flush
+              ? "flex min-h-0 flex-col overflow-hidden p-0"
+              : studioCanvas
+                ? "min-w-0 px-4 py-5 sm:px-6"
+                : "mx-auto w-full max-w-7xl px-4 py-8 sm:px-6",
+          )}
+        >
+          {children}
+        </main>
       </div>
     </div>
   );

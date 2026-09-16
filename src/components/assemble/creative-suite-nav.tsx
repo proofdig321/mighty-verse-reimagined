@@ -1,34 +1,53 @@
 import Link from "next/link";
 import { cn } from "@/lib/utils";
-import type { CreativeSuiteNavItem, CreativeSuiteSectionId } from "@/lib/assemble/suite";
+import type { CreativeSuiteNavGroup, CreativeSuiteSectionId } from "@/lib/assemble/suite";
 
 export function CreativeSuiteNav({
-  items,
+  groups,
   current,
+  library,
 }: {
-  items: CreativeSuiteNavItem[];
+  groups: CreativeSuiteNavGroup[];
   current?: CreativeSuiteSectionId;
+  library?: { label: string; href: string }[];
 }) {
   return (
-    <nav aria-label="Creative Suite" className="flex flex-wrap gap-1 border-b border-border">
-      {items.map((item) => {
-        const active = current === item.id;
-        return (
-          <Link
-            key={item.id}
-            href={item.href}
-            aria-current={active ? "page" : undefined}
-            className={cn(
-              "px-3 py-2 text-sm transition-colors",
-              active
-                ? "border-b-2 border-foreground text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
-          >
-            {item.label}
-          </Link>
-        );
-      })}
+    <nav aria-label="Studio" className="studio-rail">
+      {groups.map((group) => (
+        <div key={group.id} className="studio-rail-group">
+          <p className="studio-rail-label">{group.label}</p>
+          <ul>
+            {group.items.map((item) => {
+              const active = current === item.id;
+              return (
+                <li key={item.id}>
+                  <Link
+                    href={item.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn("studio-rail-link", active && "studio-rail-link-current")}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
+      {library?.length ? (
+        <div className="studio-rail-group">
+          <p className="studio-rail-label">Library</p>
+          <ul>
+            {library.map((item) => (
+              <li key={item.href}>
+                <Link href={item.href} className="studio-rail-link">
+                  {item.label}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </nav>
   );
 }

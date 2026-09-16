@@ -20,7 +20,7 @@ export type {
   ProductionStepStatus,
 } from "./workflow";
 export { validateUniverseIdentity, mergeWorkPresentationIdentity } from "./identity";
-export { CREATIVE_SUITE_SECTIONS, creativeSuiteNavItems, suiteChildHref, suiteScenes } from "./suite";
+export { CREATIVE_SUITE_SECTIONS, CREATIVE_SUITE_NAV_GROUPS, creativeSuiteNavItems, creativeSuiteNavGroups, suiteChildHref, suiteScenes } from "./suite";
 export {
   sceneOrdinal,
   sceneShortTitle,

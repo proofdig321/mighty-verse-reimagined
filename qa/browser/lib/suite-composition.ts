@@ -17,8 +17,8 @@ export async function revealStudioInspector(page: Page) {
   }
 }
 
-async function openStudioWorkspace(page: Page, name: "Overview" | "Storyboard" | "Sentinel" | "Scenes" | "Production" | "2.5D Experience" | "Holographic Experience") {
-  await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name, exact: true }).click();
+async function openStudioWorkspace(page: Page, name: "Source" | "Storyboard" | "Sentinel" | "Scenes" | "Production" | "2.5D Preview" | "Experience") {
+  await page.getByRole("navigation", { name: "Studio" }).getByRole("link", { name, exact: true }).click();
 }
 
 function fromCurateOnPage(page: Page): boolean {
@@ -45,14 +45,14 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(page.getByText(CANON.universeDescription).first()).toBeVisible();
   await expect(page.getByRole("button", { name: /shuffle/i })).toHaveCount(0);
 
-  const suiteNav = page.getByRole("navigation", { name: "Creative Suite" });
-  await expect(suiteNav.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
+  const suiteNav = page.getByRole("navigation", { name: "Studio" });
+  await expect(suiteNav.getByRole("link", { name: "Source", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Storyboard", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Production", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Sentinel", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "2.5D Experience", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "Holographic Experience", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "2.5D Preview", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Experience", exact: true })).toBeVisible();
 
   const command = page.locator(".studio-command-grid");
   await expect(command.getByText("Source", { exact: true })).toBeVisible();
@@ -60,7 +60,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(command.getByText("Scenes", { exact: true })).toBeVisible();
   await expect(command.getByText("Storyboard", { exact: true })).toBeVisible();
   await expect(command.getByText("Production", { exact: true })).toBeVisible();
-  await expect(command.getByText("2.5D", { exact: true })).toBeVisible();
+  await expect(command.getByText("2.5D Preview", { exact: true })).toBeVisible();
 
   const deck = page.locator("section[aria-labelledby='studio-scene-deck']");
   await expect(deck.getByRole("heading", { name: "Scene deck" })).toBeVisible();
@@ -89,12 +89,12 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await page.getByRole("tab", { name: "Sentinel" }).click();
   const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
   await expect(sentinel.getByRole("heading", { name: "Sentinel" })).toBeVisible();
-  await expect(sentinel.getByRole("heading", { name: "Evidence" })).toBeVisible();
+  await expect(sentinel.getByRole("heading", { name: "Evidence", exact: true })).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Observed panels" })).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Scene-boundary proposals" })).toBeVisible();
   await expect(sentinel.locator("[data-holographic-kind]")).toHaveCount(0);
   await expect(sentinel.locator("[data-proposal-scene]")).toHaveCount(4);
-  await expect(sentinel.getByRole("link", { name: "2.5D Experience" })).toHaveAttribute(
+  await expect(sentinel.getByRole("link", { name: "2.5D Preview" })).toHaveAttribute(
     "href",
     suitePath(ROUTES.authorityUniversePreview, fromCurate),
   );
@@ -116,10 +116,10 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(production.getByText(/Powerhouse/i).first()).toBeVisible();
   await expect(production.getByText("Proverb").first()).toBeVisible();
 
-  await openStudioWorkspace(page, "2.5D Experience");
+  await openStudioWorkspace(page, "2.5D Preview");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniversePreview}`));
   const preview = page.locator("section[aria-labelledby='universe-preview']");
-  await expect(preview.getByRole("heading", { name: "2.5D Experience" })).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "2.5D Preview" })).toBeVisible();
   await expect(preview.getByRole("button", { name: "2D composition" })).toBeVisible();
   await expect(preview.getByRole("button", { name: "2.5D Studio Preview" })).toBeVisible();
   await preview.getByRole("button", { name: "2D composition" }).click();
@@ -201,11 +201,11 @@ export async function expectCreativeSuiteComposition(page: Page) {
     `#universe-moment-${SCENE_MOMENTS.powerhouse.creativeMomentId}`,
   );
 
-  await openStudioWorkspace(page, "Holographic Experience");
+  await openStudioWorkspace(page, "Experience");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseExperience}`));
   const continuation = page.locator("section[aria-labelledby='universe-experience-continuation']");
   await expect(continuation.getByText("Assemble", { exact: true })).toBeVisible();
-  await expect(continuation.getByText("Experience", { exact: true }).first()).toBeVisible();
+  await expect(continuation.getByRole("heading", { name: "Holographic Experience" })).toBeVisible();
   await expect(continuation.getByRole("link", { name: /Holographic Experience/i })).toHaveAttribute(
     "href",
     ROUTES.universeHolographic,
@@ -215,6 +215,6 @@ export async function expectCreativeSuiteComposition(page: Page) {
     ROUTES.universeLive,
   );
 
-  await openStudioWorkspace(page, "Overview");
+  await openStudioWorkspace(page, "Source");
   await expect(page).toHaveURL(suitePathRe(ROUTES.authorityUniverseWorkspace, fromCurate, true));
 }

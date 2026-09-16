@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { SentinelEvidencePage } from "@/components/assemble/sentinel-evidence-page";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { mediaInspectHref, creativeSuiteWorkspaceHref, curateSentinelHref } from "@/lib/assemble/studio";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
@@ -20,14 +20,7 @@ export default async function UniverseSentinelPage({
   const from = fromCurate ? "curate" : null;
 
   return (
-    <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      current="sentinel"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-      workspaceLabel="Sentinel"
-    >
+    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "sentinel", "Sentinel")}>
       <SentinelEvidencePage
         universeId={workspace.data.master_id}
         universeTitle={title}

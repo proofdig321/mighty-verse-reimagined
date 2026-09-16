@@ -92,7 +92,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await captureScreenshot(page, testInfo, "suite-production-path");
   notes.push("B: Universes → Super Hero Ego Creative Studio workspaces show source, Sentinel, storyboard, production, and 2.5D");
 
-  await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name: "2.5D Experience", exact: true }).click();
+  await page.getByRole("navigation", { name: "Studio" }).getByRole("link", { name: "2.5D Preview", exact: true }).click();
   const preview = page.locator("section[aria-labelledby='universe-preview']");
   await preview.getByRole("button", { name: "2D composition" }).click();
   await expect(preview.locator("[data-preview-scene]")).toHaveCount(4);
@@ -103,7 +103,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   notes.push("C: Studio Preview switches 2D composition and 2.5D without leaving Creative Suite");
 
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("navigation", { name: "Creative Suite" })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Studio" })).toBeVisible();
   await expect(preview.locator("[data-holographic-kind='scene']")).toHaveCount(4);
   const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflowX, `narrow Studio overflow ${overflowX}px`).toBeLessThan(24);

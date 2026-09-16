@@ -2,7 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { RegisterMural } from "@/components/assemble/register-mural";
 import { StudioOverview } from "@/components/assemble/studio-overview";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { MuralEmpty } from "@/components/assemble/mural-presence";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
@@ -17,17 +17,9 @@ export default async function UniverseStudioOverviewPage({
   const query = await searchParams;
   const fromCurate = query.from === "curate";
   const workspace = await requireStudioWorkspace(masterId, fromCurate);
-  const title = workspace.data.title ?? "Untitled universe";
 
   return (
-    <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      description={workspace.data.description}
-      current="overview"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-    >
+    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "overview")}>
       {query.identity === "saved" ? (
         <p role="status" className="mb-6 rounded-lg border border-border bg-card px-4 py-3 text-sm text-foreground">
           Universe identity saved.

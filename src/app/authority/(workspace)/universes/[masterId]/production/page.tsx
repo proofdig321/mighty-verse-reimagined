@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { ProductionBriefs } from "@/components/assemble/production-briefs";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
 export default async function UniverseProductionPage({
@@ -15,17 +15,9 @@ export default async function UniverseProductionPage({
   const query = await searchParams;
   const fromCurate = query.from === "curate";
   const workspace = await requireStudioWorkspace(masterId, fromCurate);
-  const title = workspace.data.title ?? "Untitled universe";
 
   return (
-    <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      current="production"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-      workspaceLabel="Production"
-    >
+    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "production", "Production")}>
       <section className="suite-section" aria-labelledby="universe-production">
         <div className="suite-section-head">
           <h2 id="universe-production" className="suite-section-title">

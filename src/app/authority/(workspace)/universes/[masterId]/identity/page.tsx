@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
-import { loadUniverseAssembly } from "@/lib/assemble";
+import { loadUniverseAssembly, suiteScenes } from "@/lib/assemble";
 import { creativeSuiteHref } from "@/lib/assemble/studio";
 import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
 import IdentityCurationClient from "./identity-curation-client";
@@ -34,10 +34,12 @@ export default async function UniverseIdentityPage({
     <StudioWorkspaceShell
       universeId={data.master_id}
       title={title}
+      description={data.description}
       current="identity"
       suiteHref={suiteHref}
       fromCurate={fromCurate}
       workspaceLabel="Identity"
+      sceneCount={suiteScenes(data).length}
       showIdentityAction={false}
       lead="Curate the canonical title and description. Scene identity, Scene timing, canonical Scene order, and Creative Moment identity are authored on those objects."
     >

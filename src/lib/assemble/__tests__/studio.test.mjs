@@ -1,5 +1,5 @@
 import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteStoryboardHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref, curateAttachHref } from "../studio";
-import { creativeSuiteNavItems, resolveStudioHash, suiteChildHref } from "../suite";
+import { creativeSuiteNavGroups, creativeSuiteNavItems, resolveStudioHash, suiteChildHref, studioLibraryHrefs } from "../suite";
 import { studioInteractionLabel } from "../studio-interaction";
 
 function assert(condition, message) {
@@ -111,8 +111,15 @@ const nav = creativeSuiteNavItems(suite);
 assert(nav.map((item) => item.id).join(",") === "overview,storyboard,sentinel,scenes,production,preview,experience", "Studio nav is workspaces, not a stacked ontology dump");
 assert(nav.find((item) => item.id === "storyboard")?.href === `${suite}/storyboard`, "Storyboard is a child route");
 assert(nav.find((item) => item.id === "sentinel")?.href === `${suite}/sentinel`, "Sentinel is a child route");
-assert(nav.find((item) => item.id === "preview")?.label === "2.5D Experience", "2.5D Experience is explicit");
-assert(nav.find((item) => item.id === "experience")?.label === "Holographic Experience", "Holographic Experience is explicit");
+assert(nav.find((item) => item.id === "overview")?.label === "Source", "Source is the Context workspace");
+assert(nav.find((item) => item.id === "preview")?.label === "2.5D Preview", "2.5D Preview is explicit");
+assert(nav.find((item) => item.id === "experience")?.label === "Experience", "Experience is the public realization workspace");
+const groups = creativeSuiteNavGroups(suite);
+assert(groups.map((group) => group.id).join(",") === "context,work,realization", "Studio rail groups Context, Work, Realization");
+assert(groups[0].items.map((item) => item.id).join(",") === "overview,sentinel", "Context is Source and Sentinel");
+assert(groups[1].items.map((item) => item.id).join(",") === "storyboard,scenes,production", "Work is Storyboard, Scenes, Production");
+assert(groups[2].items.map((item) => item.id).join(",") === "preview,experience", "Realization is 2.5D Preview and Experience");
+assert(studioLibraryHrefs(suite).map((item) => item.label).join(",") === "Media,References,Generations", "Library reuses existing media, references, and generation surfaces");
 assert(nav.find((item) => item.id === "preview")?.href === `${suite}/preview`, "2.5D is a child route");
 assert(suiteChildHref(`${suite}?from=curate`, "scenes") === `${suite}/scenes?from=curate`, "child routes preserve Curate origin");
 assert(creativeSuiteWorkspaceHref(UNIVERSE, "sentinel") === `${suite}/sentinel`, "Sentinel evidence has its own workspace");

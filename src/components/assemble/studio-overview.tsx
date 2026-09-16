@@ -51,7 +51,7 @@ export function StudioOverview({
       href: creativeSuiteWorkspaceHref(data.master_id, "production", from),
     },
     {
-      label: "2.5D Experience",
+      label: "2.5D Preview",
       value: previewReady ? "Preview available" : "Waiting",
       href: creativeSuiteWorkspaceHref(data.master_id, "preview", from),
     },

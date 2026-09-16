@@ -9,7 +9,7 @@ import type { StoryboardWorkRecord } from "@/lib/storyboard/document";
 import { creativeSuiteStoryboardHref } from "@/lib/assemble/studio";
 import { cn } from "@/lib/utils";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
-import { SentinelWorkspace } from "./sentinel-workspace";
+import { SentinelSummary, SentinelWorkspace } from "./sentinel-workspace";
 
 export function SentinelEvidencePage({
   universeId,
@@ -122,6 +122,12 @@ export function SentinelEvidencePage({
 
   return (
     <div className="space-y-8" data-sentinel-page="true">
+      <SentinelSummary
+        observationCount={cinematic?.shots.length ?? intelligence?.storyboard.length ?? 0}
+        referenceCount={work?.frames?.length ?? 0}
+        mediaFactCount={source?.playback_id ? 1 : 0}
+        href={storyboardHref}
+      />
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div className="space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel</p>

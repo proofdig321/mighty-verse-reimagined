@@ -1,11 +1,51 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { formatShotWindow, cameraEvidenceStatus, evidenceStatusLabel, temporalEvidenceStatus, visualEvidenceStatus, type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
 import { formatTimelineMs } from "@/lib/media/timing";
 import type { StoryboardSourceRecord } from "@/lib/storyboard/source";
+
+export function SentinelSummary({
+  observationCount,
+  referenceCount,
+  mediaFactCount,
+  onView,
+  href,
+}: {
+  observationCount: number;
+  referenceCount: number;
+  mediaFactCount: number;
+  onView?: () => void;
+  href?: string;
+}) {
+  return (
+    <section className="sentinel-summary" aria-label="Sentinel">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel</p>
+      <p className="text-sm text-foreground">
+        {observationCount} observation{observationCount === 1 ? "" : "s"}
+      </p>
+      <p className="text-xs text-muted-foreground">
+        {referenceCount} reference{referenceCount === 1 ? "" : "s"} · {mediaFactCount} verified media fact{mediaFactCount === 1 ? "" : "s"}
+      </p>
+      <p className="text-[11px] text-muted-foreground">
+        Observations and evidence. Sentinel does not authorise creative meaning.
+      </p>
+      {href ? (
+        <Link href={href} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+          View Evidence
+        </Link>
+      ) : (
+        <Button type="button" size="sm" variant="outline" onClick={onView}>
+          View Evidence
+        </Button>
+      )}
+    </section>
+  );
+}
 
 export function SentinelWorkspace({
   source,
