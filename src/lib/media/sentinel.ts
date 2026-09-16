@@ -27,6 +27,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { SampledFrame, FrameDelta, BrowserMediaMetadata } from "@/lib/media/intelligence";
+import { CINEMATIC_ANALYSIS_VERSION, withCinematicParameters } from "./cinematic-evidence";
 
 /** Current analysis version. Increment when the algorithm changes. */
 export const ANALYSIS_VERSION = "browser-v1" as const;
@@ -249,4 +250,43 @@ export async function listInspectionSessions(assetId: string): Promise<{
     .order("started_at", { ascending: false });
 
   return data ?? [];
+}
+
+export async function persistCinematicAnalysis(input: {
+  assetId: string;
+  initiatedBy: string | null;
+  durationMs: number | null;
+  cinematic: import("./cinematic-evidence").CinematicAnalysis;
+}): Promise<{ sessionId: string }> {
+  const svc = getServiceClient();
+  const sessions = await listInspectionSessions(input.assetId);
+  const latest = sessions.find((session) => session.status === "completed") ?? sessions[0] ?? null;
+  if (latest) {
+    const current = await getInspectionSession(latest.session_id);
+    const parameters = withCinematicParameters(current?.session.parameters, input.cinematic);
+    await svc
+      .from("inspection_session")
+      .update({ parameters, analysis_version: current?.session.analysis_version ?? ANALYSIS_VERSION })
+      .eq("session_id", latest.session_id);
+    return { sessionId: latest.session_id };
+  }
+  const now = new Date().toISOString();
+  const { data, error } = await svc
+    .from("inspection_session")
+    .insert({
+      asset_id: input.assetId,
+      initiated_by: input.initiatedBy,
+      analysis_version: CINEMATIC_ANALYSIS_VERSION,
+      status: "completed",
+      observed_duration_ms: input.durationMs,
+      frame_count: input.cinematic.shots.length,
+      candidate_count: input.cinematic.shots.length,
+      parameters: withCinematicParameters({}, input.cinematic),
+      started_at: now,
+      completed_at: now,
+    })
+    .select("session_id")
+    .single();
+  if (error || !data) throw new Error(error?.message ?? "Cinematic evidence could not be saved.");
+  return { sessionId: data.session_id };
 }

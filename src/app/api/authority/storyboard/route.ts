@@ -9,6 +9,7 @@ import { loadStoryboardMaterials } from "@/lib/storyboard/load";
 import { promptWithGemini, serverAiCapability, STORYBOARD_SYSTEM } from "@/lib/ai/provider";
 import { aiServiceCapability } from "@/lib/ai/config";
 import { generateStructuredStoryboard } from "@/lib/ai/gemini";
+import { parseStructuredStoryboard } from "@/lib/ai/structured-storyboard";
 import { composeAssistPrompt } from "@/lib/ai/prompt-composer";
 import { assistAction } from "@/lib/storyboard/assist";
 import { STRUCTURED_STORYBOARD_SYSTEM } from "@/lib/storyboard/document";
@@ -40,7 +41,9 @@ import {
   useStillOnStoryboard,
 } from "@/lib/storyboard/commands";
 import { listGenerationJobs } from "@/lib/storyboard/generation";
-import { parseStructuredStoryboard } from "@/lib/ai/structured-storyboard";
+import { loadStoryboardCinematic, analyseStoryboardSource } from "@/lib/storyboard/analyse-source";
+import { addSentinelReferences, addSentinelShotsToStoryboard, selectSentinelShot } from "@/lib/storyboard/sentinel-binding";
+import { parseCinematicShot } from "@/lib/media/cinematic-evidence";
 
 /**
  * GET/POST /api/authority/storyboard
@@ -85,11 +88,15 @@ export async function GET(request: Request) {
   const jobs = work ? await listGenerationJobs({ participantId, workId: work.work_id }) : [];
   const capability = aiServiceCapability();
 
+  const cinematic = work?.cinematic ?? (work ? await loadStoryboardCinematic(work) : null);
   return NextResponse.json({
     body: work?.body ?? materials.body?.body ?? "",
     panel_count: work?.panels.length ?? materials.body?.panel_count ?? 0,
     work,
     jobs,
+    cinematic,
+    selected_panel_id: work?.selection?.panel_id ?? null,
+    selected_shot_id: work?.selection?.shot_id ?? null,
     artifacts: materials.artifacts.map((artifact) => ({
       title: artifact.title,
       output_type: artifact.output_type,
@@ -369,6 +376,83 @@ export async function POST(request: Request) {
       })),
     });
     return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "analyse-sentinel") {
+    try {
+      const result = await analyseStoryboardSource({ work, participantId });
+      const next = await loadStoryboardWorkById({ workId: work.work_id, participantId });
+      return NextResponse.json({
+        work: next ?? work,
+        cinematic: result.analysis,
+        provider: result.provider,
+        session_id: result.sessionId,
+        status: "ready",
+        creates_scene: false,
+        creates_canonical: false,
+      });
+    } catch (caught) {
+      return NextResponse.json({
+        error: caught instanceof Error ? caught.message : "Sentinel could not analyse this source.",
+        creates_scene: false,
+      }, { status: 400 });
+    }
+  }
+
+  if (action === "select-sentinel-shot") {
+    const shot = parseCinematicShot(body.shot);
+    if (!shot) return NextResponse.json({ error: "Sentinel shot was not valid.", creates_scene: false }, { status: 400 });
+    const selected = await selectSentinelShot({ workId: work.work_id, participantId, shot });
+    return NextResponse.json({
+      work: selected.work,
+      selected_panel_id: selected.panelId,
+      selected_shot_id: shot.shot_id,
+      created: selected.created,
+      status: "ready",
+      creates_scene: false,
+      creates_canonical: false,
+    });
+  }
+
+  if (action === "add-sentinel-references") {
+    const shots = (Array.isArray(body.shots) ? body.shots : []).map(parseCinematicShot).filter(Boolean);
+    const playbackId = typeof body.playback_id === "string" ? body.playback_id : work.sources?.[0]?.playback_id;
+    if (!playbackId) return NextResponse.json({ error: "Source playback is required.", creates_scene: false }, { status: 400 });
+    if (!shots.length) return NextResponse.json({ error: "Select at least one Sentinel observation.", creates_scene: false }, { status: 400 });
+    const result = await addSentinelReferences({
+      workId: work.work_id,
+      participantId,
+      shots: shots as NonNullable<ReturnType<typeof parseCinematicShot>>[],
+      playbackId,
+      panelId: typeof body.panel_id === "string" ? body.panel_id : null,
+    });
+    return NextResponse.json({
+      work: result.work,
+      added: result.added,
+      skipped: result.skipped,
+      selected_panel_id: result.panelId,
+      status: "ready",
+      creates_scene: false,
+      creates_canonical: false,
+    });
+  }
+
+  if (action === "add-sentinel-shots") {
+    const shots = (Array.isArray(body.shots) ? body.shots : []).map(parseCinematicShot).filter(Boolean);
+    if (!shots.length) return NextResponse.json({ error: "Select at least one Sentinel observation.", creates_scene: false }, { status: 400 });
+    const result = await addSentinelShotsToStoryboard({
+      workId: work.work_id,
+      participantId,
+      shots: shots as NonNullable<ReturnType<typeof parseCinematicShot>>[],
+    });
+    return NextResponse.json({
+      work: result.work,
+      selected_panel_id: result.panelIds[result.panelIds.length - 1] ?? null,
+      panel_ids: result.panelIds,
+      status: "ready",
+      creates_scene: false,
+      creates_canonical: false,
+    });
   }
 
   if (action === "generate-storyboard" || action === "shot-list") {

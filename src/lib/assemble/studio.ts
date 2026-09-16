@@ -135,7 +135,7 @@ export function creativeSuiteWorkspaceHref(
   sceneId?: string,
 ): string {
   if (workspace === "sentinel") {
-    return withStudioQuery(`/authority/universes/${universeId}/storyboard`, from, { source: "sentinel" });
+    return withStudioQuery(`/authority/universes/${universeId}/sentinel`, from);
   }
   if (workspace === "overview") return creativeSuiteHref(universeId, from);
   if (workspace === "scenes" && sceneId) {

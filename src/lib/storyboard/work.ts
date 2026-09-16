@@ -15,12 +15,16 @@ import type {
 } from "./document";
 import {
   parseStoryboardAssembly,
+  parseStoryboardCinematic,
   parseStoryboardFrame,
+  parseStoryboardSelection,
   parseStoryboardSource,
   type StoryboardAssemblyRecord,
   type StoryboardFrameRecord,
+  type StoryboardSelectionRecord,
   type StoryboardSourceRecord,
 } from "./source";
+import type { CinematicAnalysis } from "../media/cinematic-evidence";
 
 type ServiceClient = ReturnType<typeof getServiceClient>;
 
@@ -100,6 +104,8 @@ function asGenerationMetadata(value: unknown): PanelGenerationMetadata {
   return {
     stills: asEntries(record.stills),
     motion: asEntries(record.motion),
+    sentinel_observation: record.sentinel_observation ?? null,
+    transformation_instruction: typeof record.transformation_instruction === "string" ? record.transformation_instruction : null,
   };
 }
 
@@ -195,6 +201,8 @@ async function loadWorkMaterials(db: ServiceClient, workId: string, participantI
   sources: StoryboardSourceRecord[];
   frames: StoryboardFrameRecord[];
   assembly: StoryboardAssemblyRecord | null;
+  selection: StoryboardSelectionRecord | null;
+  cinematic: CinematicAnalysis | null;
 }> {
   const { data } = await db
     .from("media_intake")
@@ -206,6 +214,8 @@ async function loadWorkMaterials(db: ServiceClient, workId: string, participantI
   const sources: StoryboardSourceRecord[] = [];
   const frames: StoryboardFrameRecord[] = [];
   let assembly: StoryboardAssemblyRecord | null = null;
+  let selection: StoryboardSelectionRecord | null = null;
+  let cinematic: CinematicAnalysis | null = null;
   for (const row of data ?? []) {
     const source = parseStoryboardSource(row.provenance_notes);
     if (source && source.work_id === workId) {
@@ -218,9 +228,16 @@ async function loadWorkMaterials(db: ServiceClient, workId: string, participantI
       continue;
     }
     const parsedAssembly = parseStoryboardAssembly(row.provenance_notes);
-    if (parsedAssembly && parsedAssembly.work_id === workId && !assembly) assembly = parsedAssembly;
+    if (parsedAssembly && parsedAssembly.work_id === workId && !assembly) {
+      assembly = parsedAssembly;
+      continue;
+    }
+    const parsedSelection = parseStoryboardSelection(row.provenance_notes);
+    if (parsedSelection && parsedSelection.work_id === workId && !selection) selection = parsedSelection;
+    const parsedCinematic = parseStoryboardCinematic(row.provenance_notes);
+    if (parsedCinematic && parsedCinematic.work_id === workId && !cinematic) cinematic = parsedCinematic.cinematic;
   }
-  return { sources, frames, assembly };
+  return { sources, frames, assembly, selection, cinematic };
 }
 
 export async function ensureStoryboardWork(input: {
@@ -453,6 +470,7 @@ export async function updateStoryboardPanel(input: {
   panelId: string;
   patch: Partial<Omit<StoryboardPanelRecord, "panel_id" | "work_id" | "creates_scene">>;
   client?: ServiceClient;
+  lock?: boolean;
 }): Promise<StoryboardPanelRecord | null> {
   const db = svc(input.client);
   const { data: panel } = await db.from("storyboard_panel").select("*, storyboard_work!inner(participant_id, universe_id)").eq("panel_id", input.panelId).maybeSingle();
@@ -480,7 +498,7 @@ export async function updateStoryboardPanel(input: {
     "references",
   ]);
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
-  if (Object.keys(input.patch).some((key) => creativeLockFields.has(key))) {
+  if (input.lock !== false && Object.keys(input.patch).some((key) => creativeLockFields.has(key))) {
     patch.user_locked = true;
   }
   const allowed = [
@@ -508,6 +526,7 @@ export async function updateStoryboardPanel(input: {
     "sequence",
     "status",
     "generation_metadata",
+    "source",
   ];
   for (const key of allowed) {
     if (key in input.patch) patch[key] = input.patch[key as keyof typeof input.patch];

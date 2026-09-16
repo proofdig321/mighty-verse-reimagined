@@ -17,7 +17,7 @@ export async function revealStudioInspector(page: Page) {
   }
 }
 
-async function openStudioWorkspace(page: Page, name: "Overview" | "Storyboard" | "Scenes" | "Production" | "2.5D" | "Experience") {
+async function openStudioWorkspace(page: Page, name: "Overview" | "Storyboard" | "Sentinel" | "Scenes" | "Production" | "2.5D Experience" | "Holographic Experience") {
   await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name, exact: true }).click();
 }
 
@@ -50,8 +50,9 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(suiteNav.getByRole("link", { name: "Storyboard", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Production", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "2.5D", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "Experience", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Sentinel", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "2.5D Experience", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Holographic Experience", exact: true })).toBeVisible();
 
   const command = page.locator(".studio-command-grid");
   await expect(command.getByText("Source", { exact: true })).toBeVisible();
@@ -115,10 +116,10 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(production.getByText(/Powerhouse/i).first()).toBeVisible();
   await expect(production.getByText("Proverb").first()).toBeVisible();
 
-  await openStudioWorkspace(page, "2.5D");
+  await openStudioWorkspace(page, "2.5D Experience");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniversePreview}`));
   const preview = page.locator("section[aria-labelledby='universe-preview']");
-  await expect(preview.getByRole("heading", { name: "2.5D Preview" })).toBeVisible();
+  await expect(preview.getByRole("heading", { name: "2.5D Experience" })).toBeVisible();
   await expect(preview.getByRole("button", { name: "2D composition" })).toBeVisible();
   await expect(preview.getByRole("button", { name: "2.5D Studio Preview" })).toBeVisible();
   await preview.getByRole("button", { name: "2D composition" }).click();
@@ -200,7 +201,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
     `#universe-moment-${SCENE_MOMENTS.powerhouse.creativeMomentId}`,
   );
 
-  await openStudioWorkspace(page, "Experience");
+  await openStudioWorkspace(page, "Holographic Experience");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseExperience}`));
   const continuation = page.locator("section[aria-labelledby='universe-experience-continuation']");
   await expect(continuation.getByText("Assemble", { exact: true })).toBeVisible();

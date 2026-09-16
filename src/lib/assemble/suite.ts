@@ -17,10 +17,11 @@ import type { UniverseAssembly, UniverseAssemblyScene } from "./types";
 export const CREATIVE_SUITE_SECTIONS = [
   { id: "overview", label: "Overview", path: "" },
   { id: "storyboard", label: "Storyboard", path: "storyboard" },
+  { id: "sentinel", label: "Sentinel", path: "sentinel" },
   { id: "scenes", label: "Scenes", path: "scenes" },
   { id: "production", label: "Production", path: "production" },
-  { id: "preview", label: "2.5D", path: "preview" },
-  { id: "experience", label: "Experience", path: "experience" },
+  { id: "preview", label: "2.5D Experience", path: "preview" },
+  { id: "experience", label: "Holographic Experience", path: "experience" },
 ] as const;
 
 export type CreativeSuiteSectionId =
@@ -67,11 +68,11 @@ export const STUDIO_HASH_WORKSPACES: Record<string, { path: string; search?: Rec
   "universe-identity": { path: "identity" },
   "universe-source": { path: "" },
   "universe-mural": { path: "" },
-  "universe-sentinel": { path: "storyboard", search: { source: "sentinel" } },
+  "universe-sentinel": { path: "sentinel" },
   "sentinel-storyboard": { path: "storyboard" },
-  "sentinel-animation": { path: "storyboard", search: { source: "sentinel" } },
-  "sentinel-proposals": { path: "storyboard", search: { source: "sentinel" } },
-  "sentinel-authorise": { path: "storyboard", search: { source: "sentinel" } },
+  "sentinel-animation": { path: "sentinel" },
+  "sentinel-proposals": { path: "sentinel" },
+  "sentinel-authorise": { path: "sentinel" },
   "universe-production": { path: "production" },
   "universe-preview": { path: "preview" },
   "universe-scenes": { path: "scenes" },

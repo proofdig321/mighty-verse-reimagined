@@ -1,10 +1,11 @@
 export const dynamic = "force-dynamic";
 
-import { ExperienceContinuation } from "@/components/assemble/experience-continuation";
+import { SentinelEvidencePage } from "@/components/assemble/sentinel-evidence-page";
 import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { mediaInspectHref, creativeSuiteWorkspaceHref, curateSentinelHref } from "@/lib/assemble/studio";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
-export default async function UniverseExperiencePage({
+export default async function UniverseSentinelPage({
   params,
   searchParams,
 }: {
@@ -16,20 +17,25 @@ export default async function UniverseExperiencePage({
   const fromCurate = query.from === "curate";
   const workspace = await requireStudioWorkspace(masterId, fromCurate);
   const title = workspace.data.title ?? "Untitled universe";
+  const from = fromCurate ? "curate" : null;
 
   return (
     <StudioWorkspaceShell
       universeId={workspace.data.master_id}
       title={title}
-      current="experience"
+      current="sentinel"
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
-      workspaceLabel="Holographic Experience"
+      workspaceLabel="Sentinel"
     >
-      <ExperienceContinuation
-        href={`/worlds/${workspace.data.master_id}/holographic`}
-        universeHref={`/worlds/${workspace.data.master_id}`}
+      <SentinelEvidencePage
+        universeId={workspace.data.master_id}
         universeTitle={title}
+        intelligence={workspace.intelligence}
+        canAuthoriseSentinel
+        inspectHref={workspace.inspectAssetId ? mediaInspectHref(workspace.inspectAssetId) : null}
+        previewHref={creativeSuiteWorkspaceHref(workspace.data.master_id, "preview", from)}
+        establishHref={curateSentinelHref(workspace.data.master_id)}
       />
     </StudioWorkspaceShell>
   );

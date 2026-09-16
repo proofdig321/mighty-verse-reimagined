@@ -562,23 +562,27 @@ export async function deriveStoryboardFrame(input: {
   if (input.panelId) {
     const panel = work.panels.find((item) => item.panel_id === input.panelId);
     if (panel) {
-      await updateStoryboardPanel({
-        participantId: input.participantId,
-        panelId: input.panelId,
-        patch: {
-          references: [
-            ...panel.references,
-            {
-              role: "still",
-              label: `${input.sourceTitle} @ ${Math.round(input.timestampMs / 1000)}s`,
-              url: stillUrl,
-              time_ms: input.timestampMs,
-              source_title: input.sourceTitle,
-            },
-          ],
-        },
-        client: db,
-      });
+      const exists = panel.references.some((reference) => reference.url === stillUrl && reference.time_ms === input.timestampMs);
+      if (!exists) {
+        await updateStoryboardPanel({
+          participantId: input.participantId,
+          panelId: input.panelId,
+          lock: false,
+          patch: {
+            references: [
+              ...panel.references,
+              {
+                role: "still",
+                label: `${input.sourceTitle} @ ${Math.round(input.timestampMs / 1000)}s`,
+                url: stillUrl,
+                time_ms: input.timestampMs,
+                source_title: input.sourceTitle,
+              },
+            ],
+          },
+          client: db,
+        });
+      }
     }
   }
   return (await loadStoryboardWorkById(input)) as StoryboardWorkRecord;

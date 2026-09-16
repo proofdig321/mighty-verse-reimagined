@@ -35,9 +35,33 @@ export type ArtifactHistoryEntry = {
   kind: "still" | "motion";
 };
 
+export type SentinelObservationRecord = {
+  shot_id: string;
+  start_ms: number;
+  end_ms: number;
+  time_ms: number;
+  what_happens: string;
+  camera: string;
+  camera_explanation: string | null;
+  framing: string;
+  motion: string;
+  action: string;
+  subjects: string;
+  environment: string;
+  lighting: string | null;
+  transition: string;
+  narrative: string | null;
+  confidence: "high" | "medium" | "low";
+  analysis_mode: "gemini-sampled-frames" | "sampled-fallback";
+  still_url: string | null;
+  creates_scene: false;
+};
+
 export type PanelGenerationMetadata = {
   stills?: ArtifactHistoryEntry[];
   motion?: ArtifactHistoryEntry[];
+  sentinel_observation?: SentinelObservationRecord | null;
+  transformation_instruction?: string | null;
 };
 
 export type StoryboardPanelRecord = {
@@ -94,6 +118,8 @@ export type StoryboardWorkRecord = {
   sources?: import("./source").StoryboardSourceRecord[];
   frames?: import("./source").StoryboardFrameRecord[];
   assembly?: import("./source").StoryboardAssemblyRecord | null;
+  selection?: import("./source").StoryboardSelectionRecord | null;
+  cinematic?: import("../media/cinematic-evidence").CinematicAnalysis | null;
   creates_scene: false;
   creates_canonical: false;
 };

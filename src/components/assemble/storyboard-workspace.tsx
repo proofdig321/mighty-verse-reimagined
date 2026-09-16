@@ -26,6 +26,7 @@ import { ASSIST_ACTIONS } from "@/lib/storyboard/assist";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import { jobUiLabel, type GenerationJobKind } from "@/lib/ai/jobs";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
+import { SentinelWorkspace } from "./sentinel-workspace";
 import { AssociateStoryboard } from "./associate-storyboard";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardResetDialog } from "./storyboard-reset-dialog";
@@ -33,6 +34,8 @@ import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
 import { deriveStoryboardProgress, storyboardOperatorChainLabel } from "@/lib/assemble/storyboard-progress";
 import { cn } from "@/lib/utils";
+import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
+import { type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
 import {
   emptyHistory,
   historyStorageKey,
@@ -149,6 +152,12 @@ export function StoryboardWorkspace({
   const [resetOpen, setResetOpen] = useState(false);
   const [assistProposal, setAssistProposal] = useState<string | null>(null);
   const [assemblyItems, setAssemblyItems] = useState<AuthoringSnapshot["assembly"]>([]);
+  const [cinematic, setCinematic] = useState<CinematicAnalysis | null>(null);
+  const [cinematicShotId, setCinematicShotId] = useState<string | null>(null);
+  const [bulkShotIds, setBulkShotIds] = useState<string[]>([]);
+  const [analysing, setAnalysing] = useState(false);
+  const [sentinelMessage, setSentinelMessage] = useState<string | null>(null);
+  const [sentinelError, setSentinelError] = useState<string | null>(null);
   const savedSnapshot = useRef<AuthoringSnapshot | null>(null);
   const autosaveTimer = useRef<number | null>(null);
 
@@ -230,8 +239,10 @@ export function StoryboardWorkspace({
       const response = await fetch(`/api/authority/storyboard?${query.toString()}`);
       const payload = await response.json().catch(() => ({}));
       if (payload.work) {
-        applyWork(payload.work);
+        applyWork(payload.work, typeof payload.selected_panel_id === "string" ? payload.selected_panel_id : null);
       }
+      if (payload.cinematic) setCinematic(payload.cinematic);
+      if (typeof payload.selected_shot_id === "string") setCinematicShotId(payload.selected_shot_id);
       if (Array.isArray(payload.jobs)) setJobs(payload.jobs);
       if (Array.isArray(payload.artifacts)) setGenerated(payload.artifacts);
       if (payload.capability) setCapability(payload.capability);
@@ -254,7 +265,7 @@ export function StoryboardWorkspace({
           status: payload.status === "completed" ? "ready" : payload.status,
           message: payload.status === "completed"
             ? "Generation completed. The artifact is not a Scene."
-            : payload.error?.message ?? "Generation did not complete.",
+            : operatorGenerationMessage(payload.error?.message ?? "Generation did not complete.").operator,
         });
       }
     }, 4000);
@@ -299,21 +310,26 @@ export function StoryboardWorkspace({
     });
   }
 
-  function applyWork(next: StoryboardWorkRecord) {
+  function applyWork(next: StoryboardWorkRecord, preferredPanelId?: string | null) {
     setWork(next);
     setWorkTitle(next.title);
     if (next.body) setScript(next.body);
     if (next.assembly?.items) setAssemblyItems(next.assembly.items);
+    if (next.cinematic) setCinematic(next.cinematic);
     savedSnapshot.current = snapshotOf(next, next.body, next.assembly?.items ?? []);
     if (typeof window !== "undefined") {
       setHistory(parseHistory(window.localStorage.getItem(historyStorageKey(next.work_id))));
     }
+    const preferred = preferredPanelId ?? next.selection?.panel_id ?? null;
+    if (preferred) setSelectedId(preferred);
+    if (next.selection?.shot_id) setCinematicShotId(next.selection.shot_id);
     if (next.panels.length) {
       setScriptPanels([]);
-      setSelectedId((current) => current ?? next.panels[0]?.panel_id ?? null);
-      if (next.panels[0]) {
-        setDraftPanel(next.panels[0]);
-        setFirstFrame(next.panels[0].still_url ?? "");
+      setSelectedId((current) => preferred ?? current ?? next.panels[0]?.panel_id ?? null);
+      const active = next.panels.find((panel) => panel.panel_id === (preferred ?? selectedId)) ?? next.panels[0];
+      if (active) {
+        setDraftPanel(active);
+        setFirstFrame(active.still_url ?? "");
       }
       const stills: Record<string, string> = {};
       for (const panel of next.panels) {
@@ -348,7 +364,7 @@ export function StoryboardWorkspace({
       });
       setHistory(nextHistory);
       window.localStorage.setItem(historyStorageKey(result.work.work_id), serializeHistory(nextHistory));
-      applyWork(result.work);
+      applyWork(result.work, typeof result.selected_panel_id === "string" ? result.selected_panel_id : null);
     }
     return result;
   }
@@ -522,7 +538,7 @@ export function StoryboardWorkspace({
         still_urls: generated.map((artifact) => artifact.still_url).filter(Boolean),
         playback_ids: generated.map((artifact) => artifact.playback_id).filter(Boolean),
         extension_video_uri: extra.extension_video_uri ?? selectedJob?.result?.provider_video_uri ?? undefined,
-        instruction,
+        instruction: extra.instruction ?? selectedPersisted?.generation_metadata?.transformation_instruction ?? instruction,
         ...extra,
       }),
     });
@@ -538,7 +554,7 @@ export function StoryboardWorkspace({
     if ((!response.ok && response.status !== 202) || honestFailure) {
       setMediaState({
         status: jobStatus === "unavailable" || jobStatus === "needs_configuration" || jobStatus === "blocked" ? jobStatus : "failed",
-        message: payload.error?.message ?? payload.error ?? payload.message ?? "Generation did not complete.",
+        message: operatorGenerationMessage(payload.error?.message ?? payload.error ?? payload.message ?? "Generation did not complete.").operator,
       });
       return;
     }
@@ -634,7 +650,76 @@ export function StoryboardWorkspace({
     if (payload.work?.panels?.[0]) setTab("panels");
   }
 
-  async function useStill(reference: { asset_id: string; title: string; still_url: string | null; time_ms: number }) {
+  const cinematicShots = cinematic?.shots ?? [];
+  const bulkShots = cinematicShots.filter((shot) => bulkShotIds.includes(shot.shot_id));
+  const selectedObservation = selectedPersisted?.generation_metadata?.sentinel_observation ?? null;
+  const selectedFrame = (work?.frames ?? []).find((frame) => frame.panel_id === selectedId) ?? work?.frames?.[0] ?? null;
+  const transformationInstruction = selectedPersisted?.generation_metadata?.transformation_instruction
+    ?? (draftPanel.generation_metadata?.transformation_instruction ?? null);
+
+  async function analyseSentinel() {
+    if (!work) {
+      setSentinelError("Save or create the storyboard before analysing source media.");
+      return;
+    }
+    setAnalysing(true);
+    setSentinelError(null);
+    const result = await mutate("Analyse Sentinel", "analyse-sentinel", {});
+    setAnalysing(false);
+    if (result?.cinematic) {
+      setCinematic(result.cinematic as CinematicAnalysis);
+      setSentinelMessage(
+        result.provider === "gemini"
+          ? "Gemini described sampled Mux frames across the attached source. Sentinel remains observational."
+          : "Sampled-frame fallback. Full video-file understanding was not used.",
+      );
+    } else if (result?.error) {
+      setSentinelError(String(result.error));
+    }
+  }
+
+  async function selectCinematicShot(shot: CinematicShot) {
+    setCinematicShotId(shot.shot_id);
+    const result = await mutate("Select Sentinel shot", "select-sentinel-shot", { shot }, "selection");
+    if (typeof result?.selected_panel_id === "string") setSelectedId(result.selected_panel_id);
+    if (typeof result?.selected_shot_id === "string") setCinematicShotId(result.selected_shot_id);
+    if (result?.work) {
+      const panel = (result.work as StoryboardWorkRecord).panels.find((item) => item.panel_id === result.selected_panel_id);
+      if (panel) {
+        setDraftPanel(panel);
+        setFirstFrame(panel.still_url ?? "");
+      }
+    }
+    setSentinelMessage(`Selected Shot ${String(shot.sequence).padStart(2, "0")}. Storyboard panel and inspector now use this observation.`);
+  }
+
+  async function addCinematicReferences(shots: CinematicShot[], panelId?: string | null) {
+    const playbackId = work?.sources?.[0]?.playback_id;
+    if (!playbackId) {
+      setSentinelError("Attach source media before creating references.");
+      return;
+    }
+    const result = await mutate("Add Sentinel references", "add-sentinel-references", {
+      shots,
+      playback_id: playbackId,
+      panel_id: panelId ?? selectedPersisted?.panel_id ?? null,
+    }, "selection");
+    if (result) {
+      setSentinelMessage(`Added ${result.added ?? 0} to References${result.skipped ? ` · skipped ${result.skipped} duplicate${result.skipped === 1 ? "" : "s"}` : ""}.`);
+      if ((result.added ?? 0) > 0) setTab("references");
+    }
+  }
+
+  async function addCinematicShots(shots: CinematicShot[]) {
+    const result = await mutate("Add Sentinel shots", "add-sentinel-shots", { shots }, "selection");
+    if (Array.isArray(result?.panel_ids)) {
+      setSentinelMessage(`Added ${result.panel_ids.length} observation${result.panel_ids.length === 1 ? "" : "s"} to the storyboard.`);
+      const last = result.panel_ids[result.panel_ids.length - 1];
+      if (typeof last === "string") setSelectedId(last);
+    }
+  }
+
+  async function attachReferenceStill(reference: { asset_id: string; title: string; still_url: string | null; time_ms: number }) {
     if (!reference.still_url) {
       setMediaState({ status: "failed", message: "That reference has no still yet." });
       return;
@@ -1006,6 +1091,7 @@ export function StoryboardWorkspace({
                   <p className="text-xs text-muted-foreground">
                     Script is a creative input. Generating panels does not create Scenes or change canonical timing.
                   </p>
+                  <StageNav tab={tab} onTab={setTab} />
                 </section>
               </TabsContent>
 
@@ -1061,23 +1147,55 @@ export function StoryboardWorkspace({
                 <p className="text-xs text-muted-foreground">
                   Chrome Prompt API is the intended local path. Gemini is the server path. AI output remains a proposal until you save it.
                 </p>
+                <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
 
-              <TabsContent value="sentinel" className="storyboard-tab-panel">
-                <section data-column="sentinel" aria-labelledby="universe-sentinel" className="space-y-3">
+              <TabsContent value="sentinel" className="storyboard-tab-panel space-y-4">
+                <section data-column="sentinel" aria-labelledby="universe-sentinel" className="space-y-4">
+                  <div className="suite-section-head">
+                    <h2 id="universe-sentinel" className="suite-section-title">
+                      Sentinel
+                    </h2>
+                    <p className="suite-section-note">
+                      Sentinel answers what is happening in the attached source: timing, camera, subjects, motion, environment, and transitions.
+                      It does not decide what the scene should become, and it does not create Scenes.
+                    </p>
+                  </div>
+                  <SentinelWorkspace
+                    source={work?.sources?.[0] ?? null}
+                    analysis={cinematic}
+                    selectedShotId={cinematicShotId}
+                    selectedIds={bulkShotIds}
+                    selectedCountLabel={`${bulkShotIds.length} observation${bulkShotIds.length === 1 ? "" : "s"} selected`}
+                    analysing={analysing}
+                    message={sentinelMessage}
+                    error={sentinelError}
+                    onAnalyse={() => void analyseSentinel()}
+                    onSelectShot={(shot) => void selectCinematicShot(shot)}
+                    onToggleShot={(shotId) => {
+                      setBulkShotIds((current) => current.includes(shotId) ? current.filter((id) => id !== shotId) : [...current, shotId]);
+                    }}
+                    onSelectAll={() => setBulkShotIds(cinematicShots.map((shot) => shot.shot_id))}
+                    onClearSelection={() => setBulkShotIds([])}
+                    onAddReferences={() => void addCinematicReferences(bulkShots)}
+                    onAddToStoryboard={() => void addCinematicShots(bulkShots)}
+                    onUseSelected={() => {
+                      const shot = cinematicShots.find((item) => item.shot_id === cinematicShotId) ?? cinematicShots[0];
+                      if (shot) void addCinematicReferences([shot], selectedPersisted?.panel_id ?? null);
+                    }}
+                    onAssociatePanel={() => void addCinematicReferences(bulkShots, selectedPersisted?.panel_id ?? null)}
+                    associateEnabled={Boolean(selectedPersisted)}
+                  />
                   {intelligence && universeId ? (
-                    <div className="suite-section">
-                      <div className="suite-section-head">
-                        <h2 id="universe-sentinel" className="suite-section-title">
-                          Sentinel
-                        </h2>
-                        <p className="suite-section-note">
-                          Sentinel is observational evidence: overview, timed segments, subjects, frame context, and uncertainty.
-                          It does not author transformations or create Scenes. Import copies observed stills onto storyboard panels.
-                        </p>
-                      </div>
+                    <div className="space-y-3" data-universe-evidence="true">
+                      <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                        Universe evidence
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Canonical Universe inspection remains separate from the attached Storyboard source. Authorising windows never creates Scenes.
+                      </p>
                       <Button type="button" size="sm" variant="outline" onClick={() => void importSentinel()}>
-                        Import evidence as storyboard panels
+                        Import Universe evidence as storyboard panels
                       </Button>
                       {establishHref ? (
                         <Link href={establishHref} className={cn(buttonVariants({ size: "sm" }))}>
@@ -1094,19 +1212,24 @@ export function StoryboardWorkspace({
                         establishHref={establishHref}
                       />
                     </div>
-                  ) : (
-                    <>
-                      <h2 id="universe-sentinel" className="suite-section-title">
-                        Sentinel
-                      </h2>
-                      <p className="suite-empty">No Sentinel evidence is available yet. Inspect the bound source to observe it.</p>
-                    </>
-                  )}
+                  ) : null}
+                  <StageNav tab={tab} onTab={setTab} />
                 </section>
               </TabsContent>
 
               <TabsContent value="references" className="storyboard-tab-panel space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">References</p>
+                <p className="text-xs text-muted-foreground">
+                  Source Reference is the material Sentinel and the creator deliberately carry forward. Duplicates of the same playback and timestamp are skipped.
+                </p>
+                {(work?.frames?.length ?? 0) === 0 && references.length === 0 && generated.length === 0 ? (
+                  <div className="space-y-2">
+                    <p className="suite-empty">No references selected yet.</p>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>
+                      Choose from Sentinel
+                    </Button>
+                  </div>
+                ) : null}
                 <StoryboardSourceMedia
                   workId={work?.work_id ?? workId}
                   sources={work?.sources ?? []}
@@ -1151,7 +1274,7 @@ export function StoryboardWorkspace({
                               size="sm"
                               variant="outline"
                               className="h-7 w-full text-[10px]"
-                              onClick={() => void useStill(reference)}
+                              onClick={() => void attachReferenceStill(reference)}
                             >
                               Use on storyboard
                             </Button>
@@ -1161,9 +1284,10 @@ export function StoryboardWorkspace({
                           </div>
                         ) : null}
                       </li>
-                    ))}
+                    )                    )}
                   </ul>
                 )}
+                <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="panels" className="storyboard-tab-panel space-y-3">
                 <div className="flex flex-wrap gap-2">
@@ -1190,10 +1314,23 @@ export function StoryboardWorkspace({
                   }}>Move later</Button>
                 </div>
                 <p className="text-xs text-muted-foreground">Panels are creative objects, not Scenes. Reorder is undoable.</p>
+                <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="stills" className="storyboard-tab-panel space-y-3">
                 <p className="text-xs text-muted-foreground">Generate a still for the selected panel. Previous successful stills stay in history.</p>
-                <Button type="button" size="sm" onClick={() => void generateMedia("still")}>Generate still</Button>
+                {!selectedPersisted ? (
+                  <p className="suite-empty">Select a panel from Sentinel or Panels before generating a still.</p>
+                ) : !(selectedPersisted.references.length || (work?.frames?.length ?? 0)) ? (
+                  <div className="space-y-2">
+                    <p className="suite-empty">No references selected yet.</p>
+                    <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>Choose from Sentinel</Button>
+                  </div>
+                ) : !transformationInstruction && !selectedPersisted.action ? (
+                  <p className="suite-empty">Reference ready. Define what should change.</p>
+                ) : stillJob && (stillJob.status === "failed" || stillJob.status === "unavailable" || stillJob.status === "blocked") ? (
+                  <GenerationFailure job={stillJob} />
+                ) : null}
+                <Button type="button" size="sm" onClick={() => void generateMedia("still")} disabled={!selectedPersisted}>Generate still</Button>
                 <StatusLine state={mediaState} />
                 {selectedPersisted?.generation_metadata?.stills?.length ? (
                   <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -1209,9 +1346,15 @@ export function StoryboardWorkspace({
                     ))}
                   </ul>
                 ) : <p className="suite-empty">No still history on this panel yet.</p>}
+                <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="motion" className="storyboard-tab-panel space-y-3">
                 <p className="text-xs text-muted-foreground">Motion uses the configured Veo model. Unsupported modes stay explained, not mysterious.</p>
+                {!selected?.still ? (
+                  <p className="suite-empty">Generate or select a still before motion can run.</p>
+                ) : motionJob && (motionJob.status === "failed" || motionJob.status === "unavailable" || motionJob.status === "blocked") ? (
+                  <GenerationFailure job={motionJob} />
+                ) : null}
                 {([
                   ["motion", "Text to video"],
                   ["animate-still", "Image to video"],
@@ -1236,9 +1379,11 @@ export function StoryboardWorkspace({
                   );
                 })}
                 <StatusLine state={mediaState} />
+                <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
               <TabsContent value="assembly" className="storyboard-tab-panel space-y-3">
                 <p className="text-xs text-muted-foreground">Storyboard assembly is not the public Experience. Select generated artifacts, order them, and save.</p>
+                {assemblyItems.length === 0 ? <p className="suite-empty">No assembly items yet. Add a still or motion from the selected panel.</p> : null}
                 <Button type="button" size="sm" onClick={() => {
                   if (!selected) return;
                   const next = [...assemblyItems, {
@@ -1265,6 +1410,7 @@ export function StoryboardWorkspace({
                     </li>
                   ))}
                 </ol>
+                <StageNav tab={tab} onTab={setTab} />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -1408,16 +1554,62 @@ export function StoryboardWorkspace({
           {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
           {selectedPersisted ? (
             <div className="mt-3 grid gap-2">
+              {selectedObservation || selectedFrame ? (
+                <div className="rounded-md border border-border p-3 text-sm" data-source-reference="true">
+                  <p className="suite-kicker">Source Reference</p>
+                  <p className="font-medium">
+                    {selectedObservation ? `Shot · ${formatTimelineMs(selectedObservation.start_ms)} – ${formatTimelineMs(selectedObservation.end_ms)}` : selectedFrame?.source_title}
+                    {selectedFrame ? ` · ${formatTimelineMs(selectedFrame.timestamp_ms)}` : ""}
+                  </p>
+                  {selectedObservation ? (
+                    <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
+                      <div><dt className="inline font-medium text-foreground">Observed subject </dt><dd className="inline">{selectedObservation.subjects || "Unknown"}</dd></div>
+                      <div><dt className="inline font-medium text-foreground">Observed action </dt><dd className="inline">{selectedObservation.action}</dd></div>
+                      <div><dt className="inline font-medium text-foreground">Camera </dt><dd className="inline">{selectedObservation.camera_explanation || selectedObservation.camera} · {selectedObservation.framing}</dd></div>
+                      <div><dt className="inline font-medium text-foreground">Confidence </dt><dd className="inline capitalize">{selectedObservation.confidence}</dd></div>
+                    </dl>
+                  ) : null}
+                  <p className="mt-2 text-[11px] text-muted-foreground">Sentinel observation is kept when you edit the authorised fields.</p>
+                </div>
+              ) : (
+                <p className="suite-empty">No source reference on this panel yet. Choose from Sentinel.</p>
+              )}
               <Label htmlFor="panel-title">Title</Label>
               <Input id="panel-title" value={editorPanel.title ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, title: event.target.value })} />
-              <Label htmlFor="panel-action">Transformation instruction</Label>
-              <Textarea id="panel-action" className="min-h-20" value={editorPanel.action ?? editorPanel.description ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value, description: event.target.value })} placeholder="Write the transformation yourself. Sentinel does not author this." />
+              <Label htmlFor="panel-action">Observed action</Label>
+              <Textarea id="panel-action" className="min-h-16" value={editorPanel.action ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value })} placeholder="Correct Sentinel’s observed action if needed." />
+              <Label htmlFor="panel-transform">Transformation instruction</Label>
+              <Textarea
+                id="panel-transform"
+                className="min-h-20"
+                value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
+                onChange={(event) => setDraftPanel({
+                  ...selectedPersisted,
+                  ...draftPanel,
+                  panel_id: selectedPersisted.panel_id,
+                  generation_metadata: {
+                    ...selectedPersisted.generation_metadata,
+                    ...draftPanel.generation_metadata,
+                    transformation_instruction: event.target.value,
+                  },
+                })}
+                placeholder="Preserve camera movement, choreography and spatial relationship. Write the creative change. Sentinel does not author this."
+              />
               <Label htmlFor="panel-intent">Narrative intent</Label>
               <Input id="panel-intent" value={editorPanel.narrative_purpose ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, narrative_purpose: event.target.value })} />
               <Label htmlFor="panel-camera">Camera</Label>
               <Input id="panel-camera" value={editorPanel.camera ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera: event.target.value })} />
+              {selectedObservation && selectedPersisted.user_locked && selectedObservation.camera !== (editorPanel.camera_movement ?? editorPanel.camera) ? (
+                <p className="text-[11px] text-muted-foreground">Sentinel observed: {selectedObservation.camera}. Creator authorised: {editorPanel.camera_movement || editorPanel.camera}.</p>
+              ) : null}
               <Label htmlFor="panel-movement">Movement</Label>
               <Input id="panel-movement" value={editorPanel.camera_movement ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera_movement: event.target.value })} />
+              <Label htmlFor="panel-framing">Framing</Label>
+              <Input id="panel-framing" value={editorPanel.framing ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, framing: event.target.value })} />
+              <Label htmlFor="panel-environment">Environment</Label>
+              <Input id="panel-environment" value={editorPanel.environment ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, environment: event.target.value })} />
+              <Label htmlFor="panel-characters">Subjects</Label>
+              <Input id="panel-characters" value={editorPanel.characters ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, characters: event.target.value })} />
               <Label htmlFor="panel-transition">Transition</Label>
               <Input id="panel-transition" value={editorPanel.transition ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, transition: event.target.value })} />
               <Label htmlFor="panel-duration">Duration (ms)</Label>
@@ -1439,8 +1631,8 @@ export function StoryboardWorkspace({
               <p className="text-xs" data-generation-status={selectedJob.status}>
                 {jobUiLabel(selectedJob.status as never)}
                 {selectedJob.progress != null ? ` · ${selectedJob.progress}%` : ""}
-                {selectedJob.error?.message ? ` · ${selectedJob.error.message}` : ""}
               </p>
+              {selectedJob.error?.message ? <GenerationFailure job={selectedJob} /> : null}
               <div className="flex flex-wrap gap-2">
                 {selectedJob.retryable || selectedJob.status === "failed" || selectedJob.status === "unavailable" ? (
                   <Button type="button" size="sm" variant="outline" onClick={() => void fetch(`/api/authority/storyboard/jobs/${selectedJob.job_id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "retry" }) }).then(async (response) => {
@@ -1491,51 +1683,61 @@ export function StoryboardWorkspace({
                 <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
                   2.5D Experience
                 </Link>
+                <Link href={creativeSuiteWorkspaceHref(universeId, "experience")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                  Holographic Experience
+                </Link>
               </>
             ) : null}
           </div>
           <details className="mt-3" data-storyboard-provenance="true">
             <summary className="cursor-pointer text-xs text-muted-foreground">Provenance</summary>
-            <dl className="mt-2 grid gap-1 text-[11px] text-muted-foreground">
-              <div className="flex justify-between gap-3">
-                <dt>Source</dt>
-                <dd>{work?.sources?.[0]?.title || "None attached"}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Sentinel</dt>
-                <dd>{selectedSentinel ? `${selectedSentinel.title} · ${formatTimelineMs(selectedSentinel.time_ms)}` : "No selected observation"}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Reference</dt>
-                <dd>{selectedPersisted?.references[0]?.label || work?.frames?.[0]?.source_title || "None"}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Transformation</dt>
-                <dd>{(editorPanel.action || editorPanel.description || "Write this yourself").slice(0, 80)}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Still</dt>
-                <dd>{stillJob ? jobUiLabel(stillJob.status as never) : selected?.still ? "Attached" : "None"}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Motion</dt>
-                <dd>{motionJob ? jobUiLabel(motionJob.status as never) : selected?.endpoint ? "Attached" : "None"}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Assembly</dt>
-                <dd>{work?.assembly?.items?.length ? `${work.assembly.items.length} item${work.assembly.items.length === 1 ? "" : "s"}` : "None"}</dd>
-              </div>
-              <div className="flex justify-between gap-3">
-                <dt>Canonical</dt>
-                <dd>creates_scene = false</dd>
-              </div>
-            </dl>
+            <ol className="mt-2 grid gap-2 text-[11px] text-muted-foreground">
+              <li>
+                <p className="font-medium text-foreground">Source</p>
+                <p>{work?.sources?.[0]?.title || "None attached"}{work?.sources?.[0]?.playback_id ? ` · Mux ${work.sources[0].playback_id}` : ""}</p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Sentinel</p>
+                <p>
+                  {selectedObservation
+                    ? `${formatTimelineMs(selectedObservation.start_ms)} – ${formatTimelineMs(selectedObservation.end_ms)} · ${selectedObservation.what_happens}`
+                    : cinematicShotId
+                      ? `Selected ${cinematicShotId}`
+                      : "No selected observation"}
+                </p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Reference</p>
+                <p>{selectedPersisted?.references[0]?.label || selectedFrame?.source_title || "None"}{selectedFrame ? ` · ${formatTimelineMs(selectedFrame.timestamp_ms)}` : ""}</p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Transformation</p>
+                <p>{(transformationInstruction || editorPanel.generation_metadata?.transformation_instruction || "Write this yourself").slice(0, 160)}</p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Generation</p>
+                <p>{selectedJob ? `${selectedJob.kind} · ${jobUiLabel(selectedJob.status as never)}` : "None"}</p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Media</p>
+                <p>{selectedJob?.result?.playback_id ? `Mux ${selectedJob.result.playback_id}` : selected?.still ? "Still attached" : "None"}</p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Assembly</p>
+                <p>{work?.assembly?.items?.length ? `${work.assembly.items.length} item${work.assembly.items.length === 1 ? "" : "s"}` : "None"}</p>
+              </li>
+              <li>
+                <p className="font-medium text-foreground">Canonical</p>
+                <p>creates_scene = false</p>
+              </li>
+            </ol>
           </details>
           <details className="mt-3">
             <summary className="cursor-pointer text-xs text-muted-foreground">Technical inspector</summary>
             <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-              work {work?.work_id ?? "—"} · panel {selectedId ?? "—"} · job {selectedJob?.job_id ?? "—"}
+              work {work?.work_id ?? "—"} · panel {selectedId ?? "—"} · shot {cinematicShotId ?? "—"} · job {selectedJob?.job_id ?? "—"}
               {selectedJob?.result?.playback_id ? ` · mux ${selectedJob.result.playback_id}` : ""}
+              {selectedJob?.error?.message ? ` · ${selectedJob.error.message}` : ""}
               {capability?.models ? ` · text ${capability.models.text} · image ${capability.models.image} · video ${capability.models.video}` : ""}
             </p>
             <button type="button" className="sr-only" onClick={() => setInspectorOpen(!inspectorOpen)}>
@@ -1562,6 +1764,50 @@ function StatusLine({ state }: { state: GenerationState }) {
     <p className="text-xs text-muted-foreground" data-generation-status={state.status}>
       {label}. {state.message}
     </p>
+  );
+}
+
+function GenerationFailure({ job }: { job: JobCard }) {
+  const copy = operatorGenerationMessage(job.error?.message);
+  return (
+    <div className="space-y-1" data-generation-failure="true">
+      <p className="text-sm text-foreground">{copy.operator}</p>
+      <details>
+        <summary className="cursor-pointer text-xs text-muted-foreground">Technical details</summary>
+        <p className="mt-1 font-mono text-[11px] text-muted-foreground">{copy.technical}</p>
+      </details>
+    </div>
+  );
+}
+
+const STAGE_ORDER: { id: MaterialTab; label: string }[] = [
+  { id: "script", label: "Script" },
+  { id: "sentinel", label: "Sentinel" },
+  { id: "references", label: "References" },
+  { id: "panels", label: "Panels" },
+  { id: "stills", label: "Stills" },
+  { id: "motion", label: "Motion" },
+  { id: "assembly", label: "Assembly" },
+];
+
+function StageNav({ tab, onTab }: { tab: MaterialTab; onTab: (next: MaterialTab) => void }) {
+  const index = STAGE_ORDER.findIndex((item) => item.id === tab);
+  const previous = index > 0 ? STAGE_ORDER[index - 1] : null;
+  const next = index >= 0 && index < STAGE_ORDER.length - 1 ? STAGE_ORDER[index + 1] : null;
+  if (!previous && !next) return null;
+  return (
+    <div className="flex flex-wrap gap-2 pt-2">
+      {previous ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => onTab(previous.id)}>
+          Previous · {previous.label}
+        </Button>
+      ) : null}
+      {next ? (
+        <Button type="button" size="sm" variant="outline" onClick={() => onTab(next.id)}>
+          Next · {next.label}
+        </Button>
+      ) : null}
+    </div>
   );
 }
 

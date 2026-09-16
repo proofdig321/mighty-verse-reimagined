@@ -3,9 +3,13 @@
  * Reuses media_intake provenance. Never creates Scenes.
  */
 
+import { parseCinematicAnalysis, type CinematicAnalysis } from "../media/cinematic-evidence";
+
 export const STORYBOARD_SOURCE_KIND = "storyboard-source";
 export const STORYBOARD_FRAME_KIND = "storyboard-frame-reference";
 export const STORYBOARD_ASSEMBLY_KIND = "storyboard-assembly";
+export const STORYBOARD_SELECTION_KIND = "storyboard-selection";
+export const STORYBOARD_CINEMATIC_KIND = "storyboard-cinematic";
 
 export type StoryboardSourceKind = "source" | "reference" | "generated";
 
@@ -50,6 +54,23 @@ export type StoryboardAssemblyRecord = {
     playback_id?: string | null;
     endpoint?: string | null;
   }>;
+  creates_scene: false;
+  creates_canonical: false;
+};
+
+export type StoryboardSelectionRecord = {
+  kind: typeof STORYBOARD_SELECTION_KIND;
+  work_id: string;
+  shot_id: string;
+  panel_id: string | null;
+  creates_scene: false;
+  creates_canonical: false;
+};
+
+export type StoryboardCinematicRecord = {
+  kind: typeof STORYBOARD_CINEMATIC_KIND;
+  work_id: string;
+  cinematic: CinematicAnalysis;
   creates_scene: false;
   creates_canonical: false;
 };
@@ -147,6 +168,66 @@ export function storyboardAssemblyNotes(input: Omit<StoryboardAssemblyRecord, "k
   const provenance: StoryboardAssemblyRecord = {
     kind: STORYBOARD_ASSEMBLY_KIND,
     ...input,
+    creates_scene: false,
+    creates_canonical: false,
+  };
+  return JSON.stringify(provenance);
+}
+
+export function parseStoryboardSelection(value: string | null | undefined): StoryboardSelectionRecord | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<StoryboardSelectionRecord>;
+    if (parsed.kind !== STORYBOARD_SELECTION_KIND) return null;
+    if (typeof parsed.work_id !== "string" || typeof parsed.shot_id !== "string") return null;
+    return {
+      kind: STORYBOARD_SELECTION_KIND,
+      work_id: parsed.work_id,
+      shot_id: parsed.shot_id,
+      panel_id: typeof parsed.panel_id === "string" ? parsed.panel_id : null,
+      creates_scene: false,
+      creates_canonical: false,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function storyboardSelectionNotes(input: Omit<StoryboardSelectionRecord, "kind" | "creates_scene" | "creates_canonical">): string {
+  const provenance: StoryboardSelectionRecord = {
+    kind: STORYBOARD_SELECTION_KIND,
+    ...input,
+    creates_scene: false,
+    creates_canonical: false,
+  };
+  return JSON.stringify(provenance);
+}
+
+export function parseStoryboardCinematic(value: string | null | undefined): StoryboardCinematicRecord | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Partial<StoryboardCinematicRecord>;
+    if (parsed.kind !== STORYBOARD_CINEMATIC_KIND) return null;
+    if (typeof parsed.work_id !== "string") return null;
+    const cinematic = parseCinematicAnalysis(parsed.cinematic);
+    if (!cinematic) return null;
+    return {
+      kind: STORYBOARD_CINEMATIC_KIND,
+      work_id: parsed.work_id,
+      cinematic,
+      creates_scene: false,
+      creates_canonical: false,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function storyboardCinematicNotes(input: { work_id: string; cinematic: CinematicAnalysis }): string {
+  const provenance: StoryboardCinematicRecord = {
+    kind: STORYBOARD_CINEMATIC_KIND,
+    work_id: input.work_id,
+    cinematic: input.cinematic,
     creates_scene: false,
     creates_canonical: false,
   };

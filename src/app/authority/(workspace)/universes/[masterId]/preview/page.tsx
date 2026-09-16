@@ -30,12 +30,12 @@ export default async function UniversePreviewPage({
       current="preview"
       suiteHref={workspace.suiteHref}
       fromCurate={fromCurate}
-      workspaceLabel="2.5D"
+      workspaceLabel="2.5D Experience"
     >
       <section className="suite-section" aria-labelledby="universe-preview">
         <div className="suite-section-head">
           <h2 id="universe-preview" className="suite-section-title">
-            2.5D Preview
+            2.5D Experience
           </h2>
         </div>
         <StudioPreview

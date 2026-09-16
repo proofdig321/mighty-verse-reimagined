@@ -131,6 +131,88 @@ export async function generateGeminiText(input: {
   };
 }
 
+export async function generateCinematicFromParts(input: {
+  system: string;
+  prompt: string;
+  images: { mimeType: string; data: string }[];
+}): Promise<{ ok: true; provider: "gemini"; model: string; json: unknown; creates_canonical: false } | ProviderFailure> {
+  const key = geminiApiKey();
+  if (!key) return unconfiguredFailure();
+  const models = textModelFallbacks(aiModelConfig().textModel);
+  let last: ProviderFailure | null = null;
+  const imageParts = input.images.slice(0, 12).map((image) => ({
+    inlineData: { mimeType: image.mimeType, data: image.data },
+  }));
+  for (const model of models) {
+    try {
+      const response = await geminiFetch(`models/${encodeURIComponent(model)}:generateContent`, {
+        method: "POST",
+        body: JSON.stringify({
+          systemInstruction: { parts: [{ text: input.system }] },
+          contents: [{
+            role: "user",
+            parts: [{ text: input.prompt }, ...imageParts],
+          }],
+          generationConfig: { responseMimeType: "application/json" },
+        }),
+      });
+      if (response.status === 404 || response.status === 403) {
+        last = await readError(response, "text", model);
+        continue;
+      }
+      if (!response.ok) {
+        last = await readError(response, "text", model);
+        if (last.code === "unsupported" || last.code === "quota") continue;
+        return last;
+      }
+      const payload = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
+      const text = payload.candidates?.[0]?.content?.parts?.map((part) => part.text ?? "").join("\n").trim() ?? "";
+      if (!text) {
+        last = {
+          ok: false,
+          code: "unknown",
+          status: "failed",
+          retryable: true,
+          message: "Gemini returned empty cinematic JSON.",
+          provider: "gemini",
+        };
+        continue;
+      }
+      const trimmed = text.replace(/^```json\s*/i, "").replace(/```$/i, "");
+      try {
+        return { ok: true, provider: "gemini", model, json: JSON.parse(trimmed), creates_canonical: false };
+      } catch {
+        last = {
+          ok: false,
+          code: "invalid_request",
+          status: "failed",
+          retryable: true,
+          message: "Gemini returned cinematic JSON that could not be parsed.",
+          provider: "gemini",
+        };
+      }
+    } catch (caught) {
+      if (caught instanceof Error && caught.message === "unconfigured") return unconfiguredFailure();
+      last = {
+        ok: false,
+        code: "unknown",
+        status: "failed",
+        retryable: true,
+        message: caught instanceof Error ? caught.message : "Gemini cinematic analysis failed.",
+        provider: "gemini",
+      };
+    }
+  }
+  return last ?? {
+    ok: false,
+    code: "unsupported",
+    status: "unavailable",
+    retryable: false,
+    message: "No configured Gemini text model accepted sampled-frame video understanding.",
+    provider: "gemini",
+  };
+}
+
 export async function generateStructuredStoryboard(input: {
   system: string;
   prompt: string;

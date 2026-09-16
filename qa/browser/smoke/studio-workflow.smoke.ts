@@ -92,7 +92,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await captureScreenshot(page, testInfo, "suite-production-path");
   notes.push("B: Universes → Super Hero Ego Creative Studio workspaces show source, Sentinel, storyboard, production, and 2.5D");
 
-  await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name: "2.5D", exact: true }).click();
+  await page.getByRole("navigation", { name: "Creative Suite" }).getByRole("link", { name: "2.5D Experience", exact: true }).click();
   const preview = page.locator("section[aria-labelledby='universe-preview']");
   await preview.getByRole("button", { name: "2D composition" }).click();
   await expect(preview.locator("[data-preview-scene]")).toHaveCount(4);
