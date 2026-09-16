@@ -32,6 +32,7 @@ export type StudioWorkspace = {
   proofExecutorAvailable: boolean;
   fromCurate: boolean;
   suiteHref: string;
+  sceneCount: number;
 };
 
 export const loadStudioWorkspace = cache(async function loadStudioWorkspace(
@@ -49,8 +50,8 @@ export const loadStudioWorkspace = cache(async function loadStudioWorkspace(
   ]);
 
   const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
-  const inspectAssetId =
-    suiteScenes(data).find((scene) => scene.asset_id)?.asset_id ?? null;
+  const scenes = suiteScenes(data);
+  const inspectAssetId = scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
 
   return {
     data,
@@ -65,5 +66,6 @@ export const loadStudioWorkspace = cache(async function loadStudioWorkspace(
     proofExecutorAvailable: isFfmpegProofExecutor(process.env.MV_PRODUCTION_PROOF_EXECUTOR),
     fromCurate,
     suiteHref,
+    sceneCount: scenes.length,
   };
 });

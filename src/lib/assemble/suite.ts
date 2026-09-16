@@ -15,13 +15,19 @@ import type { UniverseAssembly, UniverseAssemblyScene } from "./types";
  * Scene Deck shuffle is not imported.
  */
 export const CREATIVE_SUITE_SECTIONS = [
-  { id: "overview", label: "Overview", path: "" },
+  { id: "overview", label: "Source", path: "" },
   { id: "storyboard", label: "Storyboard", path: "storyboard" },
   { id: "sentinel", label: "Sentinel", path: "sentinel" },
   { id: "scenes", label: "Scenes", path: "scenes" },
   { id: "production", label: "Production", path: "production" },
-  { id: "preview", label: "2.5D Experience", path: "preview" },
-  { id: "experience", label: "Holographic Experience", path: "experience" },
+  { id: "preview", label: "2.5D Preview", path: "preview" },
+  { id: "experience", label: "Experience", path: "experience" },
+] as const;
+
+export const CREATIVE_SUITE_NAV_GROUPS = [
+  { id: "context", label: "Context", sectionIds: ["overview", "sentinel"] },
+  { id: "work", label: "Work", sectionIds: ["storyboard", "scenes", "production"] },
+  { id: "realization", label: "Realization", sectionIds: ["preview", "experience"] },
 ] as const;
 
 export type CreativeSuiteSectionId =
@@ -105,4 +111,31 @@ export function creativeSuiteNavItems(suiteHref: string): CreativeSuiteNavItem[]
     label: section.label,
     href: suiteChildHref(suiteHref, section.path),
   }));
+}
+
+export type CreativeSuiteNavGroup = {
+  id: (typeof CREATIVE_SUITE_NAV_GROUPS)[number]["id"];
+  label: string;
+  items: CreativeSuiteNavItem[];
+};
+
+export function creativeSuiteNavGroups(suiteHref: string): CreativeSuiteNavGroup[] {
+  const items = creativeSuiteNavItems(suiteHref);
+  return CREATIVE_SUITE_NAV_GROUPS.map((group) => ({
+    id: group.id,
+    label: group.label,
+    items: group.sectionIds
+      .map((sectionId) => items.find((item) => item.id === sectionId))
+      .filter((item): item is CreativeSuiteNavItem => Boolean(item)),
+  }));
+}
+
+export function studioLibraryHrefs(suiteHref: string): { label: string; href: string }[] {
+  const storyboard = suiteChildHref(suiteHref, "storyboard");
+  const join = storyboard.includes("?") ? "&" : "?";
+  return [
+    { label: "Media", href: "/authority/media" },
+    { label: "References", href: `${storyboard}${join}source=references` },
+    { label: "Generations", href: storyboard },
+  ];
 }

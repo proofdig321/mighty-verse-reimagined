@@ -50,16 +50,16 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.getByText("Creative Studio").first()).toBeVisible();
-  const suiteNav = page.getByRole("navigation", { name: "Creative Suite" });
-  await expect(suiteNav.getByRole("link", { name: "Overview", exact: true })).toBeVisible();
+  const suiteNav = page.getByRole("navigation", { name: "Studio" });
+  await expect(suiteNav.getByRole("link", { name: "Source", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Storyboard", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Scenes", exact: true })).toBeVisible();
   await expect(suiteNav.getByRole("link", { name: "Production", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "2.5D Experience", exact: true })).toBeVisible();
-  await expect(suiteNav.getByRole("link", { name: "Holographic Experience", exact: true })).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Universes", exact: true })).toHaveAttribute(
+  await expect(suiteNav.getByRole("link", { name: "2.5D Preview", exact: true })).toBeVisible();
+  await expect(suiteNav.getByRole("link", { name: "Experience", exact: true })).toBeVisible();
+  await expect(page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Studio", exact: true })).toHaveAttribute(
     "href",
-    ROUTES.authorityUniverses,
+    "/studio",
   );
   await expect(page.getByRole("link", { name: "Holographic Experience" }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
   await expect(page.getByRole("link", { name: "Canonical record" })).toHaveAttribute("href", `/authority/${CANON.universeId}`);

@@ -564,9 +564,183 @@ html[data-theme="tangerine"] {
     color: var(--foreground);
   }
 
+  .studio-workspace {
+    display: grid;
+    gap: 1.25rem;
+    min-width: 0;
+  }
+
+  .studio-workspace-rail {
+    min-width: 0;
+  }
+
+  .studio-rail {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding-bottom: 0.25rem;
+  }
+
+  .studio-rail-group {
+    min-width: max-content;
+  }
+
+  .studio-rail-label {
+    margin: 0 0 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .studio-rail-group ul {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .studio-rail-link {
+    display: block;
+    border-radius: calc(var(--radius) - 2px);
+    padding: 0.4rem 0.7rem;
+    font-size: 0.875rem;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+  }
+
+  .studio-rail-link:hover,
+  .studio-rail-link:focus-visible {
+    color: var(--foreground);
+    background: color-mix(in oklch, var(--accent) 55%, transparent);
+  }
+
+  .studio-rail-link-current {
+    color: var(--foreground);
+    background: color-mix(in oklch, var(--accent) 80%, transparent);
+  }
+
+  .studio-workspace-header {
+    display: grid;
+    gap: 0.85rem;
+    min-width: 0;
+  }
+
+  .studio-canvas {
+    min-width: 0;
+  }
+
+  .studio-composer {
+    display: grid;
+    gap: 0.85rem;
+    padding: 1rem 1.1rem 1.05rem;
+    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+    border-radius: calc(var(--radius) + 4px);
+    background: color-mix(in oklch, var(--card) 88%, transparent);
+  }
+
+  .studio-composer-mode {
+    border-radius: 999px;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
+    color: var(--muted-foreground);
+  }
+
+  .studio-composer-mode:hover,
+  .studio-composer-mode:focus-visible {
+    color: var(--foreground);
+    background: color-mix(in oklch, var(--accent) 45%, transparent);
+  }
+
+  .studio-composer-mode-current {
+    color: var(--foreground);
+    background: color-mix(in oklch, var(--accent) 80%, transparent);
+  }
+
+  .studio-composer-input {
+    min-height: 8.5rem;
+    font-size: 0.95rem;
+    line-height: 1.55;
+    resize: vertical;
+  }
+
+  .studio-composer-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .studio-composer-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .studio-composer-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .sentinel-summary {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.85rem 0.95rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--card) 72%, transparent);
+  }
+
   .storyboard-workspace {
     display: grid;
     gap: 1.25rem;
+  }
+
+  .storyboard-composer-column {
+    display: grid;
+    gap: 1.1rem;
+    min-width: 0;
+  }
+
+  @media (min-width: 1024px) {
+    .studio-workspace {
+      grid-template-columns: 12.5rem minmax(0, 1fr);
+      align-items: start;
+    }
+
+    .studio-workspace-rail {
+      position: sticky;
+      top: 4.75rem;
+    }
+
+    .studio-rail {
+      display: grid;
+      gap: 1.1rem;
+      overflow: visible;
+      padding-bottom: 0;
+    }
+
+    .studio-rail-group ul {
+      display: grid;
+      gap: 0.15rem;
+    }
+
+    .studio-rail-link {
+      padding: 0.4rem 0.55rem;
+      white-space: normal;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .studio-workspace {
+      grid-template-columns: 13.5rem minmax(28rem, 1fr);
+    }
   }
 
   .storyboard-header {
@@ -689,10 +863,17 @@ html[data-theme="tangerine"] {
     overflow: visible;
   }
 
-  @media (min-width: 1024px) {
+  @media (min-width: 1280px) {
     .storyboard-stage {
-      grid-template-columns: minmax(17rem, 5fr) minmax(0, 7fr);
-      align-items: stretch;
+      grid-template-columns: minmax(16rem, 22rem) minmax(28rem, 1.4fr) minmax(18rem, 24rem);
+      align-items: start;
+    }
+
+    .storyboard-stage > .studio-inspector {
+      position: sticky;
+      top: 4.75rem;
+      max-height: calc(100vh - 6rem);
+      overflow: auto;
     }
   }
 

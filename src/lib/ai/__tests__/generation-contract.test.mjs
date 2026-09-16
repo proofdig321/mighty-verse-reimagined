@@ -1,4 +1,4 @@
-import { canRetryJob, generationIdempotencyKey, jobProgressPercent, jobUiLabel, transitionJob } from "../jobs";
+import { canRetryJob, generationIdempotencyKey, generationProviderLabel, jobProgressPercent, jobUiLabel, transitionJob } from "../jobs";
 import { aiServiceCapability } from "../config";
 import { textModelFallbacks } from "../config";
 import { classifyGeminiHttpError, unconfiguredFailure } from "../errors";
@@ -23,6 +23,10 @@ assert(jobUiLabel("completed") === "Succeeded", "success stays honest");
 assert(jobUiLabel("failed") === "Failed", "failure stays failed");
 assert(jobUiLabel("unavailable") === "Unavailable", "unavailable stays unavailable");
 assert(jobUiLabel("needs_configuration") === "Needs configuration", "configuration is honest");
+assert(generationProviderLabel("still") === "Gemini", "stills are Gemini");
+assert(generationProviderLabel("structured-storyboard") === "Gemini", "structured story is Gemini");
+assert(generationProviderLabel("motion") === "Veo", "motion is Veo");
+assert(generationProviderLabel("reel") === "Mux", "assembly delivery is Mux");
 assert(canRetryJob("blocked", true) === false, "safety is not auto-retried");
 assert(canRetryJob("failed", true) === true, "failed can retry");
 assert(

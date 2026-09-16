@@ -206,7 +206,7 @@ export function SentinelIntelligencePanel({
           </Link>
           {previewHref ? (
             <Link href={previewHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-              2.5D Experience
+              2.5D Preview
             </Link>
           ) : null}
         </div>

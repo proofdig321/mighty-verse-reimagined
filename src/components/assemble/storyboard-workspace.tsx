@@ -25,9 +25,9 @@ import {
 import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
 import { ASSIST_ACTIONS } from "@/lib/storyboard/assist";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
-import { jobUiLabel, type GenerationJobKind } from "@/lib/ai/jobs";
+import { jobUiLabel, generationProviderLabel, type GenerationJobKind } from "@/lib/ai/jobs";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
-import { SentinelWorkspace } from "./sentinel-workspace";
+import { SentinelSummary, SentinelWorkspace } from "./sentinel-workspace";
 import { AssociateStoryboard } from "./associate-storyboard";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardResetDialog } from "./storyboard-reset-dialog";
@@ -55,6 +55,7 @@ import {
 import { derivePanelUiStatus, motionGenerationReady, motionRequirement, panelUiLabel, primaryMotionKind, stillGenerationReady } from "@/lib/storyboard/panel-state";
 import type { ResetScope } from "@/lib/storyboard/mutations";
 import { HierarchyBreadcrumb } from "./breadcrumb";
+import { StudioComposer, type StudioComposeMode } from "./studio-composer";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
 type GenerationState = {
@@ -147,6 +148,8 @@ export function StoryboardWorkspace({
   const [draftPanel, setDraftPanel] = useState<Partial<StoryboardPanelRecord>>({});
   const [firstFrame, setFirstFrame] = useState<string>("");
   const [lastFrame, setLastFrame] = useState<string>("");
+  const [durationSeconds, setDurationSeconds] = useState<4 | 6 | 8>(8);
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
   const [workTitle, setWorkTitle] = useState(universeTitle ?? "Untitled storyboard");
@@ -550,6 +553,8 @@ export function StoryboardWorkspace({
         extension_video_uri: extra.extension_video_uri ?? selectedJob?.result?.provider_video_uri ?? undefined,
         instruction: extra.instruction ?? draftPanel.generation_metadata?.transformation_instruction ?? selectedPersisted?.generation_metadata?.transformation_instruction ?? instruction,
         ...extra,
+        duration_seconds: typeof extra.duration_seconds === "number" ? extra.duration_seconds : durationSeconds,
+        aspect_ratio: extra.aspect_ratio === "9:16" || extra.aspect_ratio === "16:9" ? extra.aspect_ratio : aspectRatio,
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -895,6 +900,13 @@ export function StoryboardWorkspace({
     hasReference: Boolean(references.some((item) => item.still_url) || (work?.frames?.length ?? 0)),
   });
   const motionKind = primaryMotionKind({ stillUrl: selected?.still });
+  const composeMode: StudioComposeMode = tab === "stills" ? "still" : tab === "motion" ? "motion" : "story";
+  const composeDirective =
+    composeMode === "story"
+      ? instruction
+      : (editorPanel.generation_metadata?.transformation_instruction ?? instruction);
+  const composeReady =
+    composeMode === "still" ? stillReady : composeMode === "motion" ? motionReady : { available: true, reason: null as string | null };
   const activeReferenceUrls = [
     ...references.map((item) => item.still_url).filter(Boolean),
     ...(work?.frames ?? []).map((frame) => frame.still_url),
@@ -922,22 +934,24 @@ export function StoryboardWorkspace({
   }
 
   return (
-    <div className="storyboard-workspace" data-storyboard-layout="workspace">
+    <div className="storyboard-workspace" data-storyboard-layout="composer">
       <div className="storyboard-header">
         <div className="min-w-0 space-y-2">
-          <HierarchyBreadcrumb
-            items={[
-              { label: "Creative Studio", href: "/studio" },
-              { label: "Storyboard", href: backHref },
-              { label: workTitle || "Untitled storyboard" },
-            ]}
-          />
+          {universeId ? null : (
+            <HierarchyBreadcrumb
+              items={[
+                { label: "Studio", href: "/studio" },
+                { label: "Storyboard", href: backHref },
+                { label: workTitle || "Untitled storyboard" },
+              ]}
+            />
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            {backHref ? (
+            {universeId ? null : (
               <Link href={backHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
                 Back
               </Link>
-            ) : null}
+            )}
             <Input
               aria-label="Work title"
               className="h-8 max-w-sm"
@@ -951,19 +965,35 @@ export function StoryboardWorkspace({
               {saveLabel}
             </p>
             <p className="text-[11px] text-muted-foreground">
+              {selected ? selected.title : "No panel selected"}
+              {selectedPersisted ? ` · Panel ${selectedPersisted.sequence}` : ""}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
               {work?.universe_id ? "Attached · non-canonical" : "Unattached · non-canonical"}
             </p>
-            <p className="text-[11px] text-muted-foreground">{studioInteractionLabel()}</p>
           </div>
+          <nav className="flex flex-wrap gap-1" aria-label={studioInteractionLabel()}>
+            {STUDIO_INTERACTION_PHASES.map((phase) => (
+              <button
+                key={phase.id}
+                type="button"
+                className={cn("studio-composer-mode", interactionPhase.id === phase.id && "studio-composer-mode-current")}
+                aria-current={interactionPhase.id === phase.id ? "true" : undefined}
+                onClick={() => setTab(phase.defaultTab as MaterialTab)}
+              >
+                {phase.label}
+              </button>
+            ))}
+          </nav>
         </div>
         <div className="storyboard-header-actions">
-          <Button type="button" size="sm" variant="outline" disabled={!undoEntry} title={undoEntry?.undoHint ?? "Undo"} onClick={() => {
+          <Button type="button" size="sm" variant="outline" disabled={!undoEntry} title={undoEntry?.undoHint ?? "Undo"} aria-label={undoEntry?.undoHint ?? "Undo"} onClick={() => {
             const next = undoHistory(history);
             if (next) void restoreFromSnapshot(next.entry.before, next.state);
           }}>
             Undo
           </Button>
-          <Button type="button" size="sm" variant="outline" disabled={!redoEntry} title={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} onClick={() => {
+          <Button type="button" size="sm" variant="outline" disabled={!redoEntry} title={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} aria-label={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} onClick={() => {
             const next = redoHistory(history);
             if (next) void restoreFromSnapshot(next.entry.after, next.state);
           }}>
@@ -1023,24 +1053,6 @@ export function StoryboardWorkspace({
         }}
         onConfirm={() => void confirmDeleteWorkspace()}
       />
-      <ol className="grid gap-2 sm:grid-cols-3" aria-label={studioInteractionLabel()}>
-        {STUDIO_INTERACTION_PHASES.map((phase) => (
-          <li key={phase.id}>
-            <button
-              type="button"
-              className={cn(
-                "h-full w-full rounded-lg border border-border bg-card/60 p-3 text-left",
-                interactionPhase.id === phase.id && "border-foreground/40 bg-accent/20",
-              )}
-              aria-current={interactionPhase.id === phase.id ? "true" : undefined}
-              onClick={() => setTab(phase.defaultTab as MaterialTab)}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{phase.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{phase.note}</p>
-            </button>
-          </li>
-        ))}
-      </ol>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         {universeId ? (
           <p className="text-sm text-muted-foreground">
@@ -1099,6 +1111,16 @@ export function StoryboardWorkspace({
       <div className="storyboard-stage">
         <Card className="flex min-h-0 flex-col bg-card/70">
           <CardHeader className="border-b border-border/70">
+            <SentinelSummary
+              observationCount={cinematicShots.length || sentinelPanels.length}
+              referenceCount={
+                references.filter((item) => item.still_url).length
+                + (work?.frames?.length ?? 0)
+                + persistedPanels.reduce((sum, panel) => sum + panel.references.length, 0)
+              }
+              mediaFactCount={work?.sources?.[0]?.playback_id ? 1 : 0}
+              onView={() => setTab("sentinel")}
+            />
             <CardTitle className="uppercase tracking-[0.16em]">
               {tab === "assist" ? "AI Assist" : tab === "sentinel" ? "Sentinel" : tabs.find((item) => item.id === tab)?.label ?? "Script & Narrative"}
             </CardTitle>
@@ -1127,24 +1149,22 @@ export function StoryboardWorkspace({
               }}
               className="flex min-h-0 flex-1 flex-col gap-4"
             >
-              {tab === "script" || tab === "assist" || tab === "sentinel" ? (
-                <TabsList
-                  className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto"
-                  aria-label="Script authoring"
-                >
-                  {tabs
-                    .filter((item) => item.id === "script" || item.id === "assist" || item.id === "sentinel")
-                    .map((item) => {
-                      const Icon = item.icon;
-                      return (
-                        <TabsTrigger key={item.id} value={item.id} className="h-8 flex-none gap-1.5">
-                          <Icon size={13} />
-                          {item.label}
-                        </TabsTrigger>
-                      );
-                    })}
-                </TabsList>
-              ) : null}
+              <TabsList
+                className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto"
+                aria-label="Script authoring"
+              >
+                {tabs
+                  .filter((item) => item.id === "script" || item.id === "assist" || item.id === "sentinel" || item.id === "references")
+                  .map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <TabsTrigger key={item.id} value={item.id} className="h-8 flex-none gap-1.5">
+                        <Icon size={13} />
+                        {item.label}
+                      </TabsTrigger>
+                    );
+                  })}
+              </TabsList>
 
               <TabsContent value="script" className="storyboard-tab-panel space-y-4">
                 <section data-column="script" aria-labelledby="storyboard-script-heading" className="space-y-3">
@@ -1377,7 +1397,7 @@ export function StoryboardWorkspace({
                           </div>
                         ) : null}
                       </li>
-                    )                    )}
+                    ))}
                   </ul>
                 )}
                 <StageNav tab={tab} onTab={setTab} />
@@ -1531,6 +1551,94 @@ export function StoryboardWorkspace({
           </CardContent>
         </Card>
 
+        <div className="storyboard-composer-column">
+          <StudioComposer
+            mode={composeMode}
+            onMode={(mode) => {
+              if (mode === "story") setTab(tab === "assist" ? "assist" : "script");
+              if (mode === "still") setTab("stills");
+              if (mode === "motion") setTab("motion");
+            }}
+            directive={composeDirective}
+            onDirective={(value) => {
+              if (composeMode === "story") {
+                setInstruction(value);
+                return;
+              }
+              setInstruction(value);
+              if (!selectedPersisted) return;
+              setDraftPanel({
+                ...selectedPersisted,
+                ...draftPanel,
+                panel_id: selectedPersisted.panel_id,
+                generation_metadata: {
+                  ...selectedPersisted.generation_metadata,
+                  ...draftPanel.generation_metadata,
+                  transformation_instruction: value,
+                },
+              });
+            }}
+            placeholder={
+              composeMode === "motion"
+                ? "Describe the motion, camera, and what should change from the source."
+                : composeMode === "still"
+                  ? "Describe the still you want to realize from the selected evidence and references."
+                  : "Describe what you want to create or change. This is a creator directive, not a Sentinel observation."
+            }
+            generateLabel={composeMode === "motion" ? "Generate Motion" : composeMode === "still" ? "Generate still" : "Generate storyboard"}
+            generateDisabled={!composeReady.available}
+            generateTitle={composeReady.reason ?? undefined}
+            onGenerate={() => {
+              if (composeMode === "still") void generateMedia("still");
+              else if (composeMode === "motion") void enqueue(motionKind);
+              else void generateStoryboard();
+            }}
+            chips={(
+              <>
+                <Button type="button" size="sm" variant="outline" onClick={() => setTab("references")}>+ Reference</Button>
+                <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>+ Sentinel Evidence</Button>
+                {scenes[0] ? (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(scenes[0].master_id)}>+ Scene</Button>
+                ) : null}
+              </>
+            )}
+            controls={
+              composeMode === "motion" ? (
+                <>
+                  <label className="text-xs text-muted-foreground">
+                    Duration
+                    <select
+                      aria-label="Duration"
+                      className="ml-2 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                      value={durationSeconds}
+                      onChange={(event) => setDurationSeconds(Number(event.target.value) as 4 | 6 | 8)}
+                    >
+                      <option value={4}>4s</option>
+                      <option value={6}>6s</option>
+                      <option value={8}>8s</option>
+                    </select>
+                  </label>
+                  <label className="text-xs text-muted-foreground">
+                    Aspect
+                    <select
+                      aria-label="Aspect ratio"
+                      className="ml-2 rounded-md border border-border bg-background px-2 py-1 text-foreground"
+                      value={aspectRatio}
+                      onChange={(event) => setAspectRatio(event.target.value === "9:16" ? "9:16" : "16:9")}
+                    >
+                      <option value="16:9">16:9</option>
+                      <option value="9:16">9:16</option>
+                    </select>
+                  </label>
+                </>
+              ) : composeMode === "story" ? (
+                <p className="text-xs text-muted-foreground">Gemini · narrative structure stays in Script</p>
+              ) : (
+                <p className="text-xs text-muted-foreground">Gemini · still artifact</p>
+              )
+            }
+            status={<StatusLine state={composeMode === "story" ? saveState : mediaState} />}
+          />
         <Card className="flex min-h-0 flex-col bg-card/70">
           <CardHeader className="border-b border-border/70">
             <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Storyboard panels</p>
@@ -1623,20 +1731,18 @@ export function StoryboardWorkspace({
             )}
           </CardContent>
         </Card>
-      </div>
-
       {shotIds.length > 0 ? (
         <div className="flex items-center gap-3 rounded-xl border border-border bg-card/70 px-4 py-3">
-          <Button type="button" variant="ghost" size="sm" onClick={() => {
+          <Button type="button" variant="ghost" size="sm" aria-label="Previous panel" onClick={() => {
             const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
             setSelectedId(shotIds[Math.max(0, index - 1)]);
           }}>
             <SkipBack size={14} />
           </Button>
-          <Button type="button" size="sm" onClick={() => setPlaying((value) => !value)}>
+          <Button type="button" size="sm" aria-label={playing ? "Pause sequence" : "Play sequence"} onClick={() => setPlaying((value) => !value)}>
             {playing ? <Pause size={14} /> : <Play size={14} />}
           </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => {
+          <Button type="button" variant="ghost" size="sm" aria-label="Next panel" onClick={() => {
             const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
             setSelectedId(shotIds[Math.min(shotIds.length - 1, index + 1)]);
           }}>
@@ -1653,8 +1759,9 @@ export function StoryboardWorkspace({
           />
         </div>
       ) : null}
+        </div>
 
-      <aside className="studio-inspector" aria-label="Creator directive">
+      <aside className="studio-inspector" aria-label="Inspector">
         {!selected ? (
           <p className="suite-empty">Select a Sentinel shot or Storyboard panel. This column holds the creator directive, Generate Still, and Generate Motion.</p>
         ) : (
@@ -1796,10 +1903,10 @@ export function StoryboardWorkspace({
                   Add to production
                 </Link>
                 <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  2.5D Experience
+                  2.5D Preview
                 </Link>
                 <Link href={creativeSuiteWorkspaceHref(universeId, "experience")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  Holographic Experience
+                  Experience
                 </Link>
               </>
             ) : null}
@@ -1860,9 +1967,62 @@ export function StoryboardWorkspace({
             </button>
           </details>
           <StatusLine state={mediaState} />
+          <section className="mt-4 space-y-2" aria-label="Generations">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Generations</p>
+            {jobs.length === 0 ? (
+              <p className="suite-empty">No generations yet. Results appear here after Gemini or Veo jobs persist.</p>
+            ) : (
+              <ol className="grid gap-2">
+                {jobs.slice(0, 12).map((job, index) => (
+                  <li key={job.job_id} className="rounded-md border border-border p-2">
+                    {job.result?.still_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={job.result.still_url} alt="" className="mb-2 aspect-video w-full rounded object-cover" />
+                    ) : null}
+                    <p className="text-xs font-medium text-foreground">
+                      Gen {String(jobs.length - index).padStart(2, "0")} · {generationProviderLabel(job.kind)}
+                    </p>
+                    <p className="text-[11px] text-muted-foreground" data-generation-status={job.status}>
+                      {job.kind} · {jobUiLabel(job.status as never)}
+                      {job.result?.playback_id ? ` · Mux ${job.result.playback_id}` : ""}
+                    </p>
+                    {job.error?.message ? <GenerationFailure job={job} /> : null}
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-[10px]"
+                        onClick={() => {
+                          if (job.panel_id) setSelectedId(job.panel_id);
+                        }}
+                      >
+                        Inspect
+                      </Button>
+                      {job.result?.still_url && selectedPersisted ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[10px]"
+                          onClick={() => {
+                            setFirstFrame(job.result?.still_url ?? "");
+                            if (job.panel_id) setSelectedId(job.panel_id);
+                          }}
+                        >
+                          Use
+                        </Button>
+                      ) : null}
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </section>
           </>
         )}
         </aside>
+      </div>
     </div>
   );
 }

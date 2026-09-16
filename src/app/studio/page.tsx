@@ -27,7 +27,7 @@ export default async function StudioHomePage() {
       <section className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Start</p>
         <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl" style={{ fontFamily: "var(--font-display, inherit)" }}>
-          I have an idea
+          Studio
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Creative Studio is a workstation. {studioInteractionLabel()}. Begin with a story or an existing Universe.
@@ -97,7 +97,7 @@ export default async function StudioHomePage() {
           Universe projects
         </h2>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Open an established Universe to compose Storyboard, Scenes, Production, 2.5D Experience, and Holographic Experience.
+          Open an established Universe to compose Storyboard, Scenes, Production, 2.5D Preview, and Experience.
           Attached Storyboard stays non-canonical. This does not replace standalone work.
         </p>
         {landing.universes.length === 0 ? (

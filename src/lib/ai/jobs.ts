@@ -116,6 +116,12 @@ export function transitionJob(current: GenerationJobStatus, event: JobEvent): Ge
   }
 }
 
+export function generationProviderLabel(kind: GenerationJobKind | string): string {
+  if (kind === "text" || kind === "structured-storyboard" || kind === "still") return "Gemini";
+  if (kind === "gif" || kind === "reel") return "Mux";
+  return "Veo";
+}
+
 export function generationIdempotencyKey(input: {
   participantId: string;
   kind: GenerationJobKind;

@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { Clapperboard, Globe, Home, Images, LayoutDashboard, MonitorPlay, Plus, Sparkles } from "lucide-react";
 import { AppShell } from "@/components/layout/app-shell";
+import { studioInteractionLabel } from "@/lib/assemble/studio-interaction";
 
 export function StudioShell({ children }: { children: ReactNode }) {
   return (
@@ -10,7 +11,7 @@ export function StudioShell({ children }: { children: ReactNode }) {
       brandTitle="Mighty Verse"
       brandKicker="Creative Studio"
       headerEyebrow="Creative Studio"
-      headerTitle="Imagine → Story → Visualise → Generate"
+      headerTitle={studioInteractionLabel()}
       groups={[
         {
           label: "Studio",

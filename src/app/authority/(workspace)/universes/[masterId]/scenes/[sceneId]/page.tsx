@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { ProductionBriefs } from "@/components/assemble/production-briefs";
 import { StudioPreview } from "@/components/assemble/studio-preview";
 import { StudioScenesWorkspace } from "@/components/assemble/studio-scenes-workspace";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 import { suiteScenes } from "@/lib/assemble/suite";
 import { sceneShortTitle } from "@/lib/assemble/composition";
@@ -37,12 +37,11 @@ export default async function UniverseSceneWorkspacePage({
 
   return (
     <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      current="scenes"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-      workspaceLabel={sceneShortTitle(scene.title) ?? scene.title ?? "Scene"}
+      {...studioShellFromWorkspace(
+        workspace,
+        "scenes",
+        sceneShortTitle(scene.title) ?? scene.title ?? "Scene",
+      )}
     >
       <div className="suite-stack">
         <StudioScenesWorkspace
@@ -69,7 +68,7 @@ export default async function UniverseSceneWorkspacePage({
         <section className="suite-section" aria-labelledby="universe-preview">
           <div className="suite-section-head">
             <h2 id="universe-preview" className="suite-section-title">
-              2.5D Experience
+              2.5D Preview
             </h2>
           </div>
           <StudioPreview

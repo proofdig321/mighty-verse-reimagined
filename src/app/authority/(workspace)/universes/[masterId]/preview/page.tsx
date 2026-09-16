@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { StudioPreview } from "@/components/assemble/studio-preview";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 import { suiteScenes } from "@/lib/assemble/suite";
 import { composeExperienceProjection } from "@/lib/production/projection";
@@ -24,18 +24,11 @@ export default async function UniversePreviewPage({
   }).layers;
 
   return (
-    <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      current="preview"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-      workspaceLabel="2.5D Experience"
-    >
+    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "preview", "2.5D Preview")}>
       <section className="suite-section" aria-labelledby="universe-preview">
         <div className="suite-section-head">
           <h2 id="universe-preview" className="suite-section-title">
-            2.5D Experience
+            2.5D Preview
           </h2>
         </div>
         <StudioPreview

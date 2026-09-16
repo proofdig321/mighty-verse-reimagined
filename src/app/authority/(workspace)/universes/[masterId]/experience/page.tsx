@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { ExperienceContinuation } from "@/components/assemble/experience-continuation";
-import { StudioWorkspaceShell } from "@/components/assemble/studio-workspace-shell";
+import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
 export default async function UniverseExperiencePage({
@@ -18,14 +18,7 @@ export default async function UniverseExperiencePage({
   const title = workspace.data.title ?? "Untitled universe";
 
   return (
-    <StudioWorkspaceShell
-      universeId={workspace.data.master_id}
-      title={title}
-      current="experience"
-      suiteHref={workspace.suiteHref}
-      fromCurate={fromCurate}
-      workspaceLabel="Holographic Experience"
-    >
+    <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "experience", "Experience")}>
       <ExperienceContinuation
         href={`/worlds/${workspace.data.master_id}/holographic`}
         universeHref={`/worlds/${workspace.data.master_id}`}
