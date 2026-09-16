@@ -21,7 +21,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { masterId } = await params;
   const data = await loadUniverseAssembly(masterId);
-  return { title: data ? `${data.title ?? "Universe"} · Experience` : "Experience" };
+  return { title: data ? `${data.title ?? "Universe"} · Holographic Experience` : "Holographic Experience" };
 }
 
 export default async function HolographicWorldPage({
@@ -80,7 +80,7 @@ export default async function HolographicWorldPage({
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-1 min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Experience</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Holographic Experience</p>
               <h1
                 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl"
                 style={{ fontFamily: "var(--font-display, inherit)" }}

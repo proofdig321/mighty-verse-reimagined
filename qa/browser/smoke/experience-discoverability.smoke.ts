@@ -126,12 +126,12 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
   await expect(page.getByRole("heading", { name: /Authority Console/i })).toBeVisible();
   const experienceCard = page.locator('[data-dashboard-surface="experience"]').first();
   await expect(experienceCard).toBeVisible();
-  await expect(experienceCard).toContainText("enter the public Experience");
+  await expect(experienceCard).toContainText("enter 2.5D or Holographic Experience");
   notes.push("A: dashboard Experience is a public Experience journey, not a global 2.5D sidebar item");
 
   await experienceCard.click();
   await expect(page).toHaveURL(/\/universes(?:\?intent=experience)?$/);
-  await expect(page.getByRole("heading", { name: /Enter Experience|All Universes/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /Enter 2\.5D|All Universes/i })).toBeVisible();
   const universeCard = page.locator(`a[href="${ROUTES.universeLive}"]`).filter({ hasText: CANON.universeTitle }).first();
   await expect(universeCard).toBeVisible();
   notes.push("B: Experience lands on public Universe discovery, not a hidden holographic URL");
@@ -139,22 +139,22 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
   await universeCard.click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
   await expectUniverseExperience(page);
-  const enterExperience = page.locator('[data-experience-entry="experience"]').first();
+  const enterExperience = page.locator('[data-experience-entry="holographic"]').first();
   await expect(enterExperience).toHaveAttribute("href", ROUTES.universeHolographic);
-  await expect(enterExperience).toHaveText(/Enter Experience/);
+  await expect(enterExperience).toHaveText(/Holographic Experience/);
   await expect(page.locator(`[data-scene-id="${SCENE_MOMENTS.powerhouse.sceneMasterId}"]`)).toHaveAttribute("data-has-production", "true");
-  notes.push("C: Super Hero Ego Universe exposes Enter Experience and Powerhouse production relationship");
+  notes.push("C: Super Hero Ego Universe exposes Holographic Experience and Powerhouse production relationship");
 
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(enterExperience).toBeVisible();
   const overflowX = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   expect(overflowX, `narrow Experience overflow ${overflowX}px`).toBeLessThan(24);
-  notes.push("D: Enter Experience remains visible at 390px");
+  notes.push("D: Holographic Experience remains visible at 390px");
 
   await enterExperience.click();
   await expectPublicHolographic(page);
   await captureScreenshot(page, testInfo, "experience-architecture-mobile");
-  notes.push("E: mobile Enter Experience opens 2.5D with 1 mural, 4 scenes, 3 moments, 1 Powerhouse production layer");
+  notes.push("E: mobile Holographic Experience opens cinema with 1 mural, 4 scenes, 3 moments, 1 Powerhouse production layer");
 
   await page.setViewportSize({ width: 1280, height: 800 });
   await expectPublicHolographic(page);
@@ -180,11 +180,11 @@ test("public Universes catalog reaches Super Hero Ego Experience without Authori
   await page.goto(ROUTES.universes, { waitUntil: "domcontentloaded" });
   await page.locator(`a[href="${ROUTES.universeLive}"]`).filter({ hasText: CANON.universeTitle }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicHolographic(page);
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Public Universes Experience path", page.url(), [
-    "unauthenticated Universes → Super Hero Ego → Enter Experience",
+    "unauthenticated Universes → Super Hero Ego → Holographic Experience",
     `landed on ${ROUTES.universeHolographic}`,
     "public Experience does not require Authority permissions",
   ], observe);
@@ -195,17 +195,17 @@ test("Mural, Scene, and Creative Moment surfaces enter the same Universe Experie
   await page.getByRole("link", { name: /View Mural/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.muralLive}$`));
   await expect(page.getByText("Mural", { exact: true }).first()).toBeVisible();
-  await expect(page.locator('[data-experience-entry="experience"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(page.locator('[data-experience-entry="holographic"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
 
   await page.goto(ROUTES.universeLive, { waitUntil: "domcontentloaded" });
   await page.locator(`[data-scene-id="${SCENE_MOMENTS.powerhouse.sceneMasterId}"]`).click();
   await expect(page).toHaveURL(new RegExp(`/moments/${SCENE_MOMENTS.powerhouse.projectionId}$`));
   await expect(page.getByText("Scene", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Enter Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(page.getByRole("link", { name: /Holographic Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
 
   await page.goto(`/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("link", { name: /Enter Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
-  await page.getByRole("link", { name: /Enter Experience/i }).first().click();
+  await expect(page.getByRole("link", { name: /Holographic Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
+  await page.getByRole("link", { name: /Holographic Experience/i }).first().click();
   await expectPublicHolographic(page);
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Reveal surfaces share Universe Experience", page.url(), [

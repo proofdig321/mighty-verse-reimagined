@@ -13,7 +13,7 @@ export function PublicFooter() {
         <div className="max-w-sm space-y-2">
           <p className="text-sm font-semibold tracking-tight text-foreground">Mighty Verse</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Canonical home for Golden Shovel culture. Discover Universes, play Murals, and enter Experience.
+            Canonical home for Golden Shovel culture. Discover Universes, play Murals, enter 2.5D, or open Holographic Experience.
             External platforms remain projections of this work.
           </p>
         </div>

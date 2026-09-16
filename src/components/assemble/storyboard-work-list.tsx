@@ -9,13 +9,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import type { StoryboardWorkSummary } from "@/lib/storyboard/document";
+import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
 
 export function StoryboardWorkList({
   universes,
   initialWorks = [],
+  standaloneOnly = false,
 }: {
   universes: { master_id: string; title: string }[];
   initialWorks?: StoryboardWorkSummary[];
+  standaloneOnly?: boolean;
 }) {
   const router = useRouter();
   const [works, setWorks] = useState<StoryboardWorkSummary[]>(initialWorks);
@@ -23,12 +26,16 @@ export function StoryboardWorkList({
   const [error, setError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<string | null>(null);
   const [title, setTitle] = useState("");
+  const [pendingDelete, setPendingDelete] = useState<StoryboardWorkSummary | null>(null);
 
   async function refresh() {
-    const response = await fetch("/api/authority/storyboard?list=1");
+    const response = await fetch("/api/authority/storyboard?list=1", { cache: "no-store" });
     const payload = await response.json().catch(() => ({}));
-    if (response.ok && Array.isArray(payload.works)) setWorks(payload.works);
-    else setError(payload.error ?? "Could not load storyboard works.");
+    if (response.ok && Array.isArray(payload.works)) {
+      const next = payload.works as StoryboardWorkSummary[];
+      setWorks(standaloneOnly ? next.filter((work) => !work.universe_id) : next);
+    } else setError(payload.error ?? "Could not load storyboard works.");
+    router.refresh();
   }
 
   async function createWork() {
@@ -46,6 +53,7 @@ export function StoryboardWorkList({
       return;
     }
     router.push(`/studio/work/${payload.work.work_id}`);
+    router.refresh();
   }
 
   async function duplicate(workId: string) {
@@ -61,15 +69,23 @@ export function StoryboardWorkList({
     else await refresh();
   }
 
-  async function archive(workId: string) {
-    if (!window.confirm("Archive this Storyboard Work? Generated artifacts are kept. Canonical Scenes are not affected.")) return;
+  async function confirmDelete() {
+    if (!pendingDelete) return;
     setBusy(true);
-    await fetch("/api/authority/storyboard", {
+    setError(null);
+    const response = await fetch("/api/authority/storyboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "archive-work", work_id: workId }),
+      body: JSON.stringify({ action: "delete-work", work_id: pendingDelete.work_id }),
     });
+    const payload = await response.json().catch(() => ({}));
     setBusy(false);
+    if (!response.ok || payload.deleted !== true) {
+      setError(payload.error ?? "Storyboard could not be deleted.");
+      return;
+    }
+    setWorks((current) => current.filter((work) => work.work_id !== pendingDelete.work_id));
+    setPendingDelete(null);
     await refresh();
   }
 
@@ -146,9 +162,17 @@ export function StoryboardWorkList({
                       <Pencil size={13} />
                       Rename
                     </Button>
-                    <Button type="button" size="sm" variant="ghost" onClick={() => void archive(work.work_id)}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setError(null);
+                        setPendingDelete(work);
+                      }}
+                    >
                       <Trash2 size={13} />
-                      Archive
+                      Delete
                     </Button>
                   </div>
                 </CardContent>
@@ -162,6 +186,17 @@ export function StoryboardWorkList({
           Universe Storyboard remains under Creative Studio. This list is standalone work.
         </p>
       ) : null}
+      <StoryboardDeleteDialog
+        open={Boolean(pendingDelete)}
+        title={pendingDelete?.title ?? ""}
+        attached={pendingDelete?.attached === true}
+        busy={busy}
+        error={error}
+        onClose={() => {
+          if (!busy) setPendingDelete(null);
+        }}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import ArtworkFrame from "@/components/artwork-frame";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
 
 type SceneMomentData = MomentData & {
   sceneTitle: string | null;
@@ -359,15 +360,15 @@ export default async function MomentPage({
             {/* Action buttons */}
             <div className="flex flex-wrap gap-3">
               {universeMasterId ? (
-                <Link href={`/worlds/${universeMasterId}/holographic`} className={buttonVariants()} data-experience-entry="experience">
-                  Enter Experience
+                <Link href={publicWorldHref(universeMasterId)} className={buttonVariants()} data-experience-entry="2.5d">
+                  {ENTER_2_5D_LABEL}
                 </Link>
               ) : (
-                <Button disabled>Enter Experience</Button>
+                <Button disabled>{ENTER_2_5D_LABEL}</Button>
               )}
               {universeMasterId ? (
-                <Link href={`/worlds/${universeMasterId}`} className={buttonVariants({ variant: "outline" })}>
-                  Open Universe
+                <Link href={publicHolographicHref(universeMasterId)} className={buttonVariants({ variant: "outline" })} data-experience-entry="holographic">
+                  {HOLOGRAPHIC_EXPERIENCE_LABEL}
                 </Link>
               ) : null}
               {isScene && muralMasterId ? (

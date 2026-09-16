@@ -35,10 +35,10 @@ const STEPS = [
   {
     title: "Experience",
     href: "/universes?intent=experience",
-    linkLabel: "Enter Experience",
+    linkLabel: "Enter 2.5D",
     script:
-      "Experience. Choose a Universe, then enter the holographic cinema. Cursor movement warps the picture and pans the sound. This is how the work is presented. It does not become the source of truth.",
-    body: "The public Experience consumes projections. Media is not the creative work. Mux is delivery infrastructure.",
+      "Experience. Choose a Universe, then enter 2.5D. Holographic Experience is the cinema: cursor movement warps the picture and pans the sound. This is how the work is presented. It does not become the source of truth.",
+    body: "Public 2.5D is the Universe landing. Holographic Experience consumes projections. Media is not the creative work. Mux is delivery infrastructure.",
   },
   {
     title: "Operations",

@@ -4,7 +4,7 @@
  * Derived from live assembly + Sentinel intelligence. Not a workflow-state
  * table and not a linear wizard. Curators can jump to any ready stage.
  *
- * SOURCE → SENTINEL → STORYBOARD → SCENE PROPOSALS → AUTHORISE → 2.5D PREVIEW → EXPERIENCE
+ * SOURCE → SENTINEL → STORYBOARD → SCENE PROPOSALS → AUTHORISE → 2.5D PREVIEW → HOLOGRAPHIC EXPERIENCE
  */
 
 import type { SentinelIntelligence } from "../media/sentinel-intelligence";
@@ -19,7 +19,7 @@ export const PRODUCTION_PATH_STEPS = [
   { id: "proposals", label: "Scene proposals", path: "storyboard", fragment: "sentinel-proposals", search: { source: "sentinel" } },
   { id: "authorise", label: "Authorise", path: "storyboard", fragment: "sentinel-authorise", search: { source: "sentinel" } },
   { id: "preview", label: "2.5D Preview", path: "preview", fragment: "universe-preview" },
-  { id: "experience", label: "Experience", path: "experience", fragment: "universe-experience-continuation" },
+  { id: "experience", label: "Holographic Experience", path: "experience", fragment: "universe-experience-continuation" },
 ] as const;
 
 export type ProductionStepId = (typeof PRODUCTION_PATH_STEPS)[number]["id"];

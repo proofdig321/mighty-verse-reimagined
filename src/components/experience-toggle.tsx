@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { HOLOGRAPHIC_EXPERIENCE_LABEL } from "@/lib/experience/destinations";
 
 export default function ExperienceToggle({
   universeHref,
@@ -19,25 +20,27 @@ export default function ExperienceToggle({
           href={universeHref}
           aria-current={current === "universe" ? "page" : undefined}
           className="px-3 py-1 rounded-full text-xs font-medium"
+          data-experience-entry="2.5d"
           style={
             current === "universe"
               ? { background: "var(--accent-mv)", color: "#000" }
               : { color: "var(--muted-foreground)" }
           }
         >
-          Universe
+          2.5D
         </Link>
         <Link
           href={experienceHref}
           aria-current={current === "experience" ? "page" : undefined}
           className="px-3 py-1 rounded-full text-xs font-medium"
+          data-experience-entry="holographic"
           style={
             current === "experience"
               ? { background: "var(--accent-mv)", color: "#000" }
               : { color: "var(--muted-foreground)" }
           }
         >
-          Experience
+          {HOLOGRAPHIC_EXPERIENCE_LABEL}
         </Link>
       </div>
     </div>

@@ -6,6 +6,7 @@ import { muxThumbnailUrl } from "../media/thumbnail";
 import type { StoryboardPanelRecord, StoryboardWorkRecord, StoryboardWorkSummary } from "./document";
 import { applyOrder, nextSequence } from "./mutations";
 import {
+  isStoryboardOwnedIntake,
   parseStoryboardAssembly,
   storyboardAssemblyNotes,
   storyboardFrameNotes,
@@ -172,6 +173,65 @@ export async function archiveStoryboardWork(input: {
     .select("work_id")
     .maybeSingle();
   return Boolean(data);
+}
+
+export type DeletedStoryboardWork = {
+  deleted: true;
+  work_id: string;
+  universe_id: string | null;
+  intake_removed: number;
+  creates_scene: false;
+  creates_canonical: false;
+  mutates_canonical: false;
+};
+
+/**
+ * Delete a Storyboard workspace. Panels and generation jobs cascade from
+ * `storyboard_work`. Work-owned media_intake provenance is removed by work_id.
+ * Canonical Universe / Mural / Scene / Creative Moment / Experience records
+ * are never deleted or mutated.
+ */
+export async function deleteStoryboardWork(input: {
+  workId: string;
+  participantId: string;
+  client?: ServiceClient;
+}): Promise<DeletedStoryboardWork | null> {
+  const db = svc(input.client);
+  const work = await loadStoryboardWorkById(input);
+  if (!work) return null;
+
+  const { data: intakes } = await db
+    .from("media_intake")
+    .select("intake_id, provenance_notes")
+    .eq("supplied_by", input.participantId)
+    .ilike("provenance_notes", `%${input.workId}%`);
+  const ownedIds = (intakes ?? [])
+    .filter((row) => isStoryboardOwnedIntake(row.provenance_notes, input.workId))
+    .map((row) => row.intake_id);
+  if (ownedIds.length) {
+    const { error } = await db.from("media_intake").delete().in("intake_id", ownedIds);
+    if (error) throw new Error(error.message);
+  }
+
+  const { data: removed, error } = await db
+    .from("storyboard_work")
+    .delete()
+    .eq("work_id", input.workId)
+    .eq("participant_id", input.participantId)
+    .select("work_id")
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!removed) return null;
+
+  return {
+    deleted: true,
+    work_id: input.workId,
+    universe_id: work.universe_id,
+    intake_removed: ownedIds.length,
+    creates_scene: false,
+    creates_canonical: false,
+    mutates_canonical: false,
+  };
 }
 
 export async function attachStoryboardWorkToUniverse(input: {

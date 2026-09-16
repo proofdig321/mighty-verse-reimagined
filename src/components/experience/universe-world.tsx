@@ -13,6 +13,7 @@ import {
 } from "@/lib/experience/universe-world";
 import { cn } from "@/lib/utils";
 import { CreativeMomentCard } from "./creative-moment-card";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref } from "@/lib/experience/destinations";
 
 export type UniverseWorldExperienceProps = {
   universeId: string;
@@ -66,13 +67,13 @@ export function UniverseWorldExperience({
   const contributors = contributorPresence(moments, scenes, sceneMoments);
   const sceneDeckHref = `/worlds/${universeId}/scenes`;
   const muralHref = mural ? `/worlds/${mural.master_id}` : null;
-  const experienceHref = `/worlds/${universeId}/holographic`;
+  const holographicHref = publicHolographicHref(universeId);
   const productionSet = new Set(productionSceneIds);
 
   return (
-    <div className="world-experience">
+    <div className="world-experience" data-experience-entry="2.5d" aria-label={`${ENTER_2_5D_LABEL} · ${title}`}>
       <section className="world-identity" aria-labelledby="world-identity-heading">
-        <p className="world-kicker">Universe</p>
+        <p className="world-kicker">Universe · 2.5D</p>
         <h1 id="world-identity-heading" className="world-title">
           {title}
         </h1>
@@ -84,11 +85,11 @@ export function UniverseWorldExperience({
         ) : null}
         <div className="world-actions">
           <Link
-            href={experienceHref}
+            href={holographicHref}
             className={cn(buttonVariants({ size: "lg" }), "world-action-primary")}
-            data-experience-entry="experience"
+            data-experience-entry="holographic"
           >
-            Enter Experience
+            {HOLOGRAPHIC_EXPERIENCE_LABEL}
             <span className="sr-only">{` for ${title}`}</span>
           </Link>
           {scenes.length > 0 ? (
@@ -116,8 +117,8 @@ export function UniverseWorldExperience({
           </h2>
           <p className="world-section-note">
             {scenes.length > 0
-              ? "The complete audiovisual expression of this Universe. Playback lives on the Mural and in Experience."
-              : "The complete audiovisual expression of this Universe. Play it here, on the Mural, or in Experience. Canonical Scenes are established by a curator — they are not inferred from the file."}
+              ? "The complete audiovisual expression of this Universe. Playback lives on the Mural in 2.5D and in Holographic Experience."
+              : "The complete audiovisual expression of this Universe. Play it here, on the Mural in 2.5D, or in Holographic Experience. Canonical Scenes are established by a curator — they are not inferred from the file."}
           </p>
           <Link href={`/worlds/${mural.master_id}`} className="world-mural-stage">
             <EncounterStill url={muralStillUrl} alt="" />

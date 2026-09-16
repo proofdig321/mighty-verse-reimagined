@@ -15,23 +15,23 @@ export function ExperienceContinuation({
     <section className="suite-continuation" aria-labelledby="universe-experience-continuation">
       <p className="suite-kicker">Continuation</p>
       <h2 id="universe-experience-continuation" className="suite-section-title">
-        Experience
+        Holographic Experience
       </h2>
       <p className="suite-section-note">
-        Studio composes the work. Experience is what the audience sees.
+        Studio composes the work. Holographic Experience is what the audience sees. It is not a Studio editor.
       </p>
       <ol className="suite-continuation-flow">
         <li>Assemble</li>
         <li className="suite-continuation-arrow" aria-hidden="true">
           ↓
         </li>
-        <li>Experience</li>
+        <li>Holographic Experience</li>
       </ol>
       <div className="flex flex-wrap gap-2">
         <Link
           href={href}
           className={cn(buttonVariants({ size: "lg" }), "suite-continuation-cta")}
-          data-experience-entry="experience"
+          data-experience-entry="holographic"
         >
           Holographic Experience
           <span className="sr-only">{` for ${universeTitle}`}</span>

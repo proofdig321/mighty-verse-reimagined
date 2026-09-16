@@ -1,5 +1,6 @@
 import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteStoryboardHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref, curateAttachHref } from "../studio";
 import { creativeSuiteNavItems, resolveStudioHash, suiteChildHref } from "../suite";
+import { studioInteractionLabel } from "../studio-interaction";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -118,5 +119,6 @@ assert(creativeSuiteWorkspaceHref(UNIVERSE, "sentinel") === `${suite}/sentinel`,
 assert(creativeSuiteStoryboardHref(UNIVERSE, "curate", "references") === `${suite}/storyboard?from=curate&source=references`, "curated stills continue into Storyboard References");
 assert(resolveStudioHash("universe-sentinel")?.path === "sentinel", "legacy Sentinel hash maps to Sentinel");
 assert(resolveStudioHash("universe-scene-4790c7cf-bb19-4a01-a243-e5c3eb680555")?.path === "scenes/4790c7cf-bb19-4a01-a243-e5c3eb680555", "legacy Scene hash maps to the Scene workspace");
+assert(studioInteractionLabel() === "Context → Work → Directive", "Studio interaction model is Context → Work → Directive");
 
 console.log("Assemble Curate Studio tests: all passed");

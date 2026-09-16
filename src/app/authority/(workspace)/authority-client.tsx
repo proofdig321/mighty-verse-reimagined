@@ -12,14 +12,14 @@ import { cn } from "@/lib/utils";
 const JOURNEY = [
   { step: "01", label: "Create Work", sub: "Establish the work. YouTube is the primary ingest path.", href: "/authority/create", surface: "create", icon: Upload },
   { step: "02", label: "Curate", sub: "Shape an existing Universe from live state.", href: "/authority/curate", surface: "curate", icon: Wand2 },
-  { step: "03", label: "Creative Studio", sub: "Storyboard, Scenes, Production, 2.5D, Experience.", href: CREATIVE_STUDIO_HREF, surface: "studio", icon: MonitorPlay },
-  { step: "04", label: "Experience", sub: "Open a Universe, then enter the public Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "experience", icon: Sparkles },
+  { step: "03", label: "Creative Studio", sub: "Storyboard, Scenes, Production, 2.5D Experience, Holographic Experience.", href: CREATIVE_STUDIO_HREF, surface: "studio", icon: MonitorPlay },
+  { step: "04", label: "Experience", sub: "Open a Universe, then enter 2.5D or Holographic Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "experience", icon: Sparkles },
 ] as const;
 
 const SURFACES = [
   { label: "Discover", sub: "Public Universes catalog.", href: "/universes", surface: "discover", icon: Globe },
   { label: "Creative Studio", sub: "Start from an idea, or open an existing Universe.", href: CREATIVE_STUDIO_HREF, surface: "studio-entry", icon: MonitorPlay },
-  { label: "Public Experience", sub: "Choose a Universe, then enter Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "public-experience", icon: Clapperboard },
+  { label: "Public Experience", sub: "Choose a Universe, then enter 2.5D or Holographic Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "public-experience", icon: Clapperboard },
 ] as const;
 
 const OPERATIONS = [

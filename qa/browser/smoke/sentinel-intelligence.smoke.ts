@@ -144,7 +144,7 @@ test("Sentinel intelligence proposes windows without mutating Super Hero Ego", a
     notes.push("G: Scene Deck stills remain Mux time=36/80/149/193");
 
     await page.goto(ROUTES.momentSwordMaster, { waitUntil: "domcontentloaded" });
-    await expect(page.getByRole("link", { name: /Enter Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
+    await expect(page.getByRole("link", { name: /Holographic Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
     notes.push("H: Sword Master Moment continues into Super Hero Ego 2.5D");
 
     await page.goto(ROUTES.authorityMuxInspect, { waitUntil: "domcontentloaded" });

@@ -63,7 +63,7 @@ export default async function AboutPage() {
               { icon: "🔭", label: "Discover", desc: "Explore Universes, Murals, Scenes and Creative Moments freely. No wallet required." },
               { icon: "⚡", label: "Reveal", desc: "Understand the Mural, Scenes, and Creative Moments that make a Universe." },
               { icon: "✦", label: "Assemble", desc: "Compose the work in Creative Studio. Studio is not the public Experience." },
-              { icon: "⬡", label: "Experience", desc: "Enter the public Experience of a Universe. 2.5D is presentation, not a second ontology." },
+              { icon: "⬡", label: "2.5D & Holographic", desc: "Enter 2.5D on the Universe. Holographic Experience is the cinema. Presentation is not a second ontology." },
             ].map(({ icon, label, desc }) => (
               <div key={label} className="artifact-card artifact-copy space-y-2">
                 <span className="text-2xl">{icon}</span>

@@ -32,12 +32,12 @@ export default function UniversesFilterClient({ universes }: Props) {
   return (
     <div data-experience-journey={experienceJourney ? "true" : "false"}>
       <PublicHero
-        eyebrow={experienceJourney ? "Experience" : "Discover the canon"}
-        title={experienceJourney ? "Enter Experience" : "All Universes"}
+        eyebrow={experienceJourney ? "2.5D" : "Discover the canon"}
+        title={experienceJourney ? "Enter 2.5D" : "All Universes"}
         description={
           experienceJourney
-            ? "Open a Universe, then enter its public Experience. This is not Studio preview."
-            : "Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter Experience."
+            ? "Open a Universe to enter 2.5D. Holographic Experience is a separate cinema destination."
+            : "Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience."
         }
         aside={
           <>
@@ -97,7 +97,7 @@ export default function UniversesFilterClient({ universes }: Props) {
                       : "Various Artists"}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {experienceJourney ? "Open Universe, then Enter Experience" : "Explore, then enter Experience"}
+                    {experienceJourney ? "Open Universe, then Enter 2.5D" : "Explore, then enter 2.5D"}
                   </p>
                 </div>
               </Link>

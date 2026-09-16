@@ -23,6 +23,7 @@ import {
   seedPanelsFromScript,
   updateStoryboardPanel,
 } from "@/lib/storyboard/work";
+import { revalidatePath } from "next/cache";
 import {
   archiveStoryboardWork,
   attachStoryboardSource,
@@ -30,6 +31,7 @@ import {
   createStoryboardPanel,
   createStoryboardWork,
   deleteStoryboardPanel,
+  deleteStoryboardWork,
   deriveStoryboardFrame,
   duplicateStoryboardPanel,
   duplicateStoryboardWork,
@@ -78,7 +80,10 @@ export async function GET(request: Request) {
       participantId,
       universeId: universeId || null,
     });
-    return NextResponse.json({ works, creates_scene: false, creates_canonical: false });
+    return NextResponse.json(
+      { works, creates_scene: false, creates_canonical: false },
+      { headers: { "Cache-Control": "no-store" } },
+    );
   }
 
   const materials = await loadStoryboardMaterials(universeId || null, participantId);
@@ -187,7 +192,32 @@ export async function POST(request: Request) {
     const workId = typeof body.work_id === "string" ? body.work_id : "";
     const archived = await archiveStoryboardWork({ workId, participantId });
     if (!archived) return NextResponse.json({ error: "Storyboard was not found." }, { status: 404 });
+    revalidatePath("/studio");
+    revalidatePath("/studio/work");
     return NextResponse.json({ archived: true, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "delete-work") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    if (!workId) return NextResponse.json({ error: "A storyboard work is required." }, { status: 400 });
+    try {
+      const deleted = await deleteStoryboardWork({ workId, participantId });
+      if (!deleted) return NextResponse.json({ error: "Storyboard was not found." }, { status: 404 });
+      revalidatePath("/studio");
+      revalidatePath("/studio/work");
+      revalidatePath(`/studio/work/${workId}`);
+      if (deleted.universe_id) {
+        revalidatePath(`/authority/universes/${deleted.universe_id}`);
+        revalidatePath(`/authority/universes/${deleted.universe_id}/storyboard`);
+      }
+      return NextResponse.json({
+        ...deleted,
+        status: "ready",
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Storyboard could not be deleted.";
+      return NextResponse.json({ error: message, deleted: false, creates_scene: false, creates_canonical: false }, { status: 500 });
+    }
   }
 
   if (action === "use-still") {

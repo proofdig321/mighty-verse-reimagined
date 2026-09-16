@@ -4,7 +4,7 @@ import { CANON, CREATIVE_MOMENTS, ROUTES } from "./canon";
 export async function expectUniverseExperience(page: Page) {
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.getByText(CANON.universeDescription).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Enter Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(page.getByRole("link", { name: /Holographic Experience/i }).first()).toHaveAttribute("href", ROUTES.universeHolographic);
   await expect(page.getByRole("link", { name: /Enter Scene Deck/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /View Mural/i })).toHaveAttribute("href", ROUTES.muralLive);
   await expect(page.getByRole("heading", { name: "The Mural", exact: true })).toBeVisible();

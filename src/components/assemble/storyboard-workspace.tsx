@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FileText, Images, Pause, Play, Shield, SkipBack, SkipForward, Sparkles, Clapperboard, Film, LayoutGrid, Layers } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,9 +31,11 @@ import { SentinelWorkspace } from "./sentinel-workspace";
 import { AssociateStoryboard } from "./associate-storyboard";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardResetDialog } from "./storyboard-reset-dialog";
+import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
 import { deriveStoryboardProgress, storyboardOperatorChainLabel } from "@/lib/assemble/storyboard-progress";
+import { STUDIO_INTERACTION_PHASES, studioInteractionLabel, studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 import { cn } from "@/lib/utils";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
@@ -124,6 +127,7 @@ export function StoryboardWorkspace({
   workId?: string | null;
   backHref?: string;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<MaterialTab>(initialTab);
   const [script, setScript] = useState(initialBody);
   const [work, setWork] = useState<StoryboardWorkRecord | null>(null);
@@ -150,6 +154,9 @@ export function StoryboardWorkspace({
   const [dirty, setDirty] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [assistProposal, setAssistProposal] = useState<string | null>(null);
   const [assemblyItems, setAssemblyItems] = useState<AuthoringSnapshot["assembly"]>([]);
   const [cinematic, setCinematic] = useState<CinematicAnalysis | null>(null);
@@ -868,6 +875,27 @@ export function StoryboardWorkspace({
     job.panel_id === selectedId &&
     (job.kind === "motion" || job.kind === "clip" || job.kind === "animation" || job.kind === "animate-still"),
   );
+  const interactionPhase = studioPhaseForTab(tab);
+
+  async function confirmDeleteWorkspace() {
+    if (!work?.work_id) return;
+    setDeleteBusy(true);
+    setDeleteError(null);
+    const response = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "delete-work", work_id: work.work_id }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    setDeleteBusy(false);
+    if (!response.ok || payload.deleted !== true) {
+      setDeleteError(payload.error ?? "Storyboard could not be deleted.");
+      return;
+    }
+    setDeleteOpen(false);
+    router.push(backHref);
+    router.refresh();
+  }
 
   return (
     <div className="storyboard-workspace" data-storyboard-layout="workspace">
@@ -901,6 +929,7 @@ export function StoryboardWorkspace({
             <p className="text-[11px] text-muted-foreground">
               {work?.universe_id ? "Attached · non-canonical" : "Unattached · non-canonical"}
             </p>
+            <p className="text-[11px] text-muted-foreground">{studioInteractionLabel()}</p>
           </div>
         </div>
         <div className="storyboard-header-actions">
@@ -917,6 +946,19 @@ export function StoryboardWorkspace({
             Redo
           </Button>
           <Button type="button" size="sm" variant="outline" onClick={() => setResetOpen(true)}>Reset</Button>
+          {work?.work_id ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteOpen(true);
+              }}
+            >
+              Delete workspace
+            </Button>
+          ) : null}
           <Button type="button" size="sm" onClick={() => void saveBody()}>Save</Button>
         </div>
       </div>
@@ -946,6 +988,35 @@ export function StoryboardWorkspace({
           void mutate("Reset", "reset", { scope: scope === "panel-artifacts" ? "panel-artifacts" : "initial", panel_id: selectedPersisted?.panel_id });
         }}
       />
+      <StoryboardDeleteDialog
+        open={deleteOpen}
+        title={workTitle}
+        attached={Boolean(work?.universe_id)}
+        busy={deleteBusy}
+        error={deleteError}
+        onClose={() => {
+          if (!deleteBusy) setDeleteOpen(false);
+        }}
+        onConfirm={() => void confirmDeleteWorkspace()}
+      />
+      <ol className="grid gap-2 sm:grid-cols-3" aria-label={studioInteractionLabel()}>
+        {STUDIO_INTERACTION_PHASES.map((phase) => (
+          <li key={phase.id}>
+            <button
+              type="button"
+              className={cn(
+                "h-full w-full rounded-lg border border-border bg-card/60 p-3 text-left",
+                interactionPhase.id === phase.id && "border-foreground/40 bg-accent/20",
+              )}
+              aria-current={interactionPhase.id === phase.id ? "true" : undefined}
+              onClick={() => setTab(phase.defaultTab as MaterialTab)}
+            >
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">{phase.label}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{phase.note}</p>
+            </button>
+          </li>
+        ))}
+      </ol>
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         {universeId ? (
           <p className="text-sm text-muted-foreground">

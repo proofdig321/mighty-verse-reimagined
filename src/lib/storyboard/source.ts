@@ -250,3 +250,19 @@ export function sourceCategoryLabel(category: StoryboardSourceKind): string {
   if (category === "generated") return "Generated";
   return "Reference";
 }
+
+/** Work-owned storyboard intake kinds. Never masters, scenes, or canonical media. */
+export function storyboardProvenanceWorkId(notes: string | null | undefined): string | null {
+  return (
+    parseStoryboardSource(notes)?.work_id ??
+    parseStoryboardFrame(notes)?.work_id ??
+    parseStoryboardAssembly(notes)?.work_id ??
+    parseStoryboardSelection(notes)?.work_id ??
+    parseStoryboardCinematic(notes)?.work_id ??
+    null
+  );
+}
+
+export function isStoryboardOwnedIntake(notes: string | null | undefined, workId: string): boolean {
+  return storyboardProvenanceWorkId(notes) === workId;
+}

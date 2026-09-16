@@ -33,7 +33,7 @@ export default async function HomePage() {
             is a Legend.
           </>
         }
-        description="Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter Experience."
+        description="Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience."
         actions={
           <>
             <Link href="/universes">

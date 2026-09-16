@@ -261,7 +261,7 @@ export function HolographicStage({
   return (
     <div
       className={cn("holographic-stage", compact && "holographic-stage-compact")}
-      aria-label={`Experience stage for ${program.title}`}
+      aria-label={`${mode === "public" ? "Holographic Experience" : "2.5D Experience"} stage for ${program.title}`}
       data-holographic-playing={playing ? "true" : "false"}
       data-holographic-ready={ready ? "true" : "false"}
       data-holographic-muted={muted ? "true" : "false"}
@@ -397,7 +397,7 @@ export function HolographicStage({
                 aria-valuemin={0}
                 aria-valuemax={Math.round(durationMs)}
                 aria-valuenow={Math.round(timeMs)}
-                aria-label="Experience progress"
+                aria-label={mode === "public" ? "Holographic Experience progress" : "2.5D Experience progress"}
                 onClick={(event) => seekFromProgress(event.clientX, event.currentTarget)}
               >
                 <span style={{ width: `${progress * 100}%` }} />

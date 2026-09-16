@@ -69,7 +69,7 @@ export function StudioWorkspaceShell({
           <Link
             href={`/worlds/${universeId}/holographic`}
             className={buttonVariants({ size: "sm" })}
-            data-experience-entry="experience"
+            data-experience-entry="holographic"
           >
             Holographic Experience
           </Link>

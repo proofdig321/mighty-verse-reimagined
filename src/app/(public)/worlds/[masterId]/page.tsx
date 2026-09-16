@@ -8,6 +8,7 @@ import MediaHero from "@/components/media-hero";
 import { UniverseWorldExperience } from "@/components/experience/universe-world";
 import { sceneStillUrl } from "@/lib/experience/universe-world";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
 
 type MuralRow = {
   master_id: string;
@@ -413,11 +414,18 @@ export default async function WorldPage({
               {data.universe_master_id ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
-                    href={`/worlds/${data.universe_master_id}/holographic`}
+                    href={publicWorldHref(data.universe_master_id)}
                     className={buttonVariants({ size: "lg" })}
-                    data-experience-entry="experience"
+                    data-experience-entry="2.5d"
                   >
-                    Enter Experience
+                    {ENTER_2_5D_LABEL}
+                  </Link>
+                  <Link
+                    href={publicHolographicHref(data.universe_master_id)}
+                    className={buttonVariants({ size: "lg", variant: "outline" })}
+                    data-experience-entry="holographic"
+                  >
+                    {HOLOGRAPHIC_EXPERIENCE_LABEL}
                   </Link>
                   {data.scenes.length > 0 ? (
                     <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>

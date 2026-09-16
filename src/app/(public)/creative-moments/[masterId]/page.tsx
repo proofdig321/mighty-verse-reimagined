@@ -5,6 +5,7 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Separator } from "@/components/ui/separator";
 import { buttonVariants } from "@/components/ui/button";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
 
 type RelatedScene = {
   master_id: string;
@@ -132,14 +133,18 @@ export default async function CreativeMomentPage({
           {data.universe_master_id ? (
             <div className="flex flex-wrap gap-2 pt-2">
               <Link
-                href={`/worlds/${data.universe_master_id}/holographic`}
+                href={publicWorldHref(data.universe_master_id)}
                 className={buttonVariants({ size: "lg" })}
-                data-experience-entry="experience"
+                data-experience-entry="2.5d"
               >
-                Enter Experience
+                {ENTER_2_5D_LABEL}
               </Link>
-              <Link href={`/worlds/${data.universe_master_id}`} className={buttonVariants({ variant: "outline", size: "lg" })}>
-                Open Universe
+              <Link
+                href={publicHolographicHref(data.universe_master_id)}
+                className={buttonVariants({ size: "lg", variant: "outline" })}
+                data-experience-entry="holographic"
+              >
+                {HOLOGRAPHIC_EXPERIENCE_LABEL}
               </Link>
             </div>
           ) : null}

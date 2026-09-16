@@ -84,10 +84,10 @@ test("Home click path reaches Super Hero Ego Experience without typing a URL", a
   await expectUniverseExperience(page);
   notes.push("clicked Super Hero Ego Universe card");
 
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
   await captureScreenshot(page, testInfo, "click-path-home-experience");
-  notes.push(`clicked Enter Experience → ${ROUTES.universeHolographic}`);
+  notes.push(`clicked Holographic Experience → ${ROUTES.universeHolographic}`);
 
   const after = await snapshotProduction(svc);
   expect(after).toEqual(before);
@@ -110,9 +110,9 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   await expect(page).toHaveURL(new RegExp(`${ROUTES.muralLive}$`));
   await expect(page.getByText("Mural", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: /Back to Universe/i })).toBeVisible();
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
-  notes.push("Universe → Mural → Enter Experience");
+  notes.push("Universe → Mural → Holographic Experience");
 
   await page.getByRole("link", { name: /Return to Universe/i }).click();
   await page.locator(`[data-scene-id="${SCENE_MOMENTS.powerhouse.sceneMasterId}"]`).click();
@@ -121,24 +121,24 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   await expect(page.getByRole("heading", { name: SCENE_MOMENTS.powerhouse.sceneTitle })).toBeVisible();
   await expect(page.getByText("Experiential Moment")).toHaveCount(0);
   await expect(page.getByText("ERC-1155")).toHaveCount(0);
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
-  notes.push("Universe → Powerhouse Scene → Enter Experience");
+  notes.push("Universe → Powerhouse Scene → Holographic Experience");
 
   await page.getByRole("link", { name: /Return to Universe/i }).click();
   await page.getByRole("link", { name: /Enter Scene Deck/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeScenes}$`));
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
-  await expect(page.locator('[data-experience-entry="experience"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(page.locator('[data-experience-entry="holographic"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
   await page
     .locator(`a[href="/moments/${SCENE_MOMENTS.powerhouse.projectionId}"]`)
     .first()
     .click();
   await expect(page).toHaveURL(new RegExp(`/moments/${SCENE_MOMENTS.powerhouse.projectionId}$`));
   await expect(page.getByRole("heading", { name: SCENE_MOMENTS.powerhouse.sceneTitle })).toBeVisible();
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
-  notes.push("Universe → Scene Deck → Powerhouse → Enter Experience");
+  notes.push("Universe → Scene Deck → Powerhouse → Holographic Experience");
 
   await page.getByRole("link", { name: /Return to Universe/i }).click();
   await page
@@ -149,19 +149,19 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   await expect(page.getByText("Creative Moment", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Powerhouse", exact: true })).toBeVisible();
   await expect(page.getByRole("link", { name: "Hand-to-Hand", exact: true })).toBeVisible();
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
   await captureScreenshot(page, testInfo, "click-path-reveal-surfaces");
-  notes.push("Universe → Proverb → Enter Experience");
+  notes.push("Universe → Proverb → Holographic Experience");
 
   await page.goto(ROUTES.home, { waitUntil: "domcontentloaded" });
   await page.locator('[data-product-nav="moments"]').first().click();
   await expect(page).toHaveURL(/\/moments$/);
   await page.locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`).click();
   await expect(page).toHaveURL(new RegExp(`/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}$`));
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
-  notes.push("Home → Creative Moments → Proverb → Enter Experience");
+  notes.push("Home → Creative Moments → Proverb → Holographic Experience");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Reveal surfaces click into Experience", page.url(), notes, observe);
@@ -197,19 +197,19 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
   await page.locator('[data-dashboard-surface="experience"]').first().click();
   await expect(page).toHaveURL(/\/universes\?intent=experience/);
   await page.locator(`[data-universe-card="${CANON.universeId}"]`).first().click();
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
-  notes.push("Dashboard → Experience → Super Hero Ego → Enter Experience");
+  notes.push("Dashboard → Experience → Super Hero Ego → Holographic Experience");
 
   await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await page.locator('[data-product-nav="studio"]').first().click();
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   await page.locator('[data-dashboard-surface="studio"]').first().click();
   await page.locator(`a[href="${ROUTES.authorityUniverseWorkspace}"]`).filter({ hasText: CANON.universeTitle }).first().click();
-  await page.locator('[data-experience-entry="experience"]').first().click();
+  await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
   await captureScreenshot(page, testInfo, "click-path-studio-experience");
-  notes.push("Dashboard → Creative Studio → Super Hero Ego → Enter Experience");
+  notes.push("Dashboard → Creative Studio → Super Hero Ego → Holographic Experience");
 
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Dashboard and Studio click mounting", page.url(), notes, observe);
