@@ -62,6 +62,30 @@ export function muxThumbnailUrl(playbackId: string, timeSec = 0, width?: number)
   return `${MUX_IMAGE_BASE}/${playbackId}/thumbnail.jpg?${params}`;
 }
 
+/** Playback id from a Mux playback id, HLS endpoint, or image URL. */
+export function muxPlaybackIdFromRef(value: string | null | undefined): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const hls = trimmed.match(/stream\.mux\.com\/([^/.]+)/i);
+  if (hls?.[1]) return hls[1];
+  const image = trimmed.match(/image\.mux\.com\/([^/.]+)/i);
+  if (image?.[1]) return image[1];
+  if (/^https?:\/\//i.test(trimmed) || trimmed.startsWith("seed:")) return null;
+  return trimmed;
+}
+
+/** Representative Mux still from a playback id or HLS endpoint. */
+export function muxStillFromPlayback(
+  playbackOrEndpoint: string | null | undefined,
+  timeSec = 0,
+  width?: number,
+): string | null {
+  const playbackId = muxPlaybackIdFromRef(playbackOrEndpoint);
+  if (!playbackId) return null;
+  return muxThumbnailUrl(playbackId, timeSec, width);
+}
+
 /**
  * Returns a provider-aware thumbnail URL from a storage_ref.
  * Mux: image.mux.com/{storageRef}/thumbnail.jpg

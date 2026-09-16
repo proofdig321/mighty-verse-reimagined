@@ -21,6 +21,7 @@ test("audience chrome restores Discover pages without the operations sidebar", a
   await expect(page.getByText("Search surfaces")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /Every Song is a Universe/i })).toBeVisible();
   await expect(page.locator("[data-public-hero=display]")).toBeVisible();
+  await expect(page.locator("[data-public-hero-parallax=true]")).toBeVisible();
   notes.push("Home uses Discover Product nav only; operations stay off the audience header");
 
   await product.getByRole("link", { name: "Scenes", exact: true }).click();

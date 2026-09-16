@@ -120,6 +120,7 @@ export function AppShell({
                   key={item.href}
                   href={item.href}
                   data-product-nav={item.surface}
+                  data-dashboard-surface={item.surface}
                   onClick={() => setMobileNav(false)}
                   className={cn(
                     "flex items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors",

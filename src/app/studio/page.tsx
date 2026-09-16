@@ -1,7 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
-import { Clapperboard, Film, MonitorPlay, Plus } from "lucide-react";
+import { Film, MonitorPlay, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { loadUniverseCatalogue } from "@/lib/assemble/load-universe-catalogue";
@@ -43,7 +43,7 @@ export default async function StudioHomePage() {
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <Link href="/studio/work">
           <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
             <CardHeader>
@@ -62,21 +62,12 @@ export default async function StudioHomePage() {
             </CardHeader>
           </Card>
         </Link>
-        <Link href="/scenes">
-          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
-            <CardHeader>
-              <Clapperboard size={16} className="text-muted-foreground" />
-              <CardTitle>Scene Deck</CardTitle>
-              <CardDescription>Discover, reveal, reorder, then play your own timeline.</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/editor">
+        <Link href="/authority/curate">
           <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
             <CardHeader>
               <Film size={16} className="text-muted-foreground" />
-              <CardTitle>Timeline</CardTitle>
-              <CardDescription>Public 2.5D assembly. Experience is not a Studio editor.</CardDescription>
+              <CardTitle>Curate Hub</CardTitle>
+              <CardDescription>Associate ingested media, inspect, then continue in this workstation.</CardDescription>
             </CardHeader>
           </Card>
         </Link>

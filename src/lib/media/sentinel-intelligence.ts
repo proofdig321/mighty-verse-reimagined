@@ -155,6 +155,15 @@ function stillFor(scene: IntelligenceScene, timeMs: number): string | null {
   return providerThumbnailUrl(scene.provider, scene.storage_ref, { timeSec, width: 640 });
 }
 
+function stillForMural(
+  mural: { provider: string | null; storage_ref: string | null } | null | undefined,
+  timeMs: number,
+): string | null {
+  if (!mural?.storage_ref) return null;
+  const timeSec = Math.max(0, Math.floor(timeMs / 1000));
+  return providerThumbnailUrl(mural.provider, mural.storage_ref, { timeSec, width: 640 });
+}
+
 function mean(values: number[]): number {
   if (!values.length) return 0;
   return values.reduce((sum, value) => sum + value, 0) / values.length;
@@ -284,7 +293,7 @@ export function composeSentinelIntelligence(input: {
       time_ms: time,
       scene_master_id: null,
       title: `Unaligned beat · ${formatTimelineMs(time)}`,
-      still_url: host ? stillFor(host, time) : null,
+      still_url: host ? stillFor(host, time) : stillForMural(input.mural, time),
       change_score: input.observations.find((observation) => observation.time_ms === time)?.change_score ?? null,
       is_canonical_scene: false,
     });

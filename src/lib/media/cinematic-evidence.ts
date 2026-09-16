@@ -197,6 +197,22 @@ export function parseCinematicFromParameters(parameters: unknown): CinematicAnal
   return parseCinematicAnalysis(record.cinematic ?? parameters);
 }
 
+export function observationsFromCinematic(analysis: CinematicAnalysis | null): Array<{
+  time_ms: number;
+  mean_luminance: number | null;
+  change_score: number | null;
+  is_boundary_candidate: boolean;
+}> {
+  if (!analysis?.shots.length) return [];
+  return analysis.shots.map((shot, index) => ({
+    time_ms: shot.time_ms,
+    mean_luminance: null,
+    change_score: null,
+    is_boundary_candidate:
+      index === 0 || shot.transition === "cut" || shot.transition === "fade" || shot.transition === "dissolve",
+  }));
+}
+
 export function parseCinematicShot(value: unknown): CinematicShot | null {
   return normalizeShot(value, 0);
 }

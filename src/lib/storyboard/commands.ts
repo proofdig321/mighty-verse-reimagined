@@ -518,13 +518,16 @@ export async function restoreStoryboardSnapshot(input: {
 export async function resetStoryboardWork(input: {
   workId: string;
   participantId: string;
-  scope: "saved" | "initial" | "panel-artifacts";
+  scope: "saved" | "initial" | "panel-artifacts" | "panel";
   panelId?: string;
   client?: ServiceClient;
 }): Promise<StoryboardWorkRecord> {
   const work = await loadStoryboardWorkById(input);
   if (!work) throw new Error("Storyboard was not found.");
   const db = svc(input.client);
+  if (input.scope === "saved" || input.scope === "panel") {
+    return work;
+  }
   if (input.scope === "panel-artifacts" && input.panelId) {
     await db.from("storyboard_panel").update({
       active_still_asset_id: null,

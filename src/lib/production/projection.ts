@@ -8,6 +8,7 @@
  */
 
 import type { HolographicLayer } from "../media/sentinel-intelligence";
+import { muxStillFromPlayback } from "../media/thumbnail";
 
 export type ApprovedProductionLayer = {
   layer_id: string;
@@ -39,7 +40,9 @@ export function productionLayersFromResults(
     layer_id: `production-${result.asset_id}`,
     scene_master_id: result.scene_master_id,
     title: (result.title ?? "Production").replace(/ production · .*$/i, " production"),
-    still_url: result.still_url,
+    still_url:
+      result.still_url ??
+      muxStillFromPlayback(result.playback_id ?? result.playback_endpoint, 0, 640),
     playback_endpoint:
       result.playback_endpoint ??
       (result.playback_id ? `https://stream.mux.com/${result.playback_id}.m3u8` : null),

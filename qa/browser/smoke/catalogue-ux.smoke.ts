@@ -23,9 +23,10 @@ test("catalogue UX edit/remove pagination and Authority trim", async ({ page, co
   await expect(page.getByText("Public Universes catalog.")).toHaveCount(0);
   await expect(page.getByRole("navigation", { name: "Creative journey" })).toHaveCount(0);
   await expect(page.getByText("Experience is public. Sentinel observes throughout.")).toHaveCount(0);
-  await expect(page.locator('[data-dashboard-surface="studio"]')).toBeVisible();
-  await expect(page.locator('[data-dashboard-surface="experience"]')).toBeVisible();
+  await expect(page.locator('[data-dashboard-surface="studio"]').first()).toBeVisible();
+  await expect(page.locator('[data-dashboard-surface="experience"]')).toHaveCount(0);
   await expect(page.locator('[data-dashboard-surface="discover"]')).toHaveCount(0);
+  await expect(page.getByRole("navigation", { name: "Discover" })).toHaveCount(0);
   await page.screenshot({ path: `${ARTIFACTS}/authority-dashboard.png`, fullPage: true });
 
   await page.goto("/authority/scenes", { waitUntil: "domcontentloaded" });

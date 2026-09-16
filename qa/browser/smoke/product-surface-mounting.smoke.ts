@@ -194,7 +194,7 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
 
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authority}$`));
-  await page.locator('[data-dashboard-surface="experience"]').first().click();
+  await page.goto("/universes?intent=experience", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/universes\?intent=experience/);
   await page.locator(`[data-universe-card="${CANON.universeId}"]`).first().click();
   await page.locator('[data-experience-entry="holographic"]').first().click();

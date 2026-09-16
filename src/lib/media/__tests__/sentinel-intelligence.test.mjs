@@ -157,4 +157,24 @@ assert(canonicalOnly.holographic.filter((layer) => layer.kind === "scene").lengt
 assert(canonicalOnly.storyboard.filter((panel) => panel.kind === "scene").length === 4, "canonical storyboard still has four Scenes");
 assert(canonicalOnly.creates_scene === false, "canonical-only intelligence still creates no Scenes");
 
+const muralOnly = composeSentinelIntelligence({
+  session_id: "session-fr",
+  asset_id: "5f85a6f1-1f2a-4da7-af9b-8467e58d3b9c",
+  observations: [
+    { time_ms: 12000, mean_luminance: 40, change_score: 0.3, is_boundary_candidate: true },
+    { time_ms: 48000, mean_luminance: 55, change_score: 0.11, is_boundary_candidate: false },
+  ],
+  scenes: [],
+  mural: {
+    master_id: MURAL,
+    title: "Father Raymond",
+    provider: "mux",
+    storage_ref: "014sJhmHHRL2g52G14xG00L6MTyq4zvunCsZtFStk4Wds",
+  },
+});
+assert(muralOnly.observation_count === 2, "mural-only Universes keep persisted observations");
+assert(muralOnly.candidate_count === 1, "boundary candidates stay observational when no Scenes exist");
+assert(muralOnly.storyboard.some((panel) => panel.still_url && panel.still_url.includes("image.mux.com")), "mural-only beats still use Mux posters");
+assert(muralOnly.creates_scene === false, "mural-only evidence never creates Scenes");
+
 console.log("Sentinel intelligence tests: all passed");

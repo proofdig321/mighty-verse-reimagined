@@ -137,7 +137,10 @@ export default function EditorShell({ scenes, initialDecks, isAuthenticated }: P
   return (
     <div className="flex h-full min-h-0 flex-col overflow-hidden bg-background">
       <div className="flex shrink-0 items-center justify-between border-b border-border bg-card/50 px-4 py-2.5">
-        <p className="text-sm font-medium text-foreground">Experience Editor</p>
+        <div>
+          <p className="text-sm font-medium text-foreground">Scene Deck timeline</p>
+          <p className="text-[11px] text-muted-foreground">Public assembly of canonical Scenes. Storyboard authoring lives in Creative Studio.</p>
+        </div>
         <Button
           size="sm"
           disabled={!canPlay}

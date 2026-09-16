@@ -124,12 +124,10 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
 
   await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Authority Console/i })).toBeVisible();
-  const experienceCard = page.locator('[data-dashboard-surface="experience"]').first();
-  await expect(experienceCard).toBeVisible();
-  await expect(experienceCard).toContainText("enter 2.5D or Holographic Experience");
-  notes.push("A: dashboard Experience is a public Experience journey, not a global 2.5D sidebar item");
+  await expect(page.locator('[data-dashboard-surface="experience"]')).toHaveCount(0);
+  notes.push("A: Authority does not remount public Experience; the journey stays on Universes");
 
-  await experienceCard.click();
+  await page.goto("/universes?intent=experience", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveURL(/\/universes(?:\?intent=experience)?$/);
   await expect(page.getByRole("heading", { name: /Enter 2\.5D|All Universes/i })).toBeVisible();
   const universeCard = page.locator(`a[href="${ROUTES.universeLive}"]`).filter({ hasText: CANON.universeTitle }).first();

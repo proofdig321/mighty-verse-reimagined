@@ -105,7 +105,7 @@ export function SentinelWorkspace({
         <CardHeader>
           <CardTitle className="text-base">Source</CardTitle>
           <CardDescription>
-            {source ? `${source.title} · observational only` : "Attach source media on References first. Sentinel analyses the Storyboard source, not Super Hero Ego canonical media."}
+            {source ? `${source.title} · observational only` : "This Universe has no mural media yet. Sentinel observes the mural, not Super Hero Ego by inference."}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -116,7 +116,7 @@ export function SentinelWorkspace({
               label={source.title}
             />
           ) : (
-            <p className="suite-empty">No source attached.</p>
+            <p className="suite-empty">No mural media is attached to this Universe.</p>
           )}
         </CardContent>
       </Card>

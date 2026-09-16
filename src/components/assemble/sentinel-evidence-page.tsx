@@ -6,6 +6,7 @@ import { buttonVariants } from "@/components/ui/button";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 import type { CinematicAnalysis, CinematicShot } from "@/lib/media/cinematic-evidence";
 import type { StoryboardWorkRecord } from "@/lib/storyboard/document";
+import type { StoryboardSourceRecord } from "@/lib/storyboard/source";
 import { creativeSuiteStoryboardHref } from "@/lib/assemble/studio";
 import { cn } from "@/lib/utils";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
@@ -29,6 +30,7 @@ export function SentinelEvidencePage({
   establishHref?: string | null;
 }) {
   const [work, setWork] = useState<StoryboardWorkRecord | null>(null);
+  const [universeSource, setUniverseSource] = useState<StoryboardSourceRecord | null>(null);
   const [cinematic, setCinematic] = useState<CinematicAnalysis | null>(null);
   const [selectedShotId, setSelectedShotId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -42,12 +44,13 @@ export function SentinelEvidencePage({
       const response = await fetch(`/api/authority/storyboard?universe_id=${encodeURIComponent(universeId)}`);
       const payload = await response.json().catch(() => ({}));
       if (payload.work) setWork(payload.work);
+      if (payload.universe_source) setUniverseSource(payload.universe_source);
       if (payload.cinematic) setCinematic(payload.cinematic);
       if (typeof payload.selected_shot_id === "string") setSelectedShotId(payload.selected_shot_id);
     })();
   }, [universeId]);
 
-  const source = work?.sources?.[0] ?? null;
+  const source = work?.sources?.[0] ?? universeSource;
   const selectedShots = useMemo(
     () => (cinematic?.shots ?? []).filter((shot) => selectedIds.includes(shot.shot_id)),
     [cinematic, selectedIds],
@@ -55,7 +58,8 @@ export function SentinelEvidencePage({
   const shots = cinematic?.shots ?? [];
 
   async function post(action: string, extra: Record<string, unknown> = {}) {
-    if (!work) {
+    const needsWork = action !== "analyse-sentinel";
+    if (needsWork && !work) {
       setError("Create or open a Storyboard work before Sentinel can bind evidence.");
       return null;
     }
@@ -66,7 +70,7 @@ export function SentinelEvidencePage({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         universe_id: universeId,
-        work_id: work.work_id,
+        work_id: work?.work_id,
         action,
         ...extra,
       }),
@@ -78,6 +82,7 @@ export function SentinelEvidencePage({
       return payload;
     }
     if (payload.work) setWork(payload.work);
+    if (payload.universe_source) setUniverseSource(payload.universe_source);
     if (payload.cinematic) setCinematic(payload.cinematic);
     if (typeof payload.selected_shot_id === "string") setSelectedShotId(payload.selected_shot_id);
     return payload;
@@ -126,7 +131,7 @@ export function SentinelEvidencePage({
         <div className="space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel</p>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Observational evidence for {universeTitle}. Sentinel describes the attached Storyboard source. It does not create Scenes.
+            Observational evidence for {universeTitle}. Sentinel describes this Universe's mural. It does not create Scenes.
           </p>
         </div>
         <Link href={storyboardHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>

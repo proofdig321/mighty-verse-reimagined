@@ -46,11 +46,9 @@ export async function loadUniverseProductionResults(universeId: string): Promise
       title: intake?.title ?? "Production result",
       mux_asset_id: provenance.mux_asset_id,
       playback_id: asset.storage_ref ?? provenance.playback_id,
-      still_url: asset.storage_ref
-        ? muxThumbnailUrl(asset.storage_ref, 0, 640)
-        : provenance.playback_id
-          ? muxThumbnailUrl(provenance.playback_id, 0, 640)
-          : null,
+      still_url:
+        muxThumbnailUrl(asset.storage_ref || provenance.playback_id, 0, 640) ||
+        null,
       approval: provenance.approval,
       attached: provenance.attached,
       executor: provenance.executor,

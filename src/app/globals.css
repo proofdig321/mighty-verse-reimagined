@@ -280,13 +280,52 @@ html[data-theme="paper"] {
     background: linear-gradient(115deg, color-mix(in oklch, var(--card) 82%, var(--primary)), var(--background) 65%);
   }
 
-  .public-hero::after {
-    content: "";
+  .public-hero-parallax {
+    position: relative;
+    isolation: isolate;
+  }
+
+  .public-hero-layer {
     position: absolute;
-    inset: 0 0 0 58%;
+    inset: -18%;
+    pointer-events: none;
+    will-change: transform;
+  }
+
+  .public-hero-layer-back {
+    background:
+      radial-gradient(circle at 22% 18%, color-mix(in oklch, var(--accent-mv) 28%, transparent), transparent 42%),
+      radial-gradient(circle at 78% 72%, color-mix(in oklch, var(--primary) 22%, transparent), transparent 48%);
+    transform: translate3d(
+      calc(var(--hero-px, 0) * var(--hero-parallax, 0.75) * -48px),
+      calc((var(--hero-py, 0) * var(--hero-parallax, 0.75) * -28px) + (var(--hero-scroll, 0) * 36px)),
+      0
+    );
+  }
+
+  .public-hero-layer-mid {
     background: repeating-linear-gradient(135deg, transparent 0 18px, color-mix(in oklch, var(--primary) 13%, transparent) 19px 20px);
     opacity: 0.45;
-    pointer-events: none;
+    transform: translate3d(
+      calc(var(--hero-px, 0) * var(--hero-parallax, 0.75) * -88px),
+      calc((var(--hero-py, 0) * var(--hero-parallax, 0.75) * -40px) + (var(--hero-scroll, 0) * 64px)),
+      0
+    );
+  }
+
+  .public-hero-content {
+    position: relative;
+    z-index: 2;
+    transform: translate3d(
+      calc(var(--hero-px, 0) * var(--hero-parallax, 0.75) * 18px),
+      calc((var(--hero-py, 0) * var(--hero-parallax, 0.75) * 10px) + (var(--hero-scroll, 0) * -22px)),
+      0
+    );
+  }
+
+  .public-hero[data-public-hero="page"] .public-hero-content,
+  .public-hero[data-public-hero="page"] .public-hero-layer {
+    transform: none;
   }
 
   .artifact-card {
@@ -2633,6 +2672,16 @@ html[data-theme="paper"] {
   .holographic-orbit-production {
     grid-template-columns: repeat(auto-fit, minmax(10rem, 14rem));
     justify-content: start;
+  }
+
+  .holographic-orbit-production .holographic-layer {
+    pointer-events: auto;
+  }
+
+  .holographic-orbit-production .holographic-layer-inactive {
+    opacity: 1;
+    filter: none;
+    transform: none;
   }
 
   .holographic-layer {

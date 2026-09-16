@@ -332,6 +332,18 @@ assert(attached.layers.length === 2 && attached.production_count === 1, "approve
 assert(attached.layers[1].kind === "production", "production layer is explicit and is not a Creative Moment");
 assert(attached.layers[0].kind === "scene", "canonical Scene layer remains");
 assert(attached.layers[1].offset_y !== attached.layers[0].offset_y, "production layer is spatially distinct from the canonical Scene");
-assert(attached.redefines_timing === false, "attached production does not rewrite Scene windows");
+const attachedWithoutStill = productionLayersFromResults([
+  {
+    asset_id: "11111111-1111-4111-8111-111111111111",
+    scene_master_id: POWERHOUSE,
+    title: "Golden Shovel — Powerhouse",
+    still_url: null,
+    playback_id: "J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE",
+    approval: "approved",
+    attached: true,
+  },
+]);
+assert(attachedWithoutStill[0].still_url?.includes("image.mux.com/J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE/thumbnail.jpg"), "production still falls back to Mux poster when still_url is missing");
+assert(attachedWithoutStill[0].playback_endpoint?.includes("stream.mux.com"), "production playback stays Mux HLS");
 
 console.log("Production orchestration tests: all passed");

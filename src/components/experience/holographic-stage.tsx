@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, typ
 import Link from "next/link";
 import { Maximize2, Volume2, VolumeX } from "lucide-react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
+import { muxStillFromPlayback } from "@/lib/media/thumbnail";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { sceneOrdinal, sceneShortTitle } from "@/lib/assemble/composition";
 import {
@@ -236,10 +237,11 @@ export function HolographicStage({
   }
 
   function stillSurface(layer: HolographicLayer, title: string, className?: string) {
-    if (layer.still_url) {
+    const still = layer.still_url || muxStillFromPlayback(layer.playback_endpoint, 0, 960);
+    if (still) {
       return (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={layer.still_url} alt="" className={className} />
+        <img src={still} alt="" className={className || "world-still"} />
       );
     }
     return <div className={className || "holographic-placeholder"} aria-hidden="true" title={title} />;
@@ -546,7 +548,7 @@ export function HolographicStage({
                             start_ms: 0,
                             end_ms: null,
                           }}
-                          posterUrl={layer.still_url}
+                          posterUrl={layer.still_url || muxStillFromPlayback(layer.playback_endpoint, 0, 960)}
                           title={title}
                           playing={playing && active}
                           muted

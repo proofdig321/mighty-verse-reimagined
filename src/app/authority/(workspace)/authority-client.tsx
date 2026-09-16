@@ -2,17 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, Clapperboard, Globe, MonitorPlay, Sparkles, Users } from "lucide-react";
+import { ArrowRight, Clapperboard, Globe, Sparkles, Users } from "lucide-react";
 import { api, type AuthorityData } from "./_shared/authority-utils";
-import { CREATIVE_STUDIO_HREF, EXPERIENCE_JOURNEY_HREF } from "@/lib/product-nav";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const SURFACES = [
-  { label: "Creative Studio", sub: "Start from an idea, or open an existing Universe.", href: CREATIVE_STUDIO_HREF, surface: "studio", icon: MonitorPlay },
-  { label: "Public Experience", sub: "Choose a Universe, then enter 2.5D or Holographic Experience.", href: EXPERIENCE_JOURNEY_HREF, surface: "experience", icon: Clapperboard },
-] as const;
 
 const OPERATIONS = [
   { label: "Media Library", sub: "Incoming assets and Mux playback", href: "/authority/media", icon: Clapperboard },
@@ -45,43 +39,16 @@ export default function AuthorityClient() {
         </p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Authority Console</h1>
         <p className="text-sm text-muted-foreground">
-          Create Work, Curate, and Creative Studio live in the sidebar. This console is for operations.
+          Create Work and Curate live in the sidebar. Creative Studio is a workstation, not a dashboard card.
+          Discover Home, Universes, and Gallery already live on the public product.
         </p>
       </div>
 
       <section className="space-y-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Workspace</p>
-          <p className="mt-1 text-xs text-muted-foreground/70">
-            Compose in Studio. Experience stays public.
-          </p>
-        </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {SURFACES.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Link key={item.label} href={item.href} data-dashboard-surface={item.surface}>
-                <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
-                  <CardHeader>
-                    <Icon size={16} className="text-muted-foreground" />
-                    <CardTitle>{item.label}</CardTitle>
-                    <CardDescription>{item.sub}</CardDescription>
-                  </CardHeader>
-                  <CardFooter className="text-xs text-muted-foreground">
-                    Open <ArrowRight size={12} />
-                  </CardFooter>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="space-y-3">
-        <div>
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Operations</p>
           <p className="mt-1 text-xs text-muted-foreground/70">
-            Catalogues and rights live on their own pages. This console does not list every master.
+            Catalogues and rights live on their own pages. This console does not remount public Experience.
           </p>
         </div>
         <Card className="bg-card/80">

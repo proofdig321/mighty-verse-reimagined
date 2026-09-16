@@ -1,4 +1,5 @@
 import { getInspectionSession, listInspectionSessions } from "../media/sentinel";
+import { parseCinematicFromParameters, observationsFromCinematic } from "../media/cinematic-evidence";
 import {
   composeSentinelIntelligence,
   type SentinelIntelligence,
@@ -31,6 +32,10 @@ export async function loadSentinelIntelligence(
     const detailed = latest ? await getInspectionSession(latest.session_id) : null;
     sessionId = detailed?.session.session_id ?? latest?.session_id ?? null;
     observations = detailed?.observations ?? [];
+    if (!observations.length) {
+      const cinematic = parseCinematicFromParameters(detailed?.session.parameters ?? null);
+      observations = observationsFromCinematic(cinematic);
+    }
   }
 
   return composeSentinelIntelligence({

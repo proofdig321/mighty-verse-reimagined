@@ -1,6 +1,6 @@
 /**
- * Run cinematic Sentinel analysis against Storyboard source media.
- * Uses the attached source, never Super Hero Ego canonical media by inference.
+ * Run cinematic Sentinel analysis against this Universe's mural (or an
+ * explicitly attached Storyboard source). Never infers Super Hero Ego media.
  */
 
 import { analyseSourceCinematically } from "../ai/cinematic-analysis";
@@ -8,7 +8,35 @@ import { getServiceClient } from "../authority/validate";
 import { parseCinematicFromParameters, type CinematicAnalysis } from "../media/cinematic-evidence";
 import { getInspectionSession, listInspectionSessions, persistCinematicAnalysis } from "../media/sentinel";
 import type { StoryboardWorkRecord } from "./document";
+import { attachStoryboardSource } from "./commands";
 import { parseStoryboardCinematic, storyboardCinematicNotes } from "./source";
+
+export async function loadAssetCinematic(assetId: string): Promise<CinematicAnalysis | null> {
+  const sessions = await listInspectionSessions(assetId);
+  const latest = sessions.find((session) => session.status === "completed") ?? sessions[0] ?? null;
+  if (!latest) return null;
+  const detailed = await getInspectionSession(latest.session_id);
+  return parseCinematicFromParameters(detailed?.session.parameters ?? null);
+}
+
+export async function analyseUniverseSource(input: {
+  work: StoryboardWorkRecord;
+  participantId: string;
+  muralAssetId?: string | null;
+  muralTitle?: string | null;
+}): Promise<{ analysis: CinematicAnalysis; provider: "gemini" | "fallback"; sessionId: string | null }> {
+  let work = input.work;
+  const attached = work.sources?.[0] ?? null;
+  if (!attached?.playback_id && input.muralAssetId) {
+    work = await attachStoryboardSource({
+      workId: work.work_id,
+      participantId: input.participantId,
+      assetId: input.muralAssetId,
+      title: input.muralTitle ?? "Universe mural",
+    });
+  }
+  return analyseStoryboardSource({ work, participantId: input.participantId });
+}
 
 export async function analyseStoryboardSource(input: {
   work: StoryboardWorkRecord;
@@ -16,7 +44,7 @@ export async function analyseStoryboardSource(input: {
 }): Promise<{ analysis: CinematicAnalysis; provider: "gemini" | "fallback"; sessionId: string | null }> {
   const source = input.work.sources?.[0] ?? null;
   if (!source?.playback_id) {
-    throw new Error("Attach source media to this Storyboard before running Sentinel. Sentinel analyses the attached source, not Super Hero Ego canonical media.");
+    throw new Error("Attach this Universe's mural before running Sentinel. Sentinel analyses the Universe mural, not Super Hero Ego canonical media.");
   }
   const assetId = source.asset_id;
   let cues: { time_ms: number; mean_luminance: number | null; change_score: number | null; is_boundary_candidate: boolean }[] = [];
@@ -86,9 +114,5 @@ export async function loadStoryboardCinematic(work: StoryboardWorkRecord): Promi
   if (work.cinematic) return work.cinematic;
   const source = work.sources?.[0] ?? null;
   if (!source?.asset_id) return null;
-  const sessions = await listInspectionSessions(source.asset_id);
-  const latest = sessions.find((session) => session.status === "completed") ?? sessions[0] ?? null;
-  if (!latest) return null;
-  const detailed = await getInspectionSession(latest.session_id);
-  return parseCinematicFromParameters(detailed?.session.parameters ?? null);
+  return loadAssetCinematic(source.asset_id);
 }

@@ -27,7 +27,7 @@
 
 import { createClient } from "@supabase/supabase-js";
 import type { SampledFrame, FrameDelta, BrowserMediaMetadata } from "@/lib/media/intelligence";
-import { CINEMATIC_ANALYSIS_VERSION, withCinematicParameters } from "./cinematic-evidence";
+import { CINEMATIC_ANALYSIS_VERSION, observationsFromCinematic, withCinematicParameters } from "./cinematic-evidence";
 
 /** Current analysis version. Increment when the algorithm changes. */
 export const ANALYSIS_VERSION = "browser-v1" as const;
@@ -266,8 +266,18 @@ export async function persistCinematicAnalysis(input: {
     const parameters = withCinematicParameters(current?.session.parameters, input.cinematic);
     await svc
       .from("inspection_session")
-      .update({ parameters, analysis_version: current?.session.analysis_version ?? ANALYSIS_VERSION })
+      .update({
+        parameters,
+        analysis_version: current?.session.analysis_version ?? ANALYSIS_VERSION,
+        frame_count: current?.observations.length || input.cinematic.shots.length,
+        candidate_count:
+          current?.session.candidate_count ||
+          observationsFromCinematic(input.cinematic).filter((row) => row.is_boundary_candidate).length,
+      })
       .eq("session_id", latest.session_id);
+    if (!(current?.observations.length)) {
+      await persistCinematicObservations(latest.session_id, input.cinematic);
+    }
     return { sessionId: latest.session_id };
   }
   const now = new Date().toISOString();
@@ -280,7 +290,7 @@ export async function persistCinematicAnalysis(input: {
       status: "completed",
       observed_duration_ms: input.durationMs,
       frame_count: input.cinematic.shots.length,
-      candidate_count: input.cinematic.shots.length,
+      candidate_count: observationsFromCinematic(input.cinematic).filter((row) => row.is_boundary_candidate).length,
       parameters: withCinematicParameters({}, input.cinematic),
       started_at: now,
       completed_at: now,
@@ -288,5 +298,25 @@ export async function persistCinematicAnalysis(input: {
     .select("session_id")
     .single();
   if (error || !data) throw new Error(error?.message ?? "Cinematic evidence could not be saved.");
+  await persistCinematicObservations(data.session_id, input.cinematic);
   return { sessionId: data.session_id };
+}
+
+async function persistCinematicObservations(
+  sessionId: string,
+  cinematic: import("./cinematic-evidence").CinematicAnalysis,
+): Promise<void> {
+  const rows = observationsFromCinematic(cinematic).map((observation, index) => ({
+    session_id: sessionId,
+    time_ms: observation.time_ms,
+    order_index: index,
+    mean_luminance: observation.mean_luminance,
+    change_score: observation.change_score,
+    is_boundary_candidate: observation.is_boundary_candidate,
+    analysis_version: CINEMATIC_ANALYSIS_VERSION,
+  }));
+  if (!rows.length) return;
+  const svc = getServiceClient();
+  const { error } = await svc.from("frame_observation").insert(rows);
+  if (error) throw new Error(`Failed to persist cinematic observations: ${error.message}`);
 }

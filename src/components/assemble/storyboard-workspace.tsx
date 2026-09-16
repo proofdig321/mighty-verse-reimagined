@@ -1031,18 +1031,11 @@ export function StoryboardWorkspace({
             setDirty(false);
             return;
           }
-          if (scope === "saved" && savedSnapshot.current) {
-            setScript(savedSnapshot.current.body);
-            setWorkTitle(savedSnapshot.current.title);
-            setDirty(false);
-            if (work) applyWork(work);
-            return;
-          }
-          if (scope === "panel" && selectedPersisted && work) {
+          if (scope === "panel" && selectedPersisted) {
             setDraftPanel(selectedPersisted);
             return;
           }
-          void mutate("Reset", "reset", { scope: scope === "panel-artifacts" ? "panel-artifacts" : "initial", panel_id: selectedPersisted?.panel_id });
+          void mutate("Reset", "reset", { scope, panel_id: selectedPersisted?.panel_id });
         }}
       />
       <StoryboardDeleteDialog

@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
+import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
+import { resolveSuiteSourceAssetId } from "@/lib/assemble/source-preview";
 import { composeStoryboardBody } from "@/lib/storyboard/script";
 import { persistStoryboardBody, associateStoryboardWork } from "@/lib/storyboard/persist";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
@@ -43,7 +45,8 @@ import {
   useStillOnStoryboard,
 } from "@/lib/storyboard/commands";
 import { listGenerationJobs } from "@/lib/storyboard/generation";
-import { loadStoryboardCinematic, analyseStoryboardSource } from "@/lib/storyboard/analyse-source";
+import { loadStoryboardCinematic, loadAssetCinematic, analyseUniverseSource } from "@/lib/storyboard/analyse-source";
+import { universeMuralAsStoryboardSource } from "@/lib/storyboard/source";
 import { addSentinelReferences, addSentinelShotsToStoryboard, selectSentinelShot } from "@/lib/storyboard/sentinel-binding";
 import { parseCinematicShot } from "@/lib/media/cinematic-evidence";
 
@@ -94,12 +97,26 @@ export async function GET(request: Request) {
   const capability = aiServiceCapability();
 
   const cinematic = work?.cinematic ?? (work ? await loadStoryboardCinematic(work) : null);
+  const assembly = universeId ? await loadUniverseAssembly(universeId) : null;
+  const preview = assembly ? await loadSuiteSourcePreview(assembly) : null;
+  const muralCinematic = !cinematic && preview?.asset_id ? await loadAssetCinematic(preview.asset_id) : null;
+  const universeSource = preview
+    ? universeMuralAsStoryboardSource({
+        workId: work?.work_id ?? null,
+        title: preview.title ?? preview.mural_title,
+        assetId: preview.asset_id,
+        playbackId: preview.playback_id,
+        endpointRef: preview.endpoint_ref,
+        durationMs: preview.duration_ms,
+      })
+    : null;
   return NextResponse.json({
     body: work?.body ?? materials.body?.body ?? "",
     panel_count: work?.panels.length ?? materials.body?.panel_count ?? 0,
     work,
     jobs,
-    cinematic,
+    cinematic: cinematic ?? muralCinematic,
+    universe_source: universeSource,
     selected_panel_id: work?.selection?.panel_id ?? null,
     selected_shot_id: work?.selection?.shot_id ?? null,
     artifacts: materials.artifacts.map((artifact) => ({
@@ -296,7 +313,13 @@ export async function POST(request: Request) {
 
   if (action === "reset") {
     const workId = typeof body.work_id === "string" ? body.work_id : "";
-    const scope = body.scope === "initial" || body.scope === "panel-artifacts" ? body.scope : "saved";
+    const scope =
+      body.scope === "initial" ||
+      body.scope === "panel-artifacts" ||
+      body.scope === "saved" ||
+      body.scope === "panel"
+        ? body.scope
+        : "saved";
     const next = await resetStoryboardWork({
       workId,
       participantId,
@@ -410,7 +433,14 @@ export async function POST(request: Request) {
 
   if (action === "analyse-sentinel") {
     try {
-      const result = await analyseStoryboardSource({ work, participantId });
+      const muralAssetId = assembly ? resolveSuiteSourceAssetId(assembly) : null;
+      const muralTitle = assembly?.murals[0]?.title ?? assembly?.title ?? "Universe mural";
+      const result = await analyseUniverseSource({
+        work,
+        participantId,
+        muralAssetId,
+        muralTitle,
+      });
       const next = await loadStoryboardWorkById({ workId: work.work_id, participantId });
       return NextResponse.json({
         work: next ?? work,

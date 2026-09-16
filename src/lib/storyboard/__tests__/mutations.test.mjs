@@ -85,6 +85,8 @@ assert(removePanel(panels, "a").length === 1, "delete removes the panel");
 assert(duplicatePanel(panels[0], "c", 3).title === "A copy", "duplicate copies");
 assert(movePanelIds(["a", "b", "c"], 0, 2).join("") === "bca", "move ids");
 assert(resetScopeCopy("unsaved").destructive === false, "unsaved reset is the safe default");
+assert(resetScopeCopy("saved").destructive === false, "saved reset reloads persisted work");
+assert(resetScopeCopy("panel-artifacts").destructive === true, "artifact reset is explained as destructive");
 assert(resetScopeCopy("initial").destructive === true, "initial reset is destructive and explained");
 
 assert(derivePanelUiStatus({ selected: false, persistedStatus: "draft" }) === "draft", "empty panel is draft");

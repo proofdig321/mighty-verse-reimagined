@@ -5,6 +5,7 @@ import {
   cinematicToPanelProposal,
   composeFallbackCinematic,
   evidenceStatusLabel,
+  observationsFromCinematic,
   parseCinematicAnalysis,
   parseCinematicShot,
   representativeTimeMs,
@@ -105,5 +106,9 @@ const times = sampleTimesMs(60_000, fallback.shots.map((shot) => ({
 })), 8);
 assert(times.every((time) => time > 0), "sampled Gemini frames skip time=0");
 assert(times.length >= 2, "whole-video sampling uses multiple frames");
+
+const fromCinematic = observationsFromCinematic(geminiShots);
+assert(fromCinematic.length === geminiShots.shots.length, "cinematic shots persist as Universe observations");
+assert(fromCinematic.some((row) => row.is_boundary_candidate), "shot cuts remain boundary candidates");
 
 console.log("Cinematic evidence tests: all passed");

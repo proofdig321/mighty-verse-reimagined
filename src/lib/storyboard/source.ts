@@ -4,6 +4,7 @@
  */
 
 import { parseCinematicAnalysis, type CinematicAnalysis } from "../media/cinematic-evidence";
+import { muxThumbnailUrl } from "../media/thumbnail";
 
 export const STORYBOARD_SOURCE_KIND = "storyboard-source";
 export const STORYBOARD_FRAME_KIND = "storyboard-frame-reference";
@@ -141,6 +142,30 @@ export function parseStoryboardAssembly(value: string | null | undefined): Story
   } catch {
     return null;
   }
+}
+
+export function universeMuralAsStoryboardSource(input: {
+  workId?: string | null;
+  title: string | null;
+  assetId: string;
+  playbackId: string;
+  endpointRef: string;
+  durationMs: number | null;
+}): StoryboardSourceRecord {
+  return {
+    kind: STORYBOARD_SOURCE_KIND,
+    work_id: input.workId ?? "",
+    title: input.title?.trim() || "Universe mural",
+    asset_id: input.assetId,
+    mux_asset_id: null,
+    playback_id: input.playbackId,
+    endpoint_ref: input.endpointRef,
+    still_url: muxThumbnailUrl(input.playbackId, 0, 640),
+    duration_ms: input.durationMs,
+    category: "source",
+    creates_scene: false,
+    creates_canonical: false,
+  };
 }
 
 export function storyboardSourceNotes(input: Omit<StoryboardSourceRecord, "kind" | "creates_scene" | "creates_canonical">): string {

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { PublicHeroParallax } from "@/components/public-hero-parallax";
 
 export type PublicHeroStat = {
   n: ReactNode;
@@ -38,6 +39,7 @@ export function PublicHero({
       className="public-hero relative overflow-hidden"
       data-public-hero={size}
     >
+      <PublicHeroParallax enabled={display}>
       <div
         className={`relative z-10 mx-auto max-w-7xl px-6 ${
           display ? "py-24 md:py-36" : "py-10 md:py-14"
@@ -102,6 +104,7 @@ export function PublicHero({
           </div>
         ) : null}
       </div>
+      </PublicHeroParallax>
     </section>
   );
 }

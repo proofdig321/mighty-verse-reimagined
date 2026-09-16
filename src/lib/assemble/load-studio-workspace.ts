@@ -9,6 +9,7 @@ import { deriveSceneProductionBriefs } from "../production/plan";
 import { isFfmpegProofExecutor } from "../production/adapter";
 import { productionLayersFromResults } from "../production/projection";
 import { creativeSuiteHref } from "./studio";
+import { resolveSuiteSourceAssetId } from "./source-preview";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
 import type { SentinelIntelligence } from "../media/sentinel-intelligence";
@@ -51,7 +52,7 @@ export const loadStudioWorkspace = cache(async function loadStudioWorkspace(
 
   const suiteHref = creativeSuiteHref(data.master_id, fromCurate ? "curate" : null);
   const scenes = suiteScenes(data);
-  const inspectAssetId = scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
+  const inspectAssetId = resolveSuiteSourceAssetId(data);
 
   return {
     data,

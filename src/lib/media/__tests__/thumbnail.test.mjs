@@ -1,4 +1,4 @@
-import { muxPosterUrl, muxThumbnailUrl, resolveThumbnail } from "../thumbnail";
+import { muxPlaybackIdFromRef, muxPosterUrl, muxStillFromPlayback, muxThumbnailUrl, resolveThumbnail } from "../thumbnail";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -20,6 +20,10 @@ assert(powerhouse.includes("time=36"), "Powerhouse still stays timed at 36s");
 assert(muxThumbnailUrl(SHE, 80).includes("time=80"), "Dark Knight still stays timed at 80s");
 assert(muxThumbnailUrl(SHE, 149).includes("time=149"), "Hand-to-Hand still stays timed at 149s");
 assert(muxThumbnailUrl(SHE, 193).includes("time=193"), "Sword Master still stays timed at 193s");
+
+assert(muxPlaybackIdFromRef("https://stream.mux.com/J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE.m3u8") === "J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE", "HLS endpoint yields playback id");
+assert(muxStillFromPlayback("https://stream.mux.com/J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE.m3u8", 0, 640)?.includes("image.mux.com/J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE/thumbnail.jpg"), "production still falls back to Mux poster");
+assert(!muxStillFromPlayback("https://example.com/not-mux.m3u8"), "non-Mux endpoints do not invent a still");
 
 const mural = resolveThumbnail({ playbackId: SHE, startMs: 0, provider: "mux" });
 assert(mural && !mural.includes("time="), "Mux mural with start 0 uses poster");
