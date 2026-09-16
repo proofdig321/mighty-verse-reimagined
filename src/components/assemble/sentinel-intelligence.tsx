@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { formatTimelineMs } from "@/lib/media/timing";
+import { formatTimelineMs, secondsFromMs } from "@/lib/media/timing";
+import { creativeSuiteSentinelHref, creativeSuiteStoryboardHref } from "@/lib/assemble/studio";
+import { UseStillButton } from "./use-still-button";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 import { decideAuthoriseWindows } from "@/lib/media/sentinel-intelligence";
 import { cn } from "@/lib/utils";
@@ -157,6 +159,12 @@ export function SentinelIntelligencePanel({
               Open Inspect
             </Link>
           ) : null}
+          <Link href={creativeSuiteSentinelHref(universeId)} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            Open Storyboard
+          </Link>
+          <Link href={creativeSuiteStoryboardHref(universeId, null, "references")} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            Storyboard references
+          </Link>
           {previewHref ? (
             <Link href={previewHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
               Open 2.5D Studio Preview
@@ -197,7 +205,7 @@ export function SentinelIntelligencePanel({
                   {panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat"}
                 </p>
                 <p className="text-sm text-foreground">{panel.title}</p>
-                <p className="font-mono text-[10px] text-muted-foreground">{formatTimelineMs(panel.time_ms)}</p>
+                <p className="font-mono text-[10px] text-muted-foreground">{secondsFromMs(panel.time_ms)}s</p>
               </button>
               {openBeat === panel.panel_id ? (
                 <div className="mt-2 space-y-2">
@@ -217,6 +225,17 @@ export function SentinelIntelligencePanel({
                     >
                       {retainBusy === panel.panel_id ? "Keeping…" : "Keep as reference"}
                     </Button>
+                  ) : null}
+                  {panel.still_url ? (
+                    <UseStillButton
+                      universeId={universeId}
+                      stillUrl={panel.still_url}
+                      assetId={intelligence.asset_id}
+                      title={panel.title}
+                      timeMs={panel.time_ms}
+                      sentinelPanelId={panel.panel_id}
+                      sceneMasterId={panel.scene_master_id}
+                    />
                   ) : null}
                 </div>
               ) : null}

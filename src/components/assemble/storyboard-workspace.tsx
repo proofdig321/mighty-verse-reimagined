@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { formatTimelineMs } from "@/lib/media/timing";
+import { formatTimelineMs, secondsFromMs } from "@/lib/media/timing";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import type { SentinelIntelligence, StoryboardPanel } from "@/lib/media/sentinel-intelligence";
@@ -622,11 +622,63 @@ export function StoryboardWorkspace({
         panels: sentinelPanels.map((panel) => ({
           title: panel.title,
           description: panel.kind === "scene" ? "Canonical Scene evidence. Not a new Scene." : panel.title,
+          still_url: panel.still_url,
+          time_ms: panel.time_ms,
+          sentinel_panel_id: panel.panel_id,
+          scene_master_id: panel.scene_master_id,
         })),
       }),
     });
     const payload = await response.json().catch(() => ({}));
     if (payload.work) applyWork(payload.work);
+    if (payload.work?.panels?.[0]) setTab("panels");
+  }
+
+  async function useStill(reference: { asset_id: string; title: string; still_url: string | null; time_ms: number }) {
+    if (!reference.still_url) {
+      setMediaState({ status: "failed", message: "That reference has no still yet." });
+      return;
+    }
+    let current = work;
+    if (!current) {
+      const created = await fetch("/api/authority/storyboard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ universe_id: universeId, action: "create-work", title: workTitle }),
+      });
+      const payload = await created.json().catch(() => ({}));
+      if (!payload.work) {
+        setMediaState({ status: "failed", message: "Create the storyboard work before attaching a still." });
+        return;
+      }
+      applyWork(payload.work);
+      current = payload.work as StoryboardWorkRecord;
+    }
+    const persistedId = current.panels.some((panel) => panel.panel_id === selectedId) ? selectedId : null;
+    const response = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        universe_id: universeId,
+        action: "use-still",
+        work_id: current.work_id,
+        panel_id: persistedId,
+        asset_id: reference.asset_id,
+        still_url: reference.still_url,
+        title: reference.title,
+        time_ms: reference.time_ms,
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (payload.work) {
+      applyWork(payload.work);
+      const attached = persistedId
+        ? payload.work.panels.find((panel: StoryboardWorkRecord["panels"][number]) => panel.panel_id === persistedId)
+        : payload.work.panels[payload.work.panels.length - 1];
+      if (attached?.panel_id) setSelectedId(attached.panel_id);
+      setMediaState({ status: "ready", message: "Still attached to a storyboard panel. Sentinel evidence is not a Scene." });
+      setTab("panels");
+    }
   }
 
   const tabs: { id: MaterialTab; label: string; icon: typeof FileText }[] = [
@@ -1013,14 +1065,17 @@ export function StoryboardWorkspace({
                         </h2>
                         <p className="suite-section-note">
                           Observational evidence for this source. Sentinel does not create Scenes.
-                          {scenes.length === 0
-                            ? " This Universe has no Scenes yet — establish Intro / Verse / Hook windows on Curate Sentinel, then Authorise can patch them."
-                            : " Authorise windows only when the curator agrees."}
+                          Import copies observed stills onto storyboard panels. Mark Intro / Verse / Hook windows on Curate Sentinel.
                         </p>
                       </div>
                       <Button type="button" size="sm" variant="outline" onClick={() => void importSentinel()}>
-                        Import evidence as panels
+                        Import evidence as storyboard panels
                       </Button>
+                      {establishHref ? (
+                        <Link href={establishHref} className={cn(buttonVariants({ size: "sm" }))}>
+                          Mark scenes on Curate Sentinel
+                        </Link>
+                      ) : null}
                       <SentinelIntelligencePanel
                         universeId={universeId}
                         intelligence={intelligence}
@@ -1079,22 +1134,18 @@ export function StoryboardWorkspace({
                         )}
                         <p className="mt-1 text-xs text-foreground">{reference.title}</p>
                         <p className="text-[10px] text-muted-foreground">
-                          {reference.role} · {formatTimelineMs(reference.time_ms)}
+                          {reference.role} · {secondsFromMs(reference.time_ms)}s
                         </p>
-                        {selectedId && reference.still_url ? (
+                        {reference.still_url ? (
                           <div className="mt-1 grid gap-1">
                             <Button
                               type="button"
                               size="sm"
                               variant="outline"
                               className="h-7 w-full text-[10px]"
-                              onClick={() => {
-                                setPanelStills((current) => ({ ...current, [selectedId]: reference.still_url as string }));
-                                setFirstFrame(reference.still_url as string);
-                                setMediaState({ status: "ready", message: "Gallery artifact linked to the selected shot. It is not a Scene." });
-                              }}
+                              onClick={() => void useStill(reference)}
                             >
-                              Use on shot
+                              Use on storyboard
                             </Button>
                             <Button type="button" size="sm" variant="ghost" className="h-7 w-full text-[10px]" onClick={() => setLastFrame(reference.still_url as string)}>
                               Use as last frame

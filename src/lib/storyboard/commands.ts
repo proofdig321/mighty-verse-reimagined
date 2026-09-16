@@ -196,6 +196,14 @@ export async function createStoryboardPanel(input: {
   participantId: string;
   title?: string;
   description?: string;
+  stillUrl?: string | null;
+  assetId?: string | null;
+  timeMs?: number | null;
+  sentinelPanelId?: string | null;
+  sceneMasterId?: string | null;
+  durationMs?: number | null;
+  source?: "script" | "sentinel" | "ai" | "hybrid";
+  sourceTitle?: string | null;
   client?: ServiceClient;
 }): Promise<StoryboardWorkRecord> {
   const current = await loadStoryboardWorkById(input);
@@ -208,11 +216,81 @@ export async function createStoryboardPanel(input: {
     title: input.title ?? `Panel ${sequence}`,
     description: input.description ?? "",
     status: "draft",
-    source: "script",
+    source: input.source ?? "script",
+    sentinel_panel_id: input.sentinelPanelId ?? null,
+    proposed_scene_id: input.sceneMasterId ?? null,
+    duration_ms: input.durationMs ?? null,
+    active_still_asset_id: input.assetId ?? null,
+    panel_references: input.stillUrl
+      ? [
+          {
+            role: "still",
+            label: input.title ?? `Panel ${sequence}`,
+            url: input.stillUrl,
+            asset_id: input.assetId ?? null,
+            preferred: true,
+            time_ms: input.timeMs ?? null,
+            source_title: input.sourceTitle ?? "Sentinel still",
+          },
+        ]
+      : [],
   });
   if (error) throw new Error(error.message);
   await db.from("storyboard_work").update({ updated_at: new Date().toISOString() }).eq("work_id", input.workId);
   return (await loadStoryboardWorkById(input)) as StoryboardWorkRecord;
+}
+
+export async function useStillOnStoryboard(input: {
+  workId: string;
+  participantId: string;
+  panelId?: string | null;
+  assetId?: string | null;
+  stillUrl: string;
+  title?: string;
+  timeMs?: number | null;
+  sentinelPanelId?: string | null;
+  sceneMasterId?: string | null;
+  client?: ServiceClient;
+}): Promise<StoryboardWorkRecord> {
+  const current = input.panelId
+    ? await loadStoryboardWorkById(input)
+    : await createStoryboardPanel({
+        ...input,
+        source: "sentinel",
+        sourceTitle: "Curated reference",
+      });
+  if (!current) throw new Error("Storyboard was not found.");
+  const targetId = input.panelId ?? current.panels[current.panels.length - 1]?.panel_id;
+  if (!targetId) throw new Error("Storyboard panel was not found.");
+  const panel = current.panels.find((item) => item.panel_id === targetId);
+  const next = await updateStoryboardPanel({
+    participantId: input.participantId,
+    panelId: targetId,
+    patch: {
+      active_still_asset_id: input.assetId ?? panel?.active_still_asset_id ?? null,
+      sentinel_panel_id: input.sentinelPanelId ?? panel?.sentinel_panel_id ?? null,
+      proposed_scene_id: input.sceneMasterId ?? panel?.proposed_scene_id ?? null,
+      references: [
+        {
+          role: "still",
+          label: input.title ?? panel?.title ?? "Still",
+          url: input.stillUrl,
+          asset_id: input.assetId ?? null,
+          preferred: true,
+          time_ms: input.timeMs ?? null,
+          source_title: "Sentinel still",
+        },
+        ...(panel?.references.filter((item) => item.url !== input.stillUrl) ?? []),
+      ],
+    },
+    client: input.client,
+  });
+  if (!next) throw new Error("Still could not be attached to the panel.");
+  return (await loadStoryboardWorkById({
+    workId: input.workId,
+    participantId: input.participantId,
+    client: input.client,
+  })) as StoryboardWorkRecord;
 }
 
 export async function duplicateStoryboardPanel(input: {

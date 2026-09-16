@@ -43,7 +43,7 @@ export default async function UniverseStoryboardPage({
         previewHref={creativeSuiteWorkspaceHref(workspace.data.master_id, "preview", from)}
         establishHref={curateSentinelHref(workspace.data.master_id)}
         references={workspace.references}
-        initialTab={query.source === "sentinel" ? "sentinel" : "script"}
+        initialTab={query.source === "sentinel" ? "sentinel" : query.source === "references" ? "references" : "script"}
         initialBody={materials.body?.body ?? ""}
         artifacts={materials.artifacts.map((artifact) => ({
           title: artifact.title,

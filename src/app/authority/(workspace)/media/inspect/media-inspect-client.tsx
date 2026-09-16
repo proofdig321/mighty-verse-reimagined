@@ -1,9 +1,14 @@
 "use client";
 
 import { useRef, useState, useCallback, useEffect } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SecondsField } from "@/components/assemble/seconds-field";
+import { creativeSuiteSentinelHref, creativeSuiteStoryboardHref, curateSentinelHref } from "@/lib/assemble/studio";
+import { secondsFromMs } from "@/lib/media/timing";
+import { cn } from "@/lib/utils";
 import {
   inspectVideoForBoundaries,
   extractBrowserMetadata,
@@ -134,6 +139,9 @@ export default function MediaInspectClient({ canonicalScenes, workScope, assetId
   const [adjustingId, setAdjustingId] = useState<string | null>(null);
   const [adjustStart, setAdjustStart] = useState(0);
   const [adjustEnd, setAdjustEnd] = useState(0);
+  const [selectedFrameMs, setSelectedFrameMs] = useState<number | null>(null);
+  const [retainBusy, setRetainBusy] = useState(false);
+  const [retainMsg, setRetainMsg] = useState<string | null>(null);
   const [inspections, setInspections] = useState<SavedInspection[]>(savedInspections);
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -408,6 +416,65 @@ const runInspection = useCallback(async () => {
     video.currentTime = ms / 1000;
   }
 
+  async function keepStill(timeMs: number) {
+    if (!workScope.universe_id || !assetIdentity?.asset_id) {
+      setRetainMsg("Inspected media must belong to a Universe before a still can be retained.");
+      return;
+    }
+    setRetainBusy(true);
+    setRetainMsg(null);
+    const res = await fetch("/api/authority/references", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        universe_id: workScope.universe_id,
+        source_asset_id: assetIdentity.asset_id,
+        time_ms: timeMs,
+        role: "still",
+      }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    setRetainBusy(false);
+    setRetainMsg(res.ok
+      ? payload.already
+        ? "That still is already a curated reference."
+        : "Kept as a production reference. Open Storyboard → References to put it on a panel."
+      : `Error: ${payload.error ?? "Reference could not be retained."}`);
+  }
+
+  async function attachStillToStoryboard(timeMs: number) {
+    if (!workScope.universe_id || !assetIdentity) {
+      setRetainMsg("Inspected media must belong to a Universe before a still can go on Storyboard.");
+      return;
+    }
+    const stillUrl = assetIdentity.provider === "mux"
+      ? `https://image.mux.com/${assetIdentity.storage_ref}/thumbnail.jpg?time=${(timeMs / 1000).toFixed(3)}&width=640`
+      : null;
+    if (!stillUrl) {
+      setRetainMsg("No still is available for this source.");
+      return;
+    }
+    setRetainBusy(true);
+    setRetainMsg(null);
+    const res = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        universe_id: workScope.universe_id,
+        action: "use-still",
+        still_url: stillUrl,
+        asset_id: assetIdentity.asset_id,
+        title: `Still ${secondsFromMs(timeMs)}s`,
+        time_ms: timeMs,
+      }),
+    });
+    const payload = await res.json().catch(() => ({}));
+    setRetainBusy(false);
+    setRetainMsg(res.ok
+      ? "Attached to a storyboard panel. Sentinel evidence is not a Scene."
+      : `Error: ${payload.error ?? "Still could not be attached."}`);
+  }
+
   const durationMs = metadata?.durationMs ?? null;
   const belongingCopy = inspectWorkBelongingCopy(workScope);
   const emptyScenesCopy = inspectEmptyScenesCopy({
@@ -450,6 +517,19 @@ const runInspection = useCallback(async () => {
           ) : (
             <p className="text-xs text-muted-foreground">Unbound — this media is not Super Hero Ego.</p>
           )}
+          {workScope.universe_id ? (
+            <div className="flex flex-wrap gap-2 pt-1">
+              <Link href={curateSentinelHref(workScope.universe_id)} className={cn(buttonVariants({ size: "sm" }))}>
+                Mark scenes on Sentinel
+              </Link>
+              <Link href={creativeSuiteSentinelHref(workScope.universe_id)} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                Open Storyboard
+              </Link>
+              <Link href={creativeSuiteStoryboardHref(workScope.universe_id, null, "references")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                Storyboard references
+              </Link>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             {assetIdentity.duration_ms != null && <span>Duration: {(assetIdentity.duration_ms / 1000).toFixed(1)}s</span>}
             {assetIdentity.width && assetIdentity.height && <span>Resolution: {assetIdentity.width}×{assetIdentity.height}</span>}
@@ -716,27 +796,48 @@ const runInspection = useCallback(async () => {
             <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
               Sampled Frames — {frames.length} frames
             </p>
+            <p className="text-xs text-muted-foreground">
+              Select a frame to keep it as a reference or put it on a storyboard panel.
+            </p>
             <div className="flex gap-1 overflow-x-auto pb-2">
               {frames.map((f) => (
                 <button
                   key={f.timeMs}
                   type="button"
-                  onClick={() => jumpTo(f.timeMs)}
-                  title={formatMs(f.timeMs)}
+                  onClick={() => {
+                    setSelectedFrameMs(f.timeMs);
+                    jumpTo(f.timeMs);
+                  }}
+                  title={`${secondsFromMs(f.timeMs)}s`}
                   className="shrink-0 relative group"
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={f.dataUrl}
-                    alt={`Frame at ${formatMs(f.timeMs)}`}
-                    className="h-14 w-24 object-cover rounded border border-border group-hover:border-foreground/40 transition-colors"
+                    alt={`Frame at ${secondsFromMs(f.timeMs)}s`}
+                    className={`h-14 w-24 object-cover rounded border transition-colors ${
+                      selectedFrameMs === f.timeMs
+                        ? "border-[var(--accent-mv-gold)]"
+                        : "border-border group-hover:border-foreground/40"
+                    }`}
                   />
                   <span className="absolute bottom-0.5 left-0.5 text-[8px] text-white/70 bg-black/50 px-0.5 rounded">
-                    {formatMs(f.timeMs)}
+                    {secondsFromMs(f.timeMs)}s
                   </span>
                 </button>
               ))}
             </div>
+            {selectedFrameMs != null && workScope.universe_id ? (
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" disabled={retainBusy} onClick={() => void keepStill(selectedFrameMs)}>
+                  {retainBusy ? "Keeping…" : "Keep still as reference"}
+                </Button>
+                <Button size="sm" variant="outline" disabled={retainBusy} onClick={() => void attachStillToStoryboard(selectedFrameMs)}>
+                  Use on storyboard
+                </Button>
+              </div>
+            ) : null}
+            {retainMsg ? <p className="text-xs text-muted-foreground">{retainMsg}</p> : null}
 
             {/* Delta bar chart */}
             {deltas.length > 0 && (
@@ -889,24 +990,8 @@ const runInspection = useCallback(async () => {
                     {/* Adjust form */}
                     {isAdjusting && (
                       <div className="grid grid-cols-2 gap-2 pt-1">
-                        <label className="text-xs text-muted-foreground">
-                          Start (ms)
-                          <input
-                            type="number"
-                            value={adjustStart}
-                            onChange={(e) => setAdjustStart(Number(e.target.value))}
-                            className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm"
-                          />
-                        </label>
-                        <label className="text-xs text-muted-foreground">
-                          End (ms)
-                          <input
-                            type="number"
-                            value={adjustEnd}
-                            onChange={(e) => setAdjustEnd(Number(e.target.value))}
-                            className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm"
-                          />
-                        </label>
+                        <SecondsField label="Start" valueMs={adjustStart} onChange={setAdjustStart} />
+                        <SecondsField label="End" valueMs={adjustEnd} onChange={setAdjustEnd} />
                         <div className="col-span-2 flex gap-2">
                           <Button size="sm" onClick={() => {
                             updateCandidate(adjustCandidate(candidate, adjustStart, adjustEnd));

@@ -24,6 +24,31 @@ export function formatTimelineMs(value: number | null): string {
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
 }
 
+/** Canonical milliseconds remain the storage unit. Operators mark windows in seconds. */
+export function secondsFromMs(ms: number | null | undefined): number {
+  if (ms == null || !Number.isFinite(ms)) return 0;
+  return Math.round(ms) / 1000;
+}
+
+export function formatOperatorSeconds(ms: number | null | undefined): string {
+  const seconds = secondsFromMs(ms);
+  if (Number.isInteger(seconds)) return String(seconds);
+  return String(Number(seconds.toFixed(3)));
+}
+
+export function parseOperatorSeconds(value: string | number | null | undefined): number | null {
+  if (typeof value === "number") {
+    if (!Number.isFinite(value) || value < 0) return null;
+    return Math.round(value * 1000);
+  }
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  if (trimmed.includes(":")) return parseTimelineMs(trimmed);
+  if (!/^\d+(?:\.\d+)?$/.test(trimmed)) return null;
+  return Math.round(Number(trimmed) * 1000);
+}
+
 /**
  * Parse a Scene window into canonical milliseconds.
  * Accepts integer ms (`36000`), `0:36`, and `0:36.000`.
@@ -63,4 +88,30 @@ export function sortSceneTimings(scenes: SceneTiming[], durationMs?: number) {
 export function findActiveScene(scenes: SceneTiming[], timeMs: number) {
   // Earlier scene order wins when valid scene ranges overlap.
   return scenes.find((scene) => timeMs >= scene.startMs && timeMs < scene.endMs)?.id ?? null;
+}
+
+export function msFromTimelineRatio(ratio: number, durationMs: number): number {
+  if (!Number.isFinite(ratio) || !Number.isFinite(durationMs) || durationMs <= 0) return 0;
+  return Math.round(clampTime(ratio * durationMs, durationMs));
+}
+
+/** Drag marks a Scene window. A short click seeks instead of inventing a range. */
+export function markWindowFromPointer(input: {
+  originMs: number;
+  pointerMs: number;
+  durationMs: number;
+  dragThresholdMs?: number;
+}): { startMs: number; endMs: number; seek: boolean } {
+  const duration = Math.max(0, input.durationMs);
+  const origin = clampTime(input.originMs, duration);
+  const pointer = clampTime(input.pointerMs, duration);
+  const threshold = input.dragThresholdMs ?? 250;
+  if (Math.abs(pointer - origin) < threshold) {
+    return { startMs: pointer, endMs: pointer, seek: true };
+  }
+  return {
+    startMs: Math.min(origin, pointer),
+    endMs: Math.max(origin, pointer),
+    seek: false,
+  };
 }

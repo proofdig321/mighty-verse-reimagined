@@ -13,6 +13,7 @@ import { composeAssistPrompt } from "@/lib/ai/prompt-composer";
 import { assistAction } from "@/lib/storyboard/assist";
 import { STRUCTURED_STORYBOARD_SYSTEM } from "@/lib/storyboard/document";
 import {
+  applySentinelEvidenceToPanels,
   ensureStoryboardWork,
   loadStoryboardWork,
   loadStoryboardWorkById,
@@ -36,6 +37,7 @@ import {
   resetStoryboardWork,
   restoreStoryboardSnapshot,
   saveStoryboardAssembly,
+  useStillOnStoryboard,
 } from "@/lib/storyboard/commands";
 import { listGenerationJobs } from "@/lib/storyboard/generation";
 import { parseStructuredStoryboard } from "@/lib/ai/structured-storyboard";
@@ -181,6 +183,37 @@ export async function POST(request: Request) {
     return NextResponse.json({ archived: true, status: "ready", creates_scene: false, creates_canonical: false });
   }
 
+  if (action === "use-still") {
+    const stillUrl = typeof body.still_url === "string" ? body.still_url : "";
+    if (!stillUrl) {
+      return NextResponse.json({ error: "A still is required." }, { status: 400 });
+    }
+    let workId = typeof body.work_id === "string" ? body.work_id : "";
+    if (!workId) {
+      if (!universeId) {
+        return NextResponse.json({ error: "A storyboard work or Universe is required." }, { status: 400 });
+      }
+      const ensured = await ensureStoryboardWork({
+        participantId,
+        universeId,
+        title: assembly?.title ?? "Untitled storyboard",
+      });
+      workId = ensured.work_id;
+    }
+    const next = await useStillOnStoryboard({
+      workId,
+      participantId,
+      panelId: typeof body.panel_id === "string" ? body.panel_id : null,
+      assetId: typeof body.asset_id === "string" ? body.asset_id : null,
+      stillUrl,
+      title: typeof body.title === "string" ? body.title : undefined,
+      timeMs: typeof body.time_ms === "number" ? body.time_ms : null,
+      sentinelPanelId: typeof body.sentinel_panel_id === "string" ? body.sentinel_panel_id : null,
+      sceneMasterId: typeof body.scene_master_id === "string" ? body.scene_master_id : null,
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
   if (action === "create-panel") {
     const workId = typeof body.work_id === "string" ? body.work_id : "";
     const next = await createStoryboardPanel({
@@ -316,11 +349,24 @@ export async function POST(request: Request) {
       })),
     });
     if (!parsed) return NextResponse.json({ error: "Sentinel beats could not be imported.", creates_scene: false }, { status: 400 });
-    const next = await replaceStoryboardPanels({
+    await replaceStoryboardPanels({
       workId: work.work_id,
       participantId,
       storyboard: parsed,
       source: "sentinel",
+    });
+    const next = await applySentinelEvidenceToPanels({
+      workId: work.work_id,
+      participantId,
+      beats: beats.map((beat: Record<string, unknown>) => ({
+        title: typeof beat.title === "string" ? beat.title : undefined,
+        description: typeof beat.description === "string" ? beat.description : undefined,
+        still_url: typeof beat.still_url === "string" ? beat.still_url : null,
+        time_ms: typeof beat.time_ms === "number" ? beat.time_ms : null,
+        sentinel_panel_id: typeof beat.sentinel_panel_id === "string" ? beat.sentinel_panel_id : null,
+        scene_master_id: typeof beat.scene_master_id === "string" ? beat.scene_master_id : null,
+        duration_ms: typeof beat.duration_ms === "number" ? beat.duration_ms : null,
+      })),
     });
     return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
   }

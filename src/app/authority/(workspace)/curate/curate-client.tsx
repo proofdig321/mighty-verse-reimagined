@@ -1,9 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { SecondsField } from "@/components/assemble/seconds-field";
+import { creativeSuiteSentinelHref, creativeSuiteStoryboardHref } from "@/lib/assemble/studio";
+import { markWindowFromPointer, msFromTimelineRatio, secondsFromMs } from "@/lib/media/timing";
+import { cn } from "@/lib/utils";
 import {
   inspectVideoForBoundaries,
   extractBrowserMetadata,
@@ -160,6 +165,11 @@ export default function CurateClient({
   const [manualEnd, setManualEnd] = useState(0);
   const [retainMsg, setRetainMsg] = useState<string | null>(null);
   const [retainBusy, setRetainBusy] = useState(false);
+  const [selectedFrameMs, setSelectedFrameMs] = useState<number | null>(null);
+  const [storyboardMsg, setStoryboardMsg] = useState<string | null>(null);
+  const [storyboardBusy, setStoryboardBusy] = useState(false);
+  const markOriginRef = useRef<number | null>(null);
+  const timelineRef = useRef<HTMLDivElement>(null);
 
   // ── Mural asset binding ─────────────────────────────────────────────────────
   const [bindingAsset, setBindingAsset] = useState(false);
@@ -360,8 +370,39 @@ export default function CurateClient({
     setRetainMsg(res.ok
       ? res.already
         ? "That still is already a curated reference."
-        : "Kept as a production reference."
+        : "Kept as a production reference. Open Storyboard → References to put it on a panel."
       : `Error: ${res.error ?? "Reference could not be retained."}`);
+  }
+
+  async function attachStillToStoryboard(timeMs: number, title?: string) {
+    const stillUrl = mural?.storage_ref
+      ? providerThumbUrl(mural.provider, mural.storage_ref, timeMs, 640)
+      : null;
+    if (!stillUrl) {
+      setStoryboardMsg("No still is available for this source.");
+      return;
+    }
+    setStoryboardBusy(true);
+    setStoryboardMsg(null);
+    const res = await api("/api/authority/storyboard", {
+      universe_id: universeId,
+      action: "use-still",
+      still_url: stillUrl,
+      asset_id: mural?.asset_id ?? null,
+      title: title || `Still ${secondsFromMs(timeMs)}s`,
+      time_ms: timeMs,
+    });
+    setStoryboardBusy(false);
+    setStoryboardMsg(res.ok
+      ? "Attached to a storyboard panel. Open Storyboard to continue. This is not a Scene."
+      : `Error: ${res.error ?? "Still could not be attached."}`);
+  }
+
+  function pointerMs(clientX: number) {
+    const el = timelineRef.current;
+    if (!el || !effectiveDuration) return 0;
+    const rect = el.getBoundingClientRect();
+    return msFromTimelineRatio((clientX - rect.left) / rect.width, effectiveDuration);
   }
 
   // ── Bind asset to mural projection ─────────────────────────────────────────
@@ -393,6 +434,16 @@ export default function CurateClient({
           {mural.duration_ms ? fmtSec(mural.duration_ms) : "—"}
         </p>
       )}
+      {mural ? (
+        <div className="flex flex-wrap gap-2">
+          <Link href={creativeSuiteSentinelHref(universeId, "curate")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+            Continue in Storyboard
+          </Link>
+          <Link href={creativeSuiteStoryboardHref(universeId, "curate", "references")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+            Storyboard references
+          </Link>
+        </div>
+      ) : null}
 
       {!mural && (
         <p className="text-sm text-muted-foreground rounded-lg border border-border bg-card/30 px-5 py-6">
@@ -408,7 +459,7 @@ export default function CurateClient({
               <div className="flex items-center justify-between">
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Mural media</p>
                 <span className="text-xs text-muted-foreground">
-                  {mural.provider ?? "no provider"} · {mural.storage_ref?.slice(0, 12) ?? "—"}
+                  {mural.provider === "mux" ? "Mux HLS" : mural.provider ?? "no provider"}
                 </span>
               </div>
               {!bindingAsset ? (
@@ -470,14 +521,46 @@ export default function CurateClient({
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Timeline — {fmtSec(effectiveDuration)}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  Click seeks. Drag to mark Intro / Verse / Hook. Storage stays milliseconds; you work in seconds.
+                </p>
 
                 {/* Scrubber bar */}
                 <div
-                  className="relative h-8 rounded bg-muted/30 border border-border cursor-pointer overflow-hidden"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const ratio = (e.clientX - rect.left) / rect.width;
-                    seekTo(Math.round(ratio * effectiveDuration));
+                  ref={timelineRef}
+                  className="relative h-8 rounded bg-muted/30 border border-border cursor-pointer overflow-hidden touch-none"
+                  data-sentinel-timeline=""
+                  onPointerDown={(event) => {
+                    if (event.button !== 0) return;
+                    event.currentTarget.setPointerCapture(event.pointerId);
+                    markOriginRef.current = pointerMs(event.clientX);
+                  }}
+                  onPointerMove={(event) => {
+                    if (markOriginRef.current == null) return;
+                    const marked = markWindowFromPointer({
+                      originMs: markOriginRef.current,
+                      pointerMs: pointerMs(event.clientX),
+                      durationMs: effectiveDuration,
+                    });
+                    if (!marked.seek) {
+                      setManualStart(marked.startMs);
+                      setManualEnd(marked.endMs);
+                    }
+                  }}
+                  onPointerUp={(event) => {
+                    if (markOriginRef.current == null) return;
+                    const marked = markWindowFromPointer({
+                      originMs: markOriginRef.current,
+                      pointerMs: pointerMs(event.clientX),
+                      durationMs: effectiveDuration,
+                    });
+                    markOriginRef.current = null;
+                    if (marked.seek) {
+                      seekTo(marked.startMs);
+                      return;
+                    }
+                    setManualStart(marked.startMs);
+                    setManualEnd(marked.endMs);
                   }}
                 >
                   {/* Playhead */}
@@ -486,19 +569,31 @@ export default function CurateClient({
                     style={{ left: `${pct(currentMs, effectiveDuration)}%` }}
                   />
 
+                  {manualEnd > manualStart ? (
+                    <div
+                      className="absolute top-0 bottom-0 opacity-40 pointer-events-none"
+                      data-mark-window=""
+                      style={{
+                        left: `${pct(manualStart, effectiveDuration)}%`,
+                        width: `${pct(manualEnd - manualStart, effectiveDuration)}%`,
+                        background: "var(--accent-mv-gold)",
+                      }}
+                      title={`Mark ${secondsFromMs(manualStart)}s → ${secondsFromMs(manualEnd)}s`}
+                    />
+                  ) : null}
+
                   {/* Canonical scenes */}
                   {scenes.map((s) =>
                     s.start_ms != null && s.end_ms != null ? (
                       <div
                         key={s.master_id}
-                        className="absolute top-0 bottom-0 opacity-70 hover:opacity-100 transition-opacity cursor-pointer"
+                        className="absolute top-0 bottom-0 opacity-70 pointer-events-none"
                         style={{
                           left: `${pct(s.start_ms, effectiveDuration)}%`,
                           width: `${pct(s.end_ms - s.start_ms, effectiveDuration)}%`,
                           background: "var(--accent-mv)",
                         }}
-                        title={`${s.title ?? "Scene"}: ${fmtMs(s.start_ms)} → ${fmtMs(s.end_ms)}`}
-                        onClick={(e) => { e.stopPropagation(); seekTo(s.start_ms!); }}
+                        title={`${s.title ?? "Scene"}: ${secondsFromMs(s.start_ms)}s → ${secondsFromMs(s.end_ms)}s`}
                       />
                     ) : null
                   )}
@@ -511,13 +606,12 @@ export default function CurateClient({
                       return (
                         <div
                           key={c.candidateId}
-                          className="absolute top-0 bottom-0 w-0.5 opacity-60 hover:opacity-100 cursor-pointer"
+                          className="absolute top-0 bottom-0 w-0.5 opacity-60 pointer-events-none"
                           style={{
                             left: `${pct(startMs, effectiveDuration)}%`,
                             background: "var(--accent-mv-gold)",
                           }}
-                          title={`Candidate: ${fmtMs(startMs)}`}
-                          onClick={(e) => { e.stopPropagation(); setSelectedCandidateId(c.candidateId); seekTo(startMs); }}
+                          title={`Candidate: ${secondsFromMs(startMs)}s`}
                         />
                       );
                     })}
@@ -617,24 +711,8 @@ export default function CurateClient({
                 className="border-input bg-background text-foreground w-full rounded-md border px-3 py-1.5 text-sm"
               />
               <div className="grid grid-cols-2 gap-2">
-                <label className="text-xs text-muted-foreground">
-                  Start (ms)
-                  <input
-                    type="number"
-                    value={manualStart}
-                    onChange={(event) => setManualStart(Number(event.target.value))}
-                    className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm"
-                  />
-                </label>
-                <label className="text-xs text-muted-foreground">
-                  End (ms)
-                  <input
-                    type="number"
-                    value={manualEnd}
-                    onChange={(event) => setManualEnd(Number(event.target.value))}
-                    className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm"
-                  />
-                </label>
+                <SecondsField label="Start" valueMs={manualStart} onChange={setManualStart} />
+                <SecondsField label="End" valueMs={manualEnd} onChange={setManualEnd} />
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button size="sm" variant="outline" type="button" onClick={() => setManualStart(currentMs)}>
@@ -646,6 +724,9 @@ export default function CurateClient({
                 <Button size="sm" variant="outline" type="button" disabled={retainBusy} onClick={() => void keepStill(currentMs)}>
                   {retainBusy ? "Keeping…" : "Keep still as reference"}
                 </Button>
+                <Button size="sm" variant="outline" type="button" disabled={storyboardBusy} onClick={() => void attachStillToStoryboard(currentMs)}>
+                  {storyboardBusy ? "Attaching…" : "Use still on storyboard"}
+                </Button>
                 <Button
                   size="sm"
                   disabled={createBusy || !mural?.asset_id}
@@ -655,6 +736,7 @@ export default function CurateClient({
                 </Button>
               </div>
               {retainMsg ? <p className="text-xs text-muted-foreground">{retainMsg}</p> : null}
+              {storyboardMsg ? <p className="text-xs text-muted-foreground">{storyboardMsg}</p> : null}
             </CardContent>
           </Card>
 
@@ -665,27 +747,54 @@ export default function CurateClient({
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                   Sampled Frames — {frames.length}
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  Select a frame to keep it as a reference or put it on a storyboard panel. Clicking only used to seek.
+                </p>
                 <div className="flex gap-1 overflow-x-auto pb-1">
                   {frames.map((f) => (
                     <button
                       key={f.timeMs}
                       type="button"
-                      onClick={() => seekTo(f.timeMs)}
-                      title={fmtMs(f.timeMs)}
+                      onClick={() => {
+                        setSelectedFrameMs(f.timeMs);
+                        seekTo(f.timeMs);
+                      }}
+                      title={`${secondsFromMs(f.timeMs)}s`}
                       className="shrink-0 relative group"
+                      data-selected-frame={selectedFrameMs === f.timeMs ? "true" : undefined}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={f.dataUrl}
-                        alt={`Frame ${fmtMs(f.timeMs)}`}
-                        className="h-12 w-20 object-cover rounded border border-border group-hover:border-foreground/40 transition-colors"
+                        alt={`Frame ${secondsFromMs(f.timeMs)}s`}
+                        className={`h-12 w-20 object-cover rounded border transition-colors ${
+                          selectedFrameMs === f.timeMs
+                            ? "border-[var(--accent-mv-gold)]"
+                            : "border-border group-hover:border-foreground/40"
+                        }`}
                       />
                       <span className="absolute bottom-0.5 left-0.5 text-[8px] text-white/70 bg-black/50 px-0.5 rounded">
-                        {fmtMs(f.timeMs)}
+                        {secondsFromMs(f.timeMs)}s
                       </span>
                     </button>
                   ))}
                 </div>
+                {selectedFrameMs != null ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button size="sm" variant="outline" type="button" onClick={() => setManualStart(selectedFrameMs)}>
+                      Window start
+                    </Button>
+                    <Button size="sm" variant="outline" type="button" onClick={() => setManualEnd(selectedFrameMs)}>
+                      Window end
+                    </Button>
+                    <Button size="sm" variant="outline" type="button" disabled={retainBusy} onClick={() => void keepStill(selectedFrameMs)}>
+                      {retainBusy ? "Keeping…" : "Keep still as reference"}
+                    </Button>
+                    <Button size="sm" variant="outline" type="button" disabled={storyboardBusy} onClick={() => void attachStillToStoryboard(selectedFrameMs)}>
+                      {storyboardBusy ? "Attaching…" : "Use on storyboard"}
+                    </Button>
+                  </div>
+                ) : null}
 
                 {/* Delta bars */}
                 {deltas.length > 0 && (
@@ -842,14 +951,8 @@ export default function CurateClient({
                         {/* Adjust form */}
                         {isAdjusting && (
                           <div className="grid grid-cols-2 gap-2 pt-1">
-                            <label className="text-xs text-muted-foreground">
-                              Start (ms)
-                              <input type="number" value={adjustStart} onChange={(e) => setAdjustStart(Number(e.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm" />
-                            </label>
-                            <label className="text-xs text-muted-foreground">
-                              End (ms)
-                              <input type="number" value={adjustEnd} onChange={(e) => setAdjustEnd(Number(e.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm" />
-                            </label>
+                            <SecondsField label="Start" valueMs={adjustStart} onChange={setAdjustStart} />
+                            <SecondsField label="End" valueMs={adjustEnd} onChange={setAdjustEnd} />
                             <div className="col-span-2 flex gap-2">
                               <Button size="sm" onClick={() => { updateCandidate(adjustCandidate(candidate, adjustStart, adjustEnd)); setAdjustingId(null); }}>Apply</Button>
                               <Button size="sm" variant="outline" onClick={() => setAdjustingId(null)}>Cancel</Button>
@@ -922,6 +1025,9 @@ export default function CurateClient({
                                 </Button>
                                 <Button size="sm" variant="outline" disabled={retainBusy} onClick={() => void keepStill(startMs)}>
                                   Keep still
+                                </Button>
+                                <Button size="sm" variant="outline" disabled={storyboardBusy} onClick={() => void attachStillToStoryboard(startMs, composeSceneTitle(newSceneRole, newSceneTitle))}>
+                                  Use on storyboard
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => updateCandidate(rejectCandidate(candidate))}>
                                   Reject

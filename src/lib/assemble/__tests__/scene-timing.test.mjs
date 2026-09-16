@@ -1,4 +1,4 @@
-import { parseTimelineMs } from "../../media/timing";
+import { markWindowFromPointer, msFromTimelineRatio, parseOperatorSeconds, parseTimelineMs, secondsFromMs } from "../../media/timing";
 import { decideSceneTiming } from "../scene-timing";
 
 function assert(condition, message) {
@@ -23,6 +23,15 @@ assert(parseTimelineMs("0:36.5") === 36500, "fractional seconds pad to ms");
 assert(parseTimelineMs("0:60") == null, "invalid seconds are rejected");
 assert(parseTimelineMs("-1") == null, "negative strings are rejected");
 assert(parseTimelineMs(-1) == null, "negative numbers are rejected");
+assert(parseOperatorSeconds(257.24) === 257240, "operator seconds become canonical milliseconds");
+assert(parseOperatorSeconds("1:32.775") === 92775, "clock input stays accepted on seconds fields");
+assert(parseOperatorSeconds("92.775") === 92775, "decimal seconds are not treated as raw milliseconds");
+assert(secondsFromMs(257240) === 257.24, "canonical milliseconds display as seconds");
+assert(msFromTimelineRatio(0.5, 257240) === 128620, "timeline ratio stays in milliseconds");
+const seek = markWindowFromPointer({ originMs: 92775, pointerMs: 92800, durationMs: 257240 });
+assert(seek.seek === true, "a short click seeks instead of marking a window");
+const marked = markWindowFromPointer({ originMs: 0, pointerMs: 36000, durationMs: 257240 });
+assert(marked.seek === false && marked.startMs === 0 && marked.endMs === 36000, "a drag marks Intro/Scene start and end");
 
 const powerhouse = { master_id: POWERHOUSE, canonical_type: "scene", parent_master_id: MURAL };
 const mural = { master_id: MURAL, canonical_type: "mural", parent_master_id: UNIVERSE };

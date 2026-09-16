@@ -17,6 +17,7 @@ import {
   formatTimelineMs,
   type WorkStatus, type JourneyStep, type AuthorityData,
 } from "./authority-utils";
+import { SecondsField } from "@/components/assemble/seconds-field";
 import {
   StatusBadge, WorkJourney, PresentationPanel, ProjectionPresentationPanel,
   RealizationPanel, CreateExperiencePanel,
@@ -303,8 +304,8 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
         <div className="grid grid-cols-2 gap-2">
           <Button size="sm" variant="outline" onClick={() => setStartMs(currentMs)}>Set Start</Button>
           <Button size="sm" variant="outline" onClick={() => setEndMs(currentMs)}>Set End</Button>
-          <label className="text-muted-foreground text-xs">Start (ms)<input type="number" min="0" value={startMs} onChange={event => setStartMs(Number(event.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5" /></label>
-          <label className="text-muted-foreground text-xs">End (ms)<input type="number" min="1" value={endMs} onChange={event => setEndMs(Number(event.target.value))} className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5" /></label>
+          <SecondsField label="Start" valueMs={startMs} onChange={setStartMs} />
+          <SecondsField label="End" valueMs={endMs} onChange={setEndMs} />
         </div>
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={previewRange} disabled={endMs <= startMs}>Preview range</Button>

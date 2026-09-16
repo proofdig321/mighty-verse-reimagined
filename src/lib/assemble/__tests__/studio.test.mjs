@@ -1,4 +1,4 @@
-import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref, curateAttachHref } from "../studio";
+import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteStoryboardHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref, curateAttachHref } from "../studio";
 import { creativeSuiteNavItems, resolveStudioHash, suiteChildHref } from "../suite";
 
 function assert(condition, message) {
@@ -112,6 +112,7 @@ assert(nav.find((item) => item.id === "storyboard")?.href === `${suite}/storyboa
 assert(nav.find((item) => item.id === "preview")?.href === `${suite}/preview`, "2.5D is a child route");
 assert(suiteChildHref(`${suite}?from=curate`, "scenes") === `${suite}/scenes?from=curate`, "child routes preserve Curate origin");
 assert(creativeSuiteWorkspaceHref(UNIVERSE, "sentinel") === `${suite}/storyboard?source=sentinel`, "Sentinel evidence lives on Storyboard");
+assert(creativeSuiteStoryboardHref(UNIVERSE, "curate", "references") === `${suite}/storyboard?from=curate&source=references`, "curated stills continue into Storyboard References");
 assert(resolveStudioHash("universe-sentinel")?.path === "storyboard", "legacy Sentinel hash maps to Storyboard");
 assert(resolveStudioHash("universe-scene-4790c7cf-bb19-4a01-a243-e5c3eb680555")?.path === "scenes/4790c7cf-bb19-4a01-a243-e5c3eb680555", "legacy Scene hash maps to the Scene workspace");
 

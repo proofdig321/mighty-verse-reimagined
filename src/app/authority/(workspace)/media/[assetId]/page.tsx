@@ -8,7 +8,7 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { ChevronRight, ScanSearch, Wand2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { formatDuration } from "@/lib/media/timing";
+import { formatDuration, formatTimelineMs, secondsFromMs } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { formatIsrcDisplay, isIsrcEligible, type IsrcStatus } from "@/lib/media/isrc";
 import { deriveDistributionReadiness } from "@/lib/media/distribution-readiness";
@@ -18,11 +18,11 @@ import { MetadataStatusPanel } from "./metadata-status-panel";
 import { buildCanonicalMetadata } from "@/lib/media/metadata-build";
 import { checkMetadataConsistency } from "@/lib/media/metadata-embed";
 import { providerThumbnailUrl } from "@/lib/media/thumbnail";
-import { curateStudioHref, mediaInspectHref } from "@/lib/assemble/studio";
+import { curateSentinelHref, curateStudioHref, creativeSuiteStoryboardHref, mediaInspectHref } from "@/lib/assemble/studio";
 import { isInspectableAssetType } from "@/lib/media/inspect-persist";
 import { isCuratedReferenceProvider } from "@/lib/production/lifecycle";
 import { parseReferenceProvenance } from "@/lib/production/reference";
-import { formatTimelineMs } from "@/lib/media/timing";
+import { UseStillButton } from "@/components/assemble/use-still-button";
 
 async function getData(assetId: string) {
   const svc = getServiceClient();
@@ -234,6 +234,16 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             </Link>
           </div>
         )}
+        {isReference && provenance?.universe_id ? (
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+            <Link href={creativeSuiteStoryboardHref(provenance.universe_id, null, "references")} className={buttonVariants({ size: "sm" })}>
+              Open Storyboard
+            </Link>
+            <Link href={curateSentinelHref(provenance.universe_id)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              Open Sentinel
+            </Link>
+          </div>
+        ) : null}
       </div>
 
       {isReference ? (
@@ -251,7 +261,9 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             </div>
             <div>
               <dt className="text-muted-foreground">Frame</dt>
-              <dd className="font-mono text-foreground">{formatTimelineMs(provenance?.time_ms ?? asset.duration_ms)}</dd>
+              <dd className="font-mono text-foreground">
+                {formatTimelineMs(provenance?.time_ms ?? asset.duration_ms)} ({secondsFromMs(provenance?.time_ms ?? asset.duration_ms)}s)
+              </dd>
             </div>
             <div>
               <dt className="text-muted-foreground">Role</dt>
@@ -268,6 +280,15 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
             <Link href={`/authority/media/${provenance.source_asset_id}`} className="inline-block text-xs text-muted-foreground underline hover:text-foreground">
               Open source asset
             </Link>
+          ) : null}
+          {provenance?.universe_id && thumbnailUrl ? (
+            <UseStillButton
+              universeId={provenance.universe_id}
+              stillUrl={thumbnailUrl}
+              assetId={asset.asset_id}
+              title={title}
+              timeMs={provenance.time_ms}
+            />
           ) : null}
         </div>
       ) : (
@@ -329,14 +350,25 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
         {/* Storage / Provider */}
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Storage</p>
-          <p className="text-xs font-mono text-muted-foreground break-all">{asset.storage_ref}</p>
-          {asset.provider && (
-            <p className="text-xs text-muted-foreground">
-              Provider: <span className="text-foreground/70">{asset.provider}</span>
-              {asset.provider_asset_id && (
-                <span className="ml-1 font-mono text-muted-foreground/50">{asset.provider_asset_id.slice(0, 12)}…</span>
+          {isReference ? (
+            <>
+              <p className="text-sm text-foreground">Source playback is provider-managed. It is not identity.</p>
+              <p className="text-xs text-muted-foreground">
+                Provider: <span className="text-foreground/70">{asset.provider}</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-xs font-mono text-muted-foreground break-all">{asset.storage_ref}</p>
+              {asset.provider && (
+                <p className="text-xs text-muted-foreground">
+                  Provider: <span className="text-foreground/70">{asset.provider}</span>
+                  {asset.provider_asset_id && (
+                    <span className="ml-1 font-mono text-muted-foreground/50">{asset.provider_asset_id.slice(0, 12)}…</span>
+                  )}
+                </p>
               )}
-            </p>
+            </>
           )}
           <p className="text-xs text-muted-foreground">{new Date(asset.created_at).toLocaleDateString()}</p>
         </div>
@@ -448,7 +480,11 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
           <span className="ml-2 font-normal normal-case tracking-normal text-muted-foreground/60">{bindings.length} projection{bindings.length !== 1 ? "s" : ""}</span>
         </p>
         {bindings.length === 0 ? (
-          <p className="text-sm text-muted-foreground">This asset is not bound to any projection.</p>
+          <p className="text-sm text-muted-foreground">
+            {isReference
+              ? "A curated still is not bound to a Mural projection. That is expected. Bind the source mural on Curate Attach; use this still on Storyboard."
+              : "This asset is not bound to any projection."}
+          </p>
         ) : (
           <div className="rounded-lg border border-border overflow-hidden">
             <table className="w-full text-sm">

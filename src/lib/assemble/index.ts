@@ -36,6 +36,7 @@ export {
   creativeSuiteIdentityHref,
   creativeSuiteScenesHref,
   creativeSuiteSentinelHref,
+  creativeSuiteStoryboardHref,
   creativeSuiteWorkspaceHref,
   curateHubHref,
   curateIncomingHref,

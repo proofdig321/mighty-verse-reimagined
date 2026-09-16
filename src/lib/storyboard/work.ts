@@ -172,11 +172,14 @@ async function hydrateWork(db: ServiceClient, work: Record<string, unknown>): Pr
     panels: (panels ?? []).map((panel) => {
       const stillAsset = panel.active_still_asset_id ? assetById.get(panel.active_still_asset_id) : null;
       const motionAsset = panel.active_motion_asset_id ? assetById.get(panel.active_motion_asset_id) : null;
+      const refs = asReferences(panel.panel_references);
+      const preferredStill = refs.find((item) => item.preferred && item.url) ?? refs.find((item) => item.url);
+      const stillTime = preferredStill?.time_ms ?? null;
       const stillUrl = stillAsset
-        ? stillAsset.provider === "mux"
-          ? muxThumbnailUrl(stillAsset.storage_ref, 0, 640)
+        ? stillAsset.provider === "mux" || stillAsset.provider === "curated-reference"
+          ? muxThumbnailUrl(stillAsset.storage_ref, Math.max(0, (stillTime ?? 0) / 1000), 640)
           : signedStills.get(stillAsset.asset_id) ?? (stillAsset.storage_ref.startsWith("http") ? stillAsset.storage_ref : null)
-        : null;
+        : preferredStill?.url ?? null;
       return mapPanel(panel as Record<string, unknown>, stillUrl, {
         playback_id: motionAsset?.provider === "mux" ? motionAsset.storage_ref : null,
         endpoint: panel.active_motion_asset_id ? endpointById.get(panel.active_motion_asset_id) ?? null : null,
@@ -386,6 +389,65 @@ export async function replaceStoryboardPanels(input: {
   })) as StoryboardWorkRecord;
 }
 
+export type SentinelImportBeat = {
+  title?: string;
+  description?: string;
+  still_url?: string | null;
+  time_ms?: number | null;
+  sentinel_panel_id?: string | null;
+  scene_master_id?: string | null;
+  duration_ms?: number | null;
+};
+
+export async function applySentinelEvidenceToPanels(input: {
+  workId: string;
+  participantId: string;
+  beats: SentinelImportBeat[];
+  client?: ServiceClient;
+}): Promise<StoryboardWorkRecord> {
+  const db = svc(input.client);
+  const work = await loadStoryboardWorkById({
+    workId: input.workId,
+    participantId: input.participantId,
+    client: db,
+  });
+  if (!work) throw new Error("Storyboard was not found.");
+  const unlocked = work.panels.filter((panel) => !panel.user_locked);
+  for (const [index, panel] of unlocked.entries()) {
+    const beat = input.beats[index];
+    if (!beat) continue;
+    const stillUrl = typeof beat.still_url === "string" && beat.still_url ? beat.still_url : null;
+    const timeMs = typeof beat.time_ms === "number" ? beat.time_ms : null;
+    await db
+      .from("storyboard_panel")
+      .update({
+        sentinel_panel_id: beat.sentinel_panel_id ?? panel.sentinel_panel_id,
+        proposed_scene_id: beat.scene_master_id ?? panel.proposed_scene_id,
+        duration_ms: beat.duration_ms ?? panel.duration_ms,
+        source: "sentinel",
+        panel_references: stillUrl
+          ? [
+              {
+                role: "still",
+                label: beat.title ?? panel.title,
+                url: stillUrl,
+                preferred: true,
+                time_ms: timeMs,
+                source_title: "Sentinel evidence",
+              },
+            ]
+          : panel.references,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("panel_id", panel.panel_id);
+  }
+  return (await loadStoryboardWorkById({
+    workId: input.workId,
+    participantId: input.participantId,
+    client: db,
+  })) as StoryboardWorkRecord;
+}
+
 export async function updateStoryboardPanel(input: {
   participantId: string;
   panelId: string;
@@ -440,6 +502,7 @@ export async function updateStoryboardPanel(input: {
     "duration_ms",
     "aspect_ratio",
     "proposed_scene_id",
+    "sentinel_panel_id",
     "active_still_asset_id",
     "active_motion_asset_id",
     "sequence",

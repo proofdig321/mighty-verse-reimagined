@@ -149,6 +149,18 @@ export function creativeSuiteSentinelHref(universeId: string, from?: StudioFrom 
   return creativeSuiteWorkspaceHref(universeId, "sentinel", from);
 }
 
+export function creativeSuiteStoryboardHref(
+  universeId: string,
+  from?: StudioFrom | null,
+  source?: "sentinel" | "references",
+): string {
+  return withStudioQuery(
+    `/authority/universes/${universeId}/storyboard`,
+    from,
+    source ? { source } : undefined,
+  );
+}
+
 export function creativeSuiteIdentityHref(universeId: string, from?: StudioFrom | null): string {
   return creativeSuiteWorkspaceHref(universeId, "identity", from);
 }
