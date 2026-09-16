@@ -29,6 +29,7 @@ import type {
   CurateScene,
   CurateAsset,
 } from "@/lib/assemble/load-curate-inspection";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -424,7 +425,7 @@ export default function CurateClient({
                     <option value="">Select asset…</option>
                     {availableAssets.map((a) => (
                       <option key={a.asset_id} value={a.asset_id}>
-                        {a.title ?? `${a.provider ?? "unknown"} · ${a.storage_ref.slice(0, 16)}`} · {a.duration_ms ? fmtSec(a.duration_ms) : "—"}
+                        {galleryMediaLabel({ title: a.title })} · {a.duration_ms ? fmtSec(a.duration_ms) : "—"}
                       </option>
                     ))}
                   </select>

@@ -17,6 +17,21 @@ export type GallerySource = {
   associated_title: string | null;
 };
 
+/**
+ * Operator-facing media name. Never fall back to Mux playback ids, asset UUIDs,
+ * or storage_ref slices — Create Work may ingest without a media_intake row.
+ */
+export function galleryMediaLabel(input: {
+  title?: string | null;
+  universe_title?: string | null;
+  mural_title?: string | null;
+}): string {
+  const named = [input.title, input.universe_title, input.mural_title]
+    .map((value) => (typeof value === "string" ? value.trim() : ""))
+    .find((value) => value.length > 0);
+  return named ?? "Untitled media";
+}
+
 export function playableGallerySources(media: CurateStudioMedia[]): GallerySource[] {
   return media
     .filter((item) => {
@@ -30,7 +45,11 @@ export function playableGallerySources(media: CurateStudioMedia[]): GallerySourc
     })
     .map((item) => ({
       asset_id: item.asset_id,
-      title: item.title,
+      title: galleryMediaLabel({
+        title: item.title,
+        universe_title: item.association.universe_title,
+        mural_title: item.association.mural_title,
+      }),
       provider: item.provider,
       storage_ref: item.storage_ref,
       duration_ms: item.duration_ms,

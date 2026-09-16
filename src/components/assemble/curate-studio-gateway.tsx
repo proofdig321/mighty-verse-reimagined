@@ -12,7 +12,8 @@ import {
   studioReadinessLabel,
   type CurateStudioMedia,
 } from "@/lib/assemble/studio";
-import { associationStatusLabel } from "@/lib/assemble/association";
+import { associationStatusLabel, mediaBoundToUniverseMural } from "@/lib/assemble/association";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 import type { CurateAssetFocus } from "@/lib/assemble/curate-context";
 import type { CuratePendingIngest, CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
@@ -20,10 +21,6 @@ import { CurateUniverseSelect } from "./curate-universe-select";
 import { CurateContinuationLinks } from "./curate-continuation";
 import { CurateYoutubeIngest } from "./curate-youtube-ingest";
 import { DiscardMedia } from "./discard-media";
-
-function untitled(kind: string) {
-  return <span className="italic text-muted-foreground">Untitled {kind}</span>;
-}
 
 function CurateAssetContextBanner({ focusedAsset }: { focusedAsset: CurateAssetFocus }) {
   if (focusedAsset.next === "unavailable") {
@@ -123,7 +120,8 @@ export default function CurateStudioGateway({
               </thead>
               <tbody className="divide-y divide-border">
                 {media.map((item) => {
-                  const suiteHref = item.association.universe_id
+                  const muralBound = mediaBoundToUniverseMural(item.association, item.association.universe_id);
+                  const suiteHref = muralBound && item.association.universe_id
                     ? creativeSuiteHref(item.association.universe_id, "curate")
                     : null;
                   const isFocused = focusedAsset?.found === true && focusedAsset.asset_id === item.asset_id;
@@ -138,7 +136,13 @@ export default function CurateStudioGateway({
                       }
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{item.title ?? untitled("media")}</p>
+                        <p className="font-medium text-foreground">
+                          {galleryMediaLabel({
+                            title: item.title,
+                            universe_title: item.association.universe_title,
+                            mural_title: item.association.mural_title,
+                          })}
+                        </p>
                         <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                           {item.provider ?? "unknown"}
                           {item.duration_ms != null ? ` · ${formatDuration(item.duration_ms / 1000)}` : ""}
@@ -157,6 +161,8 @@ export default function CurateStudioGateway({
                             <span>{associationStatusLabel(item.association)}</span>
                             {item.association.mural_title ? (
                               <span className="text-muted-foreground"> · Mural {item.association.mural_title}</span>
+                            ) : item.association.bound_as === "universe" ? (
+                              <span className="text-muted-foreground"> · Universe projection only</span>
                             ) : null}
                           </span>
                         ) : (
@@ -177,7 +183,16 @@ export default function CurateStudioGateway({
                           >
                             Inspect
                           </Link>
-                          {item.deletable ? <DiscardMedia assetId={item.asset_id} title={item.title} /> : null}
+                          {item.deletable ? (
+                            <DiscardMedia
+                              assetId={item.asset_id}
+                              title={galleryMediaLabel({
+                                title: item.title,
+                                universe_title: item.association.universe_title,
+                                mural_title: item.association.mural_title,
+                              })}
+                            />
+                          ) : null}
                           {item.association.universe_id && (
                             <Link
                               href={curateSentinelHref(item.association.universe_id)}

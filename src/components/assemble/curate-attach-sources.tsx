@@ -33,6 +33,7 @@ export function CurateAttachSources({
       />
       {selected && target ? (
         <AssociateWithUniverse
+          key={selected.asset_id}
           media={selected}
           universes={[target]}
           defaultOpen

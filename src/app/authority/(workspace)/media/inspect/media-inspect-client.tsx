@@ -27,6 +27,7 @@ import {
   type InspectCanonicalScene,
   type InspectWorkScope,
 } from "@/lib/media/inspect-scope";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 
 type CanonicalScene = InspectCanonicalScene;
 
@@ -428,9 +429,15 @@ const runInspection = useCallback(async () => {
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Inspecting Asset</p>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-base font-semibold text-foreground">{assetIdentity.title ?? assetIdentity.asset_id.slice(0, 8) + "…"}</p>
+            <p className="text-base font-semibold text-foreground">
+              {galleryMediaLabel({
+                title: assetIdentity.title,
+                universe_title: workScope.universe_title,
+                mural_title: workScope.mural_title,
+              })}
+            </p>
             <span className="text-xs text-muted-foreground capitalize">{assetIdentity.provider}</span>
-            <span className="text-xs text-muted-foreground">{assetIdentity.work_type ?? assetIdentity.asset_id.slice(0, 8)}</span>
+            <span className="text-xs text-muted-foreground">{assetIdentity.work_type ?? "Source"}</span>
           </div>
           <p className="text-sm text-foreground" data-testid="inspect-work-belonging">
             {belongingCopy}

@@ -5,6 +5,8 @@ import {
   projectionBelongsToUniverse,
   existingMediaBindRequest,
   associationStatusLabel,
+  associatedUniverseIdIfMuralBound,
+  mediaBoundToUniverseMural,
   CREATE_WORK_HREF,
 } from "../association";
 
@@ -156,5 +158,31 @@ assert(mismatchedTarget.ok === false && mismatchedTarget.code === "wrong_work", 
 assert(associationStatusLabel({ universe_id: null, universe_title: null, mural_id: null, mural_title: null, scene_titles: [], bound_as: null }) === "Not associated", "unbound label");
 assert(associationStatusLabel({ universe_id: UNIVERSE, universe_title: "Super Hero Ego", mural_id: MURAL, mural_title: "Super Hero Ego", scene_titles: [], bound_as: "mural" }) === "Super Hero Ego", "associated label uses Universe title");
 assert(CREATE_WORK_HREF === "/authority/create", "Create Work remains the existing broader creation path");
+
+const muralBound = {
+  universe_id: UNIVERSE,
+  universe_title: "Super Hero Ego",
+  mural_id: MURAL,
+  mural_title: "Super Hero Ego",
+  scene_titles: [],
+  bound_as: "mural",
+};
+const universeOnly = {
+  universe_id: OTHER_UNIVERSE,
+  universe_title: "Give me my money judas - Golden Shovel",
+  mural_id: null,
+  mural_title: null,
+  scene_titles: [],
+  bound_as: "universe",
+};
+
+assert(mediaBoundToUniverseMural(muralBound, UNIVERSE) === true, "mural bind on this Universe is associated");
+assert(mediaBoundToUniverseMural(muralBound, OTHER_UNIVERSE) === false, "mural bind on Super Hero Ego is not Judas curation");
+assert(mediaBoundToUniverseMural(universeOnly, OTHER_UNIVERSE) === false, "Universe-level bind is not mural curation");
+assert(mediaBoundToUniverseMural(universeOnly, UNIVERSE) === false, "Universe-level bind on another work is not this Mural");
+assert(associatedUniverseIdIfMuralBound(muralBound, UNIVERSE) === UNIVERSE, "locked Attach treats mural bind as done");
+assert(associatedUniverseIdIfMuralBound(universeOnly, OTHER_UNIVERSE) === null, "locked Attach still offers Confirm when only the Universe projection is bound");
+assert(associatedUniverseIdIfMuralBound(muralBound) === UNIVERSE, "incoming catalogue treats mural bind as associated");
+assert(associatedUniverseIdIfMuralBound(universeOnly) === null, "incoming catalogue does not skip Confirm for Universe-only bind");
 
 console.log("Assemble association tests: all passed");

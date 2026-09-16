@@ -77,6 +77,17 @@ assert(sceneOnly.universe_id === UNIVERSE, "Scene binding still walks to the Uni
 assert(sceneOnly.mural_id === MURAL, "Scene parent Mural is retained");
 assert(sceneOnly.bound_as === "scene", "scene-only binding is not mural ownership of the Creative Moment");
 
+const universeProjection = associateAssetWithCanonicalWork({
+  assetId: ASSET,
+  bindings: [{ asset_id: ASSET, projection_id: "universe-proj" }],
+  projections: [{ projection_id: "universe-proj", master_id: UNIVERSE }],
+  masters,
+  presentations,
+});
+assert(universeProjection.universe_id === UNIVERSE, "Universe-level bind still walks to Super Hero Ego");
+assert(universeProjection.mural_id === null, "Universe-level bind does not invent a Mural");
+assert(universeProjection.bound_as === "universe", "Universe projection is not mural curation");
+
 assert(mediaInspectHref(ASSET) === `/authority/media/inspect?assetId=${ASSET}`, "inspect reuses the existing media inspect route");
 assert(creativeSuiteHref(UNIVERSE, "curate") === `/authority/universes/${UNIVERSE}?from=curate`, "suite href preserves Curate origin");
 assert(creativeSuiteSentinelHref(UNIVERSE) === `/authority/universes/${UNIVERSE}/storyboard?source=sentinel`, "inspect continues into Suite Sentinel without merging the surfaces");

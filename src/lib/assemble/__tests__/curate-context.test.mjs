@@ -70,6 +70,27 @@ assert(fromInspect.next === "creative_suite", "bound continuation is Creative Su
 assert(fromInspect.universe_id === UNIVERSE, "bound focus keeps Super Hero Ego Universe");
 assert(fromInspect.universe_title === "Super Hero Ego", "bound focus keeps Super Hero Ego title");
 
+const universeOnly = mediaRow({
+  asset_id: UNBOUND,
+  title: null,
+  association: {
+    universe_id: OTHER_UNIVERSE,
+    universe_title: "Give me my money judas - Golden Shovel",
+    mural_id: null,
+    mural_title: null,
+    scene_titles: [],
+    bound_as: "universe",
+  },
+});
+const fromUniverseProjection = resolveCurateAssetFocus({
+  requestedAssetId: UNBOUND,
+  media: [universeOnly],
+});
+assert(fromUniverseProjection.found === true, "Universe-projection media is found");
+assert(fromUniverseProjection.bound === false, "Universe-projection bind is not mural curation");
+assert(fromUniverseProjection.next === "associate", "Universe-projection media still needs Confirm association");
+assert(fromUniverseProjection.universe_id === null, "incoming focus does not skip Attach by treating Universe bind as occupancy");
+
 const spoofedUniverse = resolveCurateUniverseSelection({
   requestedUniverseId: OTHER_UNIVERSE,
   focusedAsset: fromInspect,

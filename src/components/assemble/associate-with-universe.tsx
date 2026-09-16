@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import {
   CREATE_WORK_HREF,
+  associatedUniverseIdIfMuralBound,
   decideCanonicalAssociation,
   mediaAssociationEligibility,
 } from "@/lib/assemble/association";
@@ -33,8 +34,12 @@ export function AssociateWithUniverse({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [associatedUniverseId, setAssociatedUniverseId] = useState<string | null>(
-    media.association.universe_id,
+    associatedUniverseIdIfMuralBound(media.association, lockedUniverseId),
   );
+  const universeBoundOnly =
+    Boolean(lockedUniverseId) &&
+    media.association.universe_id === lockedUniverseId &&
+    media.association.bound_as === "universe";
 
   const eligibility = mediaAssociationEligibility({
     readiness_overall: media.readiness_overall,
@@ -158,6 +163,14 @@ export function AssociateWithUniverse({
         </p>
       )}
 
+      {universeBoundOnly && (
+        <p className="text-xs text-muted-foreground">
+          This source is on the Universe projection, not the Mural. Confirm association to bind it
+          to {selected?.target.mural_title ?? "the existing Mural"}. Universe-level binding is not
+          mural curation.
+        </p>
+      )}
+
       {decision.ok === false && universeId && (
         <div className="space-y-2">
           <p role="alert" className="text-xs text-destructive">
@@ -189,19 +202,21 @@ export function AssociateWithUniverse({
         <Button type="submit" size="sm" disabled={busy || !decision.ok || decision.action !== "bind"}>
           {busy ? "Associating…" : "Confirm association"}
         </Button>
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          disabled={busy}
-          onClick={() => {
-            setOpen(false);
-            setError(null);
-            setMessage(null);
-          }}
-        >
-          Cancel
-        </Button>
+        {!lockedUniverseId && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => {
+              setOpen(false);
+              setError(null);
+              setMessage(null);
+            }}
+          >
+            Cancel
+          </Button>
+        )}
       </div>
     </form>
   );

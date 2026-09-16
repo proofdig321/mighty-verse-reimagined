@@ -64,7 +64,9 @@ export {
   buildUniverseAssociationTarget,
   decideCanonicalAssociation,
   existingMediaBindRequest,
+  associatedUniverseIdIfMuralBound,
   mediaAssociationEligibility,
+  mediaBoundToUniverseMural,
   projectionBelongsToUniverse,
 } from "./association";
 export type {
@@ -97,7 +99,7 @@ export type {
 } from "./scene-identity";
 export { decideSceneTiming } from "./scene-timing";
 export { decideSceneArtwork } from "./scene-artwork";
-export { playableGallerySources } from "./gallery-source";
+export { galleryMediaLabel, playableGallerySources } from "./gallery-source";
 export { deriveStoryboardProgress } from "./storyboard-progress";
 export type {
   SceneTimingDecision,

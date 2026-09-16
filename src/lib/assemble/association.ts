@@ -217,6 +217,31 @@ export function associationStatusLabel(association: StudioAssociation): string {
   return association.universe_title ?? "Untitled universe";
 }
 
+/**
+ * MEDIA ≠ CREATIVE WORK. A Universe-level projection binding is not mural
+ * curation. Attach / Confirm only complete when this asset is bound to the
+ * selected Universe's Mural.
+ */
+export function mediaBoundToUniverseMural(
+  association: StudioAssociation,
+  universeId: string | null | undefined,
+): boolean {
+  if (!universeId) return false;
+  return (
+    association.universe_id === universeId &&
+    association.bound_as === "mural" &&
+    Boolean(association.mural_id)
+  );
+}
+
+export function associatedUniverseIdIfMuralBound(
+  association: StudioAssociation,
+  lockedUniverseId?: string | null,
+): string | null {
+  const universeId = lockedUniverseId ?? association.universe_id;
+  return mediaBoundToUniverseMural(association, universeId) ? universeId : null;
+}
+
 export function existingMediaBindRequest(bind: AssociationBind) {
   return {
     projection_id: bind.projection_id,

@@ -1,4 +1,4 @@
-import { playableGallerySources } from "../gallery-source";
+import { galleryMediaLabel, playableGallerySources } from "../gallery-source";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -56,5 +56,35 @@ const gallery = playableGallerySources([
 assert(gallery.length === 2, "placeholder processing media is not offered as a gallery pick");
 assert(gallery[0].asset_id === SHE && gallery[1].asset_id === FR, "playable Mux sources stay selectable");
 assert(gallery[0].associated_title === "Super Hero Ego", "already-bound media still appears so it can be reused on another empty Mural");
+
+const untitledMux = playableGallerySources([
+  mediaRow({
+    asset_id: "53562189-edba-4f15-9463-bf29bffdb47d",
+    title: null,
+    storage_ref: "hqGacPkUZZuWiTu4kl9DZQx56IutFzfnXnsgDr1LHEM",
+    association: {
+      universe_id: "430ccb6b-6c31-4504-8729-19e7213e54a5",
+      universe_title: "Give me my money judas - Golden Shovel",
+      mural_id: null,
+      mural_title: null,
+      scene_titles: [],
+      bound_as: "universe",
+    },
+  }),
+]);
+assert(untitledMux.length === 1, "playable Mux without intake still appears in the gallery");
+assert(
+  untitledMux[0].title === "Give me my money judas - Golden Shovel",
+  "gallery label uses the work title, not the Mux playback id",
+);
+assert(!untitledMux[0].title.includes("hqGacPkU"), "gallery never surfaces a Mux id as the media name");
+assert(
+  galleryMediaLabel({ title: null, universe_title: null, mural_title: null }) === "Untitled media",
+  "unbound untitled media stays Untitled media, not a UUID",
+);
+assert(
+  galleryMediaLabel({ title: "  ", universe_title: null, mural_title: "Mural name" }) === "Mural name",
+  "blank intake title falls through to the Mural title",
+);
 
 console.log("Assemble gallery source tests: all passed");

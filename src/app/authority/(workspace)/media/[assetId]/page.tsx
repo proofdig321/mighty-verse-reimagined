@@ -156,10 +156,10 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
   const isReference = isCuratedReferenceProvider(asset.provider);
   const isThumbnail = !isReference && (asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail"));
-  const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
+  const bound = data.bindings.find((binding) => binding.masterId);
+  const title = intake?.title ?? bound?.masterTitle ?? (isPlaceholder ? "Placeholder asset" : "Untitled media");
   const provenance = parseReferenceProvenance(intake?.provenance_notes);
   const inspectable = isInspectableAssetType(asset.asset_type) && !isPlaceholder && !isThumbnail && !isReference;
-  const bound = data.bindings.find((binding) => binding.masterId);
   const distribution = deriveDistributionReadiness({
     title: intake?.title ?? bound?.masterTitle ?? null,
     rightsHolder: rightsLabel,
