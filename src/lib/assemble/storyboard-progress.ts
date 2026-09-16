@@ -12,6 +12,21 @@ export const STORYBOARD_PROGRESS_STEPS = [
   { id: "assembly", label: "Assembly" },
 ] as const;
 
+/** Visible operator chain. Does not add a seventh progress step. */
+export const STORYBOARD_OPERATOR_CHAIN = [
+  "Source",
+  "Sentinel",
+  "Reference",
+  "Transformation",
+  "Still",
+  "Motion",
+  "Assembly",
+] as const;
+
+export function storyboardOperatorChainLabel(): string {
+  return STORYBOARD_OPERATOR_CHAIN.join(" → ");
+}
+
 export type StoryboardProgressStepId = (typeof STORYBOARD_PROGRESS_STEPS)[number]["id"];
 
 export type StoryboardProgressStep = {

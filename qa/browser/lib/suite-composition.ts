@@ -93,7 +93,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(sentinel.getByRole("heading", { name: "Scene-boundary proposals" })).toBeVisible();
   await expect(sentinel.locator("[data-holographic-kind]")).toHaveCount(0);
   await expect(sentinel.locator("[data-proposal-scene]")).toHaveCount(4);
-  await expect(sentinel.getByRole("link", { name: "Open 2.5D Studio Preview" })).toHaveAttribute(
+  await expect(sentinel.getByRole("link", { name: "2.5D Experience" })).toHaveAttribute(
     "href",
     suitePath(ROUTES.authorityUniversePreview, fromCurate),
   );
@@ -137,7 +137,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   if (productionLayerCount === 1) {
     await expect(productionLayers).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);
   }
-  await expect(preview.getByRole("link", { name: "Enter Experience" })).toHaveAttribute("href", ROUTES.universeHolographic);
+  await expect(preview.getByRole("link", { name: "Holographic Experience" })).toHaveAttribute("href", ROUTES.universeHolographic);
   await expect(preview.getByRole("link", { name: "Open Universe" }).first()).toHaveAttribute("href", ROUTES.universeLive);
 
   await openStudioWorkspace(page, "Scenes");
@@ -205,7 +205,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   const continuation = page.locator("section[aria-labelledby='universe-experience-continuation']");
   await expect(continuation.getByText("Assemble", { exact: true })).toBeVisible();
   await expect(continuation.getByText("Experience", { exact: true }).first()).toBeVisible();
-  await expect(continuation.getByRole("link", { name: /Enter Experience/i })).toHaveAttribute(
+  await expect(continuation.getByRole("link", { name: /Holographic Experience/i })).toHaveAttribute(
     "href",
     ROUTES.universeHolographic,
   );

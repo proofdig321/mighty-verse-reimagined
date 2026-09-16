@@ -123,6 +123,14 @@ export function SentinelIntelligencePanel({
 
   const adjustCount = intelligence.proposals.filter((proposal) => proposal.status === "adjust").length;
   const needsEstablish = intelligence.proposals.length === 0;
+  const subjects = Array.from(
+    new Set(
+      intelligence.proposals
+        .map((proposal) => proposal.title)
+        .concat(intelligence.storyboard.map((panel) => panel.title))
+        .filter((title): title is string => Boolean(title)),
+    ),
+  );
 
   return (
     <div className="suite-intelligence">
@@ -131,9 +139,10 @@ export function SentinelIntelligencePanel({
           Evidence
         </h3>
         <p className="suite-section-note">
-          Sentinel observed this media. Observation is not canonical authority.
-          Derived intelligence follows as storyboard and animation plan until a curator authorises meaning.
+          Sentinel is an evidence layer: source overview, timed segments, subjects, frame context, and confidence.
+          It does not author transformations or create Scenes.
         </p>
+        <p className="suite-kicker mt-3">Source overview</p>
         <dl className="suite-evidence-facts">
           <div>
             <dt>Observations</dt>
@@ -148,6 +157,36 @@ export function SentinelIntelligencePanel({
             <dd>{intelligence.unaligned_beats.length}</dd>
           </div>
         </dl>
+        {intelligence.proposals.length ? (
+          <>
+            <p className="suite-kicker mt-4">Timed segments</p>
+            <ul className="space-y-1 text-xs text-muted-foreground">
+              {intelligence.proposals.map((proposal) => (
+                <li key={`segment-${proposal.scene_master_id}`}>
+                  {proposal.title ?? "Untitled"} · {formatTimelineMs(proposal.canonical_start_ms)} → {formatTimelineMs(proposal.canonical_end_ms)}
+                  {proposal.status === "adjust" ? " · uncertain vs canonical" : " · aligned"}
+                </li>
+              ))}
+            </ul>
+          </>
+        ) : null}
+        {subjects.length ? (
+          <>
+            <p className="suite-kicker mt-4">Subjects</p>
+            <p className="text-xs text-muted-foreground">{subjects.join(" · ")}</p>
+          </>
+        ) : null}
+        {intelligence.unaligned_beats.length > 0 || adjustCount > 0 ? (
+          <>
+            <p className="suite-kicker mt-4">Confidence / uncertainty</p>
+            <p className="text-xs text-muted-foreground">
+              {adjustCount} window{adjustCount === 1 ? "" : "s"} need curator judgement.
+              {intelligence.unaligned_beats.length
+                ? ` ${intelligence.unaligned_beats.length} unaligned beat${intelligence.unaligned_beats.length === 1 ? "" : "s"} stay observational.`
+                : ""}
+            </p>
+          </>
+        ) : null}
         <div className="flex flex-wrap gap-2 mt-3">
           {needsEstablish && establishHref ? (
             <Link href={establishHref} className={cn(buttonVariants({ size: "sm" }))} data-establish-scenes="sentinel">
@@ -167,7 +206,7 @@ export function SentinelIntelligencePanel({
           </Link>
           {previewHref ? (
             <Link href={previewHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-              Open 2.5D Studio Preview
+              2.5D Experience
             </Link>
           ) : null}
         </div>
@@ -209,10 +248,12 @@ export function SentinelIntelligencePanel({
               </button>
               {openBeat === panel.panel_id ? (
                 <div className="mt-2 space-y-2">
+                  <p className="suite-kicker">Frame context</p>
                   <p className="suite-section-note">
+                    Timestamp {secondsFromMs(panel.time_ms)}s.
                     {panel.kind === "scene"
-                      ? "This panel is an existing authorised Scene. Sentinel did not create it."
-                      : `This beat exists because Sentinel observed a change${panel.change_score != null ? ` (score ${panel.change_score.toFixed(2)})` : ""}. It is not a canonical Scene.`}
+                      ? " Segment matches an existing authorised Scene. Sentinel did not create it."
+                      : ` Observation: visual change${panel.change_score != null ? ` (score ${panel.change_score.toFixed(2)})` : ""}. Why selected: boundary or beat evidence. It is not a canonical Scene.`}
                   </p>
                   {canRetainReference && intelligence.asset_id ? (
                     <Button

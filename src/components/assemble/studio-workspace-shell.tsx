@@ -71,7 +71,7 @@ export function StudioWorkspaceShell({
             className={buttonVariants({ size: "sm" })}
             data-experience-entry="experience"
           >
-            Enter Experience
+            Holographic Experience
           </Link>
           <Link href={`/worlds/${universeId}`} className={buttonVariants({ variant: "outline", size: "sm" })}>
             Open Universe

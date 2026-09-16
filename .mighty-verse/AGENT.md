@@ -141,7 +141,7 @@ Never assume every asset is Mux. Resolve provider from the canonical media chain
 projection_media_binding → media_asset.provider → route to correct player/thumbnail
 ```
 
-**Mux thumbnail:** `https://image.mux.com/{playback_id}/thumbnail.jpg?time={seconds}`
+**Mux thumbnail:** `https://image.mux.com/{playback_id}/thumbnail.jpg` is the representative poster. Add `?time={seconds}` only for a real timestamp. `time=0` is the first decoded frame and can be black (Give Me My Money Judas). Super Hero Ego Scene stills stay `time=36/80/149/193`.
 **Livepeer thumbnail:** via VTT keyframe index (see `src/lib/media/thumbnail.ts`)
 
 `resolveThumbnail()` in `src/lib/media/thumbnail.ts` accepts `provider` parameter.
@@ -281,6 +281,7 @@ applied migration.
 - Stage 4.4 (2026-09-14): Publishing journey hardening. Mural-only work (Father Raymond) can establish Scenes from Curate Sentinel with curator-named structure (Intro/Verse/Hook) and adjustable times. Storyboard Authorise stays PATCH-only. Public Universe stages mural Mux. Public footer is real. Distribution readiness is a checklist, not YouTube/Spotify adapters. Sentinel still does not auto-create Scenes. Super Hero Ego windows unchanged. Hub source media opens `/authority/media/{assetId}` (ISRC / Replace media), not `/authority/{assetId}`. Public Scene Deck CTAs stay hidden until Scenes exist.
 - Stage 4.5 (2026-09-14): Scene authoring is constant — identity, timing, and still on every Scene object (Studio list + focused Scene). Gallery pick reuses ingested media on attach/replace. Public Scene Deck scrolling actually moves; many Scenes default to grid. Storyboard tabs share one height with a derived SCRIPT→PANELS→STILLS→MOTION path. Holographic cinema no longer paints a dark second screen over Mux. Super Hero Ego windows unchanged. Duplicate Father Raymond Intro stays on Universe `91027ced…` until an explicit reparent.
 - Curate Studio Sentinel remains universe-scoped evidence UI. Asset-level Inspect answers what is in this media; Universe-scoped Sentinel answers what evidence helps understand it in a Universe. They are not merged.
+- Stage 4.6 (2026-09-16): Storyboard source stills use the Mux representative poster when no timestamp is set. Sentinel stays observational. Generation labels are requested / running / succeeded / failed / unavailable. Studio CTAs are 2.5D Experience and Holographic Experience. Public audience CTAs stay Enter Experience. Super Hero Ego windows unchanged. No schema migration.
 
 ---
 

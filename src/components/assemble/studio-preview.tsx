@@ -112,7 +112,7 @@ export function StudioPreview({
 
       <div className="mt-4 flex flex-wrap gap-2">
         <Link href={experienceHref} className={cn(buttonVariants({ size: "sm" }))}>
-          Enter Experience
+          Holographic Experience
         </Link>
         <Link href={universeHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
           Open Universe

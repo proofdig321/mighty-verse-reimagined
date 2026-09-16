@@ -36,10 +36,27 @@ const LIVEPEER_CDN_BASE = "https://vod-cdn.lp-playback.studio/raw/jxf4iblf6wlsyo
 const MUX_IMAGE_BASE = "https://image.mux.com";
 
 /**
+ * Mux representative poster (no `time`).
+ * `thumbnail.jpg?time=0` is the first decoded frame and can be literally black.
+ */
+export function muxPosterUrl(playbackId: string, width?: number): string {
+  const params = new URLSearchParams();
+  if (width) params.set("width", String(width));
+  const query = params.toString();
+  return query
+    ? `${MUX_IMAGE_BASE}/${playbackId}/thumbnail.jpg?${query}`
+    : `${MUX_IMAGE_BASE}/${playbackId}/thumbnail.jpg`;
+}
+
+/**
  * Returns a Mux thumbnail URL for a given playback ID.
- * time defaults to 0, width is optional.
+ * Omit `time` when timeSec <= 0 so Mux chooses a representative frame.
+ * Timed stills (36 / 80 / 149 / 193) keep an explicit timestamp.
  */
 export function muxThumbnailUrl(playbackId: string, timeSec = 0, width?: number): string {
+  if (!Number.isFinite(timeSec) || timeSec <= 0) {
+    return muxPosterUrl(playbackId, width);
+  }
   const params = new URLSearchParams({ time: String(timeSec) });
   if (width) params.set("width", String(width));
   return `${MUX_IMAGE_BASE}/${playbackId}/thumbnail.jpg?${params}`;
@@ -103,10 +120,10 @@ export function resolveThumbnail(opts: {
   }
   if (!opts.playbackId) return null;
 
-  // Mux: use image.mux.com with time parameter
+  // Mux: representative poster when no start, timed still otherwise.
   if (opts.provider === "mux") {
     const timeSec = opts.startMs != null ? Math.floor(opts.startMs / 1000) : 0;
-    return `https://image.mux.com/${opts.playbackId}/thumbnail.jpg?time=${timeSec}`;
+    return muxThumbnailUrl(opts.playbackId, timeSec);
   }
 
   // Livepeer: use VTT keyframe index

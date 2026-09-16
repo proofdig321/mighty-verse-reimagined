@@ -1,4 +1,4 @@
-import { deriveStoryboardProgress } from "../storyboard-progress";
+import { deriveStoryboardProgress, storyboardOperatorChainLabel } from "../storyboard-progress";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -7,6 +7,10 @@ function assert(condition, message) {
 const empty = deriveStoryboardProgress({});
 assert(empty.completeCount === 0 && empty.total === 6, "empty storyboard has six waiting stages");
 assert(empty.steps.every((step) => step.complete === false), "no fake percentages on an empty workspace");
+assert(
+  storyboardOperatorChainLabel() === "Source → Sentinel → Reference → Transformation → Still → Motion → Assembly",
+  "operator chain is visible without adding a seventh progress step",
+);
 
 const scriptOnly = deriveStoryboardProgress({ script: "SCENE 1: EXT. STREET", panelCount: 0 });
 assert(scriptOnly.steps[0].complete === true && scriptOnly.completeCount === 1, "story body is live when text exists");

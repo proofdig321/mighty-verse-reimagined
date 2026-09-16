@@ -31,7 +31,7 @@ import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardResetDialog } from "./storyboard-reset-dialog";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
-import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
+import { deriveStoryboardProgress, storyboardOperatorChainLabel } from "@/lib/assemble/storyboard-progress";
 import { cn } from "@/lib/utils";
 import {
   emptyHistory,
@@ -778,6 +778,11 @@ export function StoryboardWorkspace({
   });
   const undoEntry = history.past[history.past.length - 1];
   const redoEntry = history.future[history.future.length - 1];
+  const stillJob = jobs.find((job) => job.panel_id === selectedId && job.kind === "still");
+  const motionJob = jobs.find((job) =>
+    job.panel_id === selectedId &&
+    (job.kind === "motion" || job.kind === "clip" || job.kind === "animation" || job.kind === "animate-still"),
+  );
 
   return (
     <div className="storyboard-workspace" data-storyboard-layout="workspace">
@@ -889,6 +894,9 @@ export function StoryboardWorkspace({
       ) : null}
 
       <div className="storyboard-progress" data-storyboard-progress={`${progress.completeCount}/${progress.total}`}>
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          {storyboardOperatorChainLabel()}
+        </p>
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
           Storyboard path · {progress.completeCount} of {progress.total} live
         </p>
@@ -1064,8 +1072,8 @@ export function StoryboardWorkspace({
                           Sentinel
                         </h2>
                         <p className="suite-section-note">
-                          Observational evidence for this source. Sentinel does not create Scenes.
-                          Import copies observed stills onto storyboard panels. Mark Intro / Verse / Hook windows on Curate Sentinel.
+                          Sentinel is observational evidence: overview, timed segments, subjects, frame context, and uncertainty.
+                          It does not author transformations or create Scenes. Import copies observed stills onto storyboard panels.
                         </p>
                       </div>
                       <Button type="button" size="sm" variant="outline" onClick={() => void importSentinel()}>
@@ -1402,8 +1410,8 @@ export function StoryboardWorkspace({
             <div className="mt-3 grid gap-2">
               <Label htmlFor="panel-title">Title</Label>
               <Input id="panel-title" value={editorPanel.title ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, title: event.target.value })} />
-              <Label htmlFor="panel-action">Visual description</Label>
-              <Textarea id="panel-action" className="min-h-20" value={editorPanel.action ?? editorPanel.description ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value, description: event.target.value })} />
+              <Label htmlFor="panel-action">Transformation instruction</Label>
+              <Textarea id="panel-action" className="min-h-20" value={editorPanel.action ?? editorPanel.description ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value, description: event.target.value })} placeholder="Write the transformation yourself. Sentinel does not author this." />
               <Label htmlFor="panel-intent">Narrative intent</Label>
               <Input id="panel-intent" value={editorPanel.narrative_purpose ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, narrative_purpose: event.target.value })} />
               <Label htmlFor="panel-camera">Camera</Label>
@@ -1481,11 +1489,48 @@ export function StoryboardWorkspace({
                   Add to production
                 </Link>
                 <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  Open 2.5D
+                  2.5D Experience
                 </Link>
               </>
             ) : null}
           </div>
+          <details className="mt-3" data-storyboard-provenance="true">
+            <summary className="cursor-pointer text-xs text-muted-foreground">Provenance</summary>
+            <dl className="mt-2 grid gap-1 text-[11px] text-muted-foreground">
+              <div className="flex justify-between gap-3">
+                <dt>Source</dt>
+                <dd>{work?.sources?.[0]?.title || "None attached"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Sentinel</dt>
+                <dd>{selectedSentinel ? `${selectedSentinel.title} · ${formatTimelineMs(selectedSentinel.time_ms)}` : "No selected observation"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Reference</dt>
+                <dd>{selectedPersisted?.references[0]?.label || work?.frames?.[0]?.source_title || "None"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Transformation</dt>
+                <dd>{(editorPanel.action || editorPanel.description || "Write this yourself").slice(0, 80)}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Still</dt>
+                <dd>{stillJob ? jobUiLabel(stillJob.status as never) : selected?.still ? "Attached" : "None"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Motion</dt>
+                <dd>{motionJob ? jobUiLabel(motionJob.status as never) : selected?.endpoint ? "Attached" : "None"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Assembly</dt>
+                <dd>{work?.assembly?.items?.length ? `${work.assembly.items.length} item${work.assembly.items.length === 1 ? "" : "s"}` : "None"}</dd>
+              </div>
+              <div className="flex justify-between gap-3">
+                <dt>Canonical</dt>
+                <dd>creates_scene = false</dd>
+              </div>
+            </dl>
+          </details>
           <details className="mt-3">
             <summary className="cursor-pointer text-xs text-muted-foreground">Technical inspector</summary>
             <p className="mt-2 font-mono text-[10px] text-muted-foreground">
@@ -1507,8 +1552,9 @@ export function StoryboardWorkspace({
 function StatusLine({ state }: { state: GenerationState }) {
   if (state.status === "idle") return null;
   const label =
-    state.status === "generating" || state.status === "queued" ? "Generating" :
-    state.status === "ready" ? "Completed" :
+    state.status === "queued" ? "Requested" :
+    state.status === "generating" ? "Running" :
+    state.status === "ready" ? "Succeeded" :
     state.status === "unavailable" || state.status === "needs_configuration" ? "Unavailable" :
     state.status === "blocked" ? "Blocked" :
     "Failed";

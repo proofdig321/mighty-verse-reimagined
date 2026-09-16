@@ -62,12 +62,12 @@ export function jobProgressPercent(status: GenerationJobStatus, reported?: numbe
 export function jobUiLabel(status: GenerationJobStatus): string {
   switch (status) {
     case "queued":
-      return "Queued";
+      return "Requested";
     case "submitted":
     case "processing":
-      return "Generating";
+      return "Running";
     case "completed":
-      return "Completed";
+      return "Succeeded";
     case "failed":
       return "Failed";
     case "blocked":

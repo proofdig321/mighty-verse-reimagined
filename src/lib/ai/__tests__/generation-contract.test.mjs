@@ -17,6 +17,11 @@ assert(transitionJob("processing", { type: "block" }) === "blocked", "safety blo
 assert(jobProgressPercent("processing", 150) === 99, "progress never fakes 100 while processing");
 assert(jobProgressPercent("completed") === 100, "completed is 100");
 assert(jobProgressPercent("failed") === null, "failed has no fake percent");
+assert(jobUiLabel("queued") === "Requested", "queue is requested, not a fake timer");
+assert(jobUiLabel("processing") === "Running", "in-flight jobs are running");
+assert(jobUiLabel("completed") === "Succeeded", "success stays honest");
+assert(jobUiLabel("failed") === "Failed", "failure stays failed");
+assert(jobUiLabel("unavailable") === "Unavailable", "unavailable stays unavailable");
 assert(jobUiLabel("needs_configuration") === "Needs configuration", "configuration is honest");
 assert(canRetryJob("blocked", true) === false, "safety is not auto-retried");
 assert(canRetryJob("failed", true) === true, "failed can retry");

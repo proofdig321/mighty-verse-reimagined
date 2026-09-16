@@ -103,7 +103,12 @@ const source = parseStoryboardSource(JSON.stringify({
   playback_id: "abc",
   category: "source",
 }));
-assert(source?.creates_scene === false, "source media is not a Scene");
+const untitled = parseStoryboardSource(JSON.stringify({
+  kind: "storyboard-source",
+  work_id: "w1",
+}));
+assert(untitled?.title === "Source media", "missing title is not a broadcast label");
+assert(untitled?.creates_scene === false, "untitled source is not a Scene");
 assert(sourceCategoryLabel("source") === "Source", "source stays source");
 assert(formatTimestamp(90000) === "01:30", "timestamp is HH:MM or MM:SS");
 const frame = parseStoryboardFrame(JSON.stringify({

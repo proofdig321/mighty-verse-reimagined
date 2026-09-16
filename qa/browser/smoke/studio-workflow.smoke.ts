@@ -110,7 +110,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   notes.push("D: 390px keeps production path and source preview usable");
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  await page.getByRole("link", { name: /Enter Experience/i }).first().click();
+  await page.getByRole("link", { name: /Holographic Experience/i }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeHolographic}$`));
   await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true })).toBeVisible();
   await expect(page.locator("[data-holographic-kind='mural']")).toHaveCount(1);
@@ -120,7 +120,7 @@ test("dashboard follows Super Hero Ego production path into Studio then Experien
   await expect(publicProduction).toHaveCount(1);
   await expect(publicProduction).toHaveAttribute("data-master-id", SCENE_MOMENTS.powerhouse.sceneMasterId);
   await captureScreenshot(page, testInfo, "public-holographic");
-  notes.push("E: Studio Enter Experience opens public Experience with Mural, Scenes, Moments, and the Powerhouse production layer");
+  notes.push("E: Studio Holographic Experience opens public Experience with Mural, Scenes, Moments, and the Powerhouse production layer");
 
   await page.goto(ROUTES.universeScenes, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("button", { name: /shuffle/i })).toBeVisible();

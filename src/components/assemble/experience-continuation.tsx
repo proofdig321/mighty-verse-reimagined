@@ -33,7 +33,7 @@ export function ExperienceContinuation({
           className={cn(buttonVariants({ size: "lg" }), "suite-continuation-cta")}
           data-experience-entry="experience"
         >
-          Enter Experience
+          Holographic Experience
           <span className="sr-only">{` for ${universeTitle}`}</span>
         </Link>
         {universeHref ? (

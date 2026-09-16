@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { formatTimestamp, sourceCategoryLabel, type StoryboardSourceRecord, type StoryboardFrameRecord } from "@/lib/storyboard/source";
 import { muxThumbnailUrl } from "@/lib/media/thumbnail";
+import { SecondsField } from "./seconds-field";
 
 export function StoryboardSourceMedia({
   workId,
@@ -28,7 +29,7 @@ export function StoryboardSourceMedia({
   const [url, setUrl] = useState("");
   const [assetId, setAssetId] = useState("");
   const [timeMs, setTimeMs] = useState(0);
-  const [title, setTitle] = useState("Super Hero Ego SABC1 Performance");
+  const [title, setTitle] = useState("");
   const active = sources[0] ?? null;
 
   async function attachAsset(nextAssetId: string, nextTitle: string) {
@@ -155,7 +156,12 @@ export function StoryboardSourceMedia({
           Source video is a Storyboard artifact. It does not become a canonical Scene.
         </p>
         <Label htmlFor="source-title">Source title</Label>
-        <Input id="source-title" value={title} onChange={(event) => setTitle(event.target.value)} />
+        <Input
+          id="source-title"
+          value={title}
+          onChange={(event) => setTitle(event.target.value)}
+          placeholder="Name this source. Do not invent a broadcast title."
+        />
         <div className="flex flex-wrap gap-2">
           <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(event) => {
             const file = event.target.files?.[0];
@@ -186,10 +192,7 @@ export function StoryboardSourceMedia({
             label={active.title}
           />
           <div className="grid gap-2 sm:grid-cols-2">
-            <label className="text-xs">
-              Timestamp (ms)
-              <Input type="number" min={0} value={timeMs} onChange={(event) => setTimeMs(Number(event.target.value) || 0)} />
-            </label>
+            <SecondsField label="Source window" valueMs={timeMs} onChange={setTimeMs} />
             <p className="self-end text-xs text-muted-foreground">
               {formatTimestamp(timeMs)}
               {active.duration_ms ? ` / ${formatTimestamp(active.duration_ms)}` : ""}
