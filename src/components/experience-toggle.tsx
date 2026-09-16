@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { HOLOGRAPHIC_EXPERIENCE_LABEL } from "@/lib/experience/destinations";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL } from "@/lib/experience/destinations";
 
 export default function ExperienceToggle({
   universeHref,
@@ -27,7 +27,7 @@ export default function ExperienceToggle({
               : { color: "var(--muted-foreground)" }
           }
         >
-          2.5D
+          {ENTER_2_5D_LABEL}
         </Link>
         <Link
           href={experienceHref}
