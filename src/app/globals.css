@@ -863,9 +863,16 @@ html[data-theme="tangerine"] {
     overflow: visible;
   }
 
-  @media (min-width: 1280px) {
+  @media (min-width: 1024px) {
     .storyboard-stage {
-      grid-template-columns: minmax(16rem, 22rem) minmax(28rem, 1.4fr) minmax(18rem, 24rem);
+      grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
+      align-items: start;
+    }
+  }
+
+  @media (min-width: 1536px) {
+    .storyboard-stage {
+      grid-template-columns: minmax(16rem, 20rem) minmax(28rem, 1.4fr) minmax(18rem, 22rem);
       align-items: start;
     }
 

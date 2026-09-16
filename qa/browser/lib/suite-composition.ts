@@ -89,7 +89,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await page.getByRole("tab", { name: "Sentinel" }).click();
   const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
   await expect(sentinel.getByRole("heading", { name: "Sentinel" })).toBeVisible();
-  await expect(sentinel.getByRole("heading", { name: "Evidence" })).toBeVisible();
+  await expect(sentinel.getByRole("heading", { name: "Evidence", exact: true })).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Observed panels" })).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Scene-boundary proposals" })).toBeVisible();
   await expect(sentinel.locator("[data-holographic-kind]")).toHaveCount(0);
@@ -205,7 +205,7 @@ export async function expectCreativeSuiteComposition(page: Page) {
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseExperience}`));
   const continuation = page.locator("section[aria-labelledby='universe-experience-continuation']");
   await expect(continuation.getByText("Assemble", { exact: true })).toBeVisible();
-  await expect(continuation.getByText("Experience", { exact: true }).first()).toBeVisible();
+  await expect(continuation.getByRole("heading", { name: "Holographic Experience" })).toBeVisible();
   await expect(continuation.getByRole("link", { name: /Holographic Experience/i })).toHaveAttribute(
     "href",
     ROUTES.universeHolographic,

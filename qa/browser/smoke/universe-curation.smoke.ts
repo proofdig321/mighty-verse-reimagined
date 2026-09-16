@@ -72,9 +72,9 @@ test("Authority Universes opens Super Hero Ego curation workspace", async ({ pag
     notes.push(`workspace Creative Moment ${cm.title} ${cm.masterId}`);
   }
 
-  await page.getByRole("navigation", { name: "Breadcrumb" }).getByRole("link", { name: "Universes", exact: true }).click();
+  await page.getByRole("navigation", { name: "Authority Console" }).getByRole("link", { name: "Universes", exact: true }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverses}$`));
-  notes.push("breadcrumb returned to Universes listing");
+  notes.push("Authority Universes listing remains reachable from Studio");
 
   await page.goto(`/authority/universes/${CANON.muralId}`, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Universe not found/i })).toBeVisible();
