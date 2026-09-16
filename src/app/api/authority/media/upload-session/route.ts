@@ -3,22 +3,11 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { validateAuthority, getServiceClient } from "@/lib/authority/validate";
 import { muxAdapter } from "@/lib/media/providers/mux/adapter";
+import { muxUploadCorsOrigin } from "@/lib/media/providers/mux/cors-origin";
 import { DEFAULT_PROVIDER } from "@/lib/media/providers";
 
 // Upload sessions older than this in non-terminal phases are considered stale.
 const STALE_SESSION_HOURS = 48;
-
-// CORS origin for Mux Direct Upload.
-// In production this must be the actual deployed domain.
-// Falls back to a permissive value only in development.
-function getUploadCorsOrigin(): string {
-  const origin = process.env.NEXT_PUBLIC_APP_URL ?? process.env.VERCEL_URL;
-  if (origin) return origin.startsWith("http") ? origin : `https://${origin}`;
-  // Development fallback — not used in production
-  return process.env.NODE_ENV === "production"
-    ? "https://mighty-verse.app"
-    : "http://localhost:3000";
-}
 
 export async function POST(request: Request) {
   const supabase = await createClient();
@@ -90,7 +79,7 @@ export async function POST(request: Request) {
     uploadResult = await muxAdapter.createDirectUpload({
       name,
       passthrough: session.session_id,
-      corsOrigin: getUploadCorsOrigin(),
+      corsOrigin: muxUploadCorsOrigin(request),
     });
   } catch (err) {
     // Clean up the session record if Mux upload creation fails

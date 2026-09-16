@@ -50,7 +50,16 @@ export function sceneStillUrl(input: {
   provider: string | null | undefined;
   storage_ref: string | null | undefined;
   start_ms: number | null | undefined;
+  artwork_storage_ref?: string | null;
 }): { provider: string; storage_ref: string; timeSec: number } | null {
+  const artwork = input.artwork_storage_ref?.trim();
+  if (artwork && !artwork.startsWith("seed:placeholder:")) {
+    return {
+      provider: artwork.startsWith("https://") ? "https" : (input.provider ?? "unknown"),
+      storage_ref: artwork,
+      timeSec: input.start_ms != null && input.start_ms >= 0 ? Math.floor(input.start_ms / 1000) : 0,
+    };
+  }
   const storage = input.storage_ref?.trim();
   if (!storage || storage.startsWith("seed:placeholder:")) return null;
   const timeSec = input.start_ms != null && input.start_ms >= 0 ? Math.floor(input.start_ms / 1000) : 0;

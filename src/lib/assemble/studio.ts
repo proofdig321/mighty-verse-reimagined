@@ -56,7 +56,12 @@ export type CurateStudioMedia = {
   readiness_blockers: string[];
   inspection: StudioInspectionSummary | null;
   association: StudioAssociation;
+  deletable: boolean;
 };
+
+export function mediaRecordHref(assetId: string): string {
+  return `/authority/media/${assetId}`;
+}
 
 export function mediaInspectHref(assetId: string): string {
   return `${MEDIA_INSPECT_HREF}?assetId=${assetId}`;
@@ -72,6 +77,10 @@ export function curateMuralHref(universeId: string): string {
 
 export function curateMomentHref(universeId: string): string {
   return `${curateHubHref(universeId)}/moment`;
+}
+
+export function curateAttachHref(universeId: string): string {
+  return `${curateHubHref(universeId)}/attach`;
 }
 
 export function curateSentinelHref(universeId: string): string {

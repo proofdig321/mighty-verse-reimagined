@@ -6,19 +6,18 @@ import { Wand2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
-import { curateStudioHref, creativeSuiteSentinelHref } from "@/lib/assemble/studio";
+import { loadInspectWorkScope } from "@/lib/assemble/load-inspect-scope";
+import {
+  creativeSuiteSentinelHref,
+  curateMuralHref,
+  curateSentinelHref,
+  curateStudioHref,
+} from "@/lib/assemble/studio";
 import { isInspectableAssetType } from "@/lib/media/inspect-persist";
 import { listInspectionSessions } from "@/lib/media/sentinel";
 import { buttonVariants } from "@/components/ui/button";
 import { HierarchyBreadcrumb } from "@/components/assemble/breadcrumb";
 import MediaInspectClient from "./media-inspect-client";
-
-type CanonicalScene = {
-  master_id: string;
-  title: string | null;
-  start_ms: number | null;
-  end_ms: number | null;
-};
 
 type AssetIdentity = {
   asset_id: string;
@@ -31,43 +30,6 @@ type AssetIdentity = {
   audio_presence: boolean | null;
   work_type: string | null;
 };
-
-async function getCanonicalScenes(): Promise<CanonicalScene[]> {
-  const svc = getServiceClient();
-
-  const { data: masters } = await svc
-    .from("master")
-    .select("master_id")
-    .eq("canonical_type", "scene")
-    .not("current_state_id", "is", null)
-    .order("sort_order", { ascending: true, nullsFirst: false })
-    .order("created_at", { ascending: true });
-
-  if (!masters?.length) return [];
-
-  const ids = masters.map((m) => m.master_id);
-
-  const [{ data: presentations }, { data: projections }] = await Promise.all([
-    svc.from("work_presentation").select("master_id, title").in("master_id", ids),
-    svc.from("projection").select("master_id, projection_id").in("master_id", ids).eq("projection_type", "experiential"),
-  ]);
-
-  const projIds = (projections ?? []).map((p) => p.projection_id);
-  const { data: bindings } = projIds.length
-    ? await svc.from("projection_media_binding").select("projection_id, start_ms, end_ms").in("projection_id", projIds).eq("binding_type", "primary")
-    : { data: [] };
-
-  return masters.map((m) => {
-    const proj = (projections ?? []).find((p) => p.master_id === m.master_id);
-    const binding = proj ? (bindings ?? []).find((b) => b.projection_id === proj.projection_id) : null;
-    return {
-      master_id: m.master_id,
-      title: (presentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
-      start_ms: binding?.start_ms ?? null,
-      end_ms: binding?.end_ms ?? null,
-    };
-  });
-}
 
 async function getAssetIdentity(assetId: string): Promise<AssetIdentity | null> {
   const svc = getServiceClient();
@@ -99,47 +61,6 @@ async function getAssetIdentity(assetId: string): Promise<AssetIdentity | null> 
   };
 }
 
-async function suiteSentinelHrefForAsset(assetId: string): Promise<string | null> {
-  const svc = getServiceClient();
-  const { data: bindings } = await svc
-    .from("projection_media_binding")
-    .select("projection_id")
-    .eq("asset_id", assetId)
-    .limit(1);
-  const binding = bindings?.[0];
-  if (!binding?.projection_id) return null;
-
-  const { data: projection } = await svc
-    .from("projection")
-    .select("master_id")
-    .eq("projection_id", binding.projection_id)
-    .maybeSingle();
-  if (!projection?.master_id) return null;
-
-  const { data: master } = await svc
-    .from("master")
-    .select("master_id, canonical_type, parent_master_id")
-    .eq("master_id", projection.master_id)
-    .maybeSingle();
-  if (!master) return null;
-
-  if (master.canonical_type === "universe") {
-    return creativeSuiteSentinelHref(master.master_id);
-  }
-  if (master.canonical_type === "mural" && master.parent_master_id) {
-    return creativeSuiteSentinelHref(master.parent_master_id);
-  }
-  if (master.canonical_type === "scene" && master.parent_master_id) {
-    const { data: mural } = await svc
-      .from("master")
-      .select("parent_master_id")
-      .eq("master_id", master.parent_master_id)
-      .maybeSingle();
-    if (mural?.parent_master_id) return creativeSuiteSentinelHref(mural.parent_master_id);
-  }
-  return null;
-}
-
 export default async function MediaInspectPage({
   searchParams,
 }: {
@@ -152,14 +73,23 @@ export default async function MediaInspectPage({
 
   const { assetId } = await searchParams;
   const inspectAssetId = typeof assetId === "string" && assetId.trim() ? assetId.trim() : null;
-  const curateHref = inspectAssetId ? curateStudioHref(null, inspectAssetId) : curateStudioHref();
 
-  const [canonicalScenes, assetIdentity, savedInspections, suiteSentinelHref] = await Promise.all([
-    getCanonicalScenes(),
+  const [workScope, assetIdentity, savedInspections] = await Promise.all([
+    loadInspectWorkScope(inspectAssetId),
     inspectAssetId ? getAssetIdentity(inspectAssetId) : Promise.resolve(null),
     inspectAssetId ? listInspectionSessions(inspectAssetId) : Promise.resolve([]),
-    inspectAssetId ? suiteSentinelHrefForAsset(inspectAssetId) : Promise.resolve(null),
   ]);
+
+  const curateHref = curateStudioHref(workScope.universe_id, inspectAssetId);
+  const suiteSentinelHref = workScope.bound && workScope.universe_id
+    ? creativeSuiteSentinelHref(workScope.universe_id)
+    : null;
+  const muralHref = workScope.universe_id && !workScope.mural_id
+    ? curateMuralHref(workScope.universe_id)
+    : null;
+  const sentinelHref = workScope.universe_id
+    ? curateSentinelHref(workScope.universe_id)
+    : null;
 
   return (
     <div className="space-y-6">
@@ -185,6 +115,16 @@ export default async function MediaInspectPage({
               <Wand2 size={14} />
               Continue in Curate
             </Link>
+            {muralHref ? (
+              <Link href={muralHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Register Mural
+              </Link>
+            ) : null}
+            {sentinelHref && workScope.mural_id ? (
+              <Link href={sentinelHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
+                Open Sentinel
+              </Link>
+            ) : null}
             {suiteSentinelHref ? (
               <Link href={suiteSentinelHref} className={buttonVariants({ variant: "outline", size: "sm" })}>
                 Open Sentinel in Suite
@@ -194,7 +134,8 @@ export default async function MediaInspectPage({
         ) : null}
       </div>
       <MediaInspectClient
-        canonicalScenes={canonicalScenes}
+        canonicalScenes={workScope.scenes}
+        workScope={workScope}
         assetIdentity={assetIdentity}
         savedInspections={savedInspections}
       />

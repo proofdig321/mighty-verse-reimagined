@@ -1,18 +1,16 @@
 export const dynamic = "force-dynamic";
 
-import { StoryboardWorkspace } from "@/components/assemble/storyboard-workspace";
-import { loadStoryboardMaterials } from "@/lib/storyboard/load";
-import { serverAiCapability } from "@/lib/ai/provider";
+import { StoryboardWorkList } from "@/components/assemble/storyboard-work-list";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
+import { listStoryboardWorks } from "@/lib/storyboard/commands";
 
 export default async function StudioWorkPage() {
   const { participantId } = await requireStudioUser("/studio/work");
-  const [materials, projects] = await Promise.all([
-    loadStoryboardMaterials(null, participantId),
+  const [projects, works] = await Promise.all([
     loadUniverseProjectCards(),
+    listStoryboardWorks({ participantId }),
   ]);
-  const ai = serverAiCapability();
 
   return (
     <div className="space-y-6">
@@ -22,24 +20,11 @@ export default async function StudioWorkPage() {
           Storyboard Workspace
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
-          Write a story, generate a sequence, and produce media. This work is not attached to a Universe until you curate that relationship.
+          Open or create a Storyboard Work. Work stays independent until you attach it. Attachment does not create Scenes.
         </p>
       </div>
-      <StoryboardWorkspace
-        universeId={null}
-        scenes={[]}
-        intelligence={null}
-        canAuthoriseSentinel={false}
-        previewHref="/studio"
-        references={[]}
-        initialBody={materials.body?.body ?? ""}
-        artifacts={materials.artifacts.map((artifact) => ({
-          title: artifact.title,
-          output_type: artifact.output_type,
-          still_url: artifact.still_url,
-          status: artifact.playback_id || artifact.still_url ? "ready" : "failed",
-        }))}
-        assistConfigured={ai.text}
+      <StoryboardWorkList
+        initialWorks={works}
         universes={projects.map((project) => ({ master_id: project.master_id, title: project.title }))}
       />
     </div>

@@ -6,6 +6,7 @@ import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
+import { PublicHero } from "@/components/public-hero";
 import { Button } from "@/components/ui/button";
 
 export const metadata: Metadata = {
@@ -22,61 +23,38 @@ export default async function HomePage() {
   return (
     <div className="public-page">
 
-      {/* ── Hero ─────────────────────────────────────────────────────────── */}
-      <section className="public-hero relative overflow-hidden">
-        <div className="relative z-10 mx-auto max-w-7xl px-6 py-24 md:py-36">
-          <div className="max-w-3xl space-y-7">
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              A living catalogue of Universes
-            </p>
-            <h1
-              className="text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl"
-              style={{ fontFamily: "var(--font-display, inherit)" }}
-            >
-              Every Song is a Universe.{" "}
-              <span style={{ color: "var(--accent-mv)" }}>Every Moment</span>{" "}
-              is a Legend.
-            </h1>
-            <p className="max-w-lg text-lg text-muted-foreground leading-relaxed">
-              Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter Experience.
-            </p>
-            <div className="flex flex-wrap gap-3 pt-2">
-              <Link href="/universes">
-                <Button
-                  className="h-11 px-6 text-sm font-semibold text-white"
-                  style={{ background: "var(--accent-mv)" }}
-                >
-                  Explore Universes
-                </Button>
-              </Link>
-              <Button variant="outline" className="h-11 px-6 text-sm" disabled>
-                Watch Trailer
+      <PublicHero
+        size="display"
+        eyebrow="A living catalogue of Universes"
+        title={
+          <>
+            Every Song is a Universe.{" "}
+            <span style={{ color: "var(--accent-mv)" }}>Every Moment</span>{" "}
+            is a Legend.
+          </>
+        }
+        description="Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter Experience."
+        actions={
+          <>
+            <Link href="/universes">
+              <Button
+                className="h-11 px-6 text-sm font-semibold text-white"
+                style={{ background: "var(--accent-mv)" }}
+              >
+                Explore Universes
               </Button>
-            </div>
-          </div>
-
-          {/* Floating stat strip */}
-          <div className="mt-16 flex flex-wrap gap-8 border-t border-border/40 pt-8">
-            {[
-              { n: featured.length || "—", label: "Universes" },
-              { n: "Scenes", label: "in the Mural" },
-              { n: "Creative Moments", label: "contributors" },
-            ].map(({ n, label }) => (
-              <div key={label} className="flex items-baseline gap-2">
-                <span
-                  className="text-3xl font-semibold text-foreground"
-                  style={{ fontFamily: "var(--font-display, inherit)" }}
-                >
-                  {n}
-                </span>
-                <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                  {label}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+            </Link>
+            <Button variant="outline" className="h-11 px-6 text-sm" disabled>
+              Watch Trailer
+            </Button>
+          </>
+        }
+        stats={[
+          { n: featured.length || "—", label: "Universes" },
+          { n: "Scenes", label: "in the Mural" },
+          { n: "Creative Moments", label: "contributors" },
+        ]}
+      />
 
       {/* ── Featured Universes ───────────────────────────────────────────── */}
       <section className="mx-auto max-w-7xl px-6 py-16">

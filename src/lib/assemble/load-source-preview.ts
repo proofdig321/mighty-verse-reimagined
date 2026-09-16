@@ -1,5 +1,6 @@
 import { getServiceClient } from "../authority/validate";
 import { getProvider } from "../media/providers";
+import { resolveSuiteSourceAssetId } from "./source-preview";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
 
@@ -25,7 +26,7 @@ export type SuiteSourcePreview = {
 };
 
 /**
- * Resolve the Universe's bound source media for Studio preview.
+ * Resolve the Universe's bound source media for Studio preview and Experience.
  * Read-only. Does not rebind, realize, or change Scene windows.
  */
 export async function loadSuiteSourcePreview(
@@ -33,7 +34,7 @@ export async function loadSuiteSourcePreview(
 ): Promise<SuiteSourcePreview | null> {
   const mural = assembly.murals[0] ?? null;
   const scenes = suiteScenes(assembly);
-  const assetId = scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
+  const assetId = resolveSuiteSourceAssetId(assembly);
   if (!mural || !assetId) return null;
 
   const svc = getServiceClient();

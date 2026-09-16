@@ -1,10 +1,21 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { api } from "../../_shared/authority-utils";
+import { UrlIngestProgress } from "@/components/assemble/url-ingest-progress";
+import Link from "next/link";
+import {
+  classifyPollBudget,
+  classifyUrlIngestStage,
+  PROCESSING_POLL_ATTEMPTS,
+  PROCESSING_POLL_MS,
+  URL_INGEST_FAILED_COPY,
+  URL_INGEST_TIMEOUT_COPY,
+  type UrlIngestStage,
+} from "@/lib/media/processing-state";
 
 type Participant = { participant_id: string; label: string };
 
@@ -64,6 +75,10 @@ export default function MediaIntakeClient({ participants }: { participants: Part
   const [creditRows, setCreditRows] = useIntakeDraft<{ participant_id: string; role: string }[]>("creditRows", []);
   const [creditParticipant, setCreditParticipant] = useState("");
   const [creditRole, setCreditRole] = useState<string>("primary_artist");
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [stage, setStage] = useState<UrlIngestStage | null>(null);
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
 
   const inputCls = "border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50";
   const selectCls = "border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm";
@@ -107,16 +122,114 @@ export default function MediaIntakeClient({ participants }: { participants: Part
       featured,
       alt_text: altText || null,
     });
-    setBusy(false);
-    if (result.error) { setMessage(`Error: ${result.error}`); return; }
+    if (result.error) {
+      setBusy(false);
+      setMessage(`Error: ${result.error}`);
+      return;
+    }
     if (result.ingest && "error" in result.ingest) {
+      setBusy(false);
       clearDraft();
       setMessage(`Intake saved, but Mux could not ingest the URL: ${result.ingest.error}`);
       return;
     }
+    if (sourceType === "external-url" && result.ingest && typeof result.ingest.session_id === "string") {
+      clearDraft();
+      setSessionId(result.ingest.session_id);
+      setStage("pulling");
+      setStartedAt(Date.now());
+      setElapsedMs(0);
+      setMessage(null);
+      return;
+    }
+    setBusy(false);
     clearDraft();
     router.push("/authority/media");
   }
+
+  useEffect(() => {
+    if (!startedAt || stage === "ready" || stage === "failed" || !stage) return;
+    const tick = () => setElapsedMs(Date.now() - startedAt);
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [startedAt, stage]);
+
+  useEffect(() => {
+    if (!sessionId) return;
+    let cancelled = false;
+    let currentPhase = "processing";
+
+    async function poll() {
+      setBusy(true);
+      for (let attempt = 0; attempt <= PROCESSING_POLL_ATTEMPTS; attempt++) {
+        if (cancelled) return;
+        const budget = classifyPollBudget({
+          phase: currentPhase,
+          attempt,
+          maxAttempts: PROCESSING_POLL_ATTEMPTS,
+        });
+        if (budget === "ingested") {
+          setStage("ready");
+          setBusy(false);
+          setMessage("Playable in Gallery. This did not create a Universe.");
+          router.push("/authority/media");
+          return;
+        }
+        if (budget === "failed") {
+          setStage("failed");
+          setBusy(false);
+          setMessage(URL_INGEST_FAILED_COPY);
+          return;
+        }
+        if (budget === "request_timeout") {
+          setMessage(URL_INGEST_TIMEOUT_COPY);
+          setBusy(false);
+          return;
+        }
+        if (attempt > 0) await new Promise((resolve) => setTimeout(resolve, PROCESSING_POLL_MS));
+        if (cancelled) return;
+        try {
+          const response = await fetch(`/api/authority/media/upload-session/${sessionId}`);
+          const data = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            setMessage(typeof data.error === "string" ? data.error : "Could not read ingest progress.");
+            setBusy(false);
+            return;
+          }
+          currentPhase = typeof data.phase === "string" ? data.phase : currentPhase;
+          const next = classifyUrlIngestStage({
+            phase: data.phase,
+            providerStatus: data.provider_status,
+            outcome: data.outcome,
+          });
+          setStage(next);
+          if (next === "ready") {
+            setBusy(false);
+            setMessage("Playable in Gallery. This did not create a Universe.");
+            router.push("/authority/media");
+            return;
+          }
+          if (next === "failed") {
+            setBusy(false);
+            setMessage(URL_INGEST_FAILED_COPY);
+            return;
+          }
+        } catch {
+          setMessage("Network error while checking Mux ingest progress.");
+          setBusy(false);
+          return;
+        }
+      }
+      setMessage(URL_INGEST_TIMEOUT_COPY);
+      setBusy(false);
+    }
+
+    void poll();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionId, router]);
 
   const steps = ["Media & identity", "Presentation", "Credits & provenance", "Review"];
 
@@ -259,6 +372,15 @@ export default function MediaIntakeClient({ participants }: { participants: Part
         </div>
 
         {message && <p role="alert" className="text-sm text-destructive">{message}</p>}
+        {stage === "failed" ? (
+          <p className="text-xs">
+            <Link href="/authority/media" className="underline underline-offset-2 hover:text-foreground">
+              Open Gallery
+            </Link>
+            {" "}to upload the file, retry Mux, or delete the shell.
+          </p>
+        ) : null}
+        {stage ? <UrlIngestProgress stage={stage} elapsedMs={elapsedMs} sourceUrl={sourceUrl} /> : null}
 
         <div className="flex justify-between gap-2">
           <Button type="button" size="sm" variant="outline" disabled={busy || step === 1} onClick={() => setStep((s) => s - 1)}>Back</Button>

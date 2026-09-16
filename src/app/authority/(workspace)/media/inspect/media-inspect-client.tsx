@@ -19,13 +19,17 @@ import {
   effectiveBoundary,
   type SceneCandidate,
 } from "@/lib/media/scene-candidates";
+import {
+  INSPECT_NEAREST_SCENE_MS,
+  inspectEmptyScenesCopy,
+  inspectWorkBelongingCopy,
+  nearestCanonicalScene,
+  type InspectCanonicalScene,
+  type InspectWorkScope,
+} from "@/lib/media/inspect-scope";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 
-type CanonicalScene = {
-  master_id: string;
-  title: string | null;
-  start_ms: number | null;
-  end_ms: number | null;
-};
+type CanonicalScene = InspectCanonicalScene;
 
 type AssetIdentity = {
   asset_id: string;
@@ -51,6 +55,7 @@ type SavedInspection = {
 
 type Props = {
   canonicalScenes: CanonicalScene[];
+  workScope: InspectWorkScope;
   assetIdentity: AssetIdentity | null;
   savedInspections: SavedInspection[];
 };
@@ -93,7 +98,7 @@ function ConfidenceBadge({ confidence }: { confidence: SceneCandidate["confidenc
   );
 }
 
-export default function MediaInspectClient({ canonicalScenes, assetIdentity, savedInspections }: Props) {
+export default function MediaInspectClient({ canonicalScenes, workScope, assetIdentity, savedInspections }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hlsRef = useRef<{ destroy: () => void } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -404,18 +409,16 @@ const runInspection = useCallback(async () => {
   }
 
   const durationMs = metadata?.durationMs ?? null;
+  const belongingCopy = inspectWorkBelongingCopy(workScope);
+  const emptyScenesCopy = inspectEmptyScenesCopy({
+    universe_id: workScope.universe_id,
+    universe_title: workScope.universe_title,
+    sceneCount: canonicalScenes.length,
+  });
 
-  // Find closest canonical scene to a candidate
-  function closestCanonical(candidate: SceneCandidate): CanonicalScene | null {
+  function closestCanonical(candidate: SceneCandidate): { scene: CanonicalScene; deltaMs: number } | null {
     const { startMs } = effectiveBoundary(candidate);
-    let best: CanonicalScene | null = null;
-    let bestDiff = Infinity;
-    for (const s of canonicalScenes) {
-      if (s.start_ms == null) continue;
-      const diff = Math.abs(s.start_ms - startMs);
-      if (diff < bestDiff) { bestDiff = diff; best = s; }
-    }
-    return bestDiff < 10000 ? best : null; // within 10s
+    return nearestCanonicalScene(canonicalScenes, startMs, INSPECT_NEAREST_SCENE_MS);
   }
 
   return (
@@ -426,10 +429,27 @@ const runInspection = useCallback(async () => {
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Inspecting Asset</p>
           <div className="flex flex-wrap items-center gap-3">
-            <p className="text-base font-semibold text-foreground">{assetIdentity.title ?? assetIdentity.asset_id.slice(0, 8) + "…"}</p>
+            <p className="text-base font-semibold text-foreground">
+              {galleryMediaLabel({
+                title: assetIdentity.title,
+                universe_title: workScope.universe_title,
+                mural_title: workScope.mural_title,
+              })}
+            </p>
             <span className="text-xs text-muted-foreground capitalize">{assetIdentity.provider}</span>
-            <span className="text-xs text-muted-foreground">{assetIdentity.work_type ?? assetIdentity.asset_id.slice(0, 8)}</span>
+            <span className="text-xs text-muted-foreground">{assetIdentity.work_type ?? "Source"}</span>
           </div>
+          <p className="text-sm text-foreground" data-testid="inspect-work-belonging">
+            {belongingCopy}
+          </p>
+          {workScope.universe_title ? (
+            <p className="text-xs text-muted-foreground">
+              Universe: <span className="text-foreground">{workScope.universe_title}</span>
+              {workScope.mural_title ? <> · Mural: <span className="text-foreground">{workScope.mural_title}</span></> : " · No Mural registered yet"}
+            </p>
+          ) : (
+            <p className="text-xs text-muted-foreground">Unbound — this media is not Super Hero Ego.</p>
+          )}
           <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
             {assetIdentity.duration_ms != null && <span>Duration: {(assetIdentity.duration_ms / 1000).toFixed(1)}s</span>}
             {assetIdentity.width && assetIdentity.height && <span>Resolution: {assetIdentity.width}×{assetIdentity.height}</span>}
@@ -832,23 +852,21 @@ const runInspection = useCallback(async () => {
                           )}
                         </div>
 
-                        {/* Closest canonical scene comparison */}
-                        {closest && (
+                        {/* Closest canonical scene comparison — this work only */}
+                        {closest ? (
                           <div className="rounded border border-border bg-muted/30 px-2 py-1.5 text-xs space-y-0.5">
                             <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                              Nearest canonical scene
+                              Nearest canonical scene on this work
                             </p>
-                            <p className="text-foreground font-medium">{closest.title ?? "Untitled Scene"}</p>
+                            <p className="text-foreground font-medium">{closest.scene.title ?? "Untitled Scene"}</p>
                             <p className="font-mono text-muted-foreground">
-                              {formatMs(closest.start_ms)} → {formatMs(closest.end_ms)}
-                              {closest.start_ms != null && (
-                                <span className="ml-2 font-sans">
-                                  (Δ {Math.abs(closest.start_ms - startMs)}ms)
-                                </span>
-                              )}
+                              {formatMs(closest.scene.start_ms)} → {formatMs(closest.scene.end_ms)}
+                              <span className="ml-2 font-sans">
+                                (Δ {closest.deltaMs}ms)
+                              </span>
                             </p>
                           </div>
-                        )}
+                        ) : null}
                       </div>
 
                       {/* Representative frame */}
@@ -999,14 +1017,15 @@ const runInspection = useCallback(async () => {
         </div>
       )}
 
-      {/* Canonical scenes reference */}
-      {canonicalScenes.length > 0 && (
+      {/* Canonical scenes reference — this Universe only */}
+      {canonicalScenes.length > 0 ? (
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
           <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Canonical Scenes — {canonicalScenes.length} scenes
+            Canonical Scenes on {workScope.universe_title ?? "this work"} — {canonicalScenes.length} scenes
           </p>
           <p className="text-xs text-muted-foreground">
-            These are the authoritative Scene boundaries from the database. They are not modified by this tool.
+            These are the authoritative Scene boundaries for this Universe. They are not modified by this tool,
+            and they are not Scenes from another work.
           </p>
           <div className="divide-y divide-border rounded-md border border-border overflow-hidden">
             {canonicalScenes.map((scene, i) => (
@@ -1041,7 +1060,14 @@ const runInspection = useCallback(async () => {
             ))}
           </div>
         </div>
-      )}
+      ) : assetIdentity ? (
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2" data-testid="inspect-empty-scenes">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+            Canonical Scenes on this work
+          </p>
+          <p className="text-sm text-foreground">{emptyScenesCopy}</p>
+        </div>
+      ) : null}
 
       {/* Operator decision notice */}
       <div className="rounded-lg border border-border bg-muted/20 px-4 py-3">

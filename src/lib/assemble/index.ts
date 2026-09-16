@@ -5,6 +5,7 @@ export { buildUniverseAssembly } from "./build-universe";
 export { loadUniverseAssembly } from "./load-universe";
 export { loadSentinelIntelligence } from "./load-sentinel-intelligence";
 export { loadSuiteSourcePreview } from "./load-source-preview";
+export { resolveSuiteSourceAssetId } from "./source-preview";
 export type { SuiteSourcePreview, SuiteSourceWindow } from "./load-source-preview";
 export {
   PRODUCTION_PATH_STEPS,
@@ -38,11 +39,13 @@ export {
   creativeSuiteWorkspaceHref,
   curateHubHref,
   curateIncomingHref,
+  curateAttachHref,
   curateMomentHref,
   curateMuralHref,
   curateSentinelHref,
   curateStudioHref,
   mediaInspectHref,
+  mediaRecordHref,
   mediaIsCanonicalUniverse,
   studioInspectionLabel,
   studioReadinessLabel,
@@ -61,7 +64,9 @@ export {
   buildUniverseAssociationTarget,
   decideCanonicalAssociation,
   existingMediaBindRequest,
+  associatedUniverseIdIfMuralBound,
   mediaAssociationEligibility,
+  mediaBoundToUniverseMural,
   projectionBelongsToUniverse,
 } from "./association";
 export type {
@@ -93,6 +98,9 @@ export type {
   SceneIdentityMaster,
 } from "./scene-identity";
 export { decideSceneTiming } from "./scene-timing";
+export { decideSceneArtwork } from "./scene-artwork";
+export { galleryMediaLabel, playableGallerySources } from "./gallery-source";
+export { deriveStoryboardProgress } from "./storyboard-progress";
 export type {
   SceneTimingDecision,
   SceneTimingMaster,
@@ -109,6 +117,18 @@ export type {
 } from "./scene-order";
 export { deriveCurateHub } from "./curate-hub";
 export { loadCurateHub } from "./load-curate-hub";
+export {
+  classifyUniverseOccupancy,
+  hasSourceMediaFromSession,
+  isAssociateTarget,
+  isPubliclyCurated,
+  occupancyLabel,
+} from "./occupancy";
+export type { UniverseOccupancy, UniverseOccupancyInput } from "./occupancy";
+export { decideWithdraw, canWithdrawMaster } from "./withdraw";
+export { isProtectedMaster, isPlayableStorageRef } from "./protected-work";
+export { loadInspectWorkScope } from "./load-inspect-scope";
+export type { InspectWorkScope } from "@/lib/media/inspect-scope";
 export type {
   CurateHubInput,
   CurateHubNextAction,

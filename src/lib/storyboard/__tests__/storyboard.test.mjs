@@ -1,5 +1,6 @@
 import { composeStoryboardBody, panelsFromStoryBody } from "../script";
-import { parseStoryboardBody, parseStoryboardArtifact, storyboardBodyNotes, STORYBOARD_BODY_KIND } from "../artifact";
+import { parseStoryboardBody, parseStoryboardArtifact, storyboardArtifactNotes, storyboardBodyNotes, STORYBOARD_BODY_KIND } from "../artifact";
+import { assistAction, assistReplacesStory } from "../assist";
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -30,5 +31,27 @@ assert(parsed?.kind === STORYBOARD_BODY_KIND, "story body reuses media_intake pr
 assert(parsed.creates_scene === false, "saved story body does not create Scenes");
 assert(parseStoryboardArtifact(notes) === null, "story body is not a generated media artifact");
 assert(parseStoryboardBody('{"kind":"production-result"}') === null, "production provenance is not a storyboard body");
+
+const muxNotes = storyboardArtifactNotes({
+  universe_id: "",
+  output_type: "clip",
+  panel_id: "panel-1",
+  title: "Motion",
+  description: "Veo prompt",
+  source: "ai",
+  mux_asset_id: "mux-asset-id",
+  playback_id: "playback-id",
+  still_url: "https://image.mux.com/playback-id/thumbnail.jpg",
+});
+const muxArtifact = parseStoryboardArtifact(muxNotes);
+assert(muxArtifact?.creates_scene === false && muxArtifact.creates_canonical === false, "Mux handoff is not a Scene");
+assert(muxArtifact.binds_projection === false, "generated Mux media does not bind a projection");
+assert(muxArtifact.playback_id === "playback-id" && muxArtifact.mux_asset_id === "mux-asset-id", "Mux ids stay on the artifact");
+assert(assistAction("create-storyboard")?.label === "Create storyboard", "AI Assist has contextual create-storyboard");
+assert(assistAction("invent-scene") === null, "AI Assist has no create-scene action");
+assert(assistReplacesStory("expand") === true, "expand may replace the story after curator action");
+assert(assistReplacesStory("rewrite-panel") === false, "panel rewrite is a suggestion, not a silent overwrite");
+assert(assistReplacesStory("suggest-camera") === false, "camera suggestion does not replace the story");
+assert(composed.creates_scene === false, "authored panels remain non-canonical");
 
 console.log("Storyboard tests: all passed");

@@ -8,8 +8,21 @@ import { Button } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import type { MediaLibraryItem } from "./page";
 import { galleryRoleLabel, type GalleryAssetRole } from "@/lib/production/lifecycle";
+import { DiscardMedia } from "@/components/assemble/discard-media";
+import { DiscardIntake } from "@/components/assemble/discard-intake";
+import { RetryUrlIngest } from "@/components/assemble/retry-url-ingest";
+import { isUsableMediaSourceUrl } from "@/lib/media/source-url";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 
-type UnlinkedIntake = { intake_id: string; title: string; work_type: string; creator_name: string | null; created_at: string };
+type UnlinkedIntake = {
+  intake_id: string;
+  title: string;
+  work_type: string;
+  creator_name: string | null;
+  created_at: string;
+  source_url: string | null;
+  source_type: string | null;
+};
 
 type Props = {
   items: MediaLibraryItem[];
@@ -80,20 +93,24 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
   const showThumb = item.thumbnail_url && !thumbError && !isAudio;
 
   return (
-    <Link
-      href={`/authority/media/${item.asset_id}`}
+    <div
       data-gallery-role={item.production_role}
       data-gallery-bound={item.bound ? "bound" : "unbound"}
       data-gallery-approval={item.production_approval ?? "none"}
       className="group flex flex-col rounded-lg border border-border bg-card/50 overflow-hidden hover:border-border/80 hover:bg-card/80 transition-colors"
     >
+      <Link href={`/authority/media/${item.asset_id}`} className="flex flex-col flex-1 min-h-0">
       {/* Thumbnail / media representation */}
       <div className="relative aspect-video bg-muted/30 flex items-center justify-center overflow-hidden">
         {showThumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={item.thumbnail_url!}
-            alt={item.title ?? "Media thumbnail"}
+            alt={galleryMediaLabel({
+              title: item.title,
+              universe_title: item.universe_title,
+              mural_title: item.mural_title,
+            })}
             className="w-full h-full object-cover"
             onError={() => setThumbError(true)}
           />
@@ -121,7 +138,11 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
       {/* Metadata */}
       <div className="flex flex-col gap-1.5 px-3 py-3 flex-1">
         <p className="text-sm font-medium text-foreground leading-tight line-clamp-1">
-          {item.title ?? <span className="font-mono text-xs text-muted-foreground">{item.storage_ref.slice(0, 14)}…</span>}
+          {galleryMediaLabel({
+            title: item.title,
+            universe_title: item.universe_title,
+            mural_title: item.mural_title,
+          })}
         </p>
 
         <CanonicalContext item={item} />
@@ -172,6 +193,22 @@ function MediaCard({ item }: { item: MediaLibraryItem }) {
         )}
       </div>
     </Link>
+      <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
+        <Link href={`/authority/media/${item.asset_id}`} className="text-xs text-muted-foreground hover:text-foreground">
+          Edit
+        </Link>
+        {item.deletable ? (
+          <DiscardMedia
+            assetId={item.asset_id}
+            title={galleryMediaLabel({
+              title: item.title,
+              universe_title: item.universe_title,
+              mural_title: item.mural_title,
+            })}
+          />
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -342,10 +379,11 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
       </div>
       <p className="text-xs text-muted-foreground">
         These intake records exist but have not yet been linked to a media asset.
-        Select an intake to upload the file directly.
+        If YouTube file fetch is blocked, paste a signed-in YouTube session, upload the file, retry Mux, or delete the shell.
+        Delete does not remove a Universe.
       </p>
 
-      <div className="space-y-2">
+      <div className="space-y-2" data-awaiting-upload="">
         {visible.map((intake) =>
           activeIntakeId === intake.intake_id ? (
             <IntakeUploadPanel
@@ -360,21 +398,37 @@ function AwaitingUploadSection({ intakes }: { intakes: UnlinkedIntake[] }) {
           ) : (
             <div
               key={intake.intake_id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card/50 px-4 py-3"
+              data-intake-id={intake.intake_id}
+              className="space-y-3 rounded-lg border border-border bg-card/50 px-4 py-3"
             >
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">{intake.title}</p>
-                <p className="text-xs text-muted-foreground">
-                  {intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}
-                </p>
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{intake.title}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {intake.work_type} · {new Date(intake.created_at).toLocaleDateString()}
+                  </p>
+                  {intake.source_url ? (
+                    <p className="text-[10px] text-muted-foreground/70 truncate">{intake.source_url}</p>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setActiveIntakeId(intake.intake_id)}
+                  >
+                    <Upload size={13} /> Upload media
+                  </Button>
+                  <DiscardIntake
+                    intakeId={intake.intake_id}
+                    title={intake.title}
+                    onDiscarded={() => setDone((prev) => new Set([...prev, intake.intake_id]))}
+                  />
+                </div>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setActiveIntakeId(intake.intake_id)}
-              >
-                <Upload size={13} /> Upload media
-              </Button>
+              {intake.source_url && isUsableMediaSourceUrl(intake.source_url) ? (
+                <RetryUrlIngest intakeId={intake.intake_id} sourceUrl={intake.source_url} />
+              ) : null}
             </div>
           )
         )}

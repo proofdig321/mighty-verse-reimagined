@@ -133,6 +133,48 @@ export async function persistStoryboardArtifact(input: {
   return { asset_id: asset.asset_id, intake_id: intake.intake_id, still_url: stillUrl, endpoint_ref: playback.endpoint };
 }
 
+export async function persistGeneratedImageArtifact(input: {
+  svc: ServiceClient;
+  universeId: string | null;
+  participantId: string;
+  outputType: StoryboardOutputType;
+  panelId: string | null;
+  title: string;
+  description: string | null;
+  assetId: string;
+  stillUrl: string | null;
+  source?: "script" | "sentinel" | "reference" | "ai";
+}): Promise<{ asset_id: string; intake_id: string; still_url: string | null }> {
+  const { data: intake, error } = await input.svc
+    .from("media_intake")
+    .insert({
+      master_id: input.universeId,
+      asset_id: input.assetId,
+      title: input.title,
+      work_type: "animation",
+      source_type: "other",
+      source_provider: "gemini",
+      supplied_by: input.participantId,
+      isrc_status: "not-applicable",
+      provenance_notes: storyboardArtifactNotes({
+        universe_id: input.universeId ?? "",
+        output_type: input.outputType,
+        panel_id: input.panelId,
+        title: input.title,
+        description: input.description,
+        source: input.source ?? "ai",
+        mux_asset_id: null,
+        playback_id: null,
+        still_url: input.stillUrl,
+      }),
+    })
+    .select("intake_id")
+    .single();
+  if (error || !intake) throw new Error(error?.message ?? "Failed to record generated still.");
+  await input.svc.from("media_asset").update({ intake_id: intake.intake_id }).eq("asset_id", input.assetId);
+  return { asset_id: input.assetId, intake_id: intake.intake_id, still_url: input.stillUrl };
+}
+
 export async function associateStoryboardWork(input: {
   svc: ServiceClient;
   participantId: string;

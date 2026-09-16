@@ -1,11 +1,11 @@
 import { sceneCreativeMomentIds, sceneShortTitle, sharedCreativeMomentIds } from "@/lib/assemble/composition";
 import { availablePresenceOptions } from "@/lib/assemble/presence";
 import { suiteScenes } from "@/lib/assemble/suite";
+import { creativeSuiteScenesHref } from "@/lib/assemble/studio";
 import type { UniverseAssembly } from "@/lib/assemble";
 import { CompositionSurface } from "./composition-surface";
 import { CreativeMomentObject } from "./creative-moment-object";
 import { SceneObject } from "./scene-object";
-import { StudioSceneDeck } from "./studio-scene-deck";
 
 export function StudioScenesWorkspace({
   data,
@@ -49,13 +49,13 @@ export function StudioScenesWorkspace({
         <section className="suite-section" aria-labelledby="universe-scenes">
           <div className="suite-section-head">
             <h2 id="universe-scenes" className="suite-section-title">
-              {focusSceneId ? "Scene" : "Scene deck"}
+              {focusSceneId ? "Scene" : "Scenes"}
             </h2>
           </div>
           {visibleScenes.length === 0 ? (
             <p className="suite-empty">No scenes assembled for this Universe yet.</p>
-          ) : focusSceneId ? (
-            <ol className="suite-scene-grid">
+          ) : (
+            <ol className="suite-scene-grid" data-scene-list={focusSceneId ? "focus" : "all"}>
               {visibleScenes.map((scene) => {
                 const index = scenes.findIndex((row) => row.master_id === scene.master_id);
                 return (
@@ -73,13 +73,12 @@ export function StudioScenesWorkspace({
                       canAuthorOrder={canAuthorOrder}
                       openHref={`/authority/${scene.master_id}`}
                       openLabel="Open record"
+                      workspaceHref={focusSceneId ? null : creativeSuiteScenesHref(data.master_id, from, scene.master_id)}
                     />
                   </li>
                 );
               })}
             </ol>
-          ) : (
-            <StudioSceneDeck universeId={data.master_id} scenes={scenes} from={from} identified />
           )}
         </section>
 

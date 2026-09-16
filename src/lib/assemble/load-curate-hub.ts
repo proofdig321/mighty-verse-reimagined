@@ -19,10 +19,13 @@ export async function loadCurateHub(universeId: string): Promise<CurateHubSnapsh
   const sceneAssetIds = suiteScenes(assembly)
     .map((scene) => scene.asset_id)
     .filter((id): id is string => Boolean(id));
+  const muralAssetIds = assembly.murals
+    .map((mural) => mural.asset_id)
+    .filter((id): id is string => Boolean(id));
   const sessionAssetIds = (sessions ?? [])
     .map((session) => session.asset_id)
     .filter((id): id is string => Boolean(id));
-  const candidateAssets = [...new Set([...sceneAssetIds, ...sessionAssetIds])];
+  const candidateAssets = [...new Set([...sceneAssetIds, ...muralAssetIds, ...sessionAssetIds])];
 
   const { data: inspections } = candidateAssets.length
     ? await svc.from("inspection_session").select("session_id").in("asset_id", candidateAssets)
@@ -36,11 +39,18 @@ export async function loadCurateHub(universeId: string): Promise<CurateHubSnapsh
       ? latest.asset_id
       : null;
 
+  const { data: master } = await svc
+    .from("master")
+    .select("master_id, current_state_id")
+    .eq("master_id", universeId)
+    .maybeSingle();
+
   return deriveCurateHub({
     assembly,
     sessions: sessions ?? [],
     inspectCount: inspections?.length ?? 0,
     incomingAssetId,
-    boundAssetId: sceneAssetIds[0] ?? incomingAssetId,
+    boundAssetId: sceneAssetIds[0] ?? muralAssetIds[0] ?? incomingAssetId,
+    currentStateId: master?.current_state_id ?? null,
   });
 }

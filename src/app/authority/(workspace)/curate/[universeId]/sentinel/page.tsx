@@ -50,6 +50,7 @@ export default async function CurateSentinelPage({
       </div>
 
       <CurateClient
+        universeId={assembly.master_id}
         mural={inspection.mural}
         scenes={inspection.scenes}
         availableAssets={inspection.availableAssets}

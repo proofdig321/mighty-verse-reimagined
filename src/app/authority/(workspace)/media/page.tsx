@@ -14,6 +14,7 @@ import { classifyGalleryAssetRole, type GalleryAssetRole } from "@/lib/productio
 import { parseReferenceProvenance } from "@/lib/production/reference";
 import { parseProductionProvenance, type ProductionApproval } from "@/lib/production/result";
 import MediaLibraryClient from "./media-library-client";
+import { isAwaitingUploadIntake, isDiscardedStorageRef, mediaIsDeletable } from "@/lib/media/discard-asset";
 
 export type MediaLibraryItem = {
   asset_id: string;
@@ -45,6 +46,7 @@ export type MediaLibraryItem = {
   bound: boolean;
   production_approval: ProductionApproval | null;
   video_infrastructure: "mux" | null;
+  deletable: boolean;
 };
 
 async function getData() {
@@ -57,12 +59,12 @@ async function getData() {
       .order("created_at", { ascending: false }),
     svc
       .from("media_intake")
-      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes")
+      .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes, search_status, source_url, source_type")
       .order("created_at", { ascending: false }),
   ]);
 
   const realAssets = (assets ?? []).filter(
-    (a) => !a.storage_ref.startsWith("seed:placeholder:")
+    (a) => !a.storage_ref.startsWith("seed:placeholder:") && !isDiscardedStorageRef(a.storage_ref)
   );
   const assetIds = realAssets.map((a) => a.asset_id);
 
@@ -249,10 +251,17 @@ async function getData() {
       bound: boundAssetIds.has(a.asset_id),
       production_approval: productionProvenance?.approval ?? null,
       video_infrastructure: production_role === "production" ? "mux" : null,
+      deletable: mediaIsDeletable({
+        assetId: a.asset_id,
+        storageRef: a.storage_ref,
+        liveCanonicalBinding: boundAssetIds.has(a.asset_id),
+      }),
     };
   });
 
-  const unlinkedIntakes = (intakes ?? []).filter((i) => !i.asset_id);
+  const unlinkedIntakes = (intakes ?? []).filter((i) =>
+    isAwaitingUploadIntake({ assetId: i.asset_id, searchStatus: i.search_status })
+  );
 
   return { items, unlinkedIntakes };
 }

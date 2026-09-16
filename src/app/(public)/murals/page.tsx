@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getServiceClient } from "@/lib/authority/validate";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
+import { PublicHero } from "@/components/public-hero";
 
 type MuralItem = {
   master_id: string;
@@ -45,22 +46,24 @@ async function getData(): Promise<MuralItem[]> {
     ? await svc.from("media_asset").select("asset_id, storage_ref, provider").in("asset_id", assetIds)
     : { data: [] };
 
-  return masters.map((m) => ({
-    master_id: m.master_id,
-    title: (presentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
-    artist: (attrEntries ?? []).find((e) => e.attribution_id === m.attribution_ref)?.role_type?.replace(/-/g, " ") ?? null,
-    playback_id: (() => {
-      const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
-      const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
-      const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
-      return ref && !ref.startsWith("seed:placeholder:") ? ref : null;
-    })(),
-    provider: (() => {
-      const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
-      const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
-      return (assets ?? []).find((a) => a.asset_id === assetId)?.provider ?? null;
-    })(),
-  }));
+  return masters
+    .map((m) => ({
+      master_id: m.master_id,
+      title: (presentations ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
+      artist: (attrEntries ?? []).find((e) => e.attribution_id === m.attribution_ref)?.role_type?.replace(/-/g, " ") ?? null,
+      playback_id: (() => {
+        const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
+        const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
+        const ref = (assets ?? []).find((a) => a.asset_id === assetId)?.storage_ref;
+        return ref && !ref.startsWith("seed:placeholder:") ? ref : null;
+      })(),
+      provider: (() => {
+        const projId = (projections ?? []).find((p) => p.master_id === m.master_id)?.projection_id;
+        const assetId = (bindings ?? []).find((b) => b.projection_id === projId)?.asset_id;
+        return (assets ?? []).find((a) => a.asset_id === assetId)?.provider ?? null;
+      })(),
+    }))
+    .filter((mural) => Boolean(mural.playback_id));
 }
 
 export default async function MuralsPage() {
@@ -69,22 +72,12 @@ export default async function MuralsPage() {
   return (
     <div className="public-page">
 
-      {/* Header band — heading left, controls right */}
-      <div className="border-b border-border bg-card/20">
-        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              Audiovisual expressions of Universes
-            </p>
-            <h1
-              className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
-              style={{ fontFamily: "var(--font-display, inherit)" }}
-            >
-              Murals
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">Explore all animated murals.</p>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
+      <PublicHero
+        eyebrow="Audiovisual expressions of Universes"
+        title="Murals"
+        description="Explore all animated murals."
+        aside={
+          <>
             <select
               className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground"
               defaultValue=""
@@ -97,9 +90,9 @@ export default async function MuralsPage() {
             >
               <option value="recent">Most Recent</option>
             </select>
-          </div>
-        </div>
-      </div>
+          </>
+        }
+      />
 
       {/* Grid */}
       <div className="mx-auto max-w-7xl px-6 py-10">

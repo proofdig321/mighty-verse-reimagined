@@ -5,6 +5,12 @@ import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { HierarchyBreadcrumb, type HierarchyBreadcrumbItem } from "@/components/assemble/breadcrumb";
+import { WithdrawWork } from "@/components/assemble/withdraw-work";
+import { GallerySourcePicker } from "@/components/assemble/gallery-source-picker";
+import type { GallerySource } from "@/lib/assemble/gallery-source";
+import ProjectionMediaPlayer from "@/components/player/projection-media-player";
+import { toAuthorityProjectionMedia } from "@/lib/assemble/authority-work-media";
+import { canWithdrawMaster } from "@/lib/assemble/withdraw";
 import {
   api, responseData, shortId, operatorError,
   WORK_TYPE_LABELS, PROJECTION_TYPES, EXPERIENCE_TYPE_LABELS,
@@ -65,7 +71,25 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   const [progress, setProgress] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+  const [gallery, setGallery] = useState<GallerySource[]>([]);
+  const [galleryId, setGalleryId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/authority/media/gallery")
+      .then((response) => response.json())
+      .then((payload) => {
+        if (cancelled || !Array.isArray(payload.sources)) return;
+        setGallery(payload.sources as GallerySource[]);
+      })
+      .catch(() => {
+        if (!cancelled) setGallery([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Accept video and audio
   const ACCEPTED_TYPES = "video/mp4,video/*,audio/mpeg,audio/mp3,audio/wav,audio/flac,audio/x-flac,audio/aiff,audio/x-aiff,audio/m4a,audio/x-m4a,audio/ogg,audio/opus,audio/*";
@@ -79,6 +103,45 @@ function AttachVideoPanel({ projId, masterId, workTitle, intakeId, participants,
   return (
     <Card><CardContent className="pt-4 space-y-4">
       <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Attach Media</span>{!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}</div>
+
+      <GallerySourcePicker
+        sources={gallery}
+        selectedId={galleryId}
+        onSelect={(assetId) => {
+          setGalleryId(assetId);
+          setFile(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+        }}
+        disabled={busy}
+      />
+      {galleryId ? (
+        <Button
+          size="sm"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setMsg(null);
+            try {
+              const attach = await api("/api/authority/media", {
+                projection_id: projId,
+                master_id: masterId,
+                asset_id: galleryId,
+              });
+              if (attach.error) throw new Error(attach.error);
+              setMsg("Gallery media attached.");
+              onDone();
+            } catch (err) {
+              setMsg(operatorError(err instanceof Error ? err.message : err, { workTitle, operation: "Attach gallery media" }));
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy && !file ? "Attaching…" : "Use selected gallery media"}
+        </Button>
+      ) : null}
+
+      <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Or upload a new file</p>
 
       {/* File drop zone */}
       <div
@@ -332,9 +395,11 @@ export default function AuthorityWorkClient({
   const status = getWorkStatus(master, state, projection, binding, presentation, projPres, realizations, master.master_id);
 
   const typeLabel = WORK_TYPE_LABELS[master.canonical_type] ?? master.canonical_type;
-  const title = presentation?.title ?? projPres?.title ?? typeLabel;
+  const title = presentation?.title ?? projPres?.title ?? parentTitle ?? typeLabel;
   const journey = getJourneySteps(master, status);
   const nextStep = getNextAction(master, status);
+  const playback = toAuthorityProjectionMedia(binding);
+  const withdrawable = canWithdrawMaster(master.master_id, master.current_state_id);
 
   // B5: breadcrumb list page per type
   const listHref: Record<string, string> = {
@@ -396,7 +461,28 @@ export default function AuthorityWorkClient({
             Open Creative Studio →
           </Link>
         )}
+        {parentMasterId && parentCanonicalType === "universe" && (
+          <div className="flex flex-wrap gap-3 pt-1">
+            <Link href={`/authority/curate/${parentMasterId}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Open Curate Hub →
+            </Link>
+            <Link href={`/authority/universes/${parentMasterId}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+              Open Creative Studio →
+            </Link>
+          </div>
+        )}
       </div>
+
+      {playback && projection && state && (
+        <section aria-label="Attached media">
+          <ProjectionMediaPlayer
+            media={playback}
+            projectionId={projection.projection_id}
+            masterId={master.master_id}
+            canonicalStateId={state.canonical_state_id}
+          />
+        </section>
+      )}
 
       {projection && uploadSessions[0] && (
         <ResumeMediaPanel
@@ -579,11 +665,20 @@ export default function AuthorityWorkClient({
               const d = await api("/api/authority/media/rights", { binding_id: binding.binding_id, master_id: master.master_id, rights_holder_ref: rightsHolderRef, rights_basis: rightsBasis });
               setBusy(false);
               if (d.error) { setMsg(operatorError(d.error, { workTitle: title, operation: "Rights update" })); return; }
-              setEditingRights(false);
-              setMsg("Rights updated. Refresh to see updated state.");
+              window.location.reload();
             }}>Save rights</Button>
             <Button size="sm" variant="outline" onClick={() => setEditingRights(false)}>Cancel</Button>
           </div>
+        </div>
+      )}
+
+      {withdrawable && (
+        <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-2">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Discover</p>
+          <p className="text-sm text-muted-foreground">
+            Withdraw removes this work from Discover. Records stay. This is not a delete. Super Hero Ego cannot be withdrawn.
+          </p>
+          <WithdrawWork masterId={master.master_id} title={title} layout="panel" />
         </div>
       )}
 

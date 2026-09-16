@@ -11,6 +11,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { formatDuration } from "@/lib/media/timing";
 import { deriveMediaReadiness } from "@/lib/media/readiness";
 import { formatIsrcDisplay, isIsrcEligible, type IsrcStatus } from "@/lib/media/isrc";
+import { deriveDistributionReadiness } from "@/lib/media/distribution-readiness";
+import { DistributionReadinessPanel } from "@/components/media/distribution-readiness-panel";
 import { IsrcWorkflowPanel } from "./isrc-workflow-panel";
 import { MetadataStatusPanel } from "./metadata-status-panel";
 import { buildCanonicalMetadata } from "@/lib/media/metadata-build";
@@ -154,9 +156,24 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
   const isReference = isCuratedReferenceProvider(asset.provider);
   const isThumbnail = !isReference && (asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail"));
-  const title = intake?.title ?? (isPlaceholder ? "Placeholder asset" : asset.storage_ref.slice(0, 16) + "…");
+  const bound = data.bindings.find((binding) => binding.masterId);
+  const title = intake?.title ?? bound?.masterTitle ?? (isPlaceholder ? "Placeholder asset" : "Untitled media");
   const provenance = parseReferenceProvenance(intake?.provenance_notes);
   const inspectable = isInspectableAssetType(asset.asset_type) && !isPlaceholder && !isThumbnail && !isReference;
+  const distribution = deriveDistributionReadiness({
+    title: intake?.title ?? bound?.masterTitle ?? null,
+    rightsHolder: rightsLabel,
+    rightsBasis: asset.rights_basis,
+    boundMasterId: bound?.masterId ?? null,
+    boundMasterTitle: bound?.masterTitle ?? null,
+    publicHref: bound?.masterId ? `/worlds/${bound.masterId}` : null,
+    isrc: realization?.isrc ?? intake?.isrc ?? null,
+    isrcStatus: realization?.isrc_status ?? intake?.isrc_status ?? null,
+    isrcEligible: isIsrcEligible(realization?.realization_type ?? ""),
+    identityHref: bound?.masterId ? `/authority/${bound.masterId}` : null,
+    rightsHref: bound?.masterId ? `/authority/${bound.masterId}` : `/authority/media/${assetId}`,
+    isrcHref: `/authority/media/${assetId}`,
+  });
 
   const thumbnailUrl = isReference
     ? providerThumbnailUrl(asset.provider, asset.storage_ref, {
@@ -480,13 +497,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
         intakeIsrc={intake?.isrc ?? null}
       />
 
-      {/* Distribution */}
-      <div className="space-y-3">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Distribution</p>
-        <div className="rounded-lg border border-border bg-card/30 px-4 py-4">
-          <p className="text-sm text-muted-foreground/60 italic">Not yet distributed. Distribution integrations are a future phase.</p>
-        </div>
-      </div>
+      <DistributionReadinessPanel readiness={distribution} />
     </div>
   );
 }

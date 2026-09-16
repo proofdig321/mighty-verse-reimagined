@@ -50,7 +50,7 @@ export default async function HolographicWorldPage({
   const links: ExperienceSurfaceLinks = {
     universeHref: `/worlds/${data.master_id}`,
     muralHref: mural ? `/worlds/${mural.master_id}` : null,
-    sceneDeckHref: `/worlds/${data.master_id}/scenes`,
+    sceneDeckHref: scenes.length > 0 ? `/worlds/${data.master_id}/scenes` : null,
     sceneHref: Object.fromEntries(
       scenes.map((scene) => [
         scene.master_id,
@@ -106,7 +106,7 @@ export default async function HolographicWorldPage({
         </div>
       </div>
 
-      {intelligence ? (
+      {program.clock || program.layers.length > 0 ? (
         <HolographicStage program={program} mode="public" links={links} />
       ) : (
         <p className="mx-auto max-w-7xl px-6 py-10 text-sm text-muted-foreground">This Universe has no spatial stage yet.</p>
@@ -122,9 +122,11 @@ export default async function HolographicWorldPage({
               View Mural
             </Link>
           ) : null}
-          <Link href={`/worlds/${data.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
-            Scene Deck
-          </Link>
+          {scenes.length > 0 ? (
+            <Link href={`/worlds/${data.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+              Scene Deck
+            </Link>
+          ) : null}
         </div>
       </div>
     </div>

@@ -8,6 +8,7 @@
 import { getServiceClient } from "@/lib/authority/validate";
 import { muxAdapter, mapMuxAsset, type DirectUploadStatus } from "@/lib/media/providers/mux/adapter";
 import type { ProviderAsset } from "@/lib/media/providers/interface";
+import { formatMuxAssetFailure } from "@/lib/media/mux-asset-error";
 import { decideAdvanceUploadSession } from "./upload-advance-decision";
 
 export {
@@ -141,6 +142,7 @@ export type AdvancedSession = {
   updated_at: string;
   outcome: "ingested" | "failed" | "in_progress";
   provider_status: string | null;
+  provider_error: string | null;
   advanced: boolean;
 };
 
@@ -173,6 +175,7 @@ export async function advanceUploadSession(sessionId: string): Promise<AdvancedS
           ? "failed"
           : "in_progress",
     provider_status: null,
+    provider_error: null,
     advanced: false,
     ...overrides,
   });
@@ -198,12 +201,17 @@ export async function advanceUploadSession(sessionId: string): Promise<AdvancedS
 
   let providerAsset: ProviderAsset | null = null;
   let assetStatus: string | null = null;
+  let providerError: string | null = null;
   if (muxAssetId) {
     try {
       const mux = (await import("@/lib/media/providers/mux/client")).getMuxClient();
       const raw = await mux.video.assets.retrieve(muxAssetId);
       assetStatus = typeof raw.status === "string" ? raw.status : null;
       providerAsset = mapMuxAsset(raw);
+      providerError = formatMuxAssetFailure({
+        status: assetStatus,
+        errors: raw.errors ?? null,
+      });
     } catch (err) {
       console.error("[upload-advance] Mux asset retrieve failed:", err instanceof Error ? err.message : err);
       providerAsset = await muxAdapter.getAsset(muxAssetId);
@@ -230,7 +238,7 @@ export async function advanceUploadSession(sessionId: string): Promise<AdvancedS
   const providerStatus = assetStatus ?? upload?.status ?? null;
 
   if (decision.action === "noop") {
-    return base({ provider_status: providerStatus });
+    return base({ provider_status: providerStatus, provider_error: providerError });
   }
 
   if (decision.action === "fail") {
@@ -243,6 +251,7 @@ export async function advanceUploadSession(sessionId: string): Promise<AdvancedS
       phase: "failed",
       outcome: "failed",
       provider_status: providerStatus,
+      provider_error: providerError ?? decision.reason,
       advanced: true,
     });
   }

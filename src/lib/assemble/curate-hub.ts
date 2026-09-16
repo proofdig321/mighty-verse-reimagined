@@ -7,18 +7,23 @@
  */
 import { classifyProcessingPhase } from "../media/processing-state";
 import {
-  CURATE_STUDIO_HREF,
   creativeSuiteHref,
+  creativeSuiteIdentityHref,
   creativeSuiteScenesHref,
+  curateAttachHref,
   curateHubHref,
-  curateIncomingHref,
   curateMomentHref,
   curateMuralHref,
   curateSentinelHref,
-  mediaInspectHref,
 } from "./studio";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
+import {
+  classifyUniverseOccupancy,
+  occupancyLabel,
+  type UniverseOccupancy,
+} from "./occupancy";
+import { isProtectedMaster } from "./protected-work";
 
 export type CurateHubRowKey =
   | "universe"
@@ -51,6 +56,12 @@ export type CurateHubNextAction = {
 export type CurateHubSnapshot = {
   universeId: string;
   universeTitle: string;
+  occupancy: UniverseOccupancy;
+  occupancyLabel: string;
+  identityHref: string;
+  withdrawable: boolean;
+  incomingAssetId: string | null;
+  boundAssetId: string | null;
   rows: CurateHubRow[];
   nextAction: CurateHubNextAction;
   processingNote: string | null;
@@ -70,6 +81,7 @@ export type CurateHubInput = {
   inspectCount: number;
   incomingAssetId?: string | null;
   boundAssetId?: string | null;
+  currentStateId?: string | null;
 };
 
 function latestSession(sessions: CurateHubSession[]) {
@@ -95,10 +107,9 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
   );
   const bound =
     Boolean(mural?.has_media) || scenes.some((scene) => Boolean(scene.asset_id));
-  const boundAssetId = input.boundAssetId ?? scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
+  const boundAssetId =
+    input.boundAssetId ?? mural?.asset_id ?? scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
   const incomingAssetId = input.incomingAssetId ?? null;
-  const inspectAssetId = boundAssetId ?? incomingAssetId;
-
   const phase = session?.phase ?? null;
   const phaseKind = phase ? classifyProcessingPhase(phase) : null;
   const processing = Boolean(phase) && phaseKind === "in_progress";
@@ -111,9 +122,9 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         key: "source_media",
         label: "Source media",
         tone: "complete",
-        summary: "Attached to this Universe.",
-        href: boundAssetId ? `/authority/${encodeURIComponent(boundAssetId)}` : curateHubHref(universeId),
-        actionLabel: "Open asset",
+        summary: "Attached to this Universe. ISRC, technical identity, and Replace media live on the media and work records — not on the public page.",
+        href: boundAssetId ? `/authority/media/${encodeURIComponent(boundAssetId)}` : `/authority/${universeId}`,
+        actionLabel: boundAssetId ? "Open media record" : "Open work record",
       }
     : processing
       ? {
@@ -141,11 +152,11 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
               key: "source_media",
               label: "Source media",
               tone: "attention",
-              summary: "Ingested and waiting for curator attachment.",
-              href: incomingAssetId
-                ? curateIncomingHref(incomingAssetId)
-                : CURATE_STUDIO_HREF,
-              actionLabel: "Attach media",
+              summary: mural
+                ? "Ingested and waiting for curator attachment to this Universe's Mural."
+                : "Ingested and waiting. Register a Mural for this Universe before attaching — do not attach it to another work.",
+              href: mural ? curateAttachHref(universeId) : curateMuralHref(universeId),
+              actionLabel: mural ? "Attach media" : "Register Mural first",
             }
           : {
               key: "source_media",
@@ -157,28 +168,35 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
             };
 
   const sentinelRow: CurateHubRow =
-    inspectCount > 0
-      ? {
-          key: "sentinel",
-          label: "Sentinel",
-          tone: sceneCount === 0 ? "attention" : "complete",
-          summary:
-            sceneCount === 0
-              ? "Evidence is available. Review candidates before establishing canonical Scenes."
-              : "Evidence is on record. Canonical Scenes already exist.",
-          href: curateSentinelHref(universeId),
-          actionLabel: sceneCount === 0 ? "Establish Scene" : "Open Sentinel",
-        }
+    bound || incomingAssetId
+      ? sceneCount === 0
+        ? {
+            key: "sentinel",
+            label: "Sentinel",
+            tone: "attention",
+            summary:
+              inspectCount > 0
+                ? "Evidence is available. You still name Intro, Verse, Hook windows and set start/end before Accept as Scene."
+                : "Name Intro, Verse 1, Hook, Verse 2 windows and set start/end on the mural. Visual inspection is optional evidence — it does not create Scenes.",
+            href: curateSentinelHref(universeId),
+            actionLabel: "Establish Scene",
+          }
+        : {
+            key: "sentinel",
+            label: "Sentinel",
+            tone: "complete",
+            summary:
+              inspectCount > 0
+                ? "Evidence is on record. Canonical Scenes already exist."
+                : "Canonical Scenes exist. Sentinel can still retain stills and adjust windows.",
+            href: curateSentinelHref(universeId),
+            actionLabel: "Open Sentinel",
+          }
       : {
           key: "sentinel",
           label: "Sentinel",
-          tone: bound || incomingAssetId ? "attention" : "pending",
-          summary:
-            bound || incomingAssetId
-              ? "Source is present. Persist an inspect so Sentinel evidence can inform Scene work."
-              : "Sentinel needs source media first.",
-          href: inspectAssetId ? mediaInspectHref(inspectAssetId) : undefined,
-          actionLabel: inspectAssetId ? "Inspect source" : undefined,
+          tone: "pending",
+          summary: "Sentinel needs source media first.",
         };
 
   const muralRow: CurateHubRow = mural
@@ -186,9 +204,11 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
         key: "mural",
         label: "Mural",
         tone: "complete",
-        summary: `Registered: ${mural.title ?? "Mural"}.`,
-        href: studioHref(universeId),
-        actionLabel: "Open in Studio",
+        summary: bound
+          ? `Registered: ${mural.title ?? "Mural"}. Replace media and presentation live on the Mural record — not the Universe record.`
+          : `Registered: ${mural.title ?? "Mural"}.`,
+        href: `/authority/${mural.master_id}`,
+        actionLabel: bound ? "Replace media" : "Open mural record",
       }
     : {
         key: "mural",
@@ -284,20 +304,32 @@ export function deriveCurateHub(input: CurateHubInput): CurateHubSnapshot {
     sceneCount,
     momentCount,
     presenceCount,
-    incomingAssetId,
+  });
+
+  const occupancy = classifyUniverseOccupancy({
+    title: assembly.title,
+    currentStateId: input.currentStateId ?? "present",
+    muralHasPlayableMedia: bound,
+    hasSourceMedia: bound || ingestedUnbound || processing,
   });
 
   return {
     universeId,
     universeTitle,
+    occupancy,
+    occupancyLabel: occupancyLabel(occupancy),
+    identityHref: creativeSuiteIdentityHref(universeId, "curate"),
+    withdrawable: occupancy !== "withdrawn" && !isProtectedMaster(universeId),
+    incomingAssetId,
+    boundAssetId,
     rows: [
       {
         key: "universe",
         label: "Universe",
         tone: "complete",
-        summary: "Canonical work is established.",
-        href: `/authority/${universeId}`,
-        actionLabel: "Open record",
+        summary: "Canonical work is established. Title and description live on identity. Media binds to the Mural, not this Universe record.",
+        href: creativeSuiteIdentityHref(universeId, "curate"),
+        actionLabel: "Edit identity",
       },
       sourceRow,
       sentinelRow,
@@ -328,7 +360,6 @@ function resolveNextAction(input: {
   sceneCount: number;
   momentCount: number;
   presenceCount: number;
-  incomingAssetId: string | null;
 }): CurateHubNextAction {
   const { universeId } = input;
 
@@ -350,24 +381,23 @@ function resolveNextAction(input: {
     };
   }
 
-  if (input.ingestedUnbound) {
-    const href = input.incomingAssetId
-      ? curateIncomingHref(input.incomingAssetId)
-      : CURATE_STUDIO_HREF;
-    return {
-      title: "Source media ready",
-      body: "Attach it to the appropriate canonical expression. Media is not the Universe.",
-      href,
-      label: "Attach media",
-    };
-  }
-
   if (!input.mural) {
     return {
       title: "Register a Mural",
-      body: "A Mural is the complete audiovisual expression of this Universe. Registration is canonical, not minting.",
+      body: input.ingestedUnbound
+        ? "A Mural is the audiovisual expression of this Universe. Register it first. Ingested media waits for that Mural — do not attach it to another work. Registration is canonical, not minting."
+        : "A Mural is the complete audiovisual expression of this Universe. Registration is canonical, not minting.",
       href: curateMuralHref(universeId),
       label: "Register Mural",
+    };
+  }
+
+  if (input.ingestedUnbound) {
+    return {
+      title: "Attach this media",
+      body: "Bind the ingested source to this Universe's Mural. Do not attach it to Super Hero Ego or another work.",
+      href: curateAttachHref(universeId),
+      label: "Attach media",
     };
   }
 
@@ -380,19 +410,10 @@ function resolveNextAction(input: {
     };
   }
 
-  if (input.sceneCount === 0 && input.inspectCount === 0 && input.boundAssetId) {
-    return {
-      title: "Inspect the source",
-      body: "Persist Sentinel evidence before treating visual beats as canonical Scenes.",
-      href: mediaInspectHref(input.boundAssetId),
-      label: "Open Sentinel inspect",
-    };
-  }
-
   if (input.sceneCount === 0) {
     return {
       title: "Establish canonical Scenes",
-      body: "Sentinel may propose candidates. You authorise the canonical windows.",
+      body: "Sentinel observes the mural. You name each window (Intro, Verse 1, Hook, Verse 2…) and set start/end. Sentinel does not auto-create Scenes.",
       href: curateSentinelHref(universeId),
       label: "Establish Scene",
     };

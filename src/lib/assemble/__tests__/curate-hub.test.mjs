@@ -64,10 +64,15 @@ const she = deriveCurateHub({
 
 assert(she.universeTitle === "Super Hero Ego", "SHE title comes from live assembly");
 assert(she.nextAction.label === "Open Creative Studio", "complete SHE continues in Studio, not Create Work");
+assert(she.withdrawable === false, "Super Hero Ego hub does not offer withdraw");
 assert(she.nextAction.href.includes(`/authority/universes/${UNIVERSE}`), "Studio continuation stays on SHE");
 assert(she.rows.find((row) => row.key === "mural")?.tone === "complete", "registered mural is complete, not minted");
 assert(!she.rows.some((row) => /mint/i.test(`${row.summary}${row.actionLabel ?? ""}`)), "hub never says mint");
-assert(she.rows.find((row) => row.key === "source_media")?.tone === "complete", "bound Mux media is attached");
+assert(she.rows.find((row) => row.key === "source_media")?.href === `/authority/media/${ASSET}`, "bound source opens the media record, not a fake master id");
+assert(she.rows.find((row) => row.key === "source_media")?.actionLabel === "Open media record", "source row names the media/ISRC record");
+assert(she.rows.find((row) => row.key === "universe")?.actionLabel === "Edit identity", "universe row is identity, not a mural media attach");
+assert(she.rows.find((row) => row.key === "mural")?.href === `/authority/${MURAL}`, "mural row opens the mural work record");
+assert(she.rows.find((row) => row.key === "mural")?.actionLabel === "Replace media", "bound mural is where Replace media lives");
 assert(she.rows.find((row) => row.key === "experience")?.href === `/worlds/${UNIVERSE}`, "experience stays public");
 assert(she.processingNote === null, "attached work is not processing");
 
@@ -115,11 +120,51 @@ const ingested = deriveCurateHub({
   inspectCount: 0,
   incomingAssetId: FR_ASSET,
 });
-assert(ingested.nextAction.title === "Source media ready", "ingested unbound media asks for attachment");
-assert(ingested.nextAction.label === "Attach media", "attachment is curator work");
+assert(ingested.withdrawable === true, "Father Raymond hub can withdraw this work from Discover");
+assert(ingested.nextAction.title === "Register a Mural", "ingested Father Raymond still needs a Mural before attach");
+assert(ingested.nextAction.label === "Register Mural", "mural registration precedes attaching ingested media");
+assert(ingested.nextAction.href === `/authority/curate/${FR}/mural`, "FR mural registration stays on Father Raymond");
+assert(ingested.nextAction.body.includes("do not attach it to another work"), "ingested media must not land on Super Hero Ego");
 assert(ingested.rows.find((row) => row.key === "mural")?.actionLabel === "Register Mural", "unregistered mural is register, not mint");
 assert(ingested.rows.find((row) => row.key === "mural")?.href === `/authority/curate/${FR}/mural`, "mural registration is a child page");
-assert(ingested.nextAction.href.includes(FR_ASSET), "FR ingested attach stays on incoming media, not Super Hero Ego");
+assert(ingested.rows.find((row) => row.key === "source_media")?.actionLabel === "Register Mural first", "ingested source without a Mural does not jump to another work");
+assert(ingested.rows.find((row) => row.key === "source_media")?.href === `/authority/curate/${FR}/mural`, "ingested source without a Mural stays on Father Raymond mural registration");
+
+const ingestedWithMural = deriveCurateHub({
+  assembly: {
+    master_id: FR,
+    title: "Father Raymond",
+    description: null,
+    created_at: "2026-09-09T00:00:00Z",
+    murals: [
+      {
+        master_id: "fr-mural",
+        title: "Father Raymond",
+        has_media: false,
+        provider: null,
+        storage_ref: null,
+        scenes: [],
+      },
+    ],
+    creative_moments: [],
+  },
+  sessions: [
+    {
+      session_id: "7fa7c456-0000-4000-8000-000000000001",
+      phase: "ingested",
+      asset_id: FR_ASSET,
+      updated_at: "2026-09-09T12:00:00Z",
+    },
+  ],
+  inspectCount: 0,
+  incomingAssetId: FR_ASSET,
+});
+assert(ingestedWithMural.nextAction.title === "Attach this media", "after mural registration, ingested media asks for attachment");
+assert(ingestedWithMural.nextAction.label === "Attach media", "attachment is curator work on this Universe");
+assert(ingestedWithMural.nextAction.href === `/authority/curate/${FR}/attach`, "FR ingested attach stays on this Universe");
+assert(!ingestedWithMural.nextAction.href.includes(UNIVERSE), "Father Raymond attach does not open Super Hero Ego");
+assert(ingestedWithMural.rows.find((row) => row.key === "source_media")?.href === `/authority/curate/${FR}/attach`, "after mural registration, source attach stays on Father Raymond");
+assert(she.occupancy === "curated", "Super Hero Ego remains curated");
 
 const noScenes = deriveCurateHub({
   assembly: {
@@ -133,6 +178,37 @@ const noScenes = deriveCurateHub({
 });
 assert(noScenes.nextAction.label === "Establish Scene", "evidence without scenes needs human authorisation");
 assert(noScenes.nextAction.href === `/authority/curate/${UNIVERSE}/sentinel`, "scene establishment is a Curate Sentinel child page");
+
+const boundNoInspect = deriveCurateHub({
+  assembly: {
+    master_id: FR,
+    title: "Father Raymond",
+    description: null,
+    created_at: "2026-09-09T00:00:00Z",
+    murals: [
+      {
+        master_id: "fr-mural",
+        title: "Father Raymond",
+        has_media: true,
+        asset_id: FR_ASSET,
+        provider: "mux",
+        storage_ref: "014sJhmHHRL2g52G14xG00L6MTyq4zvunCsZtFStk4Wds",
+        scenes: [],
+      },
+    ],
+    creative_moments: [],
+  },
+  sessions: [],
+  inspectCount: 0,
+});
+assert(boundNoInspect.nextAction.label === "Establish Scene", "a mural-bound Universe with zero Scenes goes to Sentinel, not a dead inspect gate");
+assert(boundNoInspect.nextAction.href === `/authority/curate/${FR}/sentinel`, "Father Raymond scene establishment stays on its own Sentinel");
+assert(boundNoInspect.nextAction.body.includes("Intro"), "operator is told to name Intro/Verse/Hook windows");
+assert(boundNoInspect.rows.find((row) => row.key === "sentinel")?.href === `/authority/curate/${FR}/sentinel`, "Sentinel row with zero Scenes goes to Establish Scene, not inspect-first");
+assert(boundNoInspect.rows.find((row) => row.key === "sentinel")?.actionLabel === "Establish Scene", "mural-only work establishes Scenes from Sentinel");
+assert(boundNoInspect.rows.find((row) => row.key === "source_media")?.href === `/authority/media/${FR_ASSET}`, "Father Raymond source row opens the media record");
+assert(boundNoInspect.rows.find((row) => row.key === "mural")?.href === `/authority/fr-mural`, "Father Raymond Replace media opens the mural record");
+assert(boundNoInspect.rows.find((row) => row.key === "mural")?.actionLabel === "Replace media", "mural-only work replaces media on the mural, not the Universe");
 
 const noMoments = deriveCurateHub({
   assembly: {

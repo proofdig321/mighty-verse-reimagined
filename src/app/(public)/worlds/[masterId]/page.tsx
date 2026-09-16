@@ -9,7 +9,12 @@ import { UniverseWorldExperience } from "@/components/experience/universe-world"
 import { sceneStillUrl } from "@/lib/experience/universe-world";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
 
-type MuralRow = { master_id: string; title: string | null; projection_id: string | null };
+type MuralRow = {
+  master_id: string;
+  title: string | null;
+  projection_id: string | null;
+  canonical_state_id: string | null;
+};
 type MomentRow = { master_id: string; title: string | null; projection_id: string | null };
 type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; provider: string | null; start_ms: number | null; end_ms: number | null };
 type SceneMomentRow = { scene_master_id: string; moment_master_id: string };
@@ -29,6 +34,7 @@ type PageData = {
   scene_moments: SceneMomentRow[];
   universe_master_id: string | null;
   universe_title: string | null;
+  playback_master_id: string;
 };
 
 async function resolveMedia(svc: ReturnType<typeof getServiceClient>, projectionId: string): Promise<ProjectionMedia | null> {
@@ -185,7 +191,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
   if (master.canonical_type === "universe") {
     const { data: muralMasters } = await svc
       .from("master")
-      .select("master_id")
+      .select("master_id, current_state_id")
       .eq("parent_master_id", masterId)
       .eq("canonical_type", "mural")
       .not("current_state_id", "is", null);
@@ -202,7 +208,25 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       master_id: m.master_id,
       title: (muralPres ?? []).find((p) => p.master_id === m.master_id)?.title ?? null,
       projection_id: (muralProjs ?? []).find((p) => p.master_id === m.master_id)?.projection_id ?? null,
+      canonical_state_id: m.current_state_id ?? null,
     }));
+
+    let stageMedia = media;
+    let stageProjectionId = proj?.projection_id ?? null;
+    let stageMasterId = masterId;
+    let stageCanonicalStateId = cs.canonical_state_id;
+    if (!stageMedia?.playback_id) {
+      const muralStage = murals.find((row) => row.projection_id);
+      if (muralStage?.projection_id) {
+        const muralMedia = await resolveMedia(svc, muralStage.projection_id);
+        if (muralMedia?.playback_id) {
+          stageMedia = muralMedia;
+          stageProjectionId = muralStage.projection_id;
+          stageMasterId = muralStage.master_id;
+          stageCanonicalStateId = muralStage.canonical_state_id ?? cs.canonical_state_id;
+        }
+      }
+    }
 
     const { data: cmMasters } = await svc
       .from("master")
@@ -232,15 +256,16 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       title: pres?.title ?? null,
       description: pres?.description ?? null,
       attribution_roles: attributionRoles,
-      media,
-      projection_id: proj?.projection_id ?? null,
-      canonical_state_id: cs.canonical_state_id,
+      media: stageMedia,
+      projection_id: stageProjectionId,
+      canonical_state_id: stageCanonicalStateId,
       murals,
       moments,
       scenes,
       scene_moments: sceneMoments,
       universe_master_id: null,
       universe_title: null,
+      playback_master_id: stageMasterId,
     };
   }
 
@@ -317,6 +342,7 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     scene_moments: [],
     universe_master_id,
     universe_title,
+    playback_master_id: masterId,
   };
 }
 
@@ -393,9 +419,11 @@ export default async function WorldPage({
                   >
                     Enter Experience
                   </Link>
-                  <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
-                    Scene Deck
-                  </Link>
+                  {data.scenes.length > 0 ? (
+                    <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
+                      Scene Deck
+                    </Link>
+                  ) : null}
                 </div>
               ) : null}
             </div>
@@ -452,11 +480,13 @@ export default async function WorldPage({
                 <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
               )}
             </div>
-            <div className="px-5 py-4 border-t border-border">
-              <Link href={`/worlds/${data.universe_master_id}/scenes`}>
-                <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
-              </Link>
-            </div>
+            {data.scenes.length > 0 ? (
+              <div className="px-5 py-4 border-t border-border">
+                <Link href={`/worlds/${data.universe_master_id}/scenes`}>
+                  <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
+                </Link>
+              </div>
+            ) : null}
           </div>
 
         </div>
@@ -485,17 +515,25 @@ export default async function WorldPage({
     <div className="min-h-screen bg-background">
 
       {data.media?.playback_id && data.projection_id && data.canonical_state_id ? (
-        <div className="border-b border-border">
+        <div className="border-b border-border" data-universe-mural-stage="live">
           <MediaHero
             media={data.media}
             projectionId={data.projection_id}
-            masterId={data.master_id}
+            masterId={data.playback_master_id}
             canonicalStateId={data.canonical_state_id}
             title={title}
-            typeLabel="Universe"
+            typeLabel={data.playback_master_id === data.master_id ? "Universe" : "Mural"}
             credit={data.description}
             collectible={false}
             showIdentity={false}
+            timelineScenes={data.scenes
+              .filter((scene) => scene.start_ms != null && scene.end_ms != null)
+              .map((scene) => ({
+                id: scene.master_id,
+                title: scene.title,
+                startMs: scene.start_ms!,
+                endMs: scene.end_ms!,
+              }))}
           />
         </div>
       ) : null}

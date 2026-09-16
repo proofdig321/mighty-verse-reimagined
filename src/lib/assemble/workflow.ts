@@ -8,6 +8,7 @@
  */
 
 import type { SentinelIntelligence } from "../media/sentinel-intelligence";
+import { curateSentinelHref } from "./studio";
 import { suiteChildHref, suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
 
@@ -38,6 +39,8 @@ export type ProductionPathInput = {
   suiteHref: string;
   hasMural: boolean;
   hasSourceMedia: boolean;
+  sceneCount: number;
+  establishHref: string;
   observationCount: number;
   storyboardCount: number;
   proposalCount: number;
@@ -55,6 +58,8 @@ export function productionPathInputFrom(
     suiteHref,
     hasMural: assembly.murals.length > 0,
     hasSourceMedia: Boolean(scenes.find((scene) => scene.asset_id) || assembly.murals.some((mural) => mural.has_media)),
+    sceneCount: scenes.length,
+    establishHref: curateSentinelHref(assembly.master_id),
     observationCount: intelligence?.observation_count ?? 0,
     storyboardCount: intelligence?.storyboard.length ?? 0,
     proposalCount: intelligence?.proposals.length ?? 0,
@@ -64,18 +69,31 @@ export function productionPathInputFrom(
 }
 
 export function deriveProductionPath(input: ProductionPathInput): ProductionPathStep[] {
+  const needsEstablish = input.hasSourceMedia && input.sceneCount === 0;
   return PRODUCTION_PATH_STEPS.map((step) => {
     let status: ProductionStepStatus = "waiting";
     if (step.id === "source") {
       status = input.hasSourceMedia ? "ready" : input.hasMural ? "waiting" : "waiting";
     } else if (step.id === "sentinel") {
-      status = input.observationCount > 0 ? "ready" : "waiting";
+      status = input.observationCount > 0 ? "ready" : needsEstablish ? "attention" : "waiting";
     } else if (step.id === "storyboard") {
       status = input.storyboardCount > 0 ? "ready" : "waiting";
     } else if (step.id === "proposals") {
-      status = input.adjustCount > 0 ? "attention" : input.proposalCount > 0 ? "canonical" : "waiting";
+      status = needsEstablish
+        ? "attention"
+        : input.adjustCount > 0
+          ? "attention"
+          : input.proposalCount > 0
+            ? "canonical"
+            : "waiting";
     } else if (step.id === "authorise") {
-      status = input.adjustCount > 0 ? "attention" : input.proposalCount > 0 ? "canonical" : "waiting";
+      status = needsEstablish
+        ? "waiting"
+        : input.adjustCount > 0
+          ? "attention"
+          : input.proposalCount > 0
+            ? "canonical"
+            : "waiting";
     } else if (step.id === "preview") {
       status = input.holographicCount > 0 ? "ready" : "waiting";
     } else if (step.id === "experience") {
@@ -90,9 +108,12 @@ export function deriveProductionPath(input: ProductionPathInput): ProductionPath
       for (const [key, value] of Object.entries(extra)) params.set(key, value);
       resolved = `${path}?${params.toString()}`;
     }
+    if (needsEstablish && (step.id === "sentinel" || step.id === "proposals" || step.id === "authorise")) {
+      resolved = input.establishHref;
+    }
     return {
       id: step.id,
-      label: step.label,
+      label: needsEstablish && step.id === "proposals" ? "Establish Scenes" : step.label,
       fragment: step.fragment,
       path: step.path,
       href: resolved,

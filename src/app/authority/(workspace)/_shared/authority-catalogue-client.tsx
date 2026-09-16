@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import MediaVisual from "@/components/media-visual";
+import { DiscardIntake } from "@/components/assemble/discard-intake";
 import {
   api, responseData, shortId, operatorError,
   WORK_TYPE_LABELS, EXPERIENCE_TYPE_LABELS, PROJECTION_TYPES,
@@ -869,7 +870,31 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
         </CardContent></Card>
       )}
 
-      {mediaIntakes.length > 0 && <section className="space-y-3"><p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Saved media intake</p><div className="divide-y divide-border rounded-lg border border-border bg-card">{mediaIntakes.map(intake => <div key={intake.intake_id} className="flex items-center justify-between gap-3 px-4 py-3"><div className="min-w-0"><p className="truncate text-sm font-medium">{intake.title}</p><p className="text-xs text-muted-foreground">{intake.work_type} · {intake.visibility} · {intake.search_status}</p></div><Button size="sm" variant="outline" onClick={() => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(intake as IntakeRecord); setShowIntake(true); }}>Edit metadata</Button></div>)}</div></section>}
+      {mediaIntakes.length > 0 && (
+        <section className="space-y-3">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Saved media intake</p>
+          <div className="divide-y divide-border rounded-lg border border-border bg-card">
+            {mediaIntakes.map((intake) => (
+              <div key={intake.intake_id} className="flex items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{intake.title}</p>
+                  <p className="text-xs text-muted-foreground">{intake.work_type} · {intake.visibility} · {intake.search_status}</p>
+                </div>
+                <div className="flex flex-wrap items-center justify-end gap-2 shrink-0">
+                  <Button size="sm" variant="outline" onClick={() => {
+                    Object.keys(localStorage).filter((key) => key.startsWith("mighty-verse-intake-")).forEach((key) => localStorage.removeItem(key));
+                    setEditingIntake(intake as IntakeRecord);
+                    setShowIntake(true);
+                  }}>Edit metadata</Button>
+                  {!intake.asset_id ? (
+                    <DiscardIntake intakeId={intake.intake_id} title={intake.title} onDiscarded={() => { void load(); }} />
+                  ) : null}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
       {showIntake && <MediaIntakePanel intake={editingIntake} participants={participants} onDone={async () => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(undefined); setShowIntake(false); await load(); }} onCancel={() => { setEditingIntake(undefined); setShowIntake(false); }} />}
       {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
     </div>

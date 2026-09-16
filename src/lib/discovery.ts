@@ -1,4 +1,5 @@
 import { getServiceClient } from "@/lib/authority/validate";
+import { isPlayableStorageRef } from "@/lib/assemble/protected-work";
 
 export type DiscoveryUniverse = {
   master_id: string;
@@ -46,6 +47,51 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
     .order("created_at", { ascending: false });
 
   if (!masters?.length) return [];
+
+  const universeIds = masters.filter((m) => m.canonical_type === "universe").map((m) => m.master_id);
+  const { data: muralChildren } = universeIds.length
+    ? await svc
+        .from("master")
+        .select("master_id, parent_master_id")
+        .eq("canonical_type", "mural")
+        .in("parent_master_id", universeIds)
+        .not("current_state_id", "is", null)
+    : { data: [] };
+  const muralIds = (muralChildren ?? []).map((row) => row.master_id);
+  const { data: muralProjections } = muralIds.length
+    ? await svc
+        .from("projection")
+        .select("projection_id, master_id")
+        .in("master_id", muralIds)
+        .eq("projection_type", "experiential")
+    : { data: [] };
+  const muralProjectionIds = (muralProjections ?? []).map((row) => row.projection_id);
+  const { data: muralBindings } = muralProjectionIds.length
+    ? await svc
+        .from("projection_media_binding")
+        .select("projection_id, asset_id, media_asset(storage_ref, provider)")
+        .in("projection_id", muralProjectionIds)
+        .eq("access_level", "public")
+        .eq("binding_type", "primary")
+    : { data: [] };
+
+  const curatedUniverseIds = new Set<string>();
+  const muralVisualByUniverse = new Map<string, { playback_id: string; provider: string | null }>();
+  for (const mural of muralChildren ?? []) {
+    const projection = (muralProjections ?? []).find((item) => item.master_id === mural.master_id);
+    const binding = projection
+      ? (muralBindings ?? []).find((item) => item.projection_id === projection.projection_id)
+      : null;
+    const storageRef = binding ? mediaStorageRef(binding) : null;
+    if (!isPlayableStorageRef(storageRef) || !mural.parent_master_id) continue;
+    curatedUniverseIds.add(mural.parent_master_id);
+    if (!muralVisualByUniverse.has(mural.parent_master_id) && storageRef) {
+      muralVisualByUniverse.set(mural.parent_master_id, {
+        playback_id: storageRef,
+        provider: binding ? mediaProvider(binding) : null,
+      });
+    }
+  }
 
   const stateIds = masters.map((m) => m.current_state_id);
   const masterIds = masters.map((m) => m.master_id);
@@ -113,16 +159,17 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
     .map((m) => {
       const cs = (states ?? []).find((s) => s.canonical_state_id === m.current_state_id);
       if (!cs) return null;
+      if (m.canonical_type !== "universe" || !curatedUniverseIds.has(m.master_id)) return null;
 
       const mProjs = (projections ?? []).filter((p) => p.master_id === m.master_id);
       const roles = (attrEntries ?? [])
         .filter((e) => e.attribution_id === m.attribution_ref)
         .map((e) => e.role_type);
 
-      const masterHasMedia = mProjs.some((p) => projHasMedia.get(p.projection_id));
+      const muralVisual = muralVisualByUniverse.get(m.master_id);
       const visualBinding = (bindings ?? []).map(binding => ({ binding, storageRef: mediaStorageRef(binding) })).find(({ binding, storageRef }) => binding.projection_id === mProjs[0]?.projection_id && !!storageRef && !storageRef.startsWith("seed:placeholder:"));
-      const visualPlaybackId = visualBinding?.storageRef ?? null;
-      const visualProvider = visualBinding ? mediaProvider(visualBinding.binding) : null;
+      const visualPlaybackId = muralVisual?.playback_id ?? visualBinding?.storageRef ?? null;
+      const visualProvider = muralVisual?.provider ?? (visualBinding ? mediaProvider(visualBinding.binding) : null);
       const presentation = (presentationRows ?? []).find((p) => p.master_id === m.master_id);
 
       return {
@@ -130,7 +177,7 @@ export async function getDiscovery(): Promise<DiscoveryUniverse[]> {
         canonical_type: m.canonical_type,
         canonical_state_version: cs.version,
         authorisation_state: cs.authorisation_state,
-        has_media: masterHasMedia,
+        has_media: true,
         title: presentation?.title ?? null,
         description: presentation?.description ?? null,
         attribution_roles: roles,

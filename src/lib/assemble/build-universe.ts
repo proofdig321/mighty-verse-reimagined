@@ -47,6 +47,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       ? rows.bindings.find((row) => row.projection_id === projection.projection_id)
       : null;
     const media = assetFor(rows, projection?.projection_id);
+    const artwork = rows.presentations.find((row) => row.master_id === scene.master_id)?.artwork_storage_ref ?? null;
     const relatedMomentIds = momentsByScene.get(scene.master_id) ?? [];
     const creativeMoments = relatedMomentIds.map((id) => ({
       master_id: id,
@@ -68,6 +69,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       asset_id: binding?.asset_id ?? null,
       provider: media.provider,
       storage_ref: media.storage_ref,
+      artwork_storage_ref: artwork && !artwork.startsWith("seed:placeholder:") ? artwork : null,
     };
     const list = scenesByMural.get(muralId) ?? [];
     list.push(entry);
@@ -77,6 +79,9 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
   const murals: UniverseAssemblyMural[] = rows.muralMasters.map((mural) => {
     const scenes = scenesByMural.get(mural.master_id) ?? [];
     const muralProjection = (rows.muralProjections ?? []).find((row) => row.master_id === mural.master_id);
+    const muralBinding = muralProjection
+      ? rows.bindings.find((row) => row.projection_id === muralProjection.projection_id)
+      : null;
     const muralMedia = assetFor(rows, muralProjection?.projection_id);
     const sceneMedia = scenes.find((scene) => scene.storage_ref) ?? null;
     const provider = muralMedia.provider ?? sceneMedia?.provider ?? null;
@@ -86,6 +91,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       title: titleFor(mural.master_id),
       scenes,
       has_media: Boolean(storage_ref),
+      asset_id: muralBinding?.asset_id ?? sceneMedia?.asset_id ?? null,
       provider,
       storage_ref,
     };

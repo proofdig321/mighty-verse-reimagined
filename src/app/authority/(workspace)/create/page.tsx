@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import CreateWorkClient from "./create-work-client";
+import { loadUniverseCatalogue } from "@/lib/assemble/load-universe-catalogue";
 
 async function getContext(currentParticipantId: string) {
   const svc = getServiceClient();
@@ -56,6 +57,9 @@ async function getContext(currentParticipantId: string) {
     })),
     participants,
     currentParticipantId,
+    orphanUniverses: (await loadUniverseCatalogue())
+      .filter((row) => row.occupancy === "orphan")
+      .map((row) => ({ master_id: row.master_id, title: row.title })),
   };
 }
 
@@ -74,6 +78,7 @@ export default async function CreateWorkPage() {
       murals={context.murals}
       participants={context.participants}
       currentParticipantId={context.currentParticipantId}
+      orphanUniverses={context.orphanUniverses}
     />
   );
 }

@@ -56,6 +56,8 @@ export function providerThumbnailUrl(
   storageRef: string,
   opts: { timeSec?: number; width?: number } = {}
 ): string {
+  if (storageRef.startsWith("https://")) return storageRef;
+  if (provider === "https") return storageRef;
   if (provider === "mux" || provider === "curated-reference") {
     return muxThumbnailUrl(storageRef, opts.timeSec ?? 0, opts.width);
   }

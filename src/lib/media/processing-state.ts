@@ -48,9 +48,66 @@ export function processingStageLabel(kind: ProcessingKind, phase?: string | null
   return "Processing video…";
 }
 
+/**
+ * YouTube / HTTPS URL ingest stages.
+ * Mux does not report a byte percentage for URL pull. These are labeled
+ * operator stages, not a fake 0–100 bar.
+ */
+export const URL_INGEST_STAGES = [
+  { id: "submitted", label: "Submitted ingest" },
+  { id: "pulling", label: "Fetching the file into Mux" },
+  { id: "ready", label: "Playable in Incoming and Gallery" },
+] as const;
+
+export type UrlIngestStage = (typeof URL_INGEST_STAGES)[number]["id"] | "failed";
+
+export function classifyUrlIngestStage(input: {
+  phase?: string | null;
+  providerStatus?: string | null;
+  outcome?: string | null;
+}): UrlIngestStage {
+  const phase = input.phase ?? "";
+  const outcome = input.outcome ?? "";
+  const provider = (input.providerStatus ?? "").toLowerCase();
+  if (phase === "failed" || outcome === "failed" || provider === "errored") return "failed";
+  if (
+    phase === "ingested" ||
+    phase === "ready" ||
+    outcome === "ingested"
+  ) {
+    return "ready";
+  }
+  if (phase === "processing" || provider === "preparing" || provider === "asset_created") {
+    return "pulling";
+  }
+  if (phase === "uploading") return "pulling";
+  return "submitted";
+}
+
+export function urlIngestStageIndex(stage: UrlIngestStage): number {
+  if (stage === "failed") return 1;
+  if (stage === "submitted") return 0;
+  if (stage === "pulling") return 1;
+  return 2;
+}
+
+export function urlIngestStageLabel(stage: UrlIngestStage): string {
+  if (stage === "failed") return "Could not ingest this video";
+  if (stage === "submitted") return "Submitted ingest";
+  if (stage === "pulling") return "Fetching the file into Mux";
+  return "Playable in Incoming and Gallery";
+}
+
 /** Honest copy when the browser stops waiting while the job may still run. */
 export const REQUEST_TIMEOUT_COPY =
   "This page stopped waiting. Video processing may still be running. A request timeout is not a processing failure. You can leave and return to this work.";
 
 export const PROCESSING_FAILED_COPY =
   "The media provider reported that processing failed. The canonical work is preserved. Retry the upload against this work — do not create a new Universe.";
+
+/** Curate / Add Media URL ingest. No Universe is involved. Operator finishes on Gallery. */
+export const URL_INGEST_FAILED_COPY =
+  "The file did not become playable in Mux. The intake stays in Gallery. Upload the file there, retry with a signed-in YouTube session, or delete the shell. This did not create a Universe.";
+
+export const URL_INGEST_TIMEOUT_COPY =
+  "This page stopped waiting. Mux may still be processing the file. A request timeout is not a processing failure. Check Incoming and Gallery. This did not create a Universe.";

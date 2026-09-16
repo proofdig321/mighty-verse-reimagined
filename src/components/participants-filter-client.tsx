@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { PublicHero } from "@/components/public-hero";
 
 type ParticipantItem = {
   participant_id: string;
@@ -36,25 +37,12 @@ export default function ParticipantsFilterClient({ participants }: Props) {
 
   return (
     <div>
-      {/* Header band */}
-      <div className="border-b border-border bg-card/20">
-        <div className="mx-auto max-w-7xl px-6 py-6 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              The people building the universes
-            </p>
-            <h1
-              className="mt-1.5 text-3xl font-semibold text-foreground md:text-4xl"
-              style={{ fontFamily: "var(--font-display, inherit)" }}
-            >
-              Creators & Participants
-            </h1>
-            <p className="mt-1 text-sm text-muted-foreground">
-              The people building the universes.
-            </p>
-          </div>
-          {/* Filter tabs inline on the right */}
-          <div className="flex items-center gap-0.5 shrink-0 overflow-x-auto scrollbar-hidden">
+      <PublicHero
+        eyebrow="The people building the universes"
+        title="Creators & Participants"
+        description="The people building the universes."
+        aside={
+          <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hidden">
             {TABS.map((t) => (
               <button
                 key={t}
@@ -70,8 +58,8 @@ export default function ParticipantsFilterClient({ participants }: Props) {
               </button>
             ))}
           </div>
-        </div>
-      </div>
+        }
+      />
 
       {/* Grid */}
       <div className="mx-auto max-w-7xl px-6 py-10">

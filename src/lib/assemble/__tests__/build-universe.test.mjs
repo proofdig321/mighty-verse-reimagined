@@ -69,6 +69,7 @@ const assembly = buildUniverseAssembly({
 assert(assembly.title === "Super Hero Ego", "universe title");
 assert(assembly.murals.length === 1 && assembly.murals[0].master_id === MURAL, "one mural");
 assert(assembly.murals[0].has_media === true, "mural has bound media");
+assert(assembly.murals[0].asset_id === MUX_ASSET, "mural carries the bound Mux asset for Experience");
 assert(assembly.murals[0].storage_ref === MUX_PLAYBACK, "mural still uses Mux storage_ref");
 assert(assembly.murals[0].scenes.length === 4, "four scenes");
 assert(assembly.creative_moments.length === 3, "three creative moments");

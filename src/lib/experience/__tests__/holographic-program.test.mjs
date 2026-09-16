@@ -115,4 +115,28 @@ assert(reason, "Universe Creative Moments missing from Sentinel still join the p
 assert(reason.related_scene_ids.includes(DARK_KNIGHT), "Reason keeps its Scene relationship");
 assert(Boolean(reason.still_url), "Reason receives a Scene still for the collectible plane");
 
+const FR_MURAL = "14938419-9477-431a-be04-511b1e205bbd";
+const FR_PLAYBACK = "014sJhmHHRL2g52G14xG00L6MTyq4zvunCsZtFStk4Wds";
+const muralOnly = composeHolographicProgram({
+  title: "Father Raymond - Golden Shovel feat Reverb 360",
+  layers: [],
+  source: {
+    asset_id: "5f85a6f1-1f2a-4da7-af9b-8467e58d3b9c",
+    title: "Father Raymond - Golden Shovel feat Reverb 360",
+    provider: "mux",
+    playback_id: FR_PLAYBACK,
+    endpoint_ref: `https://stream.mux.com/${FR_PLAYBACK}.m3u8`,
+    duration_ms: 198400,
+    mural_id: FR_MURAL,
+    mural_title: "Father Raymond - Golden Shovel feat Reverb 360",
+    mural_projection_id: "b4b3614e-ef69-4abb-a5f5-8412473be57a",
+    mural_canonical_state_id: FR_MURAL,
+    windows: [],
+  },
+});
+assert(muralOnly.clock?.endpoint_ref.includes(FR_PLAYBACK), "Father Raymond mural-only Experience still has a Mux clock");
+assert(muralOnly.layers.some((layer) => layer.kind === "mural"), "Father Raymond mural becomes the cinema plane without Scenes");
+assert(muralOnly.windows.length === 0, "Father Raymond does not invent Scene windows");
+assert(muralOnly.creates_scene === false, "mural-only program still does not create Scenes");
+
 console.log("Holographic program tests: all passed");

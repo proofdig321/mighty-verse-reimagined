@@ -3,6 +3,7 @@ import {
   composeSentinelIntelligence,
   type SentinelIntelligence,
 } from "../media/sentinel-intelligence";
+import { resolveSuiteSourceAssetId } from "./source-preview";
 import { suiteScenes } from "./suite";
 import type { UniverseAssembly } from "./types";
 
@@ -14,7 +15,7 @@ export async function loadSentinelIntelligence(
   const mural = assembly.murals[0] ?? null;
   if (!scenes.length && !mural) return null;
 
-  const assetId = scenes.find((scene) => scene.asset_id)?.asset_id ?? null;
+  const assetId = resolveSuiteSourceAssetId(assembly);
   const includeObservations = options?.includeObservations !== false;
   let sessionId: string | null = null;
   let observations: {

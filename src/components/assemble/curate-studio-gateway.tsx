@@ -7,21 +7,20 @@ import {
   creativeSuiteHref,
   curateSentinelHref,
   mediaInspectHref,
+  mediaRecordHref,
   studioInspectionLabel,
   studioReadinessLabel,
   type CurateStudioMedia,
 } from "@/lib/assemble/studio";
-import { associationStatusLabel } from "@/lib/assemble/association";
+import { associationStatusLabel, mediaBoundToUniverseMural } from "@/lib/assemble/association";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 import type { CurateAssetFocus } from "@/lib/assemble/curate-context";
-import type { CurateStudioUniverse } from "@/lib/assemble/load-studio";
+import type { CuratePendingIngest, CurateStudioUniverse } from "@/lib/assemble/load-studio";
 import { AssociateWithUniverse } from "./associate-with-universe";
 import { CurateUniverseSelect } from "./curate-universe-select";
 import { CurateContinuationLinks } from "./curate-continuation";
 import { CurateYoutubeIngest } from "./curate-youtube-ingest";
-
-function untitled(kind: string) {
-  return <span className="italic text-muted-foreground">Untitled {kind}</span>;
-}
+import { DiscardMedia } from "./discard-media";
 
 function CurateAssetContextBanner({ focusedAsset }: { focusedAsset: CurateAssetFocus }) {
   if (focusedAsset.next === "unavailable") {
@@ -73,11 +72,13 @@ export default function CurateStudioGateway({
   universes,
   selectedUniverseId,
   focusedAsset,
+  pendingIngest = [],
 }: {
   media: CurateStudioMedia[];
   universes: CurateStudioUniverse[];
   selectedUniverseId: string | null;
   focusedAsset: CurateAssetFocus | null;
+  pendingIngest?: CuratePendingIngest[];
 }) {
   return (
     <div className="space-y-10">
@@ -88,8 +89,8 @@ export default function CurateStudioGateway({
               Incoming / Media
             </h2>
             <p className="text-sm text-muted-foreground max-w-3xl">
-              What has arrived. These are media assets — not Universes. YouTube is the primary ingest path; Mux pulls the file. Uploading media does not create a Universe.
-              Sentinel inspects them. Creative meaning is assembled in Creative Studio.
+              What has arrived. These are media assets — not Universes. YouTube is the primary ingest path; Mighty Verse fetches the file, then Mux processes it. Uploading media does not create a Universe.
+              Sentinel inspects them. Creative meaning is assembled in Creative Studio. Each row has Edit and Delete. Canonical Super Hero Ego and Father Raymond media cannot be deleted.
             </p>
           </div>
           <Link href={MEDIA_INTAKE_HREF} className={buttonVariants({ variant: "outline", size: "sm" })}>
@@ -97,7 +98,7 @@ export default function CurateStudioGateway({
           </Link>
         </div>
 
-        <CurateYoutubeIngest />
+        <CurateYoutubeIngest initialSessions={pendingIngest} />
 
         {focusedAsset ? <CurateAssetContextBanner focusedAsset={focusedAsset} /> : null}
 
@@ -119,7 +120,8 @@ export default function CurateStudioGateway({
               </thead>
               <tbody className="divide-y divide-border">
                 {media.map((item) => {
-                  const suiteHref = item.association.universe_id
+                  const muralBound = mediaBoundToUniverseMural(item.association, item.association.universe_id);
+                  const suiteHref = muralBound && item.association.universe_id
                     ? creativeSuiteHref(item.association.universe_id, "curate")
                     : null;
                   const isFocused = focusedAsset?.found === true && focusedAsset.asset_id === item.asset_id;
@@ -134,7 +136,13 @@ export default function CurateStudioGateway({
                       }
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{item.title ?? untitled("media")}</p>
+                        <p className="font-medium text-foreground">
+                          {galleryMediaLabel({
+                            title: item.title,
+                            universe_title: item.association.universe_title,
+                            mural_title: item.association.mural_title,
+                          })}
+                        </p>
                         <p className="mt-0.5 font-mono text-[11px] text-muted-foreground">
                           {item.provider ?? "unknown"}
                           {item.duration_ms != null ? ` · ${formatDuration(item.duration_ms / 1000)}` : ""}
@@ -153,6 +161,8 @@ export default function CurateStudioGateway({
                             <span>{associationStatusLabel(item.association)}</span>
                             {item.association.mural_title ? (
                               <span className="text-muted-foreground"> · Mural {item.association.mural_title}</span>
+                            ) : item.association.bound_as === "universe" ? (
+                              <span className="text-muted-foreground"> · Universe projection only</span>
                             ) : null}
                           </span>
                         ) : (
@@ -162,11 +172,27 @@ export default function CurateStudioGateway({
                       <td className="px-4 py-3 text-right">
                         <div className="flex flex-wrap justify-end gap-3">
                           <Link
+                            href={mediaRecordHref(item.asset_id)}
+                            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                          >
+                            Edit
+                          </Link>
+                          <Link
                             href={mediaInspectHref(item.asset_id)}
                             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                           >
                             Inspect
                           </Link>
+                          {item.deletable ? (
+                            <DiscardMedia
+                              assetId={item.asset_id}
+                              title={galleryMediaLabel({
+                                title: item.title,
+                                universe_title: item.association.universe_title,
+                                mural_title: item.association.mural_title,
+                              })}
+                            />
+                          ) : null}
                           {item.association.universe_id && (
                             <Link
                               href={curateSentinelHref(item.association.universe_id)}

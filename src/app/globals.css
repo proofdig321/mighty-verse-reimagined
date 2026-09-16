@@ -315,18 +315,32 @@ html[data-theme="tangerine"] {
   }
 
   /* Deck row — horizontal scroll, cards with slight rotation for physical feel */
+  .scene-deck-frame {
+    min-width: 0;
+    width: 100%;
+    overflow: hidden;
+  }
   .scene-deck-row {
     display: flex;
     align-items: flex-end;
     gap: 1rem;
+    min-width: 0;
+    width: 100%;
+    max-width: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     padding: 2.5rem 1rem 1.5rem;
     scrollbar-width: none;
     overscroll-behavior-inline: contain;
+    scroll-snap-type: x mandatory;
+    touch-action: pan-x;
+    -webkit-overflow-scrolling: touch;
   }
   .scene-deck-row::-webkit-scrollbar { display: none; }
-  .scene-deck-row > div { flex-shrink: 0; }
+  .scene-deck-row > * {
+    flex: 0 0 auto;
+    scroll-snap-align: start;
+  }
 
   .scene-deck-card {
     position: relative;
@@ -555,10 +569,124 @@ html[data-theme="tangerine"] {
     gap: 1.25rem;
   }
 
+  .storyboard-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .storyboard-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .storyboard-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    background: color-mix(in oklch, var(--background) 40%, transparent);
+    padding: 1rem;
+  }
+
+  .storyboard-dialog {
+    width: min(36rem, 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 1.25rem;
+    box-shadow: 0 16px 40px color-mix(in oklch, var(--foreground) 12%, transparent);
+  }
+
+  .storyboard-assist-diff {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .storyboard-assist-diff {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
   .storyboard-stage {
     display: grid;
     gap: 1.25rem;
     min-height: min(70vh, 52rem);
+    align-items: stretch;
+  }
+
+  .storyboard-progress {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+    border-radius: var(--radius);
+    background: color-mix(in oklch, var(--card) 88%, transparent);
+  }
+
+  .storyboard-progress-track {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem;
+  }
+
+  @media (min-width: 768px) {
+    .storyboard-progress-track {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  .storyboard-progress-step {
+    min-width: 0;
+  }
+
+  .storyboard-progress-step button,
+  .storyboard-progress-step p {
+    margin: 0.35rem 0 0;
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .storyboard-progress-step[data-complete="true"] p {
+    color: var(--foreground);
+  }
+
+  .storyboard-progress-bar {
+    height: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--muted) 80%, transparent);
+    overflow: hidden;
+  }
+
+  .storyboard-progress-bar span {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--accent-mv);
+    transform-origin: left center;
+    transform: scaleX(0);
+  }
+
+  .storyboard-progress-step[data-complete="true"] .storyboard-progress-bar span {
+    transform: scaleX(1);
+  }
+
+  .storyboard-tab-panel {
+    min-height: 28rem;
+  }
+
+  .storyboard-workspace [data-slot="tabs-list"] {
+    height: auto;
+    min-height: 2rem;
+    flex-wrap: wrap;
+    overflow: visible;
   }
 
   @media (min-width: 1024px) {
@@ -961,7 +1089,15 @@ html[data-theme="tangerine"] {
   }
 
   .suite-scene-grid {
-    grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+    grid-template-columns: 1fr;
+  }
+
+  @media (min-width: 1100px) {
+    .suite-scene-object {
+      display: grid;
+      grid-template-columns: minmax(14rem, 18rem) minmax(0, 1fr);
+      align-items: stretch;
+    }
   }
 
   .suite-moment-grid {
@@ -1782,6 +1918,10 @@ html[data-theme="tangerine"] {
     min-width: 0;
     z-index: 1;
     overflow: hidden;
+    background: transparent;
+  }
+
+  .holographic-cinema:has([data-holographic-warp="live"]) {
     background: #050505;
   }
 

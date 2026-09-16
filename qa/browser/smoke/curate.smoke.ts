@@ -58,7 +58,10 @@ test("Authority dashboard opens Curate then Super Hero Ego hub, not a stacked pa
   await expect(page).toHaveURL(new RegExp(`${ROUTES.curate}$`));
   await expect(page.getByRole("heading", { name: /^Curate$/ })).toBeVisible();
   await expect(page.getByText("Shape the work").first()).toBeVisible();
-  await expect(page.getByText(/Uploading media does not create a Universe/i)).toBeVisible();
+  await expect(page.getByLabel("YouTube URL")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Ingest with Mux/i })).toBeVisible();
+  await expect(page.getByText(/Pasting a link does not create a Universe/i)).toBeVisible();
+  await expect(page.getByText(/Retry the upload against this work/i)).toHaveCount(0);
   await expect(page.getByRole("heading", { name: /Incoming \/ Media/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Curation context/i })).toBeVisible();
   await expect(page.getByRole("heading", { name: /Curate Hub/i })).toHaveCount(0);
@@ -74,6 +77,11 @@ test("Authority dashboard opens Curate then Super Hero Ego hub, not a stacked pa
     "href",
     `${ROUTES.authorityUniverseWorkspace}?from=curate`,
   );
+  await expect(muxRow.getByRole("link", { name: "Edit", exact: true })).toHaveAttribute(
+    "href",
+    ROUTES.authorityMuxAsset,
+  );
+  await expect(muxRow.getByRole("button", { name: "Delete" })).toHaveCount(0);
   await expect(muxRow.getByRole("link", { name: "Sentinel", exact: true })).toHaveAttribute(
     "href",
     ROUTES.authorityCurateSentinel,

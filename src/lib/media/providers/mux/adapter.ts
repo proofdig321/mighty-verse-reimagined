@@ -6,7 +6,11 @@
  *
  * Server-side only. Never import from client components.
  */
+import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import { Readable } from "node:stream";
 import type { MediaProvider, MediaClass, MediaPlaybackSource, ProviderAsset, DirectUploadResult } from "../interface";
+import { formatMuxAssetFailure } from "../../mux-asset-error";
 import { getMuxClient } from "./client";
 
 export type DirectUploadStatus = {
@@ -144,6 +148,56 @@ export class MuxAdapter implements MediaProvider {
   }
 
   /**
+   * PUT a local file to Mux Direct Upload and wait until Mux assigns an asset id.
+   * Does not wait for playback — webhook/reconcile finish ingest.
+   */
+  async uploadLocalFile(params: {
+    filePath: string;
+    passthrough: string;
+    corsOrigin: string;
+    contentType?: string;
+  }): Promise<{ providerUploadId: string; providerAssetId: string }> {
+    const upload = await this.createDirectUpload({
+      name: "production-proof.mp4",
+      passthrough: params.passthrough,
+      corsOrigin: params.corsOrigin,
+    });
+    if (!upload.uploadUrl) {
+      throw new Error("Mux direct upload URL was not created.");
+    }
+    const { size } = await stat(params.filePath);
+    const put = await fetch(upload.uploadUrl, {
+      method: "PUT",
+      headers: {
+        "Content-Type": params.contentType ?? "video/mp4",
+        "Content-Length": String(size),
+      },
+      body: Readable.toWeb(createReadStream(params.filePath)) as unknown as BodyInit,
+      duplex: "half",
+    } as RequestInit);
+    if (!put.ok) {
+      throw new Error(`Mux direct upload failed (${put.status}).`);
+    }
+
+    let assetId: string | null = null;
+    for (let attempt = 0; attempt < 45; attempt += 1) {
+      const status = await this.retrieveDirectUpload(upload.providerUploadId);
+      if (status?.status === "errored" || status?.status === "timed_out" || status?.status === "cancelled") {
+        throw new Error(`Mux direct upload ${status.status}. Mighty Verse will not invent an asset.`);
+      }
+      if (status?.assetId) {
+        assetId = status.assetId;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+    if (!assetId) {
+      throw new Error("Mux did not return an asset ID after upload. Mighty Verse will not invent one.");
+    }
+    return { providerUploadId: upload.providerUploadId, providerAssetId: assetId };
+  }
+
+  /**
    * Ingest a local production file through Mux Direct Upload.
    * Used when the executor returns a file rather than a public URL.
    * Mux still owns processing/playback; Mighty Verse does not invent IDs.
@@ -154,39 +208,21 @@ export class MuxAdapter implements MediaProvider {
     corsOrigin: string;
     contentType?: string;
   }): Promise<ProviderAsset> {
-    const { readFile } = await import("node:fs/promises");
-    const upload = await this.createDirectUpload({
-      name: "production-proof.mp4",
-      passthrough: params.passthrough,
-      corsOrigin: params.corsOrigin,
-    });
-    if (!upload.uploadUrl) {
-      throw new Error("Mux direct upload URL was not created.");
-    }
-    const body = await readFile(params.filePath);
-    const put = await fetch(upload.uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": params.contentType ?? "video/mp4" },
-      body: new Uint8Array(body),
-    });
-    if (!put.ok) {
-      throw new Error(`Mux direct upload failed (${put.status}).`);
-    }
+    const uploaded = await this.uploadLocalFile(params);
+    return this.waitForPlayback(uploaded.providerAssetId);
+  }
 
-    let assetId: string | null = null;
-    for (let attempt = 0; attempt < 45; attempt += 1) {
-      const status = await this.retrieveDirectUpload(upload.providerUploadId);
-      if (status?.assetId) {
-        assetId = status.assetId;
-        break;
-      }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+  async retrieveAssetFailure(providerAssetId: string): Promise<string | null> {
+    try {
+      const mux = getMuxClient();
+      const raw = await mux.video.assets.retrieve(providerAssetId);
+      return formatMuxAssetFailure({
+        status: typeof raw.status === "string" ? raw.status : null,
+        errors: raw.errors ?? null,
+      });
+    } catch {
+      return null;
     }
-    if (!assetId) {
-      throw new Error("Mux did not return an asset ID after upload. Mighty Verse will not invent one.");
-    }
-
-    return this.waitForPlayback(assetId);
   }
 
   async waitForPlayback(providerAssetId: string): Promise<ProviderAsset> {
@@ -197,7 +233,13 @@ export class MuxAdapter implements MediaProvider {
         const asset = mapMuxAsset(raw);
         const status = typeof raw.status === "string" ? raw.status : "";
         if (status === "errored") {
-          throw new Error("Mux asset processing failed. Mighty Verse will not invent playback.");
+          const detail = formatMuxAssetFailure({
+            status,
+            errors: raw.errors ?? null,
+          });
+          throw new Error(
+            `${detail ?? "Mux asset processing failed."} Mighty Verse will not invent playback.`,
+          );
         }
         if (asset.playbackId && status === "ready") return asset;
       } catch (caught) {

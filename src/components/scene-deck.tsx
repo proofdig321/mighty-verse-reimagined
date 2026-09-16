@@ -121,7 +121,7 @@ export default function SceneDeck({
   );
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dropTargetId, setDropTargetId] = useState<string | null>(null);
-  const [gridView, setGridView] = useState(false);
+  const [gridView, setGridView] = useState(scenes.length > 4);
   const [sequence, setSequence] = useState<CustomSequenceItem[]>([]);
   const [playerSegments, setPlayerSegments] = useState<PlaybackSegment[] | null>(null);
   const draggedInteraction = useRef(false);
@@ -446,7 +446,7 @@ export default function SceneDeck({
       ) : (
         /* Deck view — horizontal spread, draggable, with timeline below */
         <div className="space-y-2">
-          <div className="relative">
+          <div className="scene-deck-frame relative min-w-0">
             {/* Left arrow */}
             <button
               type="button"

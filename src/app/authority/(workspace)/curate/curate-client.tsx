@@ -13,17 +13,23 @@ import {
 } from "@/lib/media/intelligence";
 import {
   timestampsToCandidates,
-  acceptCandidate,
   rejectCandidate,
   adjustCandidate,
   effectiveBoundary,
   type SceneCandidate,
 } from "@/lib/media/scene-candidates";
+import {
+  composeSceneTitle,
+  SCENE_STRUCTURE_ROLES,
+  type SceneStructureRoleId,
+} from "@/lib/media/scene-structure";
+import { CURATE_NEAREST_SCENE_MS, nearestCanonicalScene } from "@/lib/media/inspect-scope";
 import type {
   CurateMural,
   CurateScene,
   CurateAsset,
 } from "@/lib/assemble/load-curate-inspection";
+import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -37,6 +43,34 @@ function fmtMs(ms: number | null): string {
 function fmtSec(ms: number | null): string {
   if (ms == null) return "—";
   return `${(ms / 1000).toFixed(1)}s`;
+}
+
+function StructureSelect({
+  id,
+  value,
+  onChange,
+}: {
+  id: string;
+  value: SceneStructureRoleId;
+  onChange: (value: SceneStructureRoleId) => void;
+}) {
+  return (
+    <label className="text-xs text-muted-foreground block">
+      Structure
+      <select
+        id={id}
+        value={value}
+        onChange={(event) => onChange(event.target.value as SceneStructureRoleId)}
+        className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1.5 text-sm"
+      >
+        {SCENE_STRUCTURE_ROLES.map((role) => (
+          <option key={role.id} value={role.id}>
+            {role.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
 }
 
 function pct(ms: number, total: number): number {
@@ -58,6 +92,7 @@ async function api(path: string, body: unknown) {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 type Props = {
+  universeId: string;
   mural: CurateMural | null;
   scenes: CurateScene[];
   availableAssets: CurateAsset[];
@@ -80,6 +115,7 @@ function providerThumbUrl(provider: string | null, storageRef: string, timeMs: n
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function CurateClient({
+  universeId,
   mural,
   scenes: initialScenes,
   availableAssets,
@@ -115,8 +151,15 @@ export default function CurateClient({
   // ── Scene creation ──────────────────────────────────────────────────────────
   const [creatingFromId, setCreatingFromId] = useState<string | null>(null);
   const [newSceneTitle, setNewSceneTitle] = useState("");
+  const [newSceneRole, setNewSceneRole] = useState<SceneStructureRoleId>("intro");
   const [createMsg, setCreateMsg] = useState<string | null>(null);
   const [createBusy, setCreateBusy] = useState(false);
+  const [manualRole, setManualRole] = useState<SceneStructureRoleId>("intro");
+  const [manualTitle, setManualTitle] = useState("");
+  const [manualStart, setManualStart] = useState(0);
+  const [manualEnd, setManualEnd] = useState(0);
+  const [retainMsg, setRetainMsg] = useState<string | null>(null);
+  const [retainBusy, setRetainBusy] = useState(false);
 
   // ── Mural asset binding ─────────────────────────────────────────────────────
   const [bindingAsset, setBindingAsset] = useState(false);
@@ -166,9 +209,11 @@ export default function CurateClient({
     if (!video) return;
     const onTime = () => setCurrentMs(Math.round(video.currentTime * 1000));
     const onMeta = () => {
-      setDurationMs(Math.round(video.duration * 1000));
+      const duration = Math.round(video.duration * 1000);
+      setDurationMs(duration);
       setMetadata(extractBrowserMetadata(video));
       setPlayerReady(true);
+      setManualEnd((current) => current || duration);
     };
     video.addEventListener("timeupdate", onTime);
     video.addEventListener("loadedmetadata", onMeta);
@@ -234,19 +279,25 @@ export default function CurateClient({
   }
 
   // ── Create canonical Scene from accepted candidate ──────────────────────────
-  async function createScene(candidate: SceneCandidate) {
-    if (!mural || !newSceneTitle.trim()) return;
-    const { startMs, endMs } = effectiveBoundary(candidate);
+  async function submitScene(opts: {
+    title: string;
+    startMs: number;
+    endMs: number;
+    candidate?: SceneCandidate;
+  }) {
+    if (!mural) return;
     const assetId = mural.asset_id;
     if (!assetId) { setCreateMsg("Mural has no media asset bound."); return; }
+    if (!opts.title.trim()) { setCreateMsg("Scene title is required."); return; }
+    if (opts.endMs <= opts.startMs) { setCreateMsg("End must be after start."); return; }
 
     setCreateBusy(true);
     setCreateMsg(null);
     const res = await api("/api/authority/scenes", {
       mural_master_id: mural.master_id,
-      title: newSceneTitle.trim(),
-      start_ms: startMs,
-      end_ms: endMs ?? startMs + 1000,
+      title: opts.title.trim(),
+      start_ms: opts.startMs,
+      end_ms: opts.endMs,
       asset_id: assetId,
     });
     setCreateBusy(false);
@@ -254,23 +305,63 @@ export default function CurateClient({
       setCreateMsg(`Error: ${res.error}`);
       return;
     }
-    // Add to local scenes list
     setScenes((prev) => [
       ...prev,
       {
         master_id: res.master_id,
-        title: newSceneTitle.trim(),
+        title: opts.title.trim(),
         sort_order: null,
-        start_ms: startMs,
-        end_ms: endMs ?? null,
+        start_ms: opts.startMs,
+        end_ms: opts.endMs,
         projection_id: res.projection_id,
         asset_id: assetId,
       },
     ]);
-    updateCandidate({ ...candidate, reviewState: "accepted" });
+    if (opts.candidate) updateCandidate({ ...opts.candidate, reviewState: "accepted" });
     setCreatingFromId(null);
     setNewSceneTitle("");
-    setCreateMsg(`Scene "${newSceneTitle.trim()}" created.`);
+    setCreateMsg(`Scene "${opts.title.trim()}" created.`);
+  }
+
+  async function createScene(candidate: SceneCandidate) {
+    const { startMs, endMs } = effectiveBoundary(candidate);
+    const title = composeSceneTitle(newSceneRole, newSceneTitle);
+    await submitScene({
+      title,
+      startMs,
+      endMs: endMs ?? startMs + 1000,
+      candidate,
+    });
+  }
+
+  async function createManualScene() {
+    const title = composeSceneTitle(manualRole, manualTitle);
+    await submitScene({
+      title,
+      startMs: manualStart,
+      endMs: manualEnd || (effectiveDuration || manualStart + 1000),
+    });
+  }
+
+  async function keepStill(timeMs: number) {
+    if (!mural?.asset_id) {
+      setRetainMsg("Mural has no media asset bound.");
+      return;
+    }
+    setRetainBusy(true);
+    setRetainMsg(null);
+    const res = await api("/api/authority/references", {
+      universe_id: universeId,
+      source_asset_id: mural.asset_id,
+      time_ms: timeMs,
+      role: "still",
+    });
+    setRetainBusy(false);
+    setRetainMsg(res.ok
+      ? res.already
+        ? "That still is already a curated reference."
+        : "Kept as a production reference."
+      : `Error: ${res.error ?? "Reference could not be retained."}`);
   }
 
   // ── Bind asset to mural projection ─────────────────────────────────────────
@@ -334,7 +425,7 @@ export default function CurateClient({
                     <option value="">Select asset…</option>
                     {availableAssets.map((a) => (
                       <option key={a.asset_id} value={a.asset_id}>
-                        {a.title ?? `${a.provider ?? "unknown"} · ${a.storage_ref.slice(0, 16)}`} · {a.duration_ms ? fmtSec(a.duration_ms) : "—"}
+                        {galleryMediaLabel({ title: a.title })} · {a.duration_ms ? fmtSec(a.duration_ms) : "—"}
                       </option>
                     ))}
                   </select>
@@ -508,6 +599,65 @@ export default function CurateClient({
             </CardContent>
           </Card>
 
+          <Card data-establish-window="manual">
+            <CardContent className="pt-4 space-y-3">
+              <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Establish a Scene window
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Visual inspection proposes candidates. You name the window (Intro, Verse 1, Hook…) and set start/end.
+                This creates a canonical Scene. Sentinel does not invent musical structure.
+              </p>
+              <StructureSelect id="manual-structure" value={manualRole} onChange={setManualRole} />
+              <input
+                type="text"
+                placeholder="Optional title (e.g. Worldwide Studios)"
+                value={manualTitle}
+                onChange={(event) => setManualTitle(event.target.value)}
+                className="border-input bg-background text-foreground w-full rounded-md border px-3 py-1.5 text-sm"
+              />
+              <div className="grid grid-cols-2 gap-2">
+                <label className="text-xs text-muted-foreground">
+                  Start (ms)
+                  <input
+                    type="number"
+                    value={manualStart}
+                    onChange={(event) => setManualStart(Number(event.target.value))}
+                    className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm"
+                  />
+                </label>
+                <label className="text-xs text-muted-foreground">
+                  End (ms)
+                  <input
+                    type="number"
+                    value={manualEnd}
+                    onChange={(event) => setManualEnd(Number(event.target.value))}
+                    className="border-input bg-background text-foreground mt-1 w-full rounded-md border px-2 py-1 text-sm"
+                  />
+                </label>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button size="sm" variant="outline" type="button" onClick={() => setManualStart(currentMs)}>
+                  Playhead → start
+                </Button>
+                <Button size="sm" variant="outline" type="button" onClick={() => setManualEnd(currentMs || effectiveDuration)}>
+                  Playhead → end
+                </Button>
+                <Button size="sm" variant="outline" type="button" disabled={retainBusy} onClick={() => void keepStill(currentMs)}>
+                  {retainBusy ? "Keeping…" : "Keep still as reference"}
+                </Button>
+                <Button
+                  size="sm"
+                  disabled={createBusy || !mural?.asset_id}
+                  onClick={() => void createManualScene()}
+                >
+                  {createBusy ? "Creating…" : `Create ${composeSceneTitle(manualRole, manualTitle)}`}
+                </Button>
+              </div>
+              {retainMsg ? <p className="text-xs text-muted-foreground">{retainMsg}</p> : null}
+            </CardContent>
+          </Card>
+
           {/* Frame strip */}
           {frames.length > 0 && (
             <Card>
@@ -604,15 +754,9 @@ export default function CurateClient({
                   const isCreating = creatingFromId === candidate.candidateId;
                   const isAdjusting = adjustingId === candidate.candidateId;
 
-                  // Nearest canonical scene
-                  let nearest: CurateScene | null = null;
-                  let nearestDiff = Infinity;
-                  for (const s of scenes) {
-                    if (s.start_ms == null) continue;
-                    const diff = Math.abs(s.start_ms - startMs);
-                    if (diff < nearestDiff) { nearestDiff = diff; nearest = s; }
-                  }
-                  if (nearestDiff > 15000) nearest = null;
+                  const nearestMatch = nearestCanonicalScene(scenes, startMs, CURATE_NEAREST_SCENE_MS);
+                  const nearest = nearestMatch?.scene ?? null;
+                  const nearestDiff = nearestMatch?.deltaMs ?? Infinity;
 
                   // Mux thumbnail if available
                   const candidateThumb = mural?.storage_ref
@@ -719,14 +863,16 @@ export default function CurateClient({
                             <p className="text-xs font-semibold text-foreground">Create canonical Scene</p>
                             <p className="text-[10px] text-muted-foreground">
                               This will create a permanent canonical Scene record: Master → CanonicalState → Projection → Binding.
+                              Pick the editorial structure. Do not leave Sentinel to guess verse vs hook.
                             </p>
                             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground font-mono">
                               <span>Start: {fmtMs(startMs)}</span>
                               <span>End: {fmtMs(endMs)}</span>
                             </div>
+                            <StructureSelect id={`structure-${candidate.candidateId}`} value={newSceneRole} onChange={setNewSceneRole} />
                             <input
                               type="text"
-                              placeholder="Scene title (required)"
+                              placeholder="Optional title"
                               value={newSceneTitle}
                               onChange={(e) => setNewSceneTitle(e.target.value)}
                               className="border-input bg-background text-foreground w-full rounded-md border px-3 py-1.5 text-sm"
@@ -735,10 +881,10 @@ export default function CurateClient({
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
-                                disabled={createBusy || !newSceneTitle.trim()}
-                                onClick={() => createScene(candidate)}
+                                disabled={createBusy || (newSceneRole === "other" && !newSceneTitle.trim())}
+                                onClick={() => void createScene(candidate)}
                               >
-                                {createBusy ? "Creating…" : "Confirm — Create Scene"}
+                                {createBusy ? "Creating…" : `Confirm — ${composeSceneTitle(newSceneRole, newSceneTitle)}`}
                               </Button>
                               <Button size="sm" variant="outline" onClick={() => { setCreatingFromId(null); setNewSceneTitle(""); }}>
                                 Cancel
@@ -773,6 +919,9 @@ export default function CurateClient({
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => { setAdjustingId(candidate.candidateId); setAdjustStart(startMs); setAdjustEnd(endMs ?? 0); }}>
                                   Adjust
+                                </Button>
+                                <Button size="sm" variant="outline" disabled={retainBusy} onClick={() => void keepStill(startMs)}>
+                                  Keep still
                                 </Button>
                                 <Button size="sm" variant="outline" onClick={() => updateCandidate(rejectCandidate(candidate))}>
                                   Reject

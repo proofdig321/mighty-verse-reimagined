@@ -139,7 +139,9 @@ export async function GET() {
         : participant.participant_id.slice(0, 8);
       return { participant_id: participant.participant_id, label };
     }),
-    mediaIntakes: (mediaIntake ?? []).map((intake) => ({ ...intake, credits: (mediaIntakeCredits ?? []).filter((credit) => credit.intake_id === intake.intake_id) })),
+    mediaIntakes: (mediaIntake ?? [])
+      .filter((intake) => intake.search_status !== "excluded")
+      .map((intake) => ({ ...intake, credits: (mediaIntakeCredits ?? []).filter((credit) => credit.intake_id === intake.intake_id) })),
     mediaIntakeCredits: mediaIntakeCredits ?? [],
     mediaAssets: (mediaAssets ?? []).map((asset) => {
       const intake = (mediaIntake ?? []).find((item) => item.asset_id === asset.asset_id);

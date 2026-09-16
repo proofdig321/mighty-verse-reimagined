@@ -61,6 +61,8 @@ test("Super Hero Ego holographic Experience plays Mux mural through canonical Sc
   notes.push("B1: Mux frames are bound as the WebGL video texture");
   await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-flip-y", "false");
   await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-parallax", "0.75");
+  await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-overlays", "none");
+  await expect(page.locator("[data-holographic-theater]")).toHaveAttribute("data-holographic-cinema-fill", "1");
   await expect
     .poll(async () => {
       const orientation = await sampleCinemaOrientation(page);

@@ -6,6 +6,7 @@
  * invent an asset or reassign a bound one.
  */
 
+import { mediaBoundToUniverseMural } from "./association";
 import type { CurateStudioMedia } from "./studio";
 
 const UUID_RE =
@@ -61,7 +62,8 @@ export function resolveCurateAssetFocus(input: {
   }
 
   const universeId = match.association.universe_id;
-  if (universeId) {
+  const muralBound = mediaBoundToUniverseMural(match.association, universeId);
+  if (universeId && muralBound) {
     return {
       asset_id: match.asset_id,
       found: true,

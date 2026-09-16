@@ -70,7 +70,20 @@ export function SceneTiming({
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
 
-  if (!canAuthor || !bindingId) return null;
+  if (!canAuthor) return null;
+
+  if (!bindingId) {
+    return (
+      <div className="suite-identity-actions">
+        <Button type="button" variant="outline" size="sm" disabled>
+          Edit timing
+        </Button>
+        <p className="suite-presence-status">
+          This Scene has no media window yet. Bind mural media, then the start and end clocks can be shaped here.
+        </p>
+      </div>
+    );
+  }
 
   async function onSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();

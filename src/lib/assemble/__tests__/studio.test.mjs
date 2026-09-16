@@ -1,4 +1,4 @@
-import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref } from "../studio";
+import { associateAssetWithCanonicalWork, mediaIsCanonicalUniverse, mediaInspectHref, creativeSuiteHref, creativeSuiteSentinelHref, creativeSuiteWorkspaceHref, curateStudioHref, curateHubHref, curateSentinelHref, curateMuralHref, curateMomentHref, curateIncomingHref, curateAttachHref } from "../studio";
 import { creativeSuiteNavItems, resolveStudioHash, suiteChildHref } from "../suite";
 
 function assert(condition, message) {
@@ -77,6 +77,17 @@ assert(sceneOnly.universe_id === UNIVERSE, "Scene binding still walks to the Uni
 assert(sceneOnly.mural_id === MURAL, "Scene parent Mural is retained");
 assert(sceneOnly.bound_as === "scene", "scene-only binding is not mural ownership of the Creative Moment");
 
+const universeProjection = associateAssetWithCanonicalWork({
+  assetId: ASSET,
+  bindings: [{ asset_id: ASSET, projection_id: "universe-proj" }],
+  projections: [{ projection_id: "universe-proj", master_id: UNIVERSE }],
+  masters,
+  presentations,
+});
+assert(universeProjection.universe_id === UNIVERSE, "Universe-level bind still walks to Super Hero Ego");
+assert(universeProjection.mural_id === null, "Universe-level bind does not invent a Mural");
+assert(universeProjection.bound_as === "universe", "Universe projection is not mural curation");
+
 assert(mediaInspectHref(ASSET) === `/authority/media/inspect?assetId=${ASSET}`, "inspect reuses the existing media inspect route");
 assert(creativeSuiteHref(UNIVERSE, "curate") === `/authority/universes/${UNIVERSE}?from=curate`, "suite href preserves Curate origin");
 assert(creativeSuiteSentinelHref(UNIVERSE) === `/authority/universes/${UNIVERSE}/storyboard?source=sentinel`, "inspect continues into Suite Sentinel without merging the surfaces");
@@ -91,6 +102,7 @@ assert(
   "bound work occupancy prefers the hub over stacking asset query onto the index",
 );
 assert(curateIncomingHref(ASSET) === `/authority/curate?asset=${ASSET}`, "incoming attach stays on the catalogue");
+assert(curateAttachHref(UNIVERSE) === `/authority/curate/${UNIVERSE}/attach`, "source attach is a hub child page");
 assert(curateStudioHref() === "/authority/curate", "Curate without context stays on the incoming catalogue");
 
 const suite = `/authority/universes/${UNIVERSE}`;

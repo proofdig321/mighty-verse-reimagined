@@ -16,6 +16,7 @@ export function SentinelIntelligencePanel({
   canRetainReference = false,
   inspectHref,
   previewHref,
+  establishHref,
 }: {
   universeId: string;
   intelligence: SentinelIntelligence;
@@ -23,6 +24,7 @@ export function SentinelIntelligencePanel({
   canRetainReference?: boolean;
   inspectHref?: string | null;
   previewHref?: string | null;
+  establishHref?: string | null;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string[]>(
@@ -118,6 +120,7 @@ export function SentinelIntelligencePanel({
   }
 
   const adjustCount = intelligence.proposals.filter((proposal) => proposal.status === "adjust").length;
+  const needsEstablish = intelligence.proposals.length === 0;
 
   return (
     <div className="suite-intelligence">
@@ -144,6 +147,11 @@ export function SentinelIntelligencePanel({
           </div>
         </dl>
         <div className="flex flex-wrap gap-2 mt-3">
+          {needsEstablish && establishHref ? (
+            <Link href={establishHref} className={cn(buttonVariants({ size: "sm" }))} data-establish-scenes="sentinel">
+              Establish Scenes
+            </Link>
+          ) : null}
           {inspectHref ? (
             <Link href={inspectHref} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
               Open Inspect
@@ -243,8 +251,15 @@ export function SentinelIntelligencePanel({
           Scene-boundary proposals
         </h3>
         <p className="suite-section-note">
-          System proposal is Sentinel-derived. Canonical is already authorised. Authorising writes existing Scene windows only. It does not create Scenes.
+          {needsEstablish
+            ? "This Universe has no canonical Scenes yet. Authorise cannot write windows until you Accept as Scene on Curate Sentinel. Extra beats can still be kept as production stills."
+            : "System proposal is Sentinel-derived. Canonical is already authorised. Authorising writes existing Scene windows only. It does not create Scenes."}
         </p>
+        {needsEstablish ? (
+          <p className="suite-section-note mt-2" data-sentinel-empty-scenes="true">
+            Name Intro, Verse, Hook (or Other) and set start/end on Curate Sentinel. Visual candidates are evidence, not musical analysis.
+          </p>
+        ) : null}
         <ul className="space-y-2">
           {intelligence.proposals.map((proposal) => (
             <li
@@ -287,7 +302,16 @@ export function SentinelIntelligencePanel({
           </p>
         ) : null}
         <div id="sentinel-authorise" className="mt-4">
-          {canAuthorise ? (
+          {needsEstablish && establishHref ? (
+            <div className="flex flex-wrap items-center gap-3">
+              <Link href={establishHref} className={cn(buttonVariants({ size: "sm" }))}>
+                Establish Scenes on Curate Sentinel
+              </Link>
+              <p className="suite-section-note">
+                Storyboard Authorise only patches existing Scene bindings. Create the windows first.
+              </p>
+            </div>
+          ) : canAuthorise ? (
             <div className="flex flex-wrap items-center gap-3">
               <Button
                 type="button"

@@ -25,6 +25,7 @@ export type UniverseAssemblyScene = {
   creative_moment_title: string | null;
   provider: string | null;
   storage_ref: string | null;
+  artwork_storage_ref: string | null;
 };
 
 export type UniverseAssemblyMural = {
@@ -32,6 +33,7 @@ export type UniverseAssemblyMural = {
   title: string | null;
   scenes: UniverseAssemblyScene[];
   has_media: boolean;
+  asset_id: string | null;
   provider: string | null;
   storage_ref: string | null;
 };
@@ -60,7 +62,7 @@ export type UniverseAssemblyRows = {
   muralMasters: { master_id: string }[];
   momentMasters: { master_id: string }[];
   sceneMasters: { master_id: string; parent_master_id: string | null; sort_order: number | null }[];
-  presentations: { master_id: string; title: string | null; description?: string | null }[];
+  presentations: { master_id: string; title: string | null; description?: string | null; artwork_storage_ref?: string | null }[];
   sceneProjections: { projection_id: string; master_id: string }[];
   muralProjections: { projection_id: string; master_id: string }[];
   momentProjections: { projection_id: string; master_id: string }[];

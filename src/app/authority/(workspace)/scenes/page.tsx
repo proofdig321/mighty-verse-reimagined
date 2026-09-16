@@ -7,6 +7,8 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { ChevronRight } from "lucide-react";
 import { formatDuration } from "@/lib/media/timing";
 import SceneOrderClient from "./scene-order-client";
+import { WithdrawWork } from "@/components/assemble/withdraw-work";
+import { canWithdrawMaster } from "@/lib/assemble/withdraw";
 
 function formatMs(ms: number | null) {
   if (ms == null) return null;
@@ -17,14 +19,17 @@ async function getData() {
   const svc = getServiceClient();
   const { data: masters } = await svc
     .from("master")
-    .select("master_id, canonical_type, parent_master_id, sort_order, created_at")
+    .select("master_id, canonical_type, parent_master_id, sort_order, current_state_id, created_at")
     .eq("canonical_type", "scene")
     .order("sort_order", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: true });
 
   if (!masters?.length) return [];
 
-  const ids = masters.map((m) => m.master_id);
+  const live = masters.filter((m) => m.current_state_id);
+  if (!live.length) return [];
+
+  const ids = live.map((m) => m.master_id);
   const parentIds = [...new Set(masters.map((m) => m.parent_master_id).filter(Boolean))] as string[];
 
   const [{ data: presentations }, { data: parentPresentations }, { data: projections }] = await Promise.all([
@@ -43,7 +48,7 @@ async function getData() {
         .in("projection_id", projIds)
     : { data: [] };
 
-  return masters.map((m) => {
+  return live.map((m) => {
     const pres = (presentations ?? []).find((p) => p.master_id === m.master_id);
     const parentPres = m.parent_master_id ? (parentPresentations ?? []).find((p) => p.master_id === m.parent_master_id) : null;
     const proj = (projections ?? []).find((p) => p.master_id === m.master_id);
@@ -59,6 +64,7 @@ async function getData() {
       startMs: binding?.start_ms ?? null,
       endMs: binding?.end_ms ?? null,
       playable,
+      withdrawable: canWithdrawMaster(m.master_id, m.current_state_id),
     };
   });
 }
@@ -78,6 +84,7 @@ export default async function ScenesPage() {
         <h1 className="text-3xl font-semibold tracking-tight">Scenes</h1>
         <p className="text-sm text-muted-foreground">
           Canonical Scenes. Each Scene belongs to a Mural. Timing is a media-realization observation, not canonical Scene identity.
+          Each row has Edit and Withdraw. Super Hero Ego Scenes cannot be withdrawn.
           {scenes.length > 0 && <span className="ml-2 text-muted-foreground/60">{scenes.length} scene{scenes.length !== 1 ? "s" : ""}</span>}
         </p>
       </div>
@@ -125,9 +132,15 @@ export default async function ScenesPage() {
                       : <span className="text-xs text-muted-foreground/50">Missing</span>}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <a href={`/authority/${s.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
-                      Open <ChevronRight size={13} />
-                    </a>
+                    <div className="flex flex-wrap items-center justify-end gap-3">
+                      {s.withdrawable ? <WithdrawWork masterId={s.master_id} title={s.title} /> : null}
+                      <a href={`/authority/${s.master_id}`} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        Edit
+                      </a>
+                      <a href={`/authority/${s.master_id}`} className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors">
+                        Open <ChevronRight size={13} />
+                      </a>
+                    </div>
                   </td>
                 </tr>
               ))}

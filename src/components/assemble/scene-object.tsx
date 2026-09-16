@@ -6,6 +6,7 @@ import type { PresenceOption } from "@/lib/assemble/presence";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { CreativeStill } from "./creative-still";
 import { SceneIdentity } from "./scene-identity-authoring";
+import { SceneArtwork } from "./scene-artwork-authoring";
 import { SceneOrder } from "./scene-order-authoring";
 import { SceneTiming } from "./scene-timing-authoring";
 import { ScenePresence } from "./presence-authoring";
@@ -23,6 +24,7 @@ export function SceneObject({
   canAuthorOrder,
   openHref,
   openLabel,
+  workspaceHref,
 }: {
   scene: SuiteScene;
   index: number;
@@ -36,6 +38,7 @@ export function SceneObject({
   canAuthorOrder: boolean;
   openHref: string;
   openLabel: string;
+  workspaceHref?: string | null;
 }) {
   const ordinal = scene.sort_order != null ? String(scene.sort_order).padStart(2, "0") : sceneOrdinal(index);
   const shortTitle = sceneShortTitle(scene.title) ?? "Untitled scene";
@@ -91,6 +94,18 @@ export function SceneObject({
           muralId={scene.mural_id}
           canAuthor={canAuthorIdentity}
         />
+        <SceneArtwork
+          universeId={universeId}
+          sceneId={scene.master_id}
+          sceneLabel={shortTitle}
+          muralId={scene.mural_id}
+          projectionId={scene.projection_id}
+          provider={scene.provider}
+          storageRef={scene.storage_ref}
+          startMs={scene.start_ms}
+          artworkStorageRef={scene.artwork_storage_ref}
+          canAuthor={canAuthorIdentity}
+        />
         <SceneTiming
           universeId={universeId}
           sceneId={scene.master_id}
@@ -119,6 +134,12 @@ export function SceneObject({
           canAuthor={canAuthorPresence}
         />
         <p className="suite-object-actions">
+          {workspaceHref ? (
+            <Link href={workspaceHref} className="suite-open-link">
+              Open Scene
+              <span className="sr-only"> {shortTitle}</span>
+            </Link>
+          ) : null}
           <Link href={openHref} className="suite-open-link">
             {openLabel}
             <span className="sr-only"> for scene {shortTitle}</span>

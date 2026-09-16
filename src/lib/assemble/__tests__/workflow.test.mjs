@@ -13,6 +13,8 @@ const sheReady = deriveProductionPath({
   suiteHref: SUITE,
   hasMural: true,
   hasSourceMedia: true,
+  sceneCount: 4,
+  establishHref: `/authority/curate/${UNIVERSE}/sentinel`,
   observationCount: 35,
   storyboardCount: 8,
   proposalCount: 4,
@@ -33,6 +35,8 @@ const aligned = deriveProductionPath({
   suiteHref: SUITE,
   hasMural: true,
   hasSourceMedia: true,
+  sceneCount: 4,
+  establishHref: `/authority/curate/${UNIVERSE}/sentinel`,
   observationCount: 35,
   storyboardCount: 4,
   proposalCount: 4,
@@ -46,6 +50,8 @@ const empty = deriveProductionPath({
   suiteHref: `/authority/universes/${MURAL}`,
   hasMural: false,
   hasSourceMedia: false,
+  sceneCount: 0,
+  establishHref: `/authority/curate/${MURAL}/sentinel`,
   observationCount: 0,
   storyboardCount: 0,
   proposalCount: 0,
@@ -53,6 +59,24 @@ const empty = deriveProductionPath({
   holographicCount: 0,
 });
 assert(empty.every((step) => step.status === "waiting" || step.id === "experience"), "empty Universe waits on source and Sentinel");
+
+const FR = "e22e080c-715c-4045-ba82-20474d25b2e0";
+const muralOnly = deriveProductionPath({
+  suiteHref: `/authority/universes/${FR}`,
+  hasMural: true,
+  hasSourceMedia: true,
+  sceneCount: 0,
+  establishHref: `/authority/curate/${FR}/sentinel`,
+  observationCount: 0,
+  storyboardCount: 0,
+  proposalCount: 0,
+  adjustCount: 0,
+  holographicCount: 0,
+});
+assert(muralOnly.find((step) => step.id === "proposals")?.label === "Establish Scenes", "mural-only work asks the curator to establish Scenes");
+assert(muralOnly.find((step) => step.id === "proposals")?.href === `/authority/curate/${FR}/sentinel`, "Scene creation stays on Curate Sentinel, not Storyboard Authorise");
+assert(muralOnly.find((step) => step.id === "authorise")?.status === "waiting", "Authorise cannot PATCH until Scenes exist");
+assert(muralOnly.find((step) => step.id === "experience")?.status === "ready", "Experience is reachable from a mural-bound Universe without invented Scenes");
 
 const fromAssembly = productionPathInputFrom(
   {

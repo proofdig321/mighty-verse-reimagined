@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient, validateAuthority } from "@/lib/authority/validate";
 
-export async function PATCH(request: Request) {
+async function updateMediaRights(request: Request) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -26,4 +26,13 @@ export async function PATCH(request: Request) {
   const { error } = await svc.from("media_asset").update({ rights_holder_ref, rights_basis: rights_basis.trim() }).eq("asset_id", binding.asset_id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ binding_id, asset_id: binding.asset_id, rights_holder_ref, rights_basis: rights_basis.trim() });
+}
+
+/** Dashboard Save rights uses POST. PATCH remains for the same act. */
+export async function POST(request: Request) {
+  return updateMediaRights(request);
+}
+
+export async function PATCH(request: Request) {
+  return updateMediaRights(request);
 }
