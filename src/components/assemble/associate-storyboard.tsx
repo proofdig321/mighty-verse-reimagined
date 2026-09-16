@@ -9,10 +9,12 @@ export function AssociateStoryboard({
   universes,
   value,
   onChange,
+  workId,
 }: {
   universes: { master_id: string; title: string }[];
   value?: string;
   onChange?: (universeId: string) => void;
+  workId?: string | null;
 }) {
   const router = useRouter();
   const [internalId, setInternalId] = useState("");
@@ -32,7 +34,7 @@ export function AssociateStoryboard({
     const response = await fetch("/api/authority/storyboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ universe_id: universeId, action: "associate" }),
+        body: JSON.stringify({ universe_id: universeId, action: "associate", work_id: workId ?? undefined }),
     });
     const payload = await response.json().catch(() => ({}));
     setBusy(false);

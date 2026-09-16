@@ -6,11 +6,21 @@ import { composeStoryboardBody } from "./script";
 import { parseStoryboardBody } from "./artifact";
 import { signCreativePath } from "./storage";
 import type {
+  ArtifactHistoryEntry,
+  PanelGenerationMetadata,
   StoryboardPanelRecord,
   StoryboardPanelSource,
   StoryboardReference,
   StoryboardWorkRecord,
 } from "./document";
+import {
+  parseStoryboardAssembly,
+  parseStoryboardFrame,
+  parseStoryboardSource,
+  type StoryboardAssemblyRecord,
+  type StoryboardFrameRecord,
+  type StoryboardSourceRecord,
+} from "./source";
 
 type ServiceClient = ReturnType<typeof getServiceClient>;
 
@@ -30,6 +40,9 @@ function asReferences(value: unknown): StoryboardReference[] {
       label: record.label,
       asset_id: typeof record.asset_id === "string" ? record.asset_id : null,
       url: typeof record.url === "string" ? record.url : null,
+      preferred: record.preferred === true,
+      time_ms: typeof record.time_ms === "number" ? record.time_ms : null,
+      source_title: typeof record.source_title === "string" ? record.source_title : null,
     });
   }
   return refs;
@@ -68,7 +81,25 @@ function mapPanel(row: Record<string, unknown>, stillUrl: string | null, motion:
     motion_endpoint: motion.endpoint,
     references: asReferences(row.panel_references),
     user_locked: row.user_locked === true,
+    generation_metadata: asGenerationMetadata(row.generation_metadata),
     creates_scene: false,
+  };
+}
+
+function asGenerationMetadata(value: unknown): PanelGenerationMetadata {
+  if (!value || typeof value !== "object") return {};
+  const record = value as PanelGenerationMetadata;
+  const asEntries = (items: unknown): ArtifactHistoryEntry[] => {
+    if (!Array.isArray(items)) return [];
+    return items.filter((item): item is ArtifactHistoryEntry => {
+      if (!item || typeof item !== "object") return false;
+      const entry = item as ArtifactHistoryEntry;
+      return typeof entry.asset_id === "string" && (entry.kind === "still" || entry.kind === "motion");
+    });
+  };
+  return {
+    stills: asEntries(record.stills),
+    motion: asEntries(record.motion),
   };
 }
 
@@ -137,6 +168,7 @@ async function hydrateWork(db: ServiceClient, work: Record<string, unknown>): Pr
     creative_intent: typeof work.creative_intent === "string" ? work.creative_intent : null,
     status: typeof work.status === "string" ? work.status : "draft",
     source: typeof work.source === "string" ? work.source : "script",
+    updated_at: typeof work.updated_at === "string" ? work.updated_at : undefined,
     panels: (panels ?? []).map((panel) => {
       const stillAsset = panel.active_still_asset_id ? assetById.get(panel.active_still_asset_id) : null;
       const motionAsset = panel.active_motion_asset_id ? assetById.get(panel.active_motion_asset_id) : null;
@@ -150,9 +182,42 @@ async function hydrateWork(db: ServiceClient, work: Record<string, unknown>): Pr
         endpoint: panel.active_motion_asset_id ? endpointById.get(panel.active_motion_asset_id) ?? null : null,
       });
     }),
+    ...(await loadWorkMaterials(db, String(work.work_id), String(work.participant_id))),
     creates_scene: false,
     creates_canonical: false,
   };
+}
+
+async function loadWorkMaterials(db: ServiceClient, workId: string, participantId: string): Promise<{
+  sources: StoryboardSourceRecord[];
+  frames: StoryboardFrameRecord[];
+  assembly: StoryboardAssemblyRecord | null;
+}> {
+  const { data } = await db
+    .from("media_intake")
+    .select("intake_id, asset_id, title, provenance_notes")
+    .eq("supplied_by", participantId)
+    .ilike("provenance_notes", `%${workId}%`)
+    .order("updated_at", { ascending: false })
+    .limit(80);
+  const sources: StoryboardSourceRecord[] = [];
+  const frames: StoryboardFrameRecord[] = [];
+  let assembly: StoryboardAssemblyRecord | null = null;
+  for (const row of data ?? []) {
+    const source = parseStoryboardSource(row.provenance_notes);
+    if (source && source.work_id === workId) {
+      sources.push({ ...source, asset_id: source.asset_id ?? row.asset_id ?? null });
+      continue;
+    }
+    const frame = parseStoryboardFrame(row.provenance_notes);
+    if (frame && frame.work_id === workId) {
+      frames.push(frame);
+      continue;
+    }
+    const parsedAssembly = parseStoryboardAssembly(row.provenance_notes);
+    if (parsedAssembly && parsedAssembly.work_id === workId && !assembly) assembly = parsedAssembly;
+  }
+  return { sources, frames, assembly };
 }
 
 export async function ensureStoryboardWork(input: {
@@ -350,7 +415,6 @@ export async function updateStoryboardPanel(input: {
     "transition",
     "duration_ms",
     "aspect_ratio",
-    "sequence",
     "references",
   ]);
   const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
@@ -380,15 +444,16 @@ export async function updateStoryboardPanel(input: {
     "active_motion_asset_id",
     "sequence",
     "status",
+    "generation_metadata",
   ];
   for (const key of allowed) {
     if (key in input.patch) patch[key] = input.patch[key as keyof typeof input.patch];
   }
   if (input.patch.references) patch.panel_references = input.patch.references;
   await db.from("storyboard_panel").update(patch).eq("panel_id", input.panelId);
-  const work = await loadStoryboardWork({
+  const work = await loadStoryboardWorkById({
+    workId: String((panel as { work_id?: string }).work_id),
     participantId: input.participantId,
-    universeId: (panel as { storyboard_work?: { universe_id?: string | null } }).storyboard_work?.universe_id ?? null,
     client: db,
   });
   return work?.panels.find((item) => item.panel_id === input.panelId) ?? null;

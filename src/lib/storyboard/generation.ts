@@ -220,10 +220,24 @@ async function persistStillAsset(input: {
     stillUrl: stored.signed_url,
     source: "ai",
   });
+  const stills = [
+    ...(input.panel.generation_metadata?.stills ?? []),
+    {
+      asset_id: asset.asset_id,
+      still_url: stored.signed_url,
+      status: "completed" as const,
+      created_at: new Date().toISOString(),
+      kind: "still" as const,
+    },
+  ];
   await updateStoryboardPanel({
     participantId: input.participantId,
     panelId: input.panel.panel_id,
-    patch: { active_still_asset_id: asset.asset_id, status: "ready" },
+    patch: {
+      active_still_asset_id: asset.asset_id,
+      status: "ready",
+      generation_metadata: { ...input.panel.generation_metadata, stills },
+    },
   });
   return { asset_id: asset.asset_id, still_url: stored.signed_url, storage_path: stored.storage_path };
 }
@@ -278,10 +292,26 @@ async function persistMotionFile(input: {
     resolution: ingested.resolution,
   });
   if (input.panel) {
+    const motionHistory = [
+      ...(input.panel.generation_metadata?.motion ?? []),
+      {
+        asset_id: persisted.asset_id,
+        still_url: persisted.still_url,
+        playback_id: ingested.playbackId,
+        endpoint: persisted.endpoint_ref,
+        status: "completed" as const,
+        created_at: new Date().toISOString(),
+        kind: "motion" as const,
+      },
+    ];
     await updateStoryboardPanel({
       participantId: input.participantId,
       panelId: input.panel.panel_id,
-      patch: { active_motion_asset_id: persisted.asset_id, status: "ready" },
+      patch: {
+        active_motion_asset_id: persisted.asset_id,
+        status: "ready",
+        generation_metadata: { ...input.panel.generation_metadata, motion: motionHistory },
+      },
     });
   }
   return {

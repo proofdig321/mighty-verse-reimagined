@@ -15,11 +15,28 @@ import { STRUCTURED_STORYBOARD_SYSTEM } from "@/lib/storyboard/document";
 import {
   ensureStoryboardWork,
   loadStoryboardWork,
+  loadStoryboardWorkById,
   replaceStoryboardPanels,
   saveStoryboardBody,
   seedPanelsFromScript,
   updateStoryboardPanel,
 } from "@/lib/storyboard/work";
+import {
+  archiveStoryboardWork,
+  attachStoryboardSource,
+  attachStoryboardWorkToUniverse,
+  createStoryboardPanel,
+  createStoryboardWork,
+  deleteStoryboardPanel,
+  deriveStoryboardFrame,
+  duplicateStoryboardPanel,
+  duplicateStoryboardWork,
+  listStoryboardWorks,
+  reorderStoryboardPanels,
+  resetStoryboardWork,
+  restoreStoryboardSnapshot,
+  saveStoryboardAssembly,
+} from "@/lib/storyboard/commands";
 import { listGenerationJobs } from "@/lib/storyboard/generation";
 import { parseStructuredStoryboard } from "@/lib/ai/structured-storyboard";
 
@@ -44,12 +61,25 @@ export async function GET(request: Request) {
   const participantId = await getParticipantId(supabase);
   if (!participantId) return NextResponse.json({ error: "No participant record" }, { status: 403 });
 
-  const universeId = new URL(request.url).searchParams.get("universe_id")?.trim() ?? "";
+  const params = new URL(request.url).searchParams;
+  const universeId = params.get("universe_id")?.trim() ?? "";
+  const workId = params.get("work_id")?.trim() ?? "";
+  const list = params.get("list") === "1";
   const denied = await authorize(universeId, participantId);
   if (denied) return denied;
 
+  if (list) {
+    const works = await listStoryboardWorks({
+      participantId,
+      universeId: universeId || null,
+    });
+    return NextResponse.json({ works, creates_scene: false, creates_canonical: false });
+  }
+
   const materials = await loadStoryboardMaterials(universeId || null, participantId);
-  const work = await loadStoryboardWork({ participantId, universeId: universeId || null });
+  const work = workId
+    ? await loadStoryboardWorkById({ workId, participantId })
+    : await loadStoryboardWork({ participantId, universeId: universeId || null });
   const jobs = work ? await listGenerationJobs({ participantId, workId: work.work_id }) : [];
   const capability = aiServiceCapability();
 
@@ -85,7 +115,7 @@ export async function POST(request: Request) {
   const body = await request.json().catch(() => ({}));
   const universeId = typeof body.universe_id === "string" ? body.universe_id.trim() : "";
   const action = typeof body.action === "string" ? body.action : "save";
-  const script = typeof body.body === "string" ? body.body : "";
+  const script = typeof body.body === "string" ? body.body : null;
   const instruction = typeof body.instruction === "string" ? body.instruction : "";
   const selectedText = typeof body.selected_text === "string" ? body.selected_text : "";
 
@@ -97,6 +127,21 @@ export async function POST(request: Request) {
   if (action === "associate") {
     if (!universeId || !assembly) {
       return NextResponse.json({ error: "Select a Universe to associate this work with.", creates_scene: false }, { status: 400 });
+    }
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    if (workId) {
+      const attached = await attachStoryboardWorkToUniverse({
+        workId,
+        participantId,
+        universeId,
+      });
+      return NextResponse.json({
+        work: attached,
+        universe_id: universeId,
+        status: "ready",
+        creates_scene: false,
+        creates_canonical: false,
+      });
     }
     const moved = await associateStoryboardWork({
       svc: getServiceClient(),
@@ -112,6 +157,121 @@ export async function POST(request: Request) {
     });
   }
 
+  if (action === "create-work") {
+    const created = await createStoryboardWork({
+      participantId,
+      universeId: universeId || null,
+      title: typeof body.title === "string" && body.title.trim() ? body.title.trim() : "Untitled storyboard",
+      body: script ?? "",
+      premise: typeof body.premise === "string" ? body.premise : null,
+    });
+    return NextResponse.json({ work: created, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "duplicate-work") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const copy = await duplicateStoryboardWork({ workId, participantId });
+    return NextResponse.json({ work: copy, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "archive-work") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const archived = await archiveStoryboardWork({ workId, participantId });
+    if (!archived) return NextResponse.json({ error: "Storyboard was not found." }, { status: 404 });
+    return NextResponse.json({ archived: true, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "create-panel") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const next = await createStoryboardPanel({
+      workId,
+      participantId,
+      title: typeof body.title === "string" ? body.title : undefined,
+      description: typeof body.description === "string" ? body.description : undefined,
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "duplicate-panel") {
+    const panelId = typeof body.panel_id === "string" ? body.panel_id : "";
+    const next = await duplicateStoryboardPanel({ panelId, participantId });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "delete-panel") {
+    const panelId = typeof body.panel_id === "string" ? body.panel_id : "";
+    const next = await deleteStoryboardPanel({ panelId, participantId });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "reorder-panels") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const panelIds = Array.isArray(body.panel_ids) ? body.panel_ids.filter((id: unknown) => typeof id === "string") : [];
+    const next = await reorderStoryboardPanels({ workId, participantId, panelIds });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "restore-snapshot") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const next = await restoreStoryboardSnapshot({
+      workId,
+      participantId,
+      title: typeof body.title === "string" ? body.title : undefined,
+      body: typeof body.body === "string" ? body.body : undefined,
+      premise: typeof body.premise === "string" ? body.premise : undefined,
+      panels: Array.isArray(body.panels) ? body.panels : [],
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "reset") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const scope = body.scope === "initial" || body.scope === "panel-artifacts" ? body.scope : "saved";
+    const next = await resetStoryboardWork({
+      workId,
+      participantId,
+      scope,
+      panelId: typeof body.panel_id === "string" ? body.panel_id : undefined,
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "attach-source") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const assetId = typeof body.asset_id === "string" ? body.asset_id : "";
+    const next = await attachStoryboardSource({
+      workId,
+      participantId,
+      assetId,
+      title: typeof body.title === "string" ? body.title : undefined,
+      category: body.category === "reference" || body.category === "generated" ? body.category : "source",
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "derive-frame") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const next = await deriveStoryboardFrame({
+      workId,
+      participantId,
+      playbackId: typeof body.playback_id === "string" ? body.playback_id : "",
+      timestampMs: typeof body.timestamp_ms === "number" ? body.timestamp_ms : 0,
+      sourceTitle: typeof body.source_title === "string" ? body.source_title : "Source performance",
+      panelId: typeof body.panel_id === "string" ? body.panel_id : null,
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
+  if (action === "save-assembly") {
+    const workId = typeof body.work_id === "string" ? body.work_id : "";
+    const next = await saveStoryboardAssembly({
+      workId,
+      participantId,
+      items: Array.isArray(body.items) ? body.items : [],
+    });
+    return NextResponse.json({ work: next, status: "ready", creates_scene: false, creates_canonical: false });
+  }
+
   if (action === "save-panel") {
     const panelId = typeof body.panel_id === "string" ? body.panel_id : "";
     const panel = await updateStoryboardPanel({
@@ -123,12 +283,26 @@ export async function POST(request: Request) {
     return NextResponse.json({ panel, status: "ready", creates_scene: false });
   }
 
-  const work = await ensureStoryboardWork({
-    participantId,
-    universeId: universeId || null,
-    body: script,
-    title: typeof body.title === "string" ? body.title : "Untitled storyboard",
-  });
+  const requestedWorkId = typeof body.work_id === "string" ? body.work_id : "";
+  let work = requestedWorkId
+    ? await loadStoryboardWorkById({ workId: requestedWorkId, participantId })
+    : await ensureStoryboardWork({
+        participantId,
+        universeId: universeId || null,
+        body: script ?? undefined,
+        title: typeof body.title === "string" ? body.title : "Untitled storyboard",
+      });
+  if (requestedWorkId && !work) {
+    return NextResponse.json({ error: "Storyboard was not found.", creates_scene: false }, { status: 404 });
+  }
+  if (!work) {
+    work = await ensureStoryboardWork({
+      participantId,
+      universeId: universeId || null,
+      body: script,
+      title: typeof body.title === "string" ? body.title : "Untitled storyboard",
+    });
+  }
 
   if (action === "import-sentinel") {
     const beats = Array.isArray(body.panels) ? body.panels : [];
@@ -257,7 +431,7 @@ export async function POST(request: Request) {
     });
   }
 
-  const composed = composeStoryboardBody(script);
+  const composed = composeStoryboardBody(script ?? work.body);
   const saved = await saveStoryboardBody({
     participantId,
     universeId: universeId || null,

@@ -19,6 +19,25 @@ export type StoryboardReference = {
   label: string;
   asset_id?: string | null;
   url?: string | null;
+  preferred?: boolean;
+  time_ms?: number | null;
+  source_title?: string | null;
+};
+
+export type ArtifactHistoryEntry = {
+  asset_id: string;
+  still_url?: string | null;
+  playback_id?: string | null;
+  endpoint?: string | null;
+  job_id?: string | null;
+  status: "completed" | "failed";
+  created_at: string;
+  kind: "still" | "motion";
+};
+
+export type PanelGenerationMetadata = {
+  stills?: ArtifactHistoryEntry[];
+  motion?: ArtifactHistoryEntry[];
 };
 
 export type StoryboardPanelRecord = {
@@ -53,6 +72,7 @@ export type StoryboardPanelRecord = {
   motion_endpoint: string | null;
   references: StoryboardReference[];
   user_locked: boolean;
+  generation_metadata: PanelGenerationMetadata;
   creates_scene: false;
 };
 
@@ -69,9 +89,28 @@ export type StoryboardWorkRecord = {
   creative_intent: string | null;
   status: string;
   source: string;
+  updated_at?: string;
   panels: StoryboardPanelRecord[];
+  sources?: import("./source").StoryboardSourceRecord[];
+  frames?: import("./source").StoryboardFrameRecord[];
+  assembly?: import("./source").StoryboardAssemblyRecord | null;
   creates_scene: false;
   creates_canonical: false;
+};
+
+export type StoryboardWorkSummary = {
+  work_id: string;
+  title: string;
+  premise: string | null;
+  updated_at: string;
+  panel_count: number;
+  universe_id: string | null;
+  attached: boolean;
+  status: string;
+  generation_status: "idle" | "generating" | "failed" | "ready";
+  selected_still: boolean;
+  selected_motion: boolean;
+  creates_scene: false;
 };
 
 export const STRUCTURED_STORYBOARD_SYSTEM = `You are assisting a curator inside Mighty Verse Creative Studio.

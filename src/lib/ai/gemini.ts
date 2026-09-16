@@ -67,9 +67,9 @@ async function geminiFetch(path: string, init: RequestInit): Promise<Response> {
   return fetch(`${GEMINI_BASE}/${path.replace(/^\//, "")}`, { ...init, headers });
 }
 
-async function readError(response: Response): Promise<ProviderFailure> {
+async function readError(response: Response, operation?: "text" | "image" | "video", model?: string): Promise<ProviderFailure> {
   const bodyText = await response.text().catch(() => "");
-  return classifyGeminiHttpError({ httpStatus: response.status, bodyText });
+  return classifyGeminiHttpError({ httpStatus: response.status, bodyText, operation, model });
 }
 
 export async function generateGeminiText(input: {
@@ -216,11 +216,11 @@ export async function generateGeminiImageBytes(input: {
         }),
       });
       if (response.status === 404 || response.status === 403 || response.status === 429) {
-        last = await readError(response);
+        last = await readError(response, "image", model);
         if (last.code === "quota" || last.code === "rate_limit") quota = last;
         continue;
       }
-      if (!response.ok) return readError(response);
+      if (!response.ok) return readError(response, "image", model);
       const payload = (await response.json()) as { candidates?: { content?: { parts?: GeminiPart[] } }[] };
       const inline = payload.candidates?.[0]?.content?.parts?.find((part) => part.inlineData?.data)?.inlineData;
       if (!inline?.data) {
@@ -334,11 +334,11 @@ export async function submitVeoGeneration(input: VeoSubmitInput): Promise<Gemini
           body: JSON.stringify(veoRequestBody({ ...input, includeAudioParameter })),
         });
         if (response.status === 404 || response.status === 403) {
-          last = await readError(response);
+          last = await readError(response, "video", model);
           break;
         }
         if (!response.ok) {
-          last = await readError(response);
+          last = await readError(response, "video", model);
           const audioRejected =
             includeAudioParameter && last.message.toLowerCase().includes("generateaudio");
           if (audioRejected) continue;

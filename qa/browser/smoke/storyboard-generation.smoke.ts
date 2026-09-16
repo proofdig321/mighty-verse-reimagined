@@ -99,11 +99,14 @@ test("authenticated Storyboard generates panels without creating Scenes", async 
 
   await page.goto("/studio/work", { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Storyboard Workspace" })).toBeVisible();
-  await expect(page.locator("[data-storyboard-progress]")).toBeVisible();
+  await page.getByRole("button", { name: "New storyboard" }).click();
+  await expect(page.locator("[data-storyboard-progress]")).toBeVisible({ timeout: 20_000 });
   await expect(page.getByRole("button", { name: "Generate storyboard" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "AI Assist" })).toBeVisible();
   await expect(page.getByRole("tab", { name: "Sentinel" })).toBeVisible();
-  notes.push("standalone /studio/work exposes Script, AI Assist, Sentinel, and generation actions");
+  await expect(page.getByRole("button", { name: "Undo" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Reset" })).toBeVisible();
+  notes.push("standalone /studio/work list creates a work and exposes Script, AI Assist, Sentinel, undo, and reset");
   if (process.env.STORYBOARD_ARTIFACT_DIR) {
     await page.screenshot({ path: `${process.env.STORYBOARD_ARTIFACT_DIR}/storyboard_standalone_studio.png`, fullPage: true });
   }

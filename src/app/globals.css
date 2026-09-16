@@ -569,6 +569,50 @@ html[data-theme="tangerine"] {
     gap: 1.25rem;
   }
 
+  .storyboard-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .storyboard-header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+  }
+
+  .storyboard-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    display: grid;
+    place-items: center;
+    background: color-mix(in oklch, var(--background) 40%, transparent);
+    padding: 1rem;
+  }
+
+  .storyboard-dialog {
+    width: min(36rem, 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--card);
+    padding: 1.25rem;
+    box-shadow: 0 16px 40px color-mix(in oklch, var(--foreground) 12%, transparent);
+  }
+
+  .storyboard-assist-diff {
+    display: grid;
+    gap: 0.75rem;
+  }
+
+  @media (min-width: 768px) {
+    .storyboard-assist-diff {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+
   .storyboard-stage {
     display: grid;
     gap: 1.25rem;
@@ -601,6 +645,7 @@ html[data-theme="tangerine"] {
     min-width: 0;
   }
 
+  .storyboard-progress-step button,
   .storyboard-progress-step p {
     margin: 0.35rem 0 0;
     font-size: 0.68rem;

@@ -52,5 +52,6 @@ assert(assistAction("invent-scene") === null, "AI Assist has no create-scene act
 assert(assistReplacesStory("expand") === true, "expand may replace the story after curator action");
 assert(assistReplacesStory("rewrite-panel") === false, "panel rewrite is a suggestion, not a silent overwrite");
 assert(assistReplacesStory("suggest-camera") === false, "camera suggestion does not replace the story");
+assert(composed.creates_scene === false, "authored panels remain non-canonical");
 
 console.log("Storyboard tests: all passed");

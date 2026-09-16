@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { FileText, Images, Pause, Play, Shield, SkipBack, SkipForward, Sparkles } from "lucide-react";
+import { FileText, Images, Pause, Play, Shield, SkipBack, SkipForward, Sparkles, Clapperboard, Film, LayoutGrid, Layers } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,17 +22,35 @@ import {
   pickGalleryTheme,
 } from "@/lib/storyboard/gallery-theme";
 import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
-import { ASSIST_ACTIONS, assistReplacesStory } from "@/lib/storyboard/assist";
+import { ASSIST_ACTIONS } from "@/lib/storyboard/assist";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import { jobUiLabel, type GenerationJobKind } from "@/lib/ai/jobs";
 import { SentinelIntelligencePanel } from "./sentinel-intelligence";
 import { AssociateStoryboard } from "./associate-storyboard";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
+import { StoryboardResetDialog } from "./storyboard-reset-dialog";
+import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { cn } from "@/lib/utils";
+import {
+  emptyHistory,
+  historyStorageKey,
+  parseHistory,
+  pushHistory,
+  redoHistory,
+  saveStatusLabel,
+  serializeHistory,
+  undoHistory,
+  workToSnapshot,
+  type AuthoringSnapshot,
+  type HistoryState,
+} from "@/lib/storyboard/history";
+import { derivePanelUiStatus, motionRequirement, panelUiLabel } from "@/lib/storyboard/panel-state";
+import type { ResetScope } from "@/lib/storyboard/mutations";
+import { HierarchyBreadcrumb } from "./breadcrumb";
 
-type MaterialTab = "script" | "assist" | "sentinel" | "references";
+type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
   message: string;
@@ -83,6 +101,8 @@ export function StoryboardWorkspace({
   artifacts = [],
   assistConfigured = false,
   universes = [],
+  workId = null,
+  backHref = "/studio/work",
 }: {
   universeId: string | null;
   universeTitle?: string | null;
@@ -98,6 +118,8 @@ export function StoryboardWorkspace({
   artifacts?: StoryboardArtifactCard[];
   assistConfigured?: boolean;
   universes?: { master_id: string; title: string }[];
+  workId?: string | null;
+  backHref?: string;
 }) {
   const [tab, setTab] = useState<MaterialTab>(initialTab);
   const [script, setScript] = useState(initialBody);
@@ -120,6 +142,15 @@ export function StoryboardWorkspace({
   const [lastFrame, setLastFrame] = useState<string>("");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [workTitle, setWorkTitle] = useState(universeTitle ?? "Untitled storyboard");
+  const [history, setHistory] = useState<HistoryState>(emptyHistory);
+  const [dirty, setDirty] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
+  const [assistProposal, setAssistProposal] = useState<string | null>(null);
+  const [assemblyItems, setAssemblyItems] = useState<AuthoringSnapshot["assembly"]>([]);
+  const savedSnapshot = useRef<AuthoringSnapshot | null>(null);
+  const autosaveTimer = useRef<number | null>(null);
 
   const persistedPanels = work?.panels ?? [];
   const sentinelPanels = intelligence?.storyboard ?? [];
@@ -193,7 +224,10 @@ export function StoryboardWorkspace({
 
   useEffect(() => {
     void (async () => {
-      const response = await fetch(`/api/authority/storyboard?universe_id=${encodeURIComponent(universeId ?? "")}`);
+      const query = new URLSearchParams();
+      if (universeId) query.set("universe_id", universeId);
+      if (workId) query.set("work_id", workId);
+      const response = await fetch(`/api/authority/storyboard?${query.toString()}`);
       const payload = await response.json().catch(() => ({}));
       if (payload.work) {
         applyWork(payload.work);
@@ -202,7 +236,7 @@ export function StoryboardWorkspace({
       if (Array.isArray(payload.artifacts)) setGenerated(payload.artifacts);
       if (payload.capability) setCapability(payload.capability);
     })();
-  }, [universeId]);
+  }, [universeId, workId]);
 
   const pendingJob = jobs.find((job) => job.status === "queued" || job.status === "submitted" || job.status === "processing");
   useEffect(() => {
@@ -227,9 +261,53 @@ export function StoryboardWorkspace({
     return () => window.clearInterval(timer);
   }, [pendingJob?.job_id]);
 
+  function snapshotOf(next: StoryboardWorkRecord, nextScript = script, nextAssembly = assemblyItems): AuthoringSnapshot {
+    return workToSnapshot({
+      title: next.title,
+      body: next.body || nextScript,
+      premise: next.premise,
+      panels: next.panels.map((panel) => ({
+        panel_id: panel.panel_id,
+        sequence: panel.sequence,
+        title: panel.title,
+        description: panel.description,
+        narrative_purpose: panel.narrative_purpose,
+        action: panel.action,
+        dialogue: panel.dialogue,
+        narration: panel.narration,
+        camera: panel.camera,
+        camera_movement: panel.camera_movement,
+        framing: panel.framing,
+        lens_style: panel.lens_style,
+        lighting: panel.lighting,
+        environment: panel.environment,
+        characters: panel.characters,
+        mood: panel.mood,
+        transition: panel.transition,
+        duration_ms: panel.duration_ms,
+        aspect_ratio: panel.aspect_ratio,
+        status: panel.status,
+        active_still_asset_id: panel.active_still_asset_id,
+        active_motion_asset_id: panel.active_motion_asset_id,
+        still_url: panel.still_url,
+        motion_playback_id: panel.motion_playback_id,
+        motion_endpoint: panel.motion_endpoint,
+        references: panel.references,
+        user_locked: panel.user_locked,
+      })),
+      assembly: next.assembly?.items ?? nextAssembly,
+    });
+  }
+
   function applyWork(next: StoryboardWorkRecord) {
     setWork(next);
+    setWorkTitle(next.title);
     if (next.body) setScript(next.body);
+    if (next.assembly?.items) setAssemblyItems(next.assembly.items);
+    savedSnapshot.current = snapshotOf(next, next.body, next.assembly?.items ?? []);
+    if (typeof window !== "undefined") {
+      setHistory(parseHistory(window.localStorage.getItem(historyStorageKey(next.work_id))));
+    }
     if (next.panels.length) {
       setScriptPanels([]);
       setSelectedId((current) => current ?? next.panels[0]?.panel_id ?? null);
@@ -243,6 +321,58 @@ export function StoryboardWorkspace({
       }
       setPanelStills((current) => ({ ...stills, ...current }));
     }
+    setDirty(false);
+    setSaveFailed(false);
+  }
+
+  async function mutate(label: string, action: string, payload: Record<string, unknown>, kind: "authoring" | "selection" = "authoring") {
+    if (!work) return;
+    const before = snapshotOf(work);
+    const response = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ universe_id: universeId, work_id: work.work_id, action, ...payload }),
+    });
+    const result = await response.json().catch(() => ({}));
+    if (result.work) {
+      const after = snapshotOf(result.work);
+      const nextHistory = pushHistory(history, {
+        id: `${Date.now()}`,
+        label,
+        kind,
+        reversible: true,
+        persistent: true,
+        undoHint: `Undo ${label.toLowerCase()}`,
+        before,
+        after,
+      });
+      setHistory(nextHistory);
+      window.localStorage.setItem(historyStorageKey(result.work.work_id), serializeHistory(nextHistory));
+      applyWork(result.work);
+    }
+    return result;
+  }
+
+  async function restoreFromSnapshot(snapshot: AuthoringSnapshot, nextHistory: HistoryState) {
+    if (!work) return;
+    const result = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "restore-snapshot",
+        work_id: work.work_id,
+        title: snapshot.title,
+        body: snapshot.body,
+        premise: snapshot.premise,
+        panels: snapshot.panels,
+      }),
+    });
+    const payload = await result.json().catch(() => ({}));
+    if (payload.work) {
+      applyWork(payload.work);
+      setHistory(nextHistory);
+      window.localStorage.setItem(historyStorageKey(payload.work.work_id), serializeHistory(nextHistory));
+    }
   }
 
   function generatePanelsLocal() {
@@ -253,18 +383,21 @@ export function StoryboardWorkspace({
   }
 
   async function saveBody(nextBody = script): Promise<StoryboardWorkRecord | null> {
-    setSaveState({ status: "generating", message: "Saving story body…" });
+    setSaveState({ status: "generating", message: "Saving…" });
+    setSaveFailed(false);
     const response = await fetch("/api/authority/storyboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ universe_id: universeId, action: "save", body: nextBody, work_id: work?.work_id }),
+      body: JSON.stringify({ universe_id: universeId, action: "save", body: nextBody, work_id: work?.work_id, title: workTitle }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {
+      setSaveFailed(true);
       setSaveState({ status: "failed", message: payload.error ?? "Could not save the story body." });
       return null;
     }
     if (payload.work) applyWork(payload.work);
+    setDirty(false);
     setSaveState({ status: "ready", message: "Story body saved as a creative artifact. It is not a Scene." });
     return payload.work ?? work;
   }
@@ -312,10 +445,8 @@ export function StoryboardWorkspace({
           ].join("\n\n"),
         });
         if (result.ok) {
-          setScript(result.text);
-          setScriptPanels(composeStoryboardBody(result.text).panels);
-          setAssistState({ status: "ready", message: "Chrome built-in AI refined the story body. It did not create Scenes." });
-          await saveBody(result.text);
+          setAssistProposal(result.text);
+          setAssistState({ status: "ready", message: "Chrome built-in AI proposed a revision. Apply it to replace authored work." });
           return;
         }
       }
@@ -340,7 +471,7 @@ export function StoryboardWorkspace({
         instruction,
         work_id: work?.work_id,
         panel: selectedPersisted,
-        apply: assistReplacesStory(actionId) ? "replace" : "suggestion",
+        apply: "suggestion",
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -352,9 +483,10 @@ export function StoryboardWorkspace({
       return;
     }
     if (payload.applied === false) {
+      setAssistProposal(String(payload.suggestion ?? ""));
       setAssistState({
         status: "ready",
-        message: `Gemini suggestion (not applied): ${String(payload.suggestion ?? "").slice(0, 280)}`,
+        message: "Gemini returned a proposal. Apply it to replace authored work, or discard it.",
       });
       return;
     }
@@ -502,6 +634,10 @@ export function StoryboardWorkspace({
     { id: "assist", label: "AI Assist", icon: Sparkles },
     { id: "sentinel", label: "Sentinel", icon: Shield },
     { id: "references", label: "References", icon: Images },
+    { id: "panels", label: "Panels", icon: LayoutGrid },
+    { id: "stills", label: "Stills", icon: Clapperboard },
+    { id: "motion", label: "Motion", icon: Film },
+    { id: "assembly", label: "Assembly", icon: Layers },
   ];
   const creativeCount = persistedPanels.length || scriptPanels.length;
   const sequenceEmpty = creativeCount === 0 && sentinelPanels.length === 0 && scenes.length === 0;
@@ -534,10 +670,140 @@ export function StoryboardWorkspace({
     return () => window.clearInterval(timer);
   }, [playing, shotIds.join("|")]);
 
+  useEffect(() => {
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    if (!dirty || !work?.work_id) return;
+    autosaveTimer.current = window.setTimeout(() => {
+      void saveBody();
+    }, 1600);
+    return () => {
+      if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    };
+  }, [script, workTitle, dirty, work?.work_id]);
+
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      const typing = target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable);
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        void saveBody();
+      }
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "z") {
+        event.preventDefault();
+        if (event.shiftKey) {
+          const next = redoHistory(history);
+          if (next) void restoreFromSnapshot(next.entry.after, next.state);
+        } else {
+          const next = undoHistory(history);
+          if (next) void restoreFromSnapshot(next.entry.before, next.state);
+        }
+      }
+      if (event.key === "Escape") {
+        setResetOpen(false);
+        setInspectorOpen(false);
+      }
+      if (!typing && (event.key === "Delete" || event.key === "Backspace") && selectedPersisted) {
+        event.preventDefault();
+        void mutate("Delete panel", "delete-panel", { panel_id: selectedPersisted.panel_id });
+      }
+      if (!typing && (event.key === "ArrowRight" || event.key === "ArrowLeft") && shotIds.length) {
+        const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
+        const next = event.key === "ArrowRight" ? Math.min(shotIds.length - 1, index + 1) : Math.max(0, index - 1);
+        setSelectedId(shotIds[next]);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
+
   const editorPanel = draftPanel.panel_id === selectedPersisted?.panel_id ? draftPanel : selectedPersisted ?? draftPanel;
+  const saveLabel = saveStatusLabel({
+    dirty,
+    saving: saveState.status === "generating",
+    failed: saveFailed || saveState.status === "failed",
+    offline: typeof navigator !== "undefined" && navigator.onLine === false,
+  });
+  const undoEntry = history.past[history.past.length - 1];
+  const redoEntry = history.future[history.future.length - 1];
 
   return (
     <div className="storyboard-workspace" data-storyboard-layout="workspace">
+      <div className="storyboard-header">
+        <div className="min-w-0 space-y-2">
+          <HierarchyBreadcrumb
+            items={[
+              { label: "Creative Studio", href: "/studio" },
+              { label: "Storyboard", href: backHref },
+              { label: workTitle || "Untitled storyboard" },
+            ]}
+          />
+          <div className="flex flex-wrap items-center gap-2">
+            {backHref ? (
+              <Link href={backHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+                Back
+              </Link>
+            ) : null}
+            <Input
+              aria-label="Work title"
+              className="h-8 max-w-sm"
+              value={workTitle}
+              onChange={(event) => {
+                setWorkTitle(event.target.value);
+                setDirty(true);
+              }}
+            />
+            <p className="text-xs text-muted-foreground" data-save-state={saveLabel}>
+              {saveLabel}
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {work?.universe_id ? "Attached · non-canonical" : "Unattached · non-canonical"}
+            </p>
+          </div>
+        </div>
+        <div className="storyboard-header-actions">
+          <Button type="button" size="sm" variant="outline" disabled={!undoEntry} title={undoEntry?.undoHint ?? "Undo"} onClick={() => {
+            const next = undoHistory(history);
+            if (next) void restoreFromSnapshot(next.entry.before, next.state);
+          }}>
+            Undo
+          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={!redoEntry} title={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} onClick={() => {
+            const next = redoHistory(history);
+            if (next) void restoreFromSnapshot(next.entry.after, next.state);
+          }}>
+            Redo
+          </Button>
+          <Button type="button" size="sm" variant="outline" onClick={() => setResetOpen(true)}>Reset</Button>
+          <Button type="button" size="sm" onClick={() => void saveBody()}>Save</Button>
+        </div>
+      </div>
+      <StoryboardResetDialog
+        open={resetOpen}
+        panelSelected={Boolean(selectedPersisted)}
+        onClose={() => setResetOpen(false)}
+        onConfirm={(scope: ResetScope) => {
+          setResetOpen(false);
+          if (scope === "unsaved" && savedSnapshot.current) {
+            setScript(savedSnapshot.current.body);
+            setWorkTitle(savedSnapshot.current.title);
+            setDirty(false);
+            return;
+          }
+          if (scope === "saved" && savedSnapshot.current) {
+            setScript(savedSnapshot.current.body);
+            setWorkTitle(savedSnapshot.current.title);
+            setDirty(false);
+            if (work) applyWork(work);
+            return;
+          }
+          if (scope === "panel" && selectedPersisted && work) {
+            setDraftPanel(selectedPersisted);
+            return;
+          }
+          void mutate("Reset", "reset", { scope: scope === "panel-artifacts" ? "panel-artifacts" : "initial", panel_id: selectedPersisted?.panel_id });
+        }}
+      />
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         {universeId ? (
           <p className="text-sm text-muted-foreground">
@@ -555,7 +821,7 @@ export function StoryboardWorkspace({
             </div>
             <Card className="w-full bg-card/60 lg:max-w-md" size="sm">
               <CardContent>
-                <AssociateStoryboard universes={universes} />
+                <AssociateStoryboard universes={universes} workId={work?.work_id} />
               </CardContent>
             </Card>
           </>
@@ -577,10 +843,16 @@ export function StoryboardWorkspace({
         <ol className="storyboard-progress-track">
           {progress.steps.map((step) => (
             <li key={step.id} className="storyboard-progress-step" data-complete={step.complete ? "true" : "false"}>
-              <div className="storyboard-progress-bar" aria-hidden="true">
-                <span />
-              </div>
-              <p>{step.label}</p>
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => setTab(step.id as MaterialTab)}
+              >
+                <div className="storyboard-progress-bar" aria-hidden="true">
+                  <span />
+                </div>
+                <p>{step.label}</p>
+              </button>
             </li>
           ))}
         </ol>
@@ -596,13 +868,22 @@ export function StoryboardWorkspace({
             <Tabs
               value={tab}
               onValueChange={(value) => {
-                if (value === "script" || value === "assist" || value === "sentinel" || value === "references") {
+                if (
+                  value === "script" ||
+                  value === "assist" ||
+                  value === "sentinel" ||
+                  value === "references" ||
+                  value === "panels" ||
+                  value === "stills" ||
+                  value === "motion" ||
+                  value === "assembly"
+                ) {
                   setTab(value);
                 }
               }}
               className="flex min-h-0 flex-1 flex-col gap-4"
             >
-              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4" aria-label="Storyboard materials">
+              <TabsList className="grid h-auto w-full grid-cols-2 gap-1 sm:grid-cols-4 xl:grid-cols-8" aria-label="Storyboard materials">
                 {tabs.map((item) => {
                   const Icon = item.icon;
                   return (
@@ -623,7 +904,10 @@ export function StoryboardWorkspace({
                     <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Story body</span>
                     <Textarea
                       value={script}
-                      onChange={(event) => setScript(event.target.value)}
+                      onChange={(event) => {
+                        setScript(event.target.value);
+                        setDirty(true);
+                      }}
                       className="min-h-[28rem] flex-1 font-mono text-sm leading-relaxed"
                       placeholder="SCENE 1: EXT. CITY STREET — NIGHT&#10;The detective walks the mural. Camera: close-up."
                     />
@@ -676,6 +960,31 @@ export function StoryboardWorkspace({
                   Generate / refine story
                 </Button>
                 <StatusLine state={assistState} />
+                {assistProposal ? (
+                  <div className="storyboard-assist-diff">
+                    <div className="rounded-md border border-border p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Current</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm">{script || "No authored story yet."}</p>
+                    </div>
+                    <div className="rounded-md border border-border p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Proposed</p>
+                      <p className="mt-2 whitespace-pre-wrap text-sm">{assistProposal}</p>
+                    </div>
+                    <div className="col-span-full flex flex-wrap gap-2">
+                      <Button type="button" size="sm" onClick={() => {
+                        setScript(assistProposal);
+                        setDirty(true);
+                        setAssistProposal(null);
+                      }}>Apply</Button>
+                      <Button type="button" size="sm" onClick={async () => {
+                        setScript(assistProposal);
+                        setAssistProposal(null);
+                        await saveBody(assistProposal);
+                      }}>Apply & Save</Button>
+                      <Button type="button" size="sm" variant="outline" onClick={() => setAssistProposal(null)}>Discard</Button>
+                    </div>
+                  </div>
+                ) : null}
                 <p className="text-xs text-muted-foreground">
                   Chrome Prompt API is the intended local path. Gemini is the server path. AI output remains a proposal until you save it.
                 </p>
@@ -722,6 +1031,15 @@ export function StoryboardWorkspace({
 
               <TabsContent value="references" className="storyboard-tab-panel space-y-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">References</p>
+                <StoryboardSourceMedia
+                  workId={work?.work_id ?? workId}
+                  sources={work?.sources ?? []}
+                  frames={work?.frames ?? []}
+                  selectedPanelId={selectedId}
+                  onWork={(next) => {
+                    if (next && typeof next === "object" && "work_id" in (next as object)) applyWork(next as StoryboardWorkRecord);
+                  }}
+                />
                 {references.length === 0 && generated.length === 0 ? (
                   <p className="suite-empty">No curated workspace reference assets indexed yet.</p>
                 ) : (
@@ -775,6 +1093,107 @@ export function StoryboardWorkspace({
                   </ul>
                 )}
               </TabsContent>
+              <TabsContent value="panels" className="storyboard-tab-panel space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button type="button" size="sm" onClick={() => void mutate("Create panel", "create-panel", {})}>Create panel</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => selectedPersisted && void mutate("Duplicate panel", "duplicate-panel", { panel_id: selectedPersisted.panel_id })}>Duplicate</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => selectedPersisted && void mutate("Delete panel", "delete-panel", { panel_id: selectedPersisted.panel_id })}>Delete</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => {
+                    if (!selectedPersisted) return;
+                    const ids = persistedPanels.map((panel) => panel.panel_id);
+                    const index = ids.indexOf(selectedPersisted.panel_id);
+                    if (index <= 0) return;
+                    const next = [...ids];
+                    [next[index - 1], next[index]] = [next[index], next[index - 1]];
+                    void mutate("Reorder panels", "reorder-panels", { panel_ids: next });
+                  }}>Move earlier</Button>
+                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => {
+                    if (!selectedPersisted) return;
+                    const ids = persistedPanels.map((panel) => panel.panel_id);
+                    const index = ids.indexOf(selectedPersisted.panel_id);
+                    if (index < 0 || index >= ids.length - 1) return;
+                    const next = [...ids];
+                    [next[index + 1], next[index]] = [next[index], next[index + 1]];
+                    void mutate("Reorder panels", "reorder-panels", { panel_ids: next });
+                  }}>Move later</Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Panels are creative objects, not Scenes. Reorder is undoable.</p>
+              </TabsContent>
+              <TabsContent value="stills" className="storyboard-tab-panel space-y-3">
+                <p className="text-xs text-muted-foreground">Generate a still for the selected panel. Previous successful stills stay in history.</p>
+                <Button type="button" size="sm" onClick={() => void generateMedia("still")}>Generate still</Button>
+                <StatusLine state={mediaState} />
+                {selectedPersisted?.generation_metadata?.stills?.length ? (
+                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                    {selectedPersisted.generation_metadata.stills.map((entry, index) => (
+                      <li key={entry.asset_id}>
+                        {entry.still_url ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={entry.still_url} alt="" className="aspect-video w-full rounded object-cover" />
+                        ) : <div className="aspect-video rounded bg-muted/40" />}
+                        <p className="mt-1 text-[11px] text-muted-foreground">Generation {index + 1} · {entry.status}</p>
+                        <Button type="button" size="sm" variant="outline" className="mt-1 h-7 text-[10px]" onClick={() => void mutate("Select still", "save-panel", { panel_id: selectedPersisted.panel_id, patch: { active_still_asset_id: entry.asset_id } }, "selection")}>Select</Button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : <p className="suite-empty">No still history on this panel yet.</p>}
+              </TabsContent>
+              <TabsContent value="motion" className="storyboard-tab-panel space-y-3">
+                <p className="text-xs text-muted-foreground">Motion uses the configured Veo model. Unsupported modes stay explained, not mysterious.</p>
+                {([
+                  ["motion", "Text to video"],
+                  ["animate-still", "Image to video"],
+                  ["first-last-frame", "First / last frame"],
+                  ["reference-motion", "Reference images"],
+                  ["extend", "Video extension"],
+                ] as const).map(([kind, label]) => {
+                  const requirement = motionRequirement({
+                    kind,
+                    stillUrl: selected?.still,
+                    lastFrameUrl: lastFrame || null,
+                    referenceUrls: [...references.map((item) => item.still_url).filter(Boolean), ...persistedPanels.flatMap((panel) => panel.references.map((ref) => ref.url).filter(Boolean))] as string[],
+                    extensionVideoUri: selectedJob?.result?.provider_video_uri ?? null,
+                  });
+                  return (
+                    <div key={kind} className="flex flex-wrap items-center gap-2">
+                      <Button type="button" size="sm" variant="outline" disabled={!requirement.available} title={requirement.reason ?? label} onClick={() => void enqueue(kind)}>
+                        {label}
+                      </Button>
+                      {!requirement.available ? <p className="text-xs text-muted-foreground">{requirement.reason}</p> : null}
+                    </div>
+                  );
+                })}
+                <StatusLine state={mediaState} />
+              </TabsContent>
+              <TabsContent value="assembly" className="storyboard-tab-panel space-y-3">
+                <p className="text-xs text-muted-foreground">Storyboard assembly is not the public Experience. Select generated artifacts, order them, and save.</p>
+                <Button type="button" size="sm" onClick={() => {
+                  if (!selected) return;
+                  const next = [...assemblyItems, {
+                    id: `${Date.now()}`,
+                    kind: selected.endpoint ? "motion" as const : "still" as const,
+                    label: selected.title,
+                    panel_id: selectedId,
+                    url: selected.still,
+                    playback_id: selectedJob?.result?.playback_id ?? null,
+                    endpoint: selected.endpoint,
+                  }];
+                  setAssemblyItems(next);
+                  void mutate("Save assembly", "save-assembly", { items: next });
+                }}>Add selected to assembly</Button>
+                <ol className="space-y-2">
+                  {assemblyItems.map((item, index) => (
+                    <li key={item.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
+                      <span>{index + 1}. {item.label}</span>
+                      <Button type="button" size="sm" variant="ghost" onClick={() => {
+                        const next = assemblyItems.filter((entry) => entry.id !== item.id);
+                        setAssemblyItems(next);
+                        void mutate("Remove assembly item", "save-assembly", { items: next });
+                      }}>Remove</Button>
+                    </li>
+                  ))}
+                </ol>
+              </TabsContent>
             </Tabs>
           </CardContent>
         </Card>
@@ -810,6 +1229,13 @@ export function StoryboardWorkspace({
                       still={panelStills[panel.panel_id] ?? panel.still_url}
                       pending={Boolean(pendingPanels[panel.panel_id])}
                       selected={selectedId === panel.panel_id}
+                      status={derivePanelUiStatus({
+                        selected: selectedId === panel.panel_id,
+                        persistedStatus: panel.status,
+                        stillUrl: panelStills[panel.panel_id] ?? panel.still_url,
+                        motionPlaybackId: panel.motion_playback_id,
+                        jobs: jobs.filter((job) => job.panel_id === panel.panel_id),
+                      })}
                       onSelect={() => {
                         setSelectedId(panel.panel_id);
                         setDraftPanel(panel);
@@ -912,10 +1338,18 @@ export function StoryboardWorkspace({
             <div className="mt-3 grid gap-2">
               <Label htmlFor="panel-title">Title</Label>
               <Input id="panel-title" value={editorPanel.title ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, title: event.target.value })} />
-              <Label htmlFor="panel-action">Action</Label>
+              <Label htmlFor="panel-action">Visual description</Label>
               <Textarea id="panel-action" className="min-h-20" value={editorPanel.action ?? editorPanel.description ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value, description: event.target.value })} />
+              <Label htmlFor="panel-intent">Narrative intent</Label>
+              <Input id="panel-intent" value={editorPanel.narrative_purpose ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, narrative_purpose: event.target.value })} />
               <Label htmlFor="panel-camera">Camera</Label>
               <Input id="panel-camera" value={editorPanel.camera ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera: event.target.value })} />
+              <Label htmlFor="panel-movement">Movement</Label>
+              <Input id="panel-movement" value={editorPanel.camera_movement ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera_movement: event.target.value })} />
+              <Label htmlFor="panel-transition">Transition</Label>
+              <Input id="panel-transition" value={editorPanel.transition ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, transition: event.target.value })} />
+              <Label htmlFor="panel-duration">Duration (ms)</Label>
+              <Input id="panel-duration" type="number" value={editorPanel.duration_ms ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, duration_ms: event.target.value ? Number(event.target.value) : null })} />
               <Label htmlFor="panel-dialogue">Dialogue</Label>
               <Input id="panel-dialogue" value={editorPanel.dialogue ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, dialogue: event.target.value })} />
               <Button type="button" size="sm" variant="outline" onClick={() => void savePanelEdits()}>
@@ -929,11 +1363,25 @@ export function StoryboardWorkspace({
           {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
           {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
           {selectedJob ? (
-            <p className="mt-2 text-xs" data-generation-status={selectedJob.status}>
-              {jobUiLabel(selectedJob.status as never)}
-              {selectedJob.progress != null ? ` · ${selectedJob.progress}%` : ""}
-              {selectedJob.error?.message ? ` · ${selectedJob.error.message}` : ""}
-            </p>
+            <div className="mt-2 space-y-2">
+              <p className="text-xs" data-generation-status={selectedJob.status}>
+                {jobUiLabel(selectedJob.status as never)}
+                {selectedJob.progress != null ? ` · ${selectedJob.progress}%` : ""}
+                {selectedJob.error?.message ? ` · ${selectedJob.error.message}` : ""}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {selectedJob.retryable || selectedJob.status === "failed" || selectedJob.status === "unavailable" ? (
+                  <Button type="button" size="sm" variant="outline" onClick={() => void fetch(`/api/authority/storyboard/jobs/${selectedJob.job_id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "retry" }) }).then(async (response) => {
+                    const payload = await response.json().catch(() => ({}));
+                    if (payload.job_id) setJobs((current) => [payload, ...current.filter((job) => job.job_id !== payload.job_id)]);
+                  })}>Retry</Button>
+                ) : null}
+                {selectedJob.status === "queued" || selectedJob.status === "submitted" || selectedJob.status === "processing" ? (
+                  <Button type="button" size="sm" variant="ghost" onClick={() => void fetch(`/api/authority/storyboard/jobs/${selectedJob.job_id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) })}>Cancel</Button>
+                ) : null}
+              </div>
+              <p className="text-[11px] text-muted-foreground">A generation cannot be undone at the provider. Undo restores local selection and keeps generated assets.</p>
+            </div>
           ) : null}
           <div className="mt-4 flex flex-wrap gap-2">
             <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("still")}>
@@ -1052,6 +1500,7 @@ function ShotFrame({
   panelKind,
   sceneId,
   caption,
+  status,
 }: {
   shotLabel: string;
   subtitle: string;
@@ -1064,6 +1513,7 @@ function ShotFrame({
   panelKind?: string;
   sceneId?: string | null;
   caption?: string;
+  status?: string;
 }) {
   return (
     <div className={cn("storyboard-panel", selected && "storyboard-panel-current")}>
@@ -1099,6 +1549,7 @@ function ShotFrame({
             <p>{shotLabel}</p>
           )}
           <p className="truncate">{subtitle}</p>
+          {status ? <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{panelUiLabel(status as never)}</p> : null}
           {caption ? <p className="font-mono text-[10px] text-muted-foreground">{caption}</p> : null}
         </div>
         <Button type="button" size="sm" className="h-7 shrink-0 text-[10px]" variant={selected ? "default" : "outline"} disabled={pending} onClick={onGenerate}>

@@ -41,6 +41,8 @@ export function unconfiguredFailure(message = "Google Gemini API is not configur
 export function classifyGeminiHttpError(input: {
   httpStatus: number;
   bodyText?: string;
+  operation?: "text" | "image" | "video";
+  model?: string;
 }): ProviderFailure {
   const body = (input.bodyText ?? "").slice(0, 4000);
   const lower = body.toLowerCase();
@@ -53,7 +55,7 @@ export function classifyGeminiHttpError(input: {
         code: "quota",
         status: "unavailable",
         retryable: false,
-        message: humanQuotaMessage(body, httpStatus),
+        message: humanQuotaMessage(body, httpStatus, input.operation, input.model),
         provider: "gemini",
         httpStatus,
       };
@@ -76,7 +78,7 @@ export function classifyGeminiHttpError(input: {
       code: rate ? "rate_limit" : "quota",
       status: "unavailable",
       retryable: rate,
-      message: humanQuotaMessage(body, httpStatus),
+        message: humanQuotaMessage(body, httpStatus, input.operation, input.model),
       provider: "gemini",
       httpStatus,
     };
@@ -141,11 +143,18 @@ function extractGeminiMessage(body: string): string | null {
   return null;
 }
 
-function humanQuotaMessage(body: string, httpStatus: number): string {
+function humanQuotaMessage(body: string, httpStatus: number, operation?: "text" | "image" | "video", model?: string): string {
+  const kind =
+    operation === "image" ? "image generation" :
+    operation === "video" ? "video generation" :
+    operation === "text" ? "text generation" :
+    "generation";
+  const modelLabel = model ? ` (${model})` : "";
+  const exhausted = `Gemini ${kind} is currently unavailable because the configured Google AI quota for this model${modelLabel} is exhausted.`;
   const extracted = extractGeminiMessage(body);
   if (extracted?.toLowerCase().includes("quota") || extracted?.toLowerCase().includes("rate")) {
-    return `Generation unavailable: ${extracted}`;
+    return `${exhausted} ${extracted}`;
   }
-  if (extracted) return `Generation unavailable: Gemini API quota or rate limit (${httpStatus}). ${extracted}`;
-  return `Generation unavailable: Gemini API quota exceeded (${httpStatus}).`;
+  if (extracted) return `${exhausted} Gemini API quota or rate limit (${httpStatus}). ${extracted}`;
+  return `${exhausted} (${httpStatus}).`;
 }
