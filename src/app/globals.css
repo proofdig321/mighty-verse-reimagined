@@ -682,6 +682,13 @@ html[data-theme="tangerine"] {
     min-height: 28rem;
   }
 
+  .storyboard-workspace [data-slot="tabs-list"] {
+    height: auto;
+    min-height: 2rem;
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
   @media (min-width: 1024px) {
     .storyboard-stage {
       grid-template-columns: minmax(17rem, 5fr) minmax(0, 7fr);

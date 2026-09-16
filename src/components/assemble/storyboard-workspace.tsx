@@ -861,8 +861,14 @@ export function StoryboardWorkspace({
       <div className="storyboard-stage">
         <Card className="flex min-h-0 flex-col bg-card/70">
           <CardHeader className="border-b border-border/70">
-            <CardTitle className="uppercase tracking-[0.16em]">Script & Narrative</CardTitle>
-            <CardDescription>Write or paste a story. AI proposes. You authorise. Panels are not Scenes.</CardDescription>
+            <CardTitle className="uppercase tracking-[0.16em]">
+              {tab === "assist" ? "AI Assist" : tab === "sentinel" ? "Sentinel" : tabs.find((item) => item.id === tab)?.label ?? "Script & Narrative"}
+            </CardTitle>
+            <CardDescription>
+              {tab === "script" || tab === "assist" || tab === "sentinel"
+                ? "Write or paste a story. AI proposes. You authorise. Panels are not Scenes."
+                : "Workspace section. Artifacts stay non-canonical until a curator promotes them."}
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-1 flex-col pt-4">
             <Tabs
@@ -883,17 +889,24 @@ export function StoryboardWorkspace({
               }}
               className="flex min-h-0 flex-1 flex-col gap-4"
             >
-              <TabsList className="flex h-auto w-full flex-wrap justify-start gap-1" aria-label="Storyboard materials">
-                {tabs.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <TabsTrigger key={item.id} value={item.id} className="gap-1.5">
-                      <Icon size={13} />
-                      {item.label}
-                    </TabsTrigger>
-                  );
-                })}
-              </TabsList>
+              {tab === "script" || tab === "assist" || tab === "sentinel" ? (
+                <TabsList
+                  className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto"
+                  aria-label="Script authoring"
+                >
+                  {tabs
+                    .filter((item) => item.id === "script" || item.id === "assist" || item.id === "sentinel")
+                    .map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <TabsTrigger key={item.id} value={item.id} className="h-8 flex-none gap-1.5">
+                          <Icon size={13} />
+                          {item.label}
+                        </TabsTrigger>
+                      );
+                    })}
+                </TabsList>
+              ) : null}
 
               <TabsContent value="script" className="storyboard-tab-panel space-y-4">
                 <section data-column="script" aria-labelledby="storyboard-script-heading" className="space-y-3">
