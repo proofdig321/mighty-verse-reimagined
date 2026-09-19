@@ -21,7 +21,8 @@ import {
   type GenerationJobKind,
   type GenerationJobStatus,
 } from "../ai/jobs";
-import { composeMotionPrompt, composeStillPrompt, type MotionIntent, type PanelPromptInput } from "../ai/prompt-composer";
+import { composeMotionPrompt, composeMotionPromptFromContext, composeStillPrompt, composeStillPromptFromContext, type MotionIntent, type PanelPromptInput } from "../ai/prompt-composer";
+import { assembleCreativeContext } from "./creative-context";
 import { muxAdapter } from "../media/providers/mux/adapter";
 import { persistGeneratedImageArtifact, persistStoryboardArtifact } from "./persist";
 import { storeCreativeBytes } from "./storage";
@@ -439,7 +440,11 @@ export async function processGenerationJob(jobId: string, participantId: string)
     if (current.kind === "still") {
       if (!panel) throw new Error("A panel is required to generate a still.");
       await writeJob(db, jobId, { status: transitionJob(current.status, { type: "submit" }), progress: 10 });
-      const prompt = composeStillPrompt(panelPromptInput(work, panel, request));
+      const instruction = typeof request.instruction === "string" && request.instruction.trim() ? request.instruction : null;
+      const ctxResult = work ? await assembleCreativeContext(work, panel, instruction) : null;
+      const prompt = ctxResult?.ok
+        ? composeStillPromptFromContext(ctxResult.context)
+        : composeStillPrompt(panelPromptInput(work, panel, request));
       const image = await generateGeminiImageBytes({ prompt });
       if (!image.ok) {
         const mapped = failFromProvider(image);
@@ -534,8 +539,12 @@ export async function processGenerationJob(jobId: string, participantId: string)
       return (await getGenerationJob({ participantId, jobId }))!;
     }
 
+    const instruction = typeof request.instruction === "string" && request.instruction.trim() ? request.instruction : null;
+    const ctxResult = work && panel ? await assembleCreativeContext(work, panel, instruction) : null;
     const prompt = panel
-      ? composeMotionPrompt(panelPromptInput(work, panel, request), motion)
+      ? ctxResult?.ok
+        ? composeMotionPromptFromContext(ctxResult.context, motion)
+        : composeMotionPrompt(panelPromptInput(work, panel, request), motion)
       : String(request.prompt ?? "");
 
     if (current.operation_id && (current.status === "submitted" || current.status === "processing")) {

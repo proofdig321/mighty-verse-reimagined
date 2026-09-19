@@ -1,7 +1,12 @@
 /**
  * Creative prompt construction for Gemini text and Veo motion.
  * Creative context only — no database dumps, UUIDs, or internal records.
+ *
+ * Two entry points:
+ *   composeStillPrompt / composeMotionPrompt — existing panel-scoped path (unchanged)
+ *   composeStillPromptFromContext / composeMotionPromptFromContext — full CreativeContext path
  */
+import type { CreativeContext, DocumentedParticipant } from "@/lib/storyboard/creative-context";
 
 export type MotionIntent = {
   style?: string | null;
@@ -150,6 +155,127 @@ export function composeAssistPrompt(input: {
   ]
     .filter(Boolean)
     .join("\n\n");
+}
+
+// ---------------------------------------------------------------------------
+// CreativeContext serialization — provider-neutral structured context → string
+// ---------------------------------------------------------------------------
+
+/**
+ * Serialize documented participants into a concise prompt block.
+ * Clearly labelled as documented credits — not generated interpretation.
+ * panel.characters (free text) is kept separate and passed through panel fields.
+ */
+function serializeParticipants(participants: DocumentedParticipant[]): string {
+  if (!participants.length) return "";
+  const lines = participants.map((p) => {
+    const desc = p.description ? ` — ${p.description}` : "";
+    return `${p.name} (${p.role})${desc}`;
+  });
+  return `Documented creative credits:\n${lines.join("\n")}`;
+}
+
+/**
+ * Build a PanelPromptInput from a full CreativeContext.
+ * Adds universe and participant context on top of the existing panel fields.
+ * Creator directive, Sentinel evidence, and references are preserved as-is.
+ */
+export function panelPromptInputFromContext(ctx: CreativeContext): PanelPromptInput & { _creativeContextHeader: string } {
+  const headerParts: string[] = [];
+
+  if (ctx.universe) {
+    headerParts.push(`Universe: ${ctx.universe.title}`);
+    if (ctx.universe.description) headerParts.push(ctx.universe.description);
+  }
+
+  if (ctx.documentedParticipants.length) {
+    headerParts.push(serializeParticipants(ctx.documentedParticipants));
+  }
+
+  if (ctx.work.premise) headerParts.push(`Premise: ${ctx.work.premise}`);
+  if (ctx.work.tone) headerParts.push(`Tone: ${ctx.work.tone}`);
+  if (ctx.work.genre) headerParts.push(`Genre: ${ctx.work.genre}`);
+
+  return {
+    storyTitle: ctx.work.title,
+    storyBody: null,
+    panel: ctx.panel,
+    selectedReferences: ctx.panel.references.map((r) => r.label).filter(Boolean),
+    instruction: ctx.creatorDirective,
+    sentinelObservation: ctx.sentinelEvidence
+      ? {
+          what_happens: ctx.sentinelEvidence.what_happens,
+          framing: ctx.sentinelEvidence.framing,
+          camera: ctx.sentinelEvidence.camera,
+          camera_explanation: ctx.sentinelEvidence.camera_explanation,
+          action: ctx.sentinelEvidence.action,
+          subjects: ctx.sentinelEvidence.subjects,
+          environment: ctx.sentinelEvidence.environment,
+          motion: ctx.sentinelEvidence.motion,
+          lighting: ctx.sentinelEvidence.lighting,
+          analysis_mode: ctx.sentinelEvidence.analysis_mode,
+        }
+      : null,
+    sourceLabel: null,
+    _creativeContextHeader: headerParts.join("\n"),
+  };
+}
+
+/**
+ * Compose a still prompt from a full CreativeContext.
+ * Universe identity and documented participants appear before panel fields.
+ * Creator directive remains last and authoritative.
+ */
+export function composeStillPromptFromContext(ctx: CreativeContext): string {
+  const base = panelPromptInputFromContext(ctx);
+  return [
+    STILL_PREFIX,
+    base._creativeContextHeader,
+    base.panel.title,
+    base.panel.description,
+    field("Subject", base.panel.characters),
+    field("Environment", base.panel.environment),
+    field("Action", base.panel.action),
+    field("Framing", base.panel.framing),
+    field("Lighting", base.panel.lighting),
+    field("Mood", base.panel.mood),
+    field("Style", base.panel.lens_style),
+    composeObservationContext(base.sentinelObservation),
+    base.selectedReferences?.length ? `Visual references in play: ${base.selectedReferences.join("; ")}` : "",
+    base.instruction ? `Creator directive: ${base.instruction}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Compose a motion prompt from a full CreativeContext.
+ * Universe identity and documented participants appear before panel fields.
+ * Creator directive remains last and authoritative.
+ */
+export function composeMotionPromptFromContext(ctx: CreativeContext, motion: MotionIntent = {}): string {
+  const base = panelPromptInputFromContext(ctx);
+  const aspect = motion.aspectRatio ?? (motion.orientation === "portrait" ? "9:16" : "16:9");
+  const style = motion.animationStyle || motion.style || base.panel.lens_style || "cinematic live-action";
+  return [
+    `A ${style} motion picture.`,
+    base._creativeContextHeader,
+    base.panel.characters ? `The subject is ${base.panel.characters}.` : base.panel.title,
+    base.panel.action || base.panel.description,
+    base.panel.environment ? `The environment is ${base.panel.environment}.` : "",
+    cameraLine(base.panel.camera, motion.cameraMovement || base.panel.camera_movement, base.panel.framing),
+    base.panel.lighting ? `Lighting: ${base.panel.lighting}.` : "",
+    base.panel.mood ? `Atmosphere: ${base.panel.mood}.` : "",
+    motion.motionDirection ? `Motion: ${motion.motionDirection}.` : "",
+    audioLine(base.panel.dialogue, base.panel.narration, motion.audioIntention),
+    base.panel.transition ? `The shot resolves toward: ${base.panel.transition}.` : "",
+    `Aspect ${aspect}. Photoreal texture unless the style is explicitly animation.`,
+    composeObservationContext(base.sentinelObservation).replace(/\n/g, " "),
+    base.selectedReferences?.length ? `Visual references in play: ${base.selectedReferences.join("; ")}.` : "",
+    base.instruction ? `Creator directive: ${base.instruction}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 function field(label: string, value?: string | null) {
