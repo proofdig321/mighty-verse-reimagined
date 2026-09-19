@@ -14,13 +14,13 @@ export const STUDIO_INTERACTION_PHASES = [
   },
   {
     id: "work",
-    label: "Storyboard",
+    label: "Work",
     defaultTab: "script",
     note: "Storyboard, panels, and generated artifacts. Non-canonical until authorised through curation.",
   },
   {
     id: "directive",
-    label: "Realization",
+    label: "Directive",
     defaultTab: "stills",
     note: "Creator directive, Generate Still, and Generate Motion. Separate from Sentinel observations.",
   },

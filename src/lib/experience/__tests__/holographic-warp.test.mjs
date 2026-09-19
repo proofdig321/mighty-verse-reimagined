@@ -6,6 +6,7 @@ import {
   holographicPanFromPointerX,
   holographicMouseUv,
   holographicUvShift,
+  holographicPoseUniforms,
   muxVideoTextureUpdate,
   tessellatePlane,
   tessellateVertexCount,
@@ -25,12 +26,33 @@ assert(left.x === 0, "left pointer maps to mouse uv 0");
 const right = holographicMouseUv({ x: 0.5, y: 0 });
 assert(right.x === 1, "right pointer maps to mouse uv 1");
 
-assert(holographicUvShift(0) < 0, "mouse left yields a negative UV shift (pixels appear to slide right)");
-assert(holographicUvShift(1) > 0, "mouse right yields a positive UV shift (pixels appear to slide left)");
+// holographicUvShift is retained for test coverage but is NOT called by the renderer.
+// The renderer uses holographicPoseUniforms() via ViewerPose instead.
+// These assertions verify the function's math, not the rendering direction.
+assert(holographicUvShift(0) < 0, "holographicUvShift: uv=0 (left) yields negative shift");
+assert(holographicUvShift(1) > 0, "holographicUvShift: uv=1 (right) yields positive shift");
 assert(HOLOGRAPHIC_PARALLAX_STRENGTH === 0.75, "cursor parallax punch is 0.75");
 assert(
   Math.abs(holographicUvShift(0)) > Math.abs(holographicUvShift(0, 0.45)),
   "0.75 parallax separates layers more than the previous 0.45 baseline",
+);
+
+// --- ViewerPose → shader uniforms ---
+// CORRECTED sign convention: viewer right → u_viewer_x positive → content shifts right.
+// The shader uses += so positive u_viewer_x moves vertices right (correct parallax).
+const centerPose = { position: { x: 0, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 } };
+const rightPose  = { position: { x: 0.375, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 } };
+const leftPose   = { position: { x: -0.375, y: 0, z: 0 }, rotation: { x: 0, y: 0, z: 0 } };
+const upPose     = { position: { x: 0, y: 0.225, z: 0 }, rotation: { x: 0, y: 0, z: 0 } };
+
+assert(holographicPoseUniforms(centerPose).viewerX === 0, "center pose: u_viewer_x = 0");
+assert(holographicPoseUniforms(centerPose).viewerY === 0, "center pose: u_viewer_y = 0");
+assert(holographicPoseUniforms(rightPose).viewerX > 0, "viewer right: u_viewer_x positive → content shifts right (corrected)");
+assert(holographicPoseUniforms(leftPose).viewerX < 0, "viewer left: u_viewer_x negative → content shifts left (corrected)");
+assert(holographicPoseUniforms(upPose).viewerY > 0, "viewer up: u_viewer_y positive → content shifts up (corrected)");
+assert(
+  holographicPoseUniforms(rightPose).viewerX === -holographicPoseUniforms(leftPose).viewerX,
+  "viewer pose uniforms are symmetric",
 );
 
 assert(

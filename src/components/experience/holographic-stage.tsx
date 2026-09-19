@@ -19,8 +19,10 @@ import {
 } from "@/lib/experience/holographic-program";
 import { cn } from "@/lib/utils";
 import { attachHolographicAudio, type HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
+import { MouseViewController } from "@/lib/experience/viewer-pose";
+import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
 import { HolographicLayerMedia } from "./holographic-layer-media";
-import { HolographicTheater, type TheaterPointer } from "./holographic-theater";
+import { HolographicTheater } from "./holographic-theater";
 import { CreativeMomentCard } from "./creative-moment-card";
 
 function LayerCard({
@@ -108,7 +110,11 @@ export function HolographicStage({
   onSelectScene?: (sceneMasterId: string, startMs: number) => void;
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
-  const pointerRef = useRef<TheaterPointer>({ x: 0, y: 0 });
+  // Input controller: converts pointer events to ViewerPose.
+  // Stored as a ref so React does not re-render on every pointer move.
+  const controllerRef = useRef<MouseViewController>(new MouseViewController());
+  // poseRef: the current ViewerPose read by the renderer each frame.
+  const poseRef = useRef<ViewerPose>(NEUTRAL_VIEWER_POSE);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HolographicAudioGraph | null>(null);
   const [playing, setPlaying] = useState(false);
@@ -148,14 +154,15 @@ export function HolographicStage({
       return;
     }
     const rect = event.currentTarget.getBoundingClientRect();
-    pointerRef.current = {
-      x: (event.clientX - rect.left) / rect.width - 0.5,
-      y: 0.5 - (event.clientY - rect.top) / rect.height,
-    };
+    // Input → MouseViewController → ViewerPose → renderer.
+    // The renderer receives a pose, not raw pointer coordinates.
+    controllerRef.current.onPointerMove(event.clientX, event.clientY, rect);
+    poseRef.current = controllerRef.current.getPose();
   }
 
   function onLeave() {
-    pointerRef.current = { x: 0, y: 0 };
+    controllerRef.current.onPointerLeave();
+    poseRef.current = NEUTRAL_VIEWER_POSE;
   }
 
   function restart() {
@@ -330,7 +337,7 @@ export function HolographicStage({
               <HolographicTheater
                 layers={spatialLayers}
                 timeMs={timeMs}
-                pointerRef={pointerRef}
+                poseRef={poseRef}
                 videoRef={videoRef}
                 audioRef={audioRef}
               />

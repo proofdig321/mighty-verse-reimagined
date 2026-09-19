@@ -25,8 +25,8 @@ export const CREATIVE_SUITE_SECTIONS = [
 ] as const;
 
 export const CREATIVE_SUITE_NAV_GROUPS = [
-  { id: "context", label: "Context", sectionIds: ["overview", "sentinel", "storyboard"] },
-  { id: "work", label: "Storyboard", sectionIds: ["scenes", "production"] },
+  { id: "context", label: "Context", sectionIds: ["overview", "sentinel"] },
+  { id: "work", label: "Work", sectionIds: ["storyboard", "scenes", "production"] },
   { id: "realization", label: "Realization", sectionIds: ["preview", "experience"] },
 ] as const;
 

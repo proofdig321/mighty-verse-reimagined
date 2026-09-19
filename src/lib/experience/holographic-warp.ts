@@ -3,8 +3,17 @@
  *
  * Pointer is cinema-normalized: x/y ∈ [-0.5, +0.5] with origin at center.
  *
- * Mouse left  (-0.5) → warp pixels right (parallax) + pan audio left  (-0.8)
- * Mouse right (+0.5) → warp pixels left  + pan audio right (+0.8)
+ * CORRECTED parallax convention (post spatial-renderer refactor):
+ *   Mouse right (+0.5) → viewer pose shifts right → foreground shifts right
+ *   Mouse left  (-0.5) → viewer pose shifts left  → foreground shifts left
+ *   Audio pan follows pointer x directly (unchanged).
+ *
+ * The shader receives u_viewer_x / u_viewer_y from the ViewerPose, not raw
+ * pointer coordinates. See holographic-theater.tsx and viewer-pose.ts.
+ *
+ * holographicUvShift() is retained for test coverage but is NOT called by
+ * the renderer. It describes the old UV-shift model which has been superseded
+ * by the ViewerPose → vertex displacement model.
  */
 
 export const HOLOGRAPHIC_PAN_MAX = 0.8;
@@ -46,10 +55,37 @@ export function holographicMouseUv(pointer: TheaterPointer): { x: number; y: num
 
 /**
  * UV sample offset that shears the picture opposite the cursor.
+ *
+ * @deprecated Not called by the renderer. Retained for test coverage only.
+ * The renderer uses ViewerPose → vertex displacement via holographicPoseUniforms().
  * Mouse left (uv.x < 0.5) yields a negative offset so content appears to slide right.
  */
 export function holographicUvShift(mouseUv: number, strength = HOLOGRAPHIC_PARALLAX_STRENGTH): number {
   return (mouseUv - 0.5) * strength;
+}
+
+/**
+ * Convert a ViewerPose to the shader uniforms used by the spatial renderer.
+ *
+ * The renderer vertex shader uses u_viewer_x / u_viewer_y (viewer position
+ * in scene-local units) rather than raw pointer coordinates or u_mouse UV.
+ * This keeps the shader independent of the input device.
+ *
+ * Sign convention:
+ *   u_viewer_x > 0 → viewer is right of center → foreground shifts right
+ *   u_viewer_y > 0 → viewer is above center    → foreground shifts up
+ *
+ * The shader applies: pos.x += u_viewer_x * wave * u_parallax
+ * This is the CORRECT direction: viewer right → content right (parallax).
+ */
+export function holographicPoseUniforms(pose: import("./spatial-types").ViewerPose): {
+  viewerX: number;
+  viewerY: number;
+} {
+  return {
+    viewerX: clamp(pose.position.x, -1, 1),
+    viewerY: clamp(pose.position.y, -1, 1),
+  };
 }
 
 export type MuxVideoTextureUpdate = "skip" | "allocate" | "subimage";

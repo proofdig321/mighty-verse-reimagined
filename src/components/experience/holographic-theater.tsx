@@ -3,53 +3,110 @@
 import { useEffect, useRef } from "react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import type { HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
+import type { ViewerPose } from "@/lib/experience/spatial-types";
 import {
   HOLOGRAPHIC_CINEMA_FILL,
   HOLOGRAPHIC_MESH_SEGMENTS,
   HOLOGRAPHIC_PARALLAX_STRENGTH,
   HOLOGRAPHIC_VIDEO_TEXTURE_FLIP_Y,
   holographicCinemaPlane,
-  holographicMouseUv,
   holographicPanFromPointerX,
+  holographicPoseUniforms,
   lerp,
   muxVideoTextureUpdate,
   tessellatePlane,
   tessellateVertexCount,
-  type TheaterPointer,
 } from "@/lib/experience/holographic-warp";
 
-export type { TheaterPointer };
+export type { ViewerPose };
 
+/**
+ * Vertex shader — spatial renderer.
+ *
+ * Input boundary: u_viewer_x / u_viewer_y come from ViewerPose.position,
+ * not from raw pointer coordinates. The shader does not know the input source.
+ *
+ * DEPTH MODEL:
+ *   When u_has_depth = 0.0 (no real depth available):
+ *     Runtime synthetic fallback — sine-wave envelope.
+ *     wave = sin(u * π) × sin(v * π)
+ *     This is content-blind. It is NOT a depth map.
+ *     It is an explicit fallback, not the final spatial promise.
+ *
+ *   When u_has_depth = 1.0 (real depth texture present):
+ *     depth = texture2D(u_depth, a_uv).r
+ *     White (1.0) = near. Black (0.0) = far.
+ *     Displacement scales with depth so near content moves more than far.
+ *     [Future path — no real depth source exists yet.]
+ *
+ * PARALLAX SIGN CONVENTION (corrected):
+ *   u_viewer_x > 0 (viewer right) → pos.x increases → content shifts right.
+ *   This is the correct look-around direction.
+ *   Previous implementation used -= which inverted the effect.
+ *
+ * DEPTH CONVENTION (for future depth texture):
+ *   White (1.0) = near (foreground). Black (0.0) = far (background).
+ *   Linear normalized values [0, 1]. No gamma correction on depth.
+ *   Clamped to [0, 1] before displacement.
+ */
 const VIDEO_VERT = `
 precision mediump float;
 attribute vec3 a_pos;
 attribute vec2 a_uv;
 uniform mat4 u_mvp;
-uniform vec2 u_mouse;
+uniform float u_viewer_x;
+uniform float u_viewer_y;
 uniform float u_parallax;
+uniform float u_has_depth;
+uniform sampler2D u_depth;
 varying vec2 v_uv;
 void main() {
   v_uv = a_uv;
   vec3 pos = a_pos;
-  float wave = sin(a_uv.x * 3.1415926) * sin(a_uv.y * 3.1415926);
-  vec2 delta = u_mouse - vec2(0.5);
-  pos.x -= delta.x * wave * u_parallax;
-  pos.y -= delta.y * wave * u_parallax * 0.6;
-  pos.z += wave * delta.x * 0.4;
+
+  float wave;
+  if (u_has_depth > 0.5) {
+    // Real depth path: sample depth texture.
+    // White = near (1.0), Black = far (0.0).
+    // Near content displaces more than far content.
+    wave = clamp(texture2D(u_depth, a_uv).r, 0.0, 1.0);
+  } else {
+    // Runtime synthetic fallback: sine-wave envelope.
+    // Content-blind — peaks at UV center regardless of what is in the frame.
+    // Explicitly NOT a depth map. Used only when no real depth is available.
+    wave = sin(a_uv.x * 3.1415926) * sin(a_uv.y * 3.1415926);
+  }
+
+  // CORRECTED sign: viewer right (u_viewer_x > 0) → content shifts right.
+  // += is the correct parallax direction (look-around effect).
+  pos.x += u_viewer_x * wave * u_parallax;
+  pos.y += u_viewer_y * wave * u_parallax * 0.6;
+  pos.z += wave * u_viewer_x * 0.4;
+
   gl_Position = u_mvp * vec4(pos, 1.0);
 }
 `;
 
+/**
+ * Fragment shader.
+ *
+ * Chromatic aberration uses viewer position (not raw pointer) for consistency
+ * with the vertex shader. Red shifts in the viewer direction, blue opposite —
+ * simulating lens dispersion from the viewer's lateral position.
+ *
+ * Scanline and edge glow are stylistic holographic CRT effects.
+ */
 const VIDEO_FRAG = `
 precision mediump float;
 varying vec2 v_uv;
 uniform sampler2D u_tex;
-uniform vec2 u_mouse;
+uniform float u_viewer_x;
+uniform float u_viewer_y;
 uniform float u_time;
 void main() {
-  vec2 delta = u_mouse - vec2(0.5);
-  vec2 rOffset = delta * 0.025;
-  vec2 bOffset = -delta * 0.025;
+  vec2 viewerOffset = vec2(u_viewer_x, u_viewer_y);
+  vec2 rOffset = viewerOffset * 0.025;
+  vec2 bOffset = -viewerOffset * 0.025;
   float r = texture2D(u_tex, clamp(v_uv + rOffset, 0.0, 1.0)).r;
   float g = texture2D(u_tex, v_uv).g;
   float b = texture2D(u_tex, clamp(v_uv + bOffset, 0.0, 1.0)).b;
@@ -184,16 +241,30 @@ function bindMesh(
   gl.vertexAttribPointer(uv, 2, gl.FLOAT, false, 20, 12);
 }
 
+/**
+ * HolographicTheater — the spatial WebGL renderer.
+ *
+ * Receives a ViewerPose from the input controller (via poseRef).
+ * Does not interpret raw pointer coordinates.
+ * Does not know whether the pose came from mouse, touch, or future XR.
+ *
+ * Depth is optional. When absent, the runtime_synthetic sine-wave fallback
+ * is used. The shader has a clear path for real depth when it becomes available.
+ *
+ * The existing Mux video pipeline (HLS → HTMLVideoElement → texImage2D /
+ * texSubImage2D) is fully preserved. The first-frame gate remains mandatory.
+ */
 export function HolographicTheater({
   layers,
   timeMs,
-  pointerRef,
+  poseRef,
   videoRef,
   audioRef,
 }: {
   layers: HolographicLayer[];
   timeMs: number;
-  pointerRef: { current: TheaterPointer };
+  /** ViewerPose ref from the input controller. Renderer reads this each frame. */
+  poseRef: { current: ViewerPose };
   videoRef?: { current: HTMLVideoElement | null };
   audioRef?: { current: HolographicAudioGraph | null };
 }) {
@@ -229,23 +300,29 @@ export function HolographicTheater({
     surface.dataset.holographicParallax = HOLOGRAPHIC_PARALLAX_STRENGTH.toFixed(2);
     surface.dataset.holographicCinemaFill = String(HOLOGRAPHIC_CINEMA_FILL);
     surface.dataset.holographicOverlays = "none";
+    surface.dataset.holographicDepth = "runtime_synthetic";
+    surface.dataset.holographicTheater = "webgl";
+
     const warpProgram: WebGLProgram = videoProgram;
     const meshBuffer: WebGLBuffer = mesh;
-    surface.dataset.holographicTheater = "webgl";
 
     const videoPos = gl.getAttribLocation(warpProgram, "a_pos");
     const videoUv = gl.getAttribLocation(warpProgram, "a_uv");
     const videoMvp = gl.getUniformLocation(warpProgram, "u_mvp");
-    const videoMouse = gl.getUniformLocation(warpProgram, "u_mouse");
+    const uViewerX = gl.getUniformLocation(warpProgram, "u_viewer_x");
+    const uViewerY = gl.getUniformLocation(warpProgram, "u_viewer_y");
     const videoParallax = gl.getUniformLocation(warpProgram, "u_parallax");
     const videoTime = gl.getUniformLocation(warpProgram, "u_time");
+    const uHasDepth = gl.getUniformLocation(warpProgram, "u_has_depth");
+    const uDepth = gl.getUniformLocation(warpProgram, "u_depth");
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.DEPTH_TEST);
 
     let cancelled = false;
-    const mouse = { x: 0.5, y: 0.5 };
+    // Smoothed viewer position — lerped toward the current pose each frame.
+    const smoothed = { x: 0, y: 0 };
     const started = performance.now();
     let allocatedWidth = 0;
     let allocatedHeight = 0;
@@ -272,18 +349,33 @@ export function HolographicTheater({
       const aspect = surface.width / Math.max(1, surface.height);
       const fov = (42 * Math.PI) / 180;
       const cameraZ = 6.35;
-      const proj = perspective(fov, aspect, 0.1, 40);
-      const look = pointerRef.current;
-      const target = holographicMouseUv(look);
-      mouse.x = lerp(mouse.x, target.x, 0.1);
-      mouse.y = lerp(mouse.y, target.y, 0.1);
-      audioRef?.current?.setPanFromPointerX(look.x);
-      surface.dataset.holographicPan = holographicPanFromPointerX(look.x).toFixed(2);
-      surface.dataset.holographicMouseX = mouse.x.toFixed(3);
 
+      // --- VIEW MODEL ---
+      // Read the current ViewerPose from the input controller.
+      // The renderer does not interpret raw pointer coordinates.
+      const pose = poseRef.current;
+      const uniforms = holographicPoseUniforms(pose);
+
+      // Smooth the viewer position to avoid jitter.
+      smoothed.x = lerp(smoothed.x, uniforms.viewerX, 0.1);
+      smoothed.y = lerp(smoothed.y, uniforms.viewerY, 0.1);
+
+      // Audio pan uses the raw pointer x from the pose position.
+      // holographicPanFromPointerX expects the original [-0.5, +0.5] range.
+      // Reverse the MOUSE_POSE_LATERAL_MAX scaling to recover pointer.x.
+      const rawPointerX = pose.position.x / (0.375 / 0.5);
+      audioRef?.current?.setPanFromPointerX(rawPointerX);
+      surface.dataset.holographicPan = holographicPanFromPointerX(rawPointerX).toFixed(2);
+      surface.dataset.holographicViewerX = smoothed.x.toFixed(3);
+
+      // --- PROJECTION / VIEW / MODEL ---
+      const proj = perspective(fov, aspect, 0.1, 40);
+      // Camera is fixed at z=6.35, looking toward origin.
+      // Viewer pose drives mesh displacement, not camera movement.
       const view = viewOffset(0, 0, cameraZ);
       const vp = mat4Multiply(proj, view);
 
+      // --- VIDEO TEXTURE ---
       const video =
         videoRef?.current ??
         (surface.parentElement?.querySelector("[data-holographic-kind='mural'] video") as HTMLVideoElement | null);
@@ -325,17 +417,33 @@ export function HolographicTheater({
         }
       }
 
+      // --- DRAW ---
+      // Only draw once a real decoded frame has been allocated.
+      // This preserves the mandatory first-frame gate.
       if (allocatedWidth > 0 && allocatedHeight > 0) {
         const viewH = 2 * Math.tan(fov / 2) * cameraZ;
         const viewW = viewH * aspect;
         const videoAspect = video && video.videoWidth > 0 ? video.videoWidth / video.videoHeight : 16 / 9;
         const { planeW, planeH } = holographicCinemaPlane(viewW, viewH, videoAspect);
         bindMesh(gl, warpProgram, meshBuffer, videoPos, videoUv);
-        gl.uniformMatrix4fv(videoMvp, false, mat4Multiply(vp, mat4Multiply(translation(0, 0, 0.15), scaleMat(planeW / 2, planeH / 2, 1))));
-        gl.uniform2f(videoMouse, mouse.x, mouse.y);
+        gl.uniformMatrix4fv(
+          videoMvp,
+          false,
+          mat4Multiply(vp, mat4Multiply(translation(0, 0, 0.15), scaleMat(planeW / 2, planeH / 2, 1))),
+        );
+        // Viewer position uniforms — from ViewerPose, not raw pointer.
+        gl.uniform1f(uViewerX, smoothed.x);
+        gl.uniform1f(uViewerY, smoothed.y);
         gl.uniform1f(videoParallax, HOLOGRAPHIC_PARALLAX_STRENGTH);
         gl.uniform1f(videoTime, (performance.now() - started) / 1000);
+        // Depth: no real depth source exists yet. Use runtime_synthetic fallback.
+        // u_has_depth = 0.0 → shader uses sine-wave envelope.
+        // When real depth becomes available, upload it to texture unit 1
+        // and set u_has_depth = 1.0.
+        gl.uniform1f(uHasDepth, 0.0);
+        gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTexture);
+        gl.uniform1i(uDepth, 1); // texture unit 1 reserved for future depth
         gl.drawArrays(gl.TRIANGLES, 0, meshCount);
       }
 
@@ -352,7 +460,7 @@ export function HolographicTheater({
       window.cancelAnimationFrame(frame);
       gl.deleteTexture(videoTexture);
     };
-  }, [signature, pointerRef, videoRef, audioRef]);
+  }, [signature, poseRef, videoRef, audioRef]);
 
   return (
     <canvas
