@@ -80,7 +80,7 @@ vda_image = (
     .run_commands(
         # Clone VDA repo at a pinned commit for reproducibility
         "git clone https://github.com/DepthAnything/Video-Depth-Anything /opt/vda && "
-        "cd /opt/vda && git checkout 8b3f9a2",  # pin to known-good commit
+        "cd /opt/vda && git checkout 4f5ae23172ba60fd7bc11ef671cca678842c7072",  # pin to known-good commit
     )
 )
 
@@ -410,7 +410,7 @@ def run_vda_inference(
 # ---------------------------------------------------------------------------
 
 @app.function(
-    gpu="A10G",
+    gpu="T4",
     timeout=600,
     volumes={"/weights": model_volume},
     secrets=[
@@ -553,7 +553,7 @@ def run_depth_job(payload: dict) -> None:
         modal.Secret.from_name("mighty-verse-callback"),
     ],
 )
-@modal.web_endpoint(method="POST")
+@modal.fastapi_endpoint(method="POST")
 def submit_depth_job(payload: dict) -> dict:
     """
     HTTP endpoint that receives job submissions from Mighty Verse (Vercel).
