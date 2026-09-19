@@ -154,7 +154,7 @@ export function unconfiguredDepthFailure(providerId: string): DepthGenerationFai
     provider: providerId,
     status: "needs_configuration",
     retryable: false,
-    message: `Depth provider "${providerId}" is not configured. Set REPLICATE_API_TOKEN.`,
+    message: `Depth provider "${providerId}" is not configured.`,
     code: "unconfigured",
   };
 }

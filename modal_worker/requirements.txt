@@ -1,0 +1,7 @@
+# Modal CLI — for deploying the depth worker
+# Install: pip install modal
+# Deploy: modal deploy modal_worker/depth_worker.py
+# Secrets: modal secret create mighty-verse-supabase \
+#   SUPABASE_PROJECT_URL=... \
+#   SUPABASE_SERVICE_ROLE_KEY=...
+modal>=0.64.0

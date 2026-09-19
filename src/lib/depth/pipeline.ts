@@ -39,7 +39,8 @@ import {
 } from "../experience/depth-format";
 import { sampleDepthFrames, type DepthSamplingConfig } from "./sampler";
 import type { DepthProvider, DepthProviderOutputFrame } from "./provider";
-import { replicateDepthProvider } from "./providers/replicate/adapter";
+import { getActiveDepthProvider } from "./registry";
+import type { ModalDepthGenerationRequest } from "./providers/modal/adapter";
 
 // ---------------------------------------------------------------------------
 // Pipeline types
@@ -48,7 +49,7 @@ import { replicateDepthProvider } from "./providers/replicate/adapter";
 export type DepthPipelineInput = {
   /** Source media asset ID (media_asset.asset_id). */
   sourceAssetId: string;
-  /** Mux playback ID for frame extraction. */
+  /** Mux playback ID for frame extraction (used by image-based providers and video reference). */
   playbackId: string;
   /** Source video duration in milliseconds. */
   durationMs: number;
@@ -78,6 +79,17 @@ export type DepthPipelineSuccess = {
   model: string;
 };
 
+/**
+ * Returned when the provider accepted the job asynchronously.
+ * The actual depth frames will arrive via the provider callback.
+ * The depth_generation_job remains in "processing" state.
+ */
+export type DepthPipelineSubmitted = {
+  ok: "submitted";
+  provider: string;
+  model: string;
+};
+
 export type DepthPipelineFailure = {
   ok: false;
   stage: "sampling" | "provider" | "encoding" | "storage" | "database";
@@ -85,7 +97,7 @@ export type DepthPipelineFailure = {
   retryable: boolean;
 };
 
-export type DepthPipelineResult = DepthPipelineSuccess | DepthPipelineFailure;
+export type DepthPipelineResult = DepthPipelineSuccess | DepthPipelineSubmitted | DepthPipelineFailure;
 
 // ---------------------------------------------------------------------------
 // Storage
@@ -224,43 +236,65 @@ function providerFramesToDepthFrames(frames: DepthProviderOutputFrame[]): DepthF
  * Returns DepthPipelineFailure on any error — no partial state is persisted.
  */
 export async function runDepthPipeline(input: DepthPipelineInput): Promise<DepthPipelineResult> {
-  const provider = input.provider ?? replicateDepthProvider;
-  const targetFps = input.sampling?.targetFps ?? 1.0;
+  const provider = input.provider ?? getActiveDepthProvider();
+  const targetFps = input.sampling?.targetFps ?? 2.0;
   const frameWidth = input.sampling?.frameWidth ?? 640;
 
-  // --- STAGE 1: Sample frames ---
-  let samplingResult;
-  try {
-    samplingResult = await sampleDepthFrames({
-      playbackId: input.playbackId,
-      durationMs: input.durationMs,
+  // --- STAGE 1 & 2: Provider submission ---
+  // For video-native providers (Modal VDA), we submit the video reference directly
+  // rather than sampling individual frames. The provider handles temporal inference.
+  // For image-based providers (Replicate), we sample frames first.
+  let generationResult;
+
+  if (provider.providerId === "modal") {
+    // Video-native path: submit job reference, no frame sampling.
+    const modalRequest: ModalDepthGenerationRequest = {
+      sourceAssetId: input.sourceAssetId,
+      frames: [], // not used by Modal provider
+      targetWidth: frameWidth,
+      jobId: input.jobId,
+      participantId: input.participantId,
       targetFps,
-      frameWidth,
+      videoRef: {
+        muxPlaybackId: input.playbackId,
+        durationMs: input.durationMs,
+      },
+    };
+    generationResult = await provider.generate(modalRequest);
+  } else {
+    // Image-based path: sample frames then submit.
+    let samplingResult;
+    try {
+      samplingResult = await sampleDepthFrames({
+        playbackId: input.playbackId,
+        durationMs: input.durationMs,
+        targetFps,
+        frameWidth,
+      });
+    } catch (caught) {
+      return {
+        ok: false,
+        stage: "sampling",
+        message: caught instanceof Error ? caught.message : "Frame sampling failed.",
+        retryable: true,
+      };
+    }
+
+    if (samplingResult.frames.length === 0) {
+      return {
+        ok: false,
+        stage: "sampling",
+        message: "No frames could be extracted from the source media.",
+        retryable: true,
+      };
+    }
+
+    generationResult = await provider.generate({
+      sourceAssetId: input.sourceAssetId,
+      frames: samplingResult.frames,
+      targetWidth: frameWidth,
     });
-  } catch (caught) {
-    return {
-      ok: false,
-      stage: "sampling",
-      message: caught instanceof Error ? caught.message : "Frame sampling failed.",
-      retryable: true,
-    };
   }
-
-  if (samplingResult.frames.length === 0) {
-    return {
-      ok: false,
-      stage: "sampling",
-      message: "No frames could be extracted from the source media. Check the Mux playback ID and duration.",
-      retryable: true,
-    };
-  }
-
-  // --- STAGE 2: Provider depth generation ---
-  const generationResult = await provider.generate({
-    sourceAssetId: input.sourceAssetId,
-    frames: samplingResult.frames,
-    targetWidth: frameWidth,
-  });
 
   if (!generationResult.ok) {
     return {
@@ -271,12 +305,13 @@ export async function runDepthPipeline(input: DepthPipelineInput): Promise<Depth
     };
   }
 
-  if (generationResult.frames.length === 0) {
+  // Async-submitted: Modal worker accepted the job, will call back when done.
+  // Return submitted signal — caller transitions job to "processing".
+  if (generationResult.ok && generationResult.frames.length === 0) {
     return {
-      ok: false,
-      stage: "provider",
-      message: "Provider returned no depth frames.",
-      retryable: true,
+      ok: "submitted",
+      provider: generationResult.provider,
+      model: generationResult.model,
     };
   }
 
@@ -303,7 +338,8 @@ export async function runDepthPipeline(input: DepthPipelineInput): Promise<Depth
 
   // --- STAGE 3: MVDP encoding ---
   const depthFrames = providerFramesToDepthFrames(generationResult.frames);
-  const frameRate = samplingResult.actualFps > 0 ? samplingResult.actualFps : targetFps;
+  // For image-based providers, use the actual sampled fps; for video-native, use targetFps.
+  const frameRate = targetFps;
 
   const depthAssetDescriptor: DepthAsset = {
     assetId: input.jobId, // placeholder — real assetId assigned after DB insert

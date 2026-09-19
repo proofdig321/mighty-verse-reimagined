@@ -32,7 +32,7 @@ import {
   type DepthGenerationResult,
   type DepthProvider,
   type DepthProviderOutputFrame,
-} from "../provider";
+} from "../../provider";
 
 const PROVIDER_ID = "replicate";
 const MODEL_ID = "depth-anything-v2";

@@ -100,8 +100,8 @@ export async function createDepthJob(input: {
   provider?: DepthProvider;
 }): Promise<DepthJobRecord> {
   const db = getServiceClient();
-  const providerId = input.provider?.providerId ?? "replicate";
-  const targetFps = input.targetFps ?? 1.0;
+  const providerId = input.provider?.providerId ?? "modal";
+  const targetFps = input.targetFps ?? 2.0;
   const frameWidth = input.frameWidth ?? 640;
 
   const { data, error } = await db
@@ -144,8 +144,9 @@ export async function listDepthJobsForAsset(sourceAssetId: string): Promise<Dept
 }
 
 /**
- * Process a queued depth job.
- * Runs the full pipeline and updates the job record with the result or error.
+ * Submit a depth job to the active provider.
+ * For async providers (Modal VDA): transitions job to "processing" and returns.
+ * For sync providers (Replicate): runs the full pipeline and returns completed/failed.
  * Never leaves the job in a partial state.
  */
 export async function processDepthJob(input: {
@@ -176,13 +177,21 @@ export async function processDepthJob(input: {
 
   const result = await runDepthPipeline(pipelineInput);
 
+  // Async-submitted: Modal worker accepted the job. Job stays "processing".
+  // The callback route will finalize it when the worker completes.
+  if (result.ok === "submitted") {
+    await writeJob(db, input.jobId, {
+      status: "processing",
+      model: result.model,
+    });
+    return (await getDepthJob(input.jobId))!;
+  }
+
   if (!result.ok) {
     const status: DepthJobStatus =
       result.stage === "provider" && result.message.includes("not configured")
         ? "needs_configuration"
-        : result.retryable
-          ? "failed"
-          : "failed";
+        : "failed";
     await writeJob(db, input.jobId, {
       status,
       retryable: result.retryable,
@@ -212,5 +221,43 @@ export async function processDepthJob(input: {
     completed_at: new Date().toISOString(),
   });
 
+  return (await getDepthJob(input.jobId))!;
+}
+
+/**
+ * Finalize a depth job from a Modal worker callback.
+ * Called by /api/authority/depth/callback after the worker completes.
+ * Persists the depth asset and association, then marks the job completed.
+ * On failure, marks the job failed with a safe diagnostic.
+ */
+export async function finalizeDepthJob(input: {
+  jobId: string;
+  result: DepthJobResult;
+}): Promise<DepthJobRecord> {
+  const db = getServiceClient();
+  await writeJob(db, input.jobId, {
+    status: "completed",
+    model: input.result.model,
+    result: input.result,
+    completed_at: new Date().toISOString(),
+  });
+  return (await getDepthJob(input.jobId))!;
+}
+
+/**
+ * Mark a depth job as failed from a Modal worker callback.
+ */
+export async function failDepthJob(input: {
+  jobId: string;
+  message: string;
+  stage?: string;
+  retryable?: boolean;
+}): Promise<DepthJobRecord> {
+  const db = getServiceClient();
+  await writeJob(db, input.jobId, {
+    status: "failed",
+    retryable: input.retryable ?? false,
+    error: { message: input.message, stage: input.stage },
+  });
   return (await getDepthJob(input.jobId))!;
 }
