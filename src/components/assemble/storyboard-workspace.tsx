@@ -3,13 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FileText, Images, Pause, Play, Shield, SkipBack, SkipForward, Sparkles, Clapperboard, Film, LayoutGrid, Layers } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
 import { formatTimelineMs, secondsFromMs } from "@/lib/media/timing";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
@@ -55,11 +50,12 @@ import {
 import { derivePanelUiStatus, motionGenerationReady, motionRequirement, panelUiLabel, primaryMotionKind, stillGenerationReady } from "@/lib/storyboard/panel-state";
 import type { ResetScope } from "@/lib/storyboard/mutations";
 import { HierarchyBreadcrumb } from "./breadcrumb";
-import { StudioComposer, type StudioComposeMode } from "./studio-composer";
-import { CollectionPager } from "./collection-pager";
-import { StudioEmptyState } from "./studio-empty-state";
+import { StoryboardLeftColumn } from "./storyboard-left-column";
+import { StoryboardCenterColumn } from "./storyboard-center-column";
+import { StoryboardRightColumn } from "./storyboard-right-column";
+import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
 
-type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
+type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly"; // kept for initialTab compat
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
   message: string;
@@ -800,16 +796,7 @@ export function StoryboardWorkspace({
     }
   }
 
-  const tabs: { id: MaterialTab; label: string; icon: typeof FileText }[] = [
-    { id: "script", label: "Script", icon: FileText },
-    { id: "assist", label: "AI Assist", icon: Sparkles },
-    { id: "sentinel", label: "Sentinel", icon: Shield },
-    { id: "references", label: "References", icon: Images },
-    { id: "panels", label: "Panels", icon: LayoutGrid },
-    { id: "stills", label: "Stills", icon: Clapperboard },
-    { id: "motion", label: "Motion", icon: Film },
-    { id: "assembly", label: "Assembly", icon: Layers },
-  ];
+
   const creativeCount = persistedPanels.length || scriptPanels.length;
   const sequenceEmpty = creativeCount === 0 && sentinelPanels.length === 0 && scenes.length === 0;
   const progress = deriveStoryboardProgress({
@@ -919,13 +906,6 @@ export function StoryboardWorkspace({
     hasReference: Boolean(references.some((item) => item.still_url) || (work?.frames?.length ?? 0)),
   });
   const motionKind = primaryMotionKind({ stillUrl: selected?.still });
-  const composeMode: StudioComposeMode = tab === "stills" ? "still" : tab === "motion" ? "motion" : "story";
-  const composeDirective =
-    composeMode === "story"
-      ? instruction
-      : (editorPanel.generation_metadata?.transformation_instruction ?? instruction);
-  const composeReady =
-    composeMode === "still" ? stillReady : composeMode === "motion" ? motionReady : { available: true, reason: null as string | null };
   const activeReferenceUrls = [
     ...references.map((item) => item.still_url).filter(Boolean),
     ...(work?.frames ?? []).map((frame) => frame.still_url),
@@ -952,10 +932,29 @@ export function StoryboardWorkspace({
     router.refresh();
   }
 
+  async function retryJob(jobId: string) {
+    const response = await fetch(`/api/authority/storyboard/jobs/${jobId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "retry" }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (payload.job_id) setJobs((current) => [payload, ...current.filter((job) => job.job_id !== payload.job_id)]);
+  }
+
+  async function cancelJob(jobId: string) {
+    await fetch(`/api/authority/storyboard/jobs/${jobId}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel" }),
+    });
+  }
+
   return (
-    <div className="storyboard-workspace" data-storyboard-layout="composer">
+    <div className="storyboard-workspace" data-storyboard-layout="workstation">
+      {/* ── Top bar ── */}
       <div className="storyboard-header">
-        <div className="min-w-0 space-y-2">
+        <div className="min-w-0 flex flex-wrap items-center gap-2">
           {universeId ? null : (
             <HierarchyBreadcrumb
               items={[
@@ -965,72 +964,28 @@ export function StoryboardWorkspace({
               ]}
             />
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            {universeId ? null : (
-              <Link href={backHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                Back
-              </Link>
-            )}
-            <Input
-              aria-label="Work title"
-              className="h-8 max-w-sm"
-              value={workTitle}
-              onChange={(event) => {
-                setWorkTitle(event.target.value);
-                setDirty(true);
-              }}
-            />
-            <p className="text-xs text-muted-foreground" data-save-state={saveLabel}>
-              {saveLabel}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {selected ? selected.title : "No panel selected"}
-              {selectedPersisted ? ` · Panel ${selectedPersisted.sequence}` : ""}
-            </p>
-            <p className="text-[11px] text-muted-foreground">
-              {work?.universe_id ? "Attached · non-canonical" : "Unattached · non-canonical"}
-            </p>
-          </div>
-          <nav className="flex flex-wrap gap-1" aria-label={studioInteractionLabel()}>
-            {STUDIO_INTERACTION_PHASES.map((phase) => (
-              <button
-                key={phase.id}
-                type="button"
-                className={cn("studio-composer-mode", interactionPhase.id === phase.id && "studio-composer-mode-current")}
-                aria-current={interactionPhase.id === phase.id ? "true" : undefined}
-                onClick={() => setTab(phase.defaultTab as MaterialTab)}
-              >
-                {phase.label}
-              </button>
-            ))}
-          </nav>
+          {universeId ? null : (
+            <Link href={backHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+              Back
+            </Link>
+          )}
+          <Input
+            aria-label="Work title"
+            className="h-8 max-w-xs"
+            value={workTitle}
+            onChange={(event) => { setWorkTitle(event.target.value); setDirty(true); }}
+          />
+          <p className="text-xs text-muted-foreground" data-save-state={saveLabel}>{saveLabel}</p>
+          <p className="text-[11px] text-muted-foreground">
+            {work?.universe_id ? "Attached · non-canonical" : "Unattached · non-canonical"}
+          </p>
         </div>
         <div className="storyboard-header-actions">
-          <Button type="button" size="sm" variant="outline" disabled={!undoEntry} title={undoEntry?.undoHint ?? "Undo"} aria-label={undoEntry?.undoHint ?? "Undo"} onClick={() => {
-            const next = undoHistory(history);
-            if (next) void restoreFromSnapshot(next.entry.before, next.state);
-          }}>
-            Undo
-          </Button>
-          <Button type="button" size="sm" variant="outline" disabled={!redoEntry} title={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} aria-label={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} onClick={() => {
-            const next = redoHistory(history);
-            if (next) void restoreFromSnapshot(next.entry.after, next.state);
-          }}>
-            Redo
-          </Button>
+          <Button type="button" size="sm" variant="outline" disabled={!undoEntry} title={undoEntry?.undoHint ?? "Undo"} onClick={() => { const next = undoHistory(history); if (next) void restoreFromSnapshot(next.entry.before, next.state); }}>Undo</Button>
+          <Button type="button" size="sm" variant="outline" disabled={!redoEntry} title={redoEntry ? `Redo ${redoEntry.label}` : "Redo"} onClick={() => { const next = redoHistory(history); if (next) void restoreFromSnapshot(next.entry.after, next.state); }}>Redo</Button>
           <Button type="button" size="sm" variant="outline" onClick={() => setResetOpen(true)}>Reset</Button>
           {work?.work_id ? (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => {
-                setDeleteError(null);
-                setDeleteOpen(true);
-              }}
-            >
-              Delete workspace
-            </Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => { setDeleteError(null); setDeleteOpen(true); }}>Delete</Button>
           ) : null}
           <Button type="button" size="sm" onClick={() => void saveBody()}>Save</Button>
         </div>
@@ -1060,1166 +1015,108 @@ export function StoryboardWorkspace({
         attached={Boolean(work?.universe_id)}
         busy={deleteBusy}
         error={deleteError}
-        onClose={() => {
-          if (!deleteBusy) setDeleteOpen(false);
-        }}
+        onClose={() => { if (!deleteBusy) setDeleteOpen(false); }}
         onConfirm={() => void confirmDeleteWorkspace()}
       />
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        {universeId ? (
-          <p className="text-sm text-muted-foreground">
-            Target Association · {universeTitle ?? "Canonical Universe"}
-          </p>
-        ) : (
-          <>
-            <div className="min-w-0 space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                Standalone workspace
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Idea → story → panels → stills → motion. Association with a Universe is optional and explicit.
-              </p>
-            </div>
-            <Card className="w-full bg-card/60 lg:max-w-md" size="sm">
-              <CardContent>
-                <AssociateStoryboard universes={universes} workId={work?.work_id} />
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
 
-      {capability && !capability.configured ? (
-        <p className="text-xs text-muted-foreground" data-ai-capability="none">
-          {capability.label} Generation actions stay available and report the real configuration or quota state.
-        </p>
-      ) : null}
-
-      <div className="storyboard-progress" data-storyboard-progress={`${progress.completeCount}/${progress.total}`}>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          {storyboardOperatorChainLabel()}
-        </p>
-        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-          Storyboard path · {progress.completeCount} of {progress.total} live
-        </p>
-        <ol className="storyboard-progress-track">
-          {progress.steps.map((step) => (
-            <li key={step.id} className="storyboard-progress-step" data-complete={step.complete ? "true" : "false"}>
-              <button
-                type="button"
-                className="w-full text-left"
-                onClick={() => setTab(step.id as MaterialTab)}
-              >
-                <div className="storyboard-progress-bar" aria-hidden="true">
-                  <span />
-                </div>
-                <p>{step.label}</p>
-              </button>
-            </li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="storyboard-stage">
-        <Card className="flex min-h-0 flex-col bg-card/70">
-          <CardHeader className="border-b border-border/70">
-            <SentinelSummary
-              observationCount={cinematicShots.length || sentinelPanels.length}
-              referenceCount={
-                references.filter((item) => item.still_url).length
-                + (work?.frames?.length ?? 0)
-                + persistedPanels.reduce((sum, panel) => sum + panel.references.length, 0)
-              }
-              mediaFactCount={work?.sources?.[0]?.playback_id ? 1 : 0}
-              onView={() => setTab("sentinel")}
-            />
-            <CardTitle className="uppercase tracking-[0.16em]">
-              {tab === "assist" ? "AI Assist" : tab === "sentinel" ? "Sentinel" : tabs.find((item) => item.id === tab)?.label ?? "Script & Narrative"}
-            </CardTitle>
-            <CardDescription>
-              {tab === "script" || tab === "assist" || tab === "sentinel"
-                ? "Write or paste a story. AI proposes. You authorise. Panels are not Scenes."
-                : "Workspace section. Artifacts stay non-canonical until a curator promotes them."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col pt-4">
-            <Tabs
-              value={tab}
-              onValueChange={(value) => {
-                if (
-                  value === "script" ||
-                  value === "assist" ||
-                  value === "sentinel" ||
-                  value === "references" ||
-                  value === "panels" ||
-                  value === "stills" ||
-                  value === "motion" ||
-                  value === "assembly"
-                ) {
-                  setTab(value);
-                }
-              }}
-              className="flex min-h-0 flex-1 flex-col gap-4"
-            >
-              <TabsList
-                className="flex h-auto w-full flex-wrap justify-start gap-1 group-data-horizontal/tabs:h-auto"
-                aria-label="Script authoring"
-              >
-                {tabs
-                  .filter((item) => item.id === "script" || item.id === "assist" || item.id === "sentinel" || item.id === "references")
-                  .map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <TabsTrigger key={item.id} value={item.id} className="h-8 flex-none gap-1.5">
-                        <Icon size={13} />
-                        {item.label}
-                      </TabsTrigger>
-                    );
-                  })}
-              </TabsList>
-
-              <TabsContent value="script" className="storyboard-tab-panel space-y-4">
-                <section data-column="script" aria-labelledby="storyboard-script-heading" className="space-y-3">
-                  <h3 id="storyboard-script-heading" className="sr-only">
-                    Script
-                  </h3>
-                  <label className="block space-y-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Story body</span>
-                    <Textarea
-                      value={script}
-                      onChange={(event) => {
-                        setScript(event.target.value);
-                        setDirty(true);
-                      }}
-                      className="min-h-[28rem] flex-1 font-mono text-sm leading-relaxed"
-                      placeholder="SCENE 1: EXT. CITY STREET — NIGHT&#10;The detective walks the mural. Camera: close-up."
-                    />
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" size="sm" onClick={() => void generateStoryboard()}>
-                      Generate storyboard
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => void saveBody()}>
-                      Save story body
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => void assist("expand")}>
-                      Expand story
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => void assist("condense")}>
-                      Condense story
-                    </Button>
-                    <Button type="button" size="sm" variant="outline" onClick={() => void assist("improve")}>
-                      Refine story
-                    </Button>
-                  </div>
-                  <StatusLine state={saveState} />
-                  <p className="text-xs text-muted-foreground">
-                    Script is a creative input. Generating panels does not create Scenes or change canonical timing.
-                  </p>
-                  <StageNav tab={tab} onTab={setTab} />
-                </section>
-              </TabsContent>
-
-              <TabsContent value="assist" className="storyboard-tab-panel space-y-4">
-                <p className="text-xs text-muted-foreground">
-                  {selectedPersisted ? `Context: panel “${selectedPersisted.title}”.` : work ? "Context: this storyboard." : "Context: new story."}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {ASSIST_ACTIONS.map((item) => (
-                    <Button key={item.id} type="button" size="sm" variant="outline" onClick={() => void assist(item.id)}>
-                      {item.label}
-                    </Button>
-                  ))}
-                </div>
-                <label className="block space-y-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Additional instruction</span>
-                  <Textarea
-                    value={instruction}
-                    onChange={(event) => setInstruction(event.target.value)}
-                    className="min-h-28 text-sm"
-                    placeholder="Tighten the opening. Keep existing canonical Scenes as destination, not generated objects."
-                  />
-                </label>
-                <Button type="button" size="sm" onClick={() => void assist()}>
-                  Generate / refine story
-                </Button>
-                <StatusLine state={assistState} />
-                {assistProposal ? (
-                  <div className="storyboard-assist-diff">
-                    <div className="rounded-md border border-border p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Current</p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm">{script || "No authored story yet."}</p>
-                    </div>
-                    <div className="rounded-md border border-border p-3">
-                      <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Proposed</p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm">{assistProposal}</p>
-                    </div>
-                    <div className="col-span-full flex flex-wrap gap-2">
-                      <Button type="button" size="sm" onClick={() => {
-                        setScript(assistProposal);
-                        setDirty(true);
-                        setAssistProposal(null);
-                      }}>Apply</Button>
-                      <Button type="button" size="sm" onClick={async () => {
-                        setScript(assistProposal);
-                        setAssistProposal(null);
-                        await saveBody(assistProposal);
-                      }}>Apply & Save</Button>
-                      <Button type="button" size="sm" variant="outline" onClick={() => setAssistProposal(null)}>Discard</Button>
-                    </div>
-                  </div>
-                ) : null}
-                <p className="text-xs text-muted-foreground">
-                  Chrome Prompt API is the intended local path. Gemini is the server path. AI output remains a proposal until you save it.
-                </p>
-                <StageNav tab={tab} onTab={setTab} />
-              </TabsContent>
-
-              <TabsContent value="sentinel" className="storyboard-tab-panel space-y-4">
-                <section data-column="sentinel" aria-labelledby="universe-sentinel" className="space-y-4">
-                  <div className="suite-section-head">
-                    <h2 id="universe-sentinel" className="suite-section-title">
-                      Sentinel
-                    </h2>
-                    <p className="suite-section-note">
-                      Sentinel answers what is happening in the attached source: timing, camera, subjects, motion, environment, and transitions.
-                      It does not decide what the scene should become, and it does not create Scenes.
-                    </p>
-                  </div>
-                  <SentinelWorkspace
-                    source={work?.sources?.[0] ?? null}
-                    analysis={cinematic}
-                    selectedShotId={cinematicShotId}
-                    selectedIds={bulkShotIds}
-                    selectedCountLabel={`${bulkShotIds.length} observation${bulkShotIds.length === 1 ? "" : "s"} selected`}
-                    analysing={analysing}
-                    message={sentinelMessage}
-                    error={sentinelError}
-                    onAnalyse={() => void analyseSentinel()}
-                    onSelectShot={(shot) => void selectCinematicShot(shot)}
-                    onToggleShot={(shotId) => {
-                      setBulkShotIds((current) => current.includes(shotId) ? current.filter((id) => id !== shotId) : [...current, shotId]);
-                    }}
-                    onSelectAll={() => setBulkShotIds(cinematicShots.map((shot) => shot.shot_id))}
-                    onClearSelection={() => setBulkShotIds([])}
-                    onAddReferences={() => void addCinematicReferences(bulkShots)}
-                    onAddToStoryboard={() => void addCinematicShots(bulkShots)}
-                    onUseSelected={() => {
-                      const shot = cinematicShots.find((item) => item.shot_id === cinematicShotId) ?? cinematicShots[0];
-                      if (shot) void addCinematicReferences([shot], selectedPersisted?.panel_id ?? null);
-                    }}
-                    onAssociatePanel={() => void addCinematicReferences(bulkShots, selectedPersisted?.panel_id ?? null)}
-                    associateEnabled={Boolean(selectedPersisted)}
-                  />
-                  {intelligence && universeId ? (
-                    <div className="space-y-3" data-universe-evidence="true">
-                      <h3 className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        Universe evidence
-                      </h3>
-                      <p className="text-xs text-muted-foreground">
-                        Canonical Universe inspection remains separate from the attached Storyboard source. Authorising windows never creates Scenes.
-                      </p>
-                      <Button type="button" size="sm" variant="outline" onClick={() => void importSentinel()}>
-                        Import Universe evidence as storyboard panels
-                      </Button>
-                      {establishHref ? (
-                        <Link href={establishHref} className={cn(buttonVariants({ size: "sm" }))}>
-                          Mark scenes on Curate Sentinel
-                        </Link>
-                      ) : null}
-                      <SentinelIntelligencePanel
-                        universeId={universeId}
-                        intelligence={intelligence}
-                        canAuthorise={canAuthoriseSentinel}
-                        canRetainReference={canAuthoriseSentinel}
-                        inspectHref={inspectHref}
-                        previewHref={previewHref}
-                        establishHref={establishHref}
-                      />
-                    </div>
-                  ) : null}
-                  <StageNav tab={tab} onTab={setTab} />
-                </section>
-              </TabsContent>
-
-              <TabsContent value="references" className="storyboard-tab-panel space-y-3">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">References</p>
-                <p className="text-xs text-muted-foreground">
-                  Source Reference is the material Sentinel and the creator deliberately carry forward. Duplicates of the same playback and timestamp are skipped.
-                </p>
-                {(work?.frames?.length ?? 0) === 0 && references.length === 0 && generated.length === 0 ? (
-                  <div className="space-y-2">
-                    <p className="suite-empty">No references selected yet.</p>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>
-                      Choose from Sentinel
-                    </Button>
-                  </div>
-                ) : null}
-                <StoryboardSourceMedia
-                  workId={work?.work_id ?? workId}
-                  sources={work?.sources ?? []}
-                  frames={work?.frames ?? []}
-                  selectedPanelId={selectedId}
-                  onWork={(next) => {
-                    if (next && typeof next === "object" && "work_id" in (next as object)) applyWork(next as StoryboardWorkRecord);
-                  }}
-                />
-                {references.length === 0 && generated.length === 0 ? (
-                  <p className="suite-empty">No curated workspace reference assets indexed yet.</p>
-                ) : (
-                  <ul className="flex flex-wrap gap-3">
-                    {generated.map((artifact, index) => (
-                      <li key={`${artifact.title}-${index}`} className="w-36">
-                        {artifact.still_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={artifact.still_url} alt="" className="aspect-video w-full rounded object-cover" />
-                        ) : (
-                          <div className="aspect-video rounded bg-muted/40" />
-                        )}
-                        <p className="mt-1 text-xs text-foreground">{artifact.title}</p>
-                        <p className="text-[10px] text-muted-foreground">{artifact.output_type} · {artifact.status}</p>
-                      </li>
-                    ))}
-                    {references.map((reference) => (
-                      <li key={reference.asset_id} className="w-36">
-                        {reference.still_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={reference.still_url} alt="" className="aspect-video w-full rounded object-cover" />
-                        ) : (
-                          <div className="aspect-video rounded bg-muted/40" />
-                        )}
-                        <p className="mt-1 text-xs text-foreground">{reference.title}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          {reference.role} · {secondsFromMs(reference.time_ms)}s
-                        </p>
-                        {reference.still_url ? (
-                          <div className="mt-1 grid gap-1">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              className="h-7 w-full text-[10px]"
-                              onClick={() => void attachReferenceStill(reference)}
-                            >
-                              Use on storyboard
-                            </Button>
-                            <Button type="button" size="sm" variant="ghost" className="h-7 w-full text-[10px]" onClick={() => setLastFrame(reference.still_url as string)}>
-                              Use as last frame
-                            </Button>
-                          </div>
-                        ) : null}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-                <StageNav tab={tab} onTab={setTab} />
-              </TabsContent>
-              <TabsContent value="panels" className="storyboard-tab-panel space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  <Button type="button" size="sm" onClick={() => void mutate("Create panel", "create-panel", {})}>Create panel</Button>
-                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => selectedPersisted && void mutate("Duplicate panel", "duplicate-panel", { panel_id: selectedPersisted.panel_id })}>Duplicate</Button>
-                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => selectedPersisted && void mutate("Delete panel", "delete-panel", { panel_id: selectedPersisted.panel_id })}>Delete</Button>
-                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => {
-                    if (!selectedPersisted) return;
-                    const ids = persistedPanels.map((panel) => panel.panel_id);
-                    const index = ids.indexOf(selectedPersisted.panel_id);
-                    if (index <= 0) return;
-                    const next = [...ids];
-                    [next[index - 1], next[index]] = [next[index], next[index - 1]];
-                    void mutate("Reorder panels", "reorder-panels", { panel_ids: next });
-                  }}>Move earlier</Button>
-                  <Button type="button" size="sm" variant="outline" disabled={!selectedPersisted} onClick={() => {
-                    if (!selectedPersisted) return;
-                    const ids = persistedPanels.map((panel) => panel.panel_id);
-                    const index = ids.indexOf(selectedPersisted.panel_id);
-                    if (index < 0 || index >= ids.length - 1) return;
-                    const next = [...ids];
-                    [next[index + 1], next[index]] = [next[index], next[index + 1]];
-                    void mutate("Reorder panels", "reorder-panels", { panel_ids: next });
-                  }}>Move later</Button>
-                </div>
-                <p className="text-xs text-muted-foreground">Panels are creative objects, not Scenes. Reorder is undoable.</p>
-                <StageNav tab={tab} onTab={setTab} />
-              </TabsContent>
-              <TabsContent value="stills" className="storyboard-tab-panel space-y-3">
-                <p className="text-xs text-muted-foreground">Generate a still from the selected source, Sentinel evidence, reference, and creator directive. Previous successful stills stay in history.</p>
-                {!selectedPersisted ? (
-                  <p className="suite-empty">Select a panel from Sentinel or Panels before generating a still.</p>
-                ) : !(selectedPersisted.references.length || (work?.frames?.length ?? 0) || selectedObservation) ? (
-                  <div className="space-y-2">
-                    <p className="suite-empty">No references selected yet.</p>
-                    <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>Choose from Sentinel</Button>
-                  </div>
-                ) : !(editorPanel.generation_metadata?.transformation_instruction || transformationInstruction || instruction) ? (
-                  <p className="suite-empty">Reference ready. Write a creator directive for what should change.</p>
-                ) : stillJob && (stillJob.status === "failed" || stillJob.status === "unavailable" || stillJob.status === "blocked") ? (
-                  <GenerationFailure job={stillJob} />
-                ) : null}
-                <Button type="button" size="sm" onClick={() => void generateMedia("still")} disabled={!stillReady.available} title={stillReady.reason ?? "Generate still"}>Generate still</Button>
-                {!stillReady.available && stillReady.reason ? <p className="text-xs text-muted-foreground">{stillReady.reason}</p> : null}
-                <StatusLine state={mediaState} />
-                {selectedPersisted?.generation_metadata?.stills?.length ? (
-                  <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                    {selectedPersisted.generation_metadata.stills.map((entry, index) => (
-                      <li key={entry.asset_id}>
-                        {entry.still_url ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={entry.still_url} alt="" className="aspect-video w-full rounded object-cover" />
-                        ) : <div className="aspect-video rounded bg-muted/40" />}
-                        <p className="mt-1 text-[11px] text-muted-foreground">Generation {index + 1} · {entry.status}</p>
-                        <Button type="button" size="sm" variant="outline" className="mt-1 h-7 text-[10px]" onClick={() => void mutate("Select still", "save-panel", { panel_id: selectedPersisted.panel_id, patch: { active_still_asset_id: entry.asset_id } }, "selection")}>Select</Button>
-                      </li>
-                    ))}
-                  </ul>
-                ) : <p className="suite-empty">No still history on this panel yet.</p>}
-                <StageNav tab={tab} onTab={setTab} />
-              </TabsContent>
-              <TabsContent value="motion" className="storyboard-tab-panel space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  {selected?.still
-                    ? "Generate Motion from the selected still, reference, and creator directive."
-                    : "Generate Motion from the selected reference and creator directive, or generate a still first."}
-                </p>
-                {!motionReady.available ? (
-                  <p className="suite-empty">{motionReady.reason}</p>
-                ) : motionJob && (motionJob.status === "failed" || motionJob.status === "unavailable" || motionJob.status === "blocked") ? (
-                  <GenerationFailure job={motionJob} />
-                ) : null}
-                <Button type="button" size="sm" disabled={!motionReady.available} onClick={() => void enqueue(motionKind)}>
-                  Generate Motion
-                </Button>
-                <details className="rounded-md border border-border p-3">
-                  <summary className="cursor-pointer text-xs text-muted-foreground">Advanced motion modes</summary>
-                  <div className="mt-3 space-y-2">
-                {([
-                  ["motion", "Text to video"],
-                  ["animate-still", "Image to video"],
-                  ["first-last-frame", "First / last frame"],
-                  ["reference-motion", "Reference images"],
-                  ["extend", "Video extension"],
-                ] as const).map(([kind, label]) => {
-                  const requirement = motionRequirement({
-                    kind,
-                    stillUrl: selected?.still,
-                    lastFrameUrl: lastFrame || null,
-                    referenceUrls: activeReferenceUrls,
-                    extensionVideoUri: selectedJob?.result?.provider_video_uri ?? null,
-                  });
-                  return (
-                    <div key={kind} className="flex flex-wrap items-center gap-2">
-                      <Button type="button" size="sm" variant="outline" disabled={!requirement.available} title={requirement.reason ?? label} onClick={() => void enqueue(kind)}>
-                        {label}
-                      </Button>
-                      {!requirement.available ? <p className="text-xs text-muted-foreground">{requirement.reason}</p> : null}
-                    </div>
-                  );
-                })}
-                  </div>
-                </details>
-                <StatusLine state={mediaState} />
-                <StageNav tab={tab} onTab={setTab} />
-              </TabsContent>
-              <TabsContent value="assembly" className="storyboard-tab-panel space-y-3">
-                <p className="text-xs text-muted-foreground">Assembly is a production artifact. It is not a Scene and does not become canonical until curation authorises it.</p>
-                {assemblyItems.length === 0 ? <p className="suite-empty">No assembly items yet. Add a still or motion from the selected panel.</p> : (
-                  <p className="text-sm text-foreground">{assemblyItems.length} item{assemblyItems.length === 1 ? "" : "s"} assembled · non-canonical · Ready for Curation</p>
-                )}
-                <Button type="button" size="sm" onClick={() => {
-                  if (!selected) return;
-                  const next = [...assemblyItems, {
-                    id: `${Date.now()}`,
-                    kind: selected.endpoint ? "motion" as const : "still" as const,
-                    label: selected.title,
-                    panel_id: selectedId,
-                    url: selected.still,
-                    playback_id: selectedJob?.result?.playback_id ?? null,
-                    endpoint: selected.endpoint,
-                  }];
-                  setAssemblyItems(next);
-                  void mutate("Save assembly", "save-assembly", { items: next });
-                }}>Add selected to assembly</Button>
-                <ol className="space-y-2">
-                  {assemblyItems.map((item, index) => (
-                    <li key={item.id} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-2 text-sm">
-                      <span>{index + 1}. {item.label}</span>
-                      <Button type="button" size="sm" variant="ghost" onClick={() => {
-                        const next = assemblyItems.filter((entry) => entry.id !== item.id);
-                        setAssemblyItems(next);
-                        void mutate("Remove assembly item", "save-assembly", { items: next });
-                      }}>Remove</Button>
-                    </li>
-                  ))}
-                </ol>
-                {universeId ? (
-                  <Link href={curateHubHref(universeId)} className={cn(buttonVariants({ size: "sm" }))}>
-                    Submit for Curation
-                  </Link>
-                ) : (
-                  <p className="text-xs text-muted-foreground">Associate this Storyboard with a Universe before submitting it for curation. Assembly stays non-canonical.</p>
-                )}
-                <StageNav tab={tab} onTab={setTab} />
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
-
-        <div className="storyboard-composer-column">
-          <StudioComposer
-            mode={composeMode}
-            onMode={(mode) => {
-              if (mode === "story") setTab(tab === "assist" ? "assist" : "script");
-              if (mode === "still") setTab("stills");
-              if (mode === "motion") setTab("motion");
-            }}
-            directive={composeDirective}
-            onDirective={(value) => {
-              if (composeMode === "story") {
-                setInstruction(value);
-                return;
-              }
-              setInstruction(value);
-              if (!selectedPersisted) return;
-              setDraftPanel({
-                ...selectedPersisted,
-                ...draftPanel,
-                panel_id: selectedPersisted.panel_id,
-                generation_metadata: {
-                  ...selectedPersisted.generation_metadata,
-                  ...draftPanel.generation_metadata,
-                  transformation_instruction: value,
-                },
-              });
-            }}
-            placeholder={
-              composeMode === "motion"
-                ? "Describe the motion, camera, and what should change from the source."
-                : composeMode === "still"
-                  ? "Describe the still you want to realize from the selected evidence and references."
-                  : "Describe what you want to create or change. This is a creator directive, not a Sentinel observation."
-            }
-            generateLabel={composeMode === "motion" ? "Generate Motion" : composeMode === "still" ? "Generate still" : "Generate storyboard"}
-            generateDisabled={!composeReady.available}
-            generateTitle={composeReady.reason ?? undefined}
-            onGenerate={() => {
-              if (composeMode === "still") void generateMedia("still");
-              else if (composeMode === "motion") void enqueue(motionKind);
-              else void generateStoryboard();
-            }}
-            chips={(
-              <>
-                <Button type="button" size="sm" variant="outline" onClick={() => setTab("references")}>+ Reference</Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setTab("sentinel")}>+ Sentinel Evidence</Button>
-                {scenes[0] ? (
-                  <Button type="button" size="sm" variant="outline" onClick={() => setSelectedId(scenes[0].master_id)}>+ Scene</Button>
-                ) : null}
-              </>
-            )}
-            controls={
-              composeMode === "motion" ? (
-                <>
-                  <label className="text-xs text-muted-foreground">
-                    Duration
-                    <select
-                      aria-label="Duration"
-                      className="ml-2 rounded-md border border-border bg-background px-2 py-1 text-foreground"
-                      value={durationSeconds}
-                      onChange={(event) => setDurationSeconds(Number(event.target.value) as 4 | 6 | 8)}
-                    >
-                      <option value={4}>4s</option>
-                      <option value={6}>6s</option>
-                      <option value={8}>8s</option>
-                    </select>
-                  </label>
-                  <label className="text-xs text-muted-foreground">
-                    Aspect
-                    <select
-                      aria-label="Aspect ratio"
-                      className="ml-2 rounded-md border border-border bg-background px-2 py-1 text-foreground"
-                      value={aspectRatio}
-                      onChange={(event) => setAspectRatio(event.target.value === "9:16" ? "9:16" : "16:9")}
-                    >
-                      <option value="16:9">16:9</option>
-                      <option value="9:16">9:16</option>
-                    </select>
-                  </label>
-                </>
-              ) : composeMode === "story" ? (
-                <p className="text-xs text-muted-foreground">Gemini · narrative structure stays in Script</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">Gemini · still artifact</p>
-              )
-            }
-            status={<StatusLine state={composeMode === "story" ? saveState : mediaState} />}
-          />
-        <Card className="flex min-h-0 flex-col bg-card/70">
-          <CardHeader className="border-b border-border/70">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Storyboard panels</p>
-            <CardTitle>
-              <h2 id="storyboard-sequence" className="text-base font-medium leading-snug">
-                Storyboard
-              </h2>
-            </CardTitle>
-            <CardDescription>
-              Visual sequence. GENERATE stills, animate, or assemble. Artifacts stay non-canonical until a curator promotes them.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex flex-1 flex-col gap-4 pt-4" data-column="sequence" aria-labelledby="storyboard-sequence">
-            {sequenceEmpty ? (
-              <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-dashed border-border bg-muted/20 px-6 py-16 text-center">
-                <div className="mb-3 size-12 rounded-full border border-border bg-background" aria-hidden="true" />
-                <h3 className="text-sm font-medium text-foreground">Visual sequence container empty</h3>
-                <p className="mt-1 max-w-sm text-xs text-muted-foreground">
-                  Write a script or inspect source media to begin organizing storyboard compositions.
-                </p>
-              </div>
-            ) : (
-              <ol className="storyboard-panel-strip">
-                {persistedPanels.map((panel) => (
-                  <li key={panel.panel_id}>
-                    <ShotFrame
-                      shotLabel={`Shot ${panel.sequence}`}
-                      subtitle={panel.camera || panel.title}
-                      still={panelStills[panel.panel_id] ?? panel.still_url}
-                      pending={Boolean(pendingPanels[panel.panel_id])}
-                      selected={selectedId === panel.panel_id}
-                      status={derivePanelUiStatus({
-                        selected: selectedId === panel.panel_id,
-                        persistedStatus: panel.status,
-                        stillUrl: panelStills[panel.panel_id] ?? panel.still_url,
-                        motionPlaybackId: panel.motion_playback_id,
-                        jobs: jobs.filter((job) => job.panel_id === panel.panel_id),
-                      })}
-                      onSelect={() => {
-                        setSelectedId(panel.panel_id);
-                        setDraftPanel(panel);
-                        setFirstFrame(panel.still_url ?? "");
-                      }}
-                      onGenerate={() => void generateShot(panel.panel_id)}
-                    />
-                  </li>
-                ))}
-                {scriptPanels.map((panel, index) => (
-                  <li key={panel.panel_id}>
-                    <ShotFrame
-                      shotLabel={`Shot ${index + 1}`}
-                      subtitle={panel.camera || panel.title}
-                      still={panelStills[panel.panel_id] ?? null}
-                      pending={Boolean(pendingPanels[panel.panel_id])}
-                      selected={selectedId === panel.panel_id}
-                      onSelect={() => setSelectedId(panel.panel_id)}
-                      onGenerate={() => void generateShot(panel.panel_id)}
-                    />
-                  </li>
-                ))}
-                {sentinelPanels.map((panel) => (
-                  <li key={panel.panel_id}>
-                    <StoryboardEvidencePanel
-                      panel={panel}
-                      selected={selectedId === panel.panel_id}
-                      still={panelStills[panel.panel_id] ?? panel.still_url}
-                      pending={Boolean(pendingPanels[panel.panel_id])}
-                      onSelect={() => setSelectedId(panel.panel_id)}
-                      onGenerate={() => void generateShot(panel.panel_id)}
-                    />
-                  </li>
-                ))}
-                {persistedPanels.length === 0 && scriptPanels.length === 0 && sentinelPanels.length === 0
-                  ? scenes.map((scene, index) => (
-                      <li key={scene.master_id}>
-                        <ShotFrame
-                          shotLabel={`Shot ${index + 1}`}
-                          subtitle={sceneShortTitle(scene.title) ?? scene.title ?? "Untitled"}
-                          still={panelStills[scene.master_id] ?? null}
-                          pending={Boolean(pendingPanels[scene.master_id])}
-                          selected={selectedId === scene.master_id}
-                          onSelect={() => setSelectedId(scene.master_id)}
-                          onGenerate={() => void generateShot(scene.master_id)}
-                          badge="Scene"
-                        />
-                      </li>
-                    ))
-                  : null}
-              </ol>
-            )}
-          </CardContent>
-        </Card>
-      {shotIds.length > 0 ? (
-        <div className="flex items-center gap-3 rounded-xl border border-border bg-card/70 px-4 py-3">
-          <Button type="button" variant="ghost" size="sm" aria-label="Previous panel" onClick={() => {
-            const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
-            setSelectedId(shotIds[Math.max(0, index - 1)]);
-          }}>
-            <SkipBack size={14} />
-          </Button>
-          <Button type="button" size="sm" aria-label={playing ? "Pause sequence" : "Play sequence"} onClick={() => setPlaying((value) => !value)}>
-            {playing ? <Pause size={14} /> : <Play size={14} />}
-          </Button>
-          <Button type="button" variant="ghost" size="sm" aria-label="Next panel" onClick={() => {
-            const index = Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]));
-            setSelectedId(shotIds[Math.min(shotIds.length - 1, index + 1)]);
-          }}>
-            <SkipForward size={14} />
-          </Button>
-          <input
-            type="range"
-            min={0}
-            max={Math.max(0, shotIds.length - 1)}
-            value={Math.max(0, shotIds.indexOf(selectedId ?? shotIds[0]))}
-            onChange={(event) => setSelectedId(shotIds[Number(event.target.value)] ?? shotIds[0])}
-            className="h-1 flex-1 accent-current"
-            aria-label="Storyboard shot scrubber"
+      {/* ── Three-column workstation ── */}
+      <div className="storyboard-workstation">
+        {/* LEFT — Work Context */}
+        <div className="storyboard-col-left">
+          <StoryboardLeftColumn
+            script={script}
+            hasPanels={persistedPanels.length > 0}
+            saveState={saveState}
+            scenes={scenes}
+            universeId={universeId}
+            inspectHref={inspectHref}
+            onScriptChange={(value) => { setScript(value); setDirty(true); }}
+            onSave={() => void saveBody()}
+            onGenerate={() => void generateStoryboard()}
+            onAssist={(id) => void assist(id)}
+            onSelectScene={(id) => setSelectedId(id)}
           />
         </div>
-      ) : null}
+
+        {/* CENTER — Storyboard Outline */}
+        <div className="storyboard-col-center">
+          <StoryboardCenterColumn
+            persistedPanels={persistedPanels}
+            sentinelPanels={sentinelPanels}
+            scenes={scenes}
+            selectedId={selectedId}
+            panelStills={panelStills}
+            pendingPanels={pendingPanels}
+            jobs={jobs}
+            onSelect={(id) => {
+              setSelectedId(id);
+              const panel = persistedPanels.find((p) => p.panel_id === id);
+              if (panel) { setDraftPanel(panel); setFirstFrame(panel.still_url ?? ""); }
+            }}
+            onCreatePanel={() => void mutate("Create panel", "create-panel", {})}
+          />
         </div>
 
-      <Button type="button" variant="outline" size="sm" className="studio-inspector-toggle" aria-expanded={inspectorOpen} aria-controls="studio-inspector-panel" onClick={() => setInspectorOpen((value) => !value)}>
-        {inspectorOpen ? "Hide inspector" : "Inspector"}
-      </Button>
-      <aside id="studio-inspector-panel" className={cn("studio-inspector", inspectorOpen && "is-open")} aria-label="Inspector">
-        {!selected ? (
-          <p className="suite-empty">Select a Sentinel shot or Storyboard panel. This column holds the creator directive, Generate Still, and Generate Motion.</p>
-        ) : (
-          <>
-          {selected.endpoint ? (
-            <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} motion preview`} />
-          ) : selected.still ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={selected.still} alt="" className="mb-3 aspect-video w-full rounded object-cover" />
-          ) : (
-            <div className="mb-3 aspect-video rounded bg-muted/40" />
-          )}
-          <p className="suite-kicker">{selected.kind}</p>
-          <h3 className="text-lg font-medium text-foreground">{selected.title}</h3>
-          {selected.time ? <p className="font-mono text-xs text-muted-foreground">{selected.time}</p> : null}
-          {selectedPersisted ? (
-            <div className="mt-3 grid gap-2">
-              {selectedObservation || selectedFrame ? (
-                <div className="rounded-md border border-border p-3 text-sm" data-source-reference="true">
-                  <p className="suite-kicker">Source Reference</p>
-                  <p className="font-medium">
-                    {selectedObservation ? `Shot · ${formatTimelineMs(selectedObservation.start_ms)} – ${formatTimelineMs(selectedObservation.end_ms)}` : selectedFrame?.source_title}
-                    {selectedFrame ? ` · ${formatTimelineMs(selectedFrame.timestamp_ms)}` : ""}
-                  </p>
-                  {selectedObservation ? (
-                    <dl className="mt-2 grid gap-1 text-xs text-muted-foreground">
-                      <div><dt className="inline font-medium text-foreground">Observed subject </dt><dd className="inline">{selectedObservation.subjects || "Unknown"}</dd></div>
-                      <div><dt className="inline font-medium text-foreground">Observed action </dt><dd className="inline">{selectedObservation.action}</dd></div>
-                      <div><dt className="inline font-medium text-foreground">Camera </dt><dd className="inline">{selectedObservation.camera_explanation || selectedObservation.camera} · {selectedObservation.framing} · {evidenceStatusLabel(cameraEvidenceStatus({ camera: selectedObservation.camera, camera_explanation: selectedObservation.camera_explanation, analysis_mode: selectedObservation.analysis_mode }))}</dd></div>
-                      <div><dt className="inline font-medium text-foreground">Confidence </dt><dd className="inline capitalize">{selectedObservation.confidence}</dd></div>
-                    </dl>
-                  ) : null}
-                  <p className="mt-2 text-[11px] text-muted-foreground">Sentinel observation is kept when you edit the authorised fields.</p>
-                </div>
-              ) : (
-                <p className="suite-empty">No source reference on this panel yet. Choose from Sentinel.</p>
-              )}
-              <Label htmlFor="panel-title">Title</Label>
-              <Input id="panel-title" value={editorPanel.title ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, title: event.target.value })} />
-              <Label htmlFor="panel-action">Creator correction · observed action</Label>
-              <Textarea id="panel-action" className="min-h-16" value={editorPanel.action ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, action: event.target.value })} placeholder="Correct Sentinel’s observed action if needed. This does not overwrite the original observation." />
-              <Label htmlFor="panel-transform">Creator directive</Label>
-              <Textarea
-                id="panel-transform"
-                className="min-h-20"
-                value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
-                onChange={(event) => setDraftPanel({
-                  ...selectedPersisted,
-                  ...draftPanel,
-                  panel_id: selectedPersisted.panel_id,
-                  generation_metadata: {
-                    ...selectedPersisted.generation_metadata,
-                    ...draftPanel.generation_metadata,
-                    transformation_instruction: event.target.value,
-                  },
-                })}
-                placeholder="Preserve the performance and composition. Write the creative change. Sentinel does not author this."
-              />
-              <Label htmlFor="panel-intent">Narrative intent</Label>
-              <Input id="panel-intent" value={editorPanel.narrative_purpose ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, narrative_purpose: event.target.value })} />
-              <Label htmlFor="panel-camera">Camera</Label>
-              <Input id="panel-camera" value={editorPanel.camera ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera: event.target.value })} />
-              {selectedObservation && selectedPersisted.user_locked && selectedObservation.camera !== (editorPanel.camera_movement ?? editorPanel.camera) ? (
-                <p className="text-[11px] text-muted-foreground">Sentinel observed: {selectedObservation.camera === "unknown" ? "unknown / insufficient evidence" : selectedObservation.camera}. Creator directive: {editorPanel.camera_movement || editorPanel.camera}.</p>
-              ) : null}
-              <Label htmlFor="panel-movement">Movement</Label>
-              <Input id="panel-movement" value={editorPanel.camera_movement ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, camera_movement: event.target.value })} />
-              <Label htmlFor="panel-framing">Framing</Label>
-              <Input id="panel-framing" value={editorPanel.framing ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, framing: event.target.value })} />
-              <Label htmlFor="panel-environment">Environment</Label>
-              <Input id="panel-environment" value={editorPanel.environment ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, environment: event.target.value })} />
-              <Label htmlFor="panel-characters">Subjects</Label>
-              <Input id="panel-characters" value={editorPanel.characters ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, characters: event.target.value })} />
-              <Label htmlFor="panel-transition">Transition</Label>
-              <Input id="panel-transition" value={editorPanel.transition ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, transition: event.target.value })} />
-              <Label htmlFor="panel-duration">Duration (ms)</Label>
-              <Input id="panel-duration" type="number" value={editorPanel.duration_ms ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, duration_ms: event.target.value ? Number(event.target.value) : null })} />
-              <Label htmlFor="panel-dialogue">Dialogue</Label>
-              <Input id="panel-dialogue" value={editorPanel.dialogue ?? ""} onChange={(event) => setDraftPanel({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, dialogue: event.target.value })} />
-              <Button type="button" size="sm" variant="outline" onClick={() => void savePanelEdits()}>
-                Save panel
-              </Button>
-            </div>
-          ) : (
-            <p className="mt-2 text-sm text-muted-foreground">{selected.description}</p>
-          )}
-          {selected.camera ? <p className="mt-2 text-xs text-muted-foreground">Camera · {selected.camera}</p> : null}
-          {selected.movement ? <p className="text-xs text-muted-foreground">Movement · {selected.movement}</p> : null}
-          {selected.transition ? <p className="text-xs text-muted-foreground">Transition · {selected.transition}</p> : null}
-          {selectedJob ? (
-            <div className="mt-2 space-y-2">
-              <p className="text-xs" data-generation-status={selectedJob.status}>
-                {jobUiLabel(selectedJob.status as never)}
-                {selectedJob.progress != null ? ` · ${selectedJob.progress}%` : ""}
-              </p>
-              {selectedJob.error?.message ? <GenerationFailure job={selectedJob} /> : null}
-              <div className="flex flex-wrap gap-2">
-                {selectedJob.retryable || selectedJob.status === "failed" || selectedJob.status === "unavailable" ? (
-                  <Button type="button" size="sm" variant="outline" onClick={() => void fetch(`/api/authority/storyboard/jobs/${selectedJob.job_id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "retry" }) }).then(async (response) => {
-                    const payload = await response.json().catch(() => ({}));
-                    if (payload.job_id) setJobs((current) => [payload, ...current.filter((job) => job.job_id !== payload.job_id)]);
-                  })}>Retry</Button>
-                ) : null}
-                {selectedJob.status === "queued" || selectedJob.status === "submitted" || selectedJob.status === "processing" ? (
-                  <Button type="button" size="sm" variant="ghost" onClick={() => void fetch(`/api/authority/storyboard/jobs/${selectedJob.job_id}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "cancel" }) })}>Cancel</Button>
-                ) : null}
-              </div>
-              <p className="text-[11px] text-muted-foreground">A generation cannot be undone at the provider. Undo restores local selection and keeps generated assets.</p>
-            </div>
-          ) : null}
-          <div className="mt-4 flex flex-wrap gap-2">
-            <Button type="button" size="sm" onClick={() => void generateMedia("still")} disabled={!stillReady.available} title={stillReady.reason ?? "Generate still"}>
-              Generate still
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={!motionReady.available} title={motionReady.reason ?? "Generate Motion"} onClick={() => void enqueue(motionKind)}>
-              Generate Motion
-            </Button>
-            <details className="studio-composer-advanced w-full">
-              <summary>Advanced generation</summary>
-              <div className="mt-2 flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("animation")}>
-              Generate animation
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void enqueue("first-last-frame")}>
-              First / last frame
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void enqueue("reference-motion")}>
-              Reference motion
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void enqueue("extend")}>
-              Extend
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("gif")}>
-              Generate GIF
-            </Button>
-            <Button type="button" size="sm" variant="outline" onClick={() => void generateMedia("reel")}>
-              Assemble reel
-            </Button>
-              </div>
-            </details>
-            {universeId ? (
-              <>
-                <Link href={creativeSuiteWorkspaceHref(universeId, "production")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  Add to production
-                </Link>
-                <Link href={previewHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  2.5D Preview
-                </Link>
-                <Link href={creativeSuiteWorkspaceHref(universeId, "experience")} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-                  Experience
-                </Link>
-              </>
-            ) : null}
-          </div>
-          <details className="mt-3" data-storyboard-provenance="true">
-            <summary className="cursor-pointer text-xs text-muted-foreground">Provenance</summary>
-            <ol className="mt-2 grid gap-2 text-[11px] text-muted-foreground">
-              <li>
-                <p className="font-medium text-foreground">Source</p>
-                <p>{work?.sources?.[0]?.title || "None attached"}{work?.sources?.[0]?.playback_id ? ` · Mux ${work.sources[0].playback_id}` : ""}</p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Sentinel</p>
-                <p>
-                  {selectedObservation
-                    ? `${formatTimelineMs(selectedObservation.start_ms)} – ${formatTimelineMs(selectedObservation.end_ms)} · ${selectedObservation.what_happens}`
-                    : cinematicShotId
-                      ? `Selected ${cinematicShotId}`
-                      : "No selected observation"}
-                </p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Reference</p>
-                <p>{selectedPersisted?.references[0]?.label || selectedFrame?.source_title || "None"}{selectedFrame ? ` · ${formatTimelineMs(selectedFrame.timestamp_ms)}` : ""}</p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Creator directive</p>
-                <p>{(transformationInstruction || editorPanel.generation_metadata?.transformation_instruction || "Write this yourself").slice(0, 160)}</p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Generation</p>
-                <p>{selectedJob ? `${selectedJob.kind} · ${jobUiLabel(selectedJob.status as never)}` : "None"}</p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Media</p>
-                <p>{selectedJob?.result?.playback_id ? `Mux ${selectedJob.result.playback_id}` : selected?.still ? "Still attached" : "None"}</p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Assembly</p>
-                <p>{work?.assembly?.items?.length ? `${work.assembly.items.length} item${work.assembly.items.length === 1 ? "" : "s"}` : "None"}</p>
-              </li>
-              <li>
-                <p className="font-medium text-foreground">Canonical</p>
-                <p>creates_scene = false</p>
-              </li>
-            </ol>
-          </details>
-          <details className="mt-3">
-            <summary className="cursor-pointer text-xs text-muted-foreground">Technical inspector</summary>
-            <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-              work {work?.work_id ?? "—"} · panel {selectedId ?? "—"} · shot {cinematicShotId ?? "—"} · job {selectedJob?.job_id ?? "—"}
-              {selectedJob?.result?.playback_id ? ` · mux ${selectedJob.result.playback_id}` : ""}
-              {selectedJob?.error?.message ? ` · ${selectedJob.error.message}` : ""}
-              {capability?.models ? ` · text ${capability.models.text} · image ${capability.models.image} · video ${capability.models.video}` : ""}
-            </p>
-          </details>
-          <StatusLine state={mediaState} />
-          <section className="mt-4 space-y-2" aria-label="Generations">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Generations{jobs.length ? ` · ${jobs.length}` : ""}
-            </p>
-            {jobs.length === 0 ? (
-              <StudioEmptyState
-                kicker="Generations"
-                title="No generations yet."
-                body="Results appear here after Gemini or Veo jobs persist."
-              />
-            ) : (
-              <>
-              <ol className="grid gap-2">
-                {jobs.slice(generationPage * 8, generationPage * 8 + 8).map((job, index) => (
-                  <li key={job.job_id} className="rounded-md border border-border p-2">
-                    {job.result?.still_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img src={job.result.still_url} alt="" className="mb-2 aspect-video w-full rounded object-cover" />
-                    ) : null}
-                    <p className="text-xs font-medium text-foreground">
-                      Gen {String(jobs.length - (generationPage * 8 + index)).padStart(2, "0")} · {generationProviderLabel(job.kind)}
-                    </p>
-                    <p className="text-[11px] text-muted-foreground" data-generation-status={job.status}>
-                      {job.kind} · {jobUiLabel(job.status as never)}
-                      {job.result?.playback_id ? ` · Mux ${job.result.playback_id}` : ""}
-                    </p>
-                    {job.error?.message ? <GenerationFailure job={job} /> : null}
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-[10px]"
-                        onClick={() => {
-                          if (job.panel_id) setSelectedId(job.panel_id);
-                        }}
-                      >
-                        Inspect
-                      </Button>
-                      {job.result?.still_url && selectedPersisted ? (
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="h-7 text-[10px]"
-                          onClick={() => {
-                            setFirstFrame(job.result?.still_url ?? "");
-                            if (job.panel_id) setSelectedId(job.panel_id);
-                          }}
-                        >
-                          Use
-                        </Button>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <CollectionPager
-                page={generationPage}
-                pageSize={8}
-                total={jobs.length}
-                onPage={setGenerationPage}
-                label="Generation history"
-              />
-              </>
-            )}
-          </section>
-          </>
-        )}
-        </aside>
+        {/* RIGHT — Active Panel Workspace */}
+        <div className="storyboard-col-right">
+          <StoryboardRightColumn
+            selected={selected}
+            selectedPersisted={selectedPersisted}
+            editorPanel={editorPanel}
+            draftPanel={draftPanel}
+            selectedObservation={selectedObservation}
+            selectedFrame={selectedFrame}
+            mediaState={mediaState}
+            stillJob={stillJob ?? null}
+            motionJob={motionJob ?? null}
+            selectedJob={selectedJob ?? null}
+            stillReady={stillReady}
+            motionReady={motionReady}
+            motionKind={motionKind}
+            firstFrame={firstFrame}
+            lastFrame={lastFrame}
+            durationSeconds={durationSeconds}
+            aspectRatio={aspectRatio}
+            activeReferenceUrls={activeReferenceUrls}
+            references={references}
+            workFrames={work?.frames ?? []}
+            onDraftChange={(patch) => setDraftPanel(patch)}
+            onSavePanel={() => void savePanelEdits()}
+            onGenerateStill={() => void generateMedia("still")}
+            onEnqueue={(kind, extra) => void enqueue(kind, extra)}
+            onSetFirstFrame={setFirstFrame}
+            onSetLastFrame={setLastFrame}
+            onSetDuration={setDurationSeconds}
+            onSetAspect={setAspectRatio}
+            onRetryJob={(jobId) => void retryJob(jobId)}
+            onCancelJob={(jobId) => void cancelJob(jobId)}
+            onManageReferences={() => setTab("references")}
+            onManageSentinel={() => setTab("sentinel")}
+          />
+        </div>
       </div>
-    </div>
-  );
-}
 
-function StatusLine({ state }: { state: GenerationState }) {
-  if (state.status === "idle") return null;
-  const label =
-    state.status === "queued" ? "Requested" :
-    state.status === "generating" ? "Running" :
-    state.status === "ready" ? "Succeeded" :
-    state.status === "unavailable" || state.status === "needs_configuration" ? "Unavailable" :
-    state.status === "blocked" ? "Blocked" :
-    "Failed";
-  return (
-    <p className="text-xs text-muted-foreground" data-generation-status={state.status}>
-      {label}. {state.message}
-    </p>
-  );
-}
-
-function GenerationFailure({ job }: { job: JobCard }) {
-  const copy = operatorGenerationMessage(job.error?.message);
-  return (
-    <div className="space-y-1" data-generation-failure="true">
-      <p className="text-sm text-foreground">{copy.operator}</p>
-      <details>
-        <summary className="cursor-pointer text-xs text-muted-foreground">Technical details</summary>
-        <p className="mt-1 font-mono text-[11px] text-muted-foreground">{copy.technical}</p>
-      </details>
-    </div>
-  );
-}
-
-const STAGE_ORDER: { id: MaterialTab; label: string }[] = [
-  { id: "script", label: "Script" },
-  { id: "sentinel", label: "Sentinel" },
-  { id: "references", label: "References" },
-  { id: "panels", label: "Panels" },
-  { id: "stills", label: "Stills" },
-  { id: "motion", label: "Motion" },
-  { id: "assembly", label: "Assembly" },
-];
-
-function StageNav({ tab, onTab }: { tab: MaterialTab; onTab: (next: MaterialTab) => void }) {
-  const index = STAGE_ORDER.findIndex((item) => item.id === tab);
-  const previous = index > 0 ? STAGE_ORDER[index - 1] : null;
-  const next = index >= 0 && index < STAGE_ORDER.length - 1 ? STAGE_ORDER[index + 1] : null;
-  if (!previous && !next) return null;
-  return (
-    <div className="flex flex-wrap gap-2 pt-2">
-      {previous ? (
-        <Button type="button" size="sm" variant="outline" onClick={() => onTab(previous.id)}>
-          Previous · {previous.label}
-        </Button>
-      ) : null}
-      {next ? (
-        <Button type="button" size="sm" variant="outline" onClick={() => onTab(next.id)}>
-          Next · {next.label}
-        </Button>
-      ) : null}
-    </div>
-  );
-}
-
-function StoryboardEvidencePanel({
-  panel,
-  selected,
-  still,
-  pending,
-  onSelect,
-  onGenerate,
-}: {
-  panel: StoryboardPanel;
-  selected: boolean;
-  still: string | null;
-  pending: boolean;
-  onSelect: () => void;
-  onGenerate: () => void;
-}) {
-  const kindLabel = panel.kind === "scene" ? "Canonical Scene" : "Storyboard beat";
-  return (
-    <ShotFrame
-      shotLabel={kindLabel}
-      subtitle={panel.title}
-      still={still}
-      pending={pending}
-      selected={selected}
-      onSelect={onSelect}
-      onGenerate={onGenerate}
-      badge={kindLabel}
-      panelKind={panel.kind}
-      sceneId={panel.scene_master_id}
-      caption={formatTimelineMs(panel.time_ms)}
-    />
-  );
-}
-
-function ShotFrame({
-  shotLabel,
-  subtitle,
-  still,
-  pending,
-  selected,
-  onSelect,
-  onGenerate,
-  badge,
-  panelKind,
-  sceneId,
-  caption,
-  status,
-}: {
-  shotLabel: string;
-  subtitle: string;
-  still: string | null;
-  pending: boolean;
-  selected: boolean;
-  onSelect: () => void;
-  onGenerate: () => void;
-  badge?: string;
-  panelKind?: string;
-  sceneId?: string | null;
-  caption?: string;
-  status?: string;
-}) {
-  return (
-    <div className={cn("storyboard-panel", selected && "storyboard-panel-current")}>
-      <button
-        type="button"
-        className="storyboard-panel-hit"
-        data-panel-kind={panelKind}
-        data-scene-id={sceneId ?? undefined}
-        onClick={onSelect}
-      >
-        <div className="storyboard-panel-frame">
-          {still ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={still} alt="" />
-          ) : (
-            <div className="storyboard-panel-empty flex items-center justify-center text-xs text-muted-foreground">
-              {pending ? "Pending…" : "Pending…"}
-            </div>
-          )}
-          <div className="storyboard-panel-overlay">
-            <p>{shotLabel}</p>
-            <p>{subtitle}</p>
-          </div>
-        </div>
-      </button>
-      <div className="storyboard-panel-meta">
-        <div className="min-w-0">
-          {badge ? (
-            <p className={badge === "Canonical Scene" || badge === "Scene" ? "suite-canon-badge" : "suite-proposal-badge"}>
-              {badge}
-            </p>
-          ) : (
-            <p>{shotLabel}</p>
-          )}
-          <p className="truncate">{subtitle}</p>
-          {status ? <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">{panelUiLabel(status as never)}</p> : null}
-          {caption ? <p className="font-mono text-[10px] text-muted-foreground">{caption}</p> : null}
-        </div>
-        <Button type="button" size="sm" className="h-7 shrink-0 text-[10px]" variant={selected ? "default" : "outline"} disabled={pending} onClick={onGenerate}>
-          {pending ? "Pending…" : "GENERATE"}
-        </Button>
-      </div>
+      {/* ASSEMBLY — footer status bar */}
+      <StoryboardAssemblyBar
+        assemblyItems={assemblyItems}
+        panelCount={persistedPanels.length}
+        universeId={universeId}
+        canAddSelected={Boolean(selected)}
+        onAddSelected={() => {
+          if (!selected) return;
+          const next = [...assemblyItems, {
+            id: `${Date.now()}`,
+            kind: selected.endpoint ? "motion" as const : "still" as const,
+            label: selected.title,
+            panel_id: selectedId,
+            url: selected.still,
+            playback_id: selectedJob?.result?.playback_id ?? null,
+            endpoint: selected.endpoint,
+          }];
+          setAssemblyItems(next);
+          void mutate("Save assembly", "save-assembly", { items: next });
+        }}
+      />
     </div>
   );
 }
