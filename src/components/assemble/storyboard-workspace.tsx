@@ -550,6 +550,7 @@ export function StoryboardWorkspace({
         reference_urls: [
           ...references.map((reference) => reference.still_url).filter(Boolean),
           ...(work?.frames ?? []).map((frame) => frame.still_url),
+          ...(selectedPersisted?.references ?? []).map((ref) => ref.url).filter(Boolean),
         ].filter(Boolean),
         still_urls: generated.map((artifact) => artifact.still_url).filter(Boolean),
         playback_ids: generated.map((artifact) => artifact.playback_id).filter(Boolean),
