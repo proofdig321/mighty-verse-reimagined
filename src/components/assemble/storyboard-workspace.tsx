@@ -626,7 +626,8 @@ export function StoryboardWorkspace({
   }
 
   async function savePanelEdits() {
-    if (!selectedPersisted) return;
+    if (!selectedPersisted || !work) return;
+    const before = snapshotOf(work);
     const response = await fetch("/api/authority/storyboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -639,10 +640,24 @@ export function StoryboardWorkspace({
     });
     const payload = await response.json().catch(() => ({}));
     if (payload.panel && work) {
-      applyWork({
+      const next: StoryboardWorkRecord = {
         ...work,
         panels: work.panels.map((panel) => (panel.panel_id === payload.panel.panel_id ? payload.panel : panel)),
+      };
+      const after = snapshotOf(next);
+      const nextHistory = pushHistory(history, {
+        id: `${Date.now()}`,
+        label: "Edit panel",
+        kind: "authoring",
+        reversible: true,
+        persistent: true,
+        undoHint: "Undo panel edit",
+        before,
+        after,
       });
+      setHistory(nextHistory);
+      window.localStorage.setItem(historyStorageKey(work.work_id), serializeHistory(nextHistory));
+      applyWork(next);
       setSaveState({ status: "ready", message: "Panel edits saved. AI will not overwrite this panel silently." });
     }
   }

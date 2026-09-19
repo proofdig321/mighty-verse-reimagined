@@ -354,11 +354,7 @@ export async function replaceStoryboardPanels(input: {
     updated_at: new Date().toISOString(),
   }).eq("work_id", input.workId);
 
-  if (!input.replaceUnlockedOnly) {
-    await db.from("storyboard_panel").delete().eq("work_id", input.workId).eq("user_locked", false);
-  } else {
-    await db.from("storyboard_panel").delete().eq("work_id", input.workId).eq("user_locked", false);
-  }
+  await db.from("storyboard_panel").delete().eq("work_id", input.workId).eq("user_locked", false);
 
   const rows = input.storyboard.panels
     .filter((panel) => !locked.has(panel.sequence))
