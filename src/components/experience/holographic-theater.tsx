@@ -33,9 +33,9 @@ void main() {
   vec3 pos = a_pos;
   float wave = sin(a_uv.x * 3.1415926) * sin(a_uv.y * 3.1415926);
   vec2 delta = u_mouse - vec2(0.5);
-  pos.x -= delta.x * wave * u_parallax * 1.8;
-  pos.y -= delta.y * wave * u_parallax * 1.0;
-  pos.z += wave * delta.x * 2.2;
+  pos.x -= delta.x * wave * u_parallax;
+  pos.y -= delta.y * wave * u_parallax * 0.6;
+  pos.z += wave * delta.x * 0.4;
   gl_Position = u_mvp * vec4(pos, 1.0);
 }
 `;
@@ -281,7 +281,7 @@ export function HolographicTheater({
       surface.dataset.holographicPan = holographicPanFromPointerX(look.x).toFixed(2);
       surface.dataset.holographicMouseX = mouse.x.toFixed(3);
 
-      const view = viewOffset((mouse.x - 0.5) * 0.35, (mouse.y - 0.5) * 0.22, cameraZ);
+      const view = viewOffset(0, 0, cameraZ);
       const vp = mat4Multiply(proj, view);
 
       const video =
