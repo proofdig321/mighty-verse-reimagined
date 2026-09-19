@@ -18,7 +18,7 @@ export async function persistProductionMuxAsset(input: {
   sceneTitle: string | null;
   durationMs: number | null;
   resolution: string | null;
-  mediaClass: "audio" | "video" | "image" | "other";
+  mediaClass: "audio" | "video" | "image" | "depth" | "other";
   format: string | null;
 }): Promise<{ asset_id: string; created: boolean; intake_id: string | null }> {
   const svc = input.svc;

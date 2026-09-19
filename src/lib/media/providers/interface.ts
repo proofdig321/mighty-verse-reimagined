@@ -7,8 +7,15 @@
  * The domain must not contain scattered if (provider === "mux") branches.
  */
 
-/** Normalized, provider-independent media classification. */
-export type MediaClass = "audio" | "video" | "image" | "other";
+/**
+ * Normalized, provider-independent media classification.
+ *
+ * "depth" is an application media asset — a depth map associated with a video.
+ * It is NOT a native Mux/Livepeer track type. Depth assets are stored in
+ * Supabase Storage and delivered via signed/CDN URL, independent of the
+ * video provider. The renderer does not know or care which CDN served it.
+ */
+export type MediaClass = "audio" | "video" | "image" | "depth" | "other";
 
 /**
  * Provider-neutral playback source.

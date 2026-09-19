@@ -71,7 +71,7 @@ export async function persistStoryboardArtifact(input: {
   muxAssetId: string;
   playbackId: string;
   durationMs: number | null;
-  mediaClass: "audio" | "video" | "image" | "other";
+  mediaClass: "audio" | "video" | "image" | "depth" | "other";
   format: string | null;
   resolution: string | null;
 }): Promise<{ asset_id: string; intake_id: string; still_url: string; endpoint_ref: string }> {

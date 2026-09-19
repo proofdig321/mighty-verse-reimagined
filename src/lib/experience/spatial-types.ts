@@ -14,29 +14,19 @@
  * They do not replace canonical Universe/Mural/Scene/HolographicLayer records.
  * They are the renderer-facing representation of what to draw and from where.
  *
- * DEPTH CONVENTION (for future depth texture support):
- *   - White (1.0) = near (foreground)
- *   - Black (0.0) = far (background)
- *   - Values are linear in normalized device depth [0, 1]
- *   - No gamma correction applied to depth values
- *   - Depth is clamped to [0, 1] before use
- *   - A depth value of 0.5 represents the mid-plane of the scene
+ * DEPTH ARCHITECTURE:
+ *   Domain depth types live in depth-asset.ts (DepthAsset, DepthFrame, DepthIndex).
+ *   GPU runtime types live in depth-runtime.ts (RuntimeDepthTexture, DepthController).
+ *   SpatialLayer.depth references DepthAsset — the clean domain type.
  *
- * DEPTH PROVENANCE:
- *   Any depth representation must carry its provenance so the renderer and UI
- *   can distinguish measured evidence from synthetic fallback.
- *
- *   "runtime_synthetic" — the current sine-wave envelope. Content-blind.
- *                         Not a depth map. Used as a fallback only.
- *   "source_provided"   — a depth track embedded in the source media.
- *   "generated"         — monocular depth estimation run against the video.
- *   "inferred"          — Sentinel spatial observations used as proxy.
- *   "creator_authored"  — a depth mask drawn or approved by the creator.
+ *   DepthRepresentation is retained below as a transitional bridge for existing
+ *   tests and interfaces. New code should use DepthAsset from depth-asset.ts.
+ *   Final direction: domain ≠ GPU runtime. WebGLTexture never in domain objects.
  *
  * SENTINEL BOUNDARY:
  *   Sentinel may observe spatial evidence (depth discontinuities, foreground/
- *   background separation candidates). It does not author DepthRepresentation
- *   records. Depth becomes canonical only through creator/curator authorisation.
+ *   background separation candidates). It does not author DepthAsset records.
+ *   Depth becomes canonical only through creator/curator authorisation.
  */
 
 /** The viewer's position and orientation in the spatial scene. */
@@ -63,54 +53,32 @@ export const NEUTRAL_VIEWER_POSE: ViewerPose = {
 };
 
 /**
- * Depth representation for a spatial layer.
+ * DepthRepresentation — transitional bridge type.
  *
- * Currently no real depth source exists. The renderer uses a runtime_synthetic
- * sine-wave fallback when depth is absent or synthetic.
+ * @deprecated Use DepthAsset from depth-asset.ts for new code.
  *
- * This type establishes the interface for future depth sources without
- * fabricating data that does not exist.
+ * Retained for test compatibility. The architectural problem with this type
+ * (mixing domain data with GPU runtime state via texture?: WebGLTexture) has
+ * been resolved in the Phase 3 depth contract:
+ *   - Domain: DepthAsset / DepthFrame / DepthIndex  (depth-asset.ts)
+ *   - Runtime: RuntimeDepthTexture / DepthController (depth-runtime.ts)
+ *
+ * WebGLTexture does NOT appear in DepthAsset. This type is the only remaining
+ * location of the mixed concern and will be removed once all callers migrate.
  */
 export type DepthRepresentation = {
-  /**
-   * Provenance of this depth data.
-   * The renderer and UI must distinguish these categories.
-   * "runtime_synthetic" must never be presented as measured spatial truth.
-   */
   source:
     | "runtime_synthetic"
     | "source_provided"
     | "generated"
     | "inferred"
     | "creator_authored";
-
-  /**
-   * Confidence in this depth representation [0, 1].
-   * 1.0 = high confidence (e.g. source-provided stereo depth).
-   * 0.0 = no confidence (e.g. runtime_synthetic fallback).
-   * Absent = unknown.
-   */
   confidence?: number;
-
-  /** Width of the depth map in pixels. */
   width: number;
-
-  /** Height of the depth map in pixels. */
   height: number;
-
-  /**
-   * Depth data as a Float32Array of normalized values [0, 1].
-   * White (1.0) = near. Black (0.0) = far.
-   * Length must equal width × height.
-   * Absent when source is "runtime_synthetic" — the renderer generates
-   * the fallback procedurally.
-   */
+  /** @deprecated Use DepthFrame.data (Uint8Array) via DepthIndex instead. */
   data?: Float32Array;
-
-  /**
-   * Optional WebGL texture handle. Set by the renderer after GPU upload.
-   * Not serializable. Not persisted.
-   */
+  /** @deprecated GPU state. Lives in RuntimeDepthTexture, not domain objects. */
   texture?: WebGLTexture;
 };
 
@@ -139,11 +107,14 @@ export type SpatialLayer = {
   presentationOffset: { x: number; y: number };
 
   /**
-   * Optional depth representation for this layer.
+   * Optional depth asset for this layer.
    * Absent = renderer uses runtime_synthetic fallback.
-   * Present = renderer uses the provided depth data.
+   * Present = renderer uses the DepthIndex built from this asset.
+   *
+   * Uses the clean domain type (DepthAsset from depth-asset.ts).
+   * No WebGLTexture here — GPU state lives in DepthController.
    */
-  depth?: DepthRepresentation;
+  depth?: import("./depth-asset").DepthAsset;
 };
 
 /**

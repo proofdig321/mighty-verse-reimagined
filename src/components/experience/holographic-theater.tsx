@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import type { HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
 import type { ViewerPose } from "@/lib/experience/spatial-types";
+import type { DepthController } from "@/lib/experience/depth-runtime";
 import {
   HOLOGRAPHIC_CINEMA_FILL,
   HOLOGRAPHIC_MESH_SEGMENTS,
@@ -251,6 +252,22 @@ function bindMesh(
  * Depth is optional. When absent, the runtime_synthetic sine-wave fallback
  * is used. The shader has a clear path for real depth when it becomes available.
  *
+ * DEPTH INTEGRATION:
+ *   depthControllerRef holds a DepthController (from depth-runtime.ts).
+ *   The controller manages the GPU texture lifecycle.
+ *   React never holds a WebGLTexture — it lives only in the controller.
+ *
+ * rVFC INTEGRATION:
+ *   When HTMLVideoElement.requestVideoFrameCallback is available, depth
+ *   selection is driven by decoded media timing (authoritative).
+ *   Falls back to video.currentTime in the rAF loop for unsupported browsers.
+ *   The rAF loop continues to drive presentation in both cases.
+ *
+ * SEEK SAFETY:
+ *   DepthController.onVideoFrame() calls DepthIndex.nearest() which is
+ *   random-access. A seek to any timestamp produces the correct frame or
+ *   null — never a stale frame from before the seek.
+ *
  * The existing Mux video pipeline (HLS → HTMLVideoElement → texImage2D /
  * texSubImage2D) is fully preserved. The first-frame gate remains mandatory.
  */
@@ -260,6 +277,7 @@ export function HolographicTheater({
   poseRef,
   videoRef,
   audioRef,
+  depthControllerRef,
 }: {
   layers: HolographicLayer[];
   timeMs: number;
@@ -267,6 +285,13 @@ export function HolographicTheater({
   poseRef: { current: ViewerPose };
   videoRef?: { current: HTMLVideoElement | null };
   audioRef?: { current: HolographicAudioGraph | null };
+  /**
+   * Optional depth controller ref. When present, the renderer uses the
+   * DepthController to look up and bind depth frames to texture unit 1.
+   * React never holds a WebGLTexture — GPU state lives in the controller.
+   * Pass null/undefined to use the runtime_synthetic fallback.
+   */
+  depthControllerRef?: { current: DepthController | null };
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signature = layers.map((layer) => `${layer.layer_id}:${layer.still_url ?? ""}`).join("|");
@@ -330,6 +355,24 @@ export function HolographicTheater({
     let texSkips = 0;
     let draws = 0;
 
+    // rVFC handle — used to cancel the callback on cleanup.
+    let rVfcHandle: number | undefined;
+
+    // Register requestVideoFrameCallback when the video element is available
+    // and the browser supports it. This drives depth-frame selection from
+    // decoded media timing rather than arbitrary rAF timing.
+    // The rAF loop continues to drive presentation regardless.
+    function registerRvfc(video: HTMLVideoElement) {
+      if (typeof video.requestVideoFrameCallback !== "function") return;
+      const onFrame = (_now: DOMHighResTimeStamp, meta: { mediaTime: number }) => {
+        if (cancelled) return;
+        depthControllerRef?.current?.onVideoFrame(meta.mediaTime);
+        rVfcHandle = video.requestVideoFrameCallback(onFrame);
+      };
+      rVfcHandle = video.requestVideoFrameCallback(onFrame);
+    }
+
+    let rVfcRegistered = false;
     let frame = 0;
     function resize() {
       const width = Math.max(1, Math.floor(surface.clientWidth * (window.devicePixelRatio || 1)));
@@ -379,6 +422,20 @@ export function HolographicTheater({
       const video =
         videoRef?.current ??
         (surface.parentElement?.querySelector("[data-holographic-kind='mural'] video") as HTMLVideoElement | null);
+
+      // Register rVFC once the video element is available.
+      // Falls back to currentTime-based depth update in the rAF loop below.
+      if (video && !rVfcRegistered) {
+        registerRvfc(video);
+        rVfcRegistered = true;
+      }
+
+      // rAF fallback: update depth from currentTime when rVFC is not available.
+      // When rVFC is active, this is a no-op (controller skips duplicate timestamps).
+      if (video && typeof video.requestVideoFrameCallback !== "function") {
+        depthControllerRef?.current?.onVideoFrame(video.currentTime);
+      }
+
       if (!video) {
         surface.dataset.holographicWarp = "novideo";
       } else {
@@ -436,14 +493,21 @@ export function HolographicTheater({
         gl.uniform1f(uViewerY, smoothed.y);
         gl.uniform1f(videoParallax, HOLOGRAPHIC_PARALLAX_STRENGTH);
         gl.uniform1f(videoTime, (performance.now() - started) / 1000);
-        // Depth: no real depth source exists yet. Use runtime_synthetic fallback.
-        // u_has_depth = 0.0 → shader uses sine-wave envelope.
-        // When real depth becomes available, upload it to texture unit 1
-        // and set u_has_depth = 1.0.
-        gl.uniform1f(uHasDepth, 0.0);
+        // Depth: bind depth texture from DepthController if available.
+        // DepthController.bindDepthTexture() binds to texture unit 1 and
+        // returns true when a valid depth frame is loaded.
+        // When false, u_has_depth = 0.0 → shader uses sine-wave fallback.
+        const hasDepth = depthControllerRef?.current?.bindDepthTexture(gl) ?? false;
+        gl.uniform1f(uHasDepth, hasDepth ? 1.0 : 0.0);
+        if (hasDepth) {
+          surface.dataset.holographicDepth = depthControllerRef?.current?.current?.source ?? "unknown";
+        } else {
+          surface.dataset.holographicDepth = "runtime_synthetic";
+        }
+        // Bind video texture to unit 0 (must happen after depth binding to unit 1).
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(gl.TEXTURE_2D, videoTexture);
-        gl.uniform1i(uDepth, 1); // texture unit 1 reserved for future depth
+        gl.uniform1i(uDepth, 1); // texture unit 1 = depth
         gl.drawArrays(gl.TRIANGLES, 0, meshCount);
       }
 
@@ -458,7 +522,14 @@ export function HolographicTheater({
     return () => {
       cancelled = true;
       window.cancelAnimationFrame(frame);
+      // Cancel rVFC if registered.
+      if (rVfcHandle !== undefined && videoRef?.current &&
+          typeof videoRef.current.cancelVideoFrameCallback === "function") {
+        videoRef.current.cancelVideoFrameCallback(rVfcHandle);
+      }
       gl.deleteTexture(videoTexture);
+      // Note: DepthController.dispose() is called by the parent (holographic-stage)
+      // which owns the controller lifecycle. The theater does not own the controller.
     };
   }, [signature, poseRef, videoRef, audioRef]);
 
