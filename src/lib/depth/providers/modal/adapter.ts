@@ -74,12 +74,6 @@ export type ModalDepthJobPayload = {
    * Must be the full absolute URL of /api/authority/depth/callback.
    */
   callback_url: string;
-  /**
-   * HMAC-SHA256 signature key for callback authentication.
-   * The worker signs the callback body with this secret.
-   * The callback route verifies the signature before accepting results.
-   */
-  callback_secret: string;
 };
 
 function modalWebhookUrl(): string | null {
@@ -145,7 +139,6 @@ export class ModalVDAProvider implements DepthProvider {
       target_fps: (request as ModalDepthGenerationRequest).targetFps ?? 2.0,
       frame_width: request.targetWidth ?? 640,
       callback_url: `${appBaseUrl()}/api/authority/depth/callback`,
-      callback_secret: secret,
     };
 
     try {

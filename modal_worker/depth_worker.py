@@ -415,6 +415,7 @@ def run_vda_inference(
     volumes={"/weights": model_volume},
     secrets=[
         modal.Secret.from_name("mighty-verse-supabase"),
+        modal.Secret.from_name("mighty-verse-callback"),
     ],
 )
 def run_depth_job(payload: dict) -> None:
@@ -431,7 +432,7 @@ def run_depth_job(payload: dict) -> None:
     target_fps = float(payload.get("target_fps", 2.0))
     frame_width = int(payload.get("frame_width", 640))
     callback_url = payload["callback_url"]
-    callback_secret = payload["callback_secret"]
+    callback_secret = os.environ["MODAL_WEBHOOK_SECRET"]
 
     try:
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -549,6 +550,7 @@ def run_depth_job(payload: dict) -> None:
 @app.function(
     secrets=[
         modal.Secret.from_name("mighty-verse-supabase"),
+        modal.Secret.from_name("mighty-verse-callback"),
     ],
 )
 @modal.web_endpoint(method="POST")
@@ -558,7 +560,7 @@ def submit_depth_job(payload: dict) -> dict:
     Spawns the GPU inference function asynchronously and returns immediately.
     """
     required = ["job_id", "source_asset_id", "participant_id", "mux_playback_id",
-                "duration_ms", "callback_url", "callback_secret"]
+                "duration_ms", "callback_url"]
     for field in required:
         if field not in payload:
             return {"error": f"Missing required field: {field}"}
