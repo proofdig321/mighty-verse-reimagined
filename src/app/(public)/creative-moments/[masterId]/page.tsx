@@ -5,7 +5,7 @@ import { getServiceClient } from "@/lib/authority/validate";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Separator } from "@/components/ui/separator";
 import { buttonVariants } from "@/components/ui/button";
-import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, public2_5dHref, publicHolographicHref } from "@/lib/experience/destinations";
 
 type RelatedScene = {
   master_id: string;
@@ -97,17 +97,18 @@ export default async function CreativeMomentPage({
   const { masterId } = await params;
   const data = await getCMData(masterId);
   if (!data) notFound();
+  const cm = data!;
 
   return (
     <div className="min-h-screen bg-background">
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 py-8 space-y-8">
-        {data.universe_master_id ? (
+        {cm.universe_master_id ? (
           <Link
-            href={`/worlds/${data.universe_master_id}`}
+            href={`/worlds/${cm.universe_master_id}`}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Back to Universe{data.universe_title ? ` · ${data.universe_title}` : ""}
+            ← Back to Universe{cm.universe_title ? ` · ${cm.universe_title}` : ""}
           </Link>
         ) : null}
 
@@ -117,30 +118,30 @@ export default async function CreativeMomentPage({
             className="text-4xl md:text-5xl font-semibold leading-tight tracking-tight text-foreground"
             style={{ fontFamily: "var(--font-display, inherit)" }}
           >
-            {data.title ?? "Creative Moment"}
+            {cm.title ?? "Creative Moment"}
           </h1>
-          {data.description ? (
-            <p className="text-lg text-muted-foreground max-w-2xl">{data.description}</p>
+          {cm.description ? (
+            <p className="text-lg text-muted-foreground max-w-2xl">{cm.description}</p>
           ) : null}
-          {data.universe_master_id && data.universe_title ? (
+          {cm.universe_master_id && cm.universe_title ? (
             <p className="text-sm text-muted-foreground">
               Universe:{" "}
-              <Link href={`/worlds/${data.universe_master_id}`} className="text-foreground hover:opacity-70 transition-opacity">
-                {data.universe_title}
+              <Link href={`/worlds/${cm.universe_master_id}`} className="text-foreground hover:opacity-70 transition-opacity">
+                {cm.universe_title}
               </Link>
             </p>
           ) : null}
-          {data.universe_master_id ? (
+          {cm.universe_master_id ? (
             <div className="flex flex-wrap gap-2 pt-2">
               <Link
-                href={publicWorldHref(data.universe_master_id)}
+                href={public2_5dHref(cm.universe_master_id)}
                 className={buttonVariants({ size: "lg" })}
                 data-experience-entry="2.5d"
               >
                 {ENTER_2_5D_LABEL}
               </Link>
               <Link
-                href={publicHolographicHref(data.universe_master_id)}
+                href={publicHolographicHref(cm.universe_master_id)}
                 className={buttonVariants({ size: "lg", variant: "outline" })}
                 data-experience-entry="holographic"
               >
@@ -156,9 +157,9 @@ export default async function CreativeMomentPage({
           <h2 id="creative-moment-scenes" className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             Related Scenes
           </h2>
-          {data.scenes.length > 0 ? (
+          {cm.scenes.length > 0 ? (
             <ul className="space-y-2">
-              {data.scenes.map((scene) => (
+              {cm.scenes.map((scene) => (
                 <li key={scene.master_id}>
                   {scene.projection_id ? (
                     <Link href={`/moments/${scene.projection_id}`} className="text-sm text-foreground hover:opacity-70 transition-opacity">
@@ -177,6 +178,7 @@ export default async function CreativeMomentPage({
             <p className="text-sm text-muted-foreground">This Creative Moment is not yet present in a Scene.</p>
           )}
         </section>
+
       </div>
     </div>
   );

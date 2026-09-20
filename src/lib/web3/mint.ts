@@ -51,7 +51,7 @@ export async function mintCollectibleToken(
   await sendTransaction({ transaction, account });
 
   const ref: Web3TokenRef = {
-    chain: CHAIN.id.toString(),
+    chain: (CHAIN as { id: number }).id.toString(),
     contract: contractAddress,
     token_id: tokenId,
   };

@@ -29,6 +29,7 @@ export default async function CurateHubPage({
     loadCurateStudioMedia(),
   ]);
   if (!hub) notFound();
+  const h = hub!;
 
   return (
     <div className="space-y-8">
@@ -36,7 +37,7 @@ export default async function CurateHubPage({
         items={[
           { label: "Authority", href: "/authority" },
           { label: "Curate", href: CURATE_STUDIO_HREF },
-          { label: hub.universeTitle },
+          { label: h.universeTitle },
         ]}
       />
 
@@ -52,7 +53,7 @@ export default async function CurateHubPage({
           </p>
         </div>
         <Link
-          href={creativeSuiteHref(hub.universeId, "curate")}
+          href={creativeSuiteHref(h.universeId, "curate")}
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
           Open Creative Studio
@@ -61,10 +62,10 @@ export default async function CurateHubPage({
 
       <CurateUniverseSelect
         universes={studio.universes}
-        selectedUniverseId={hub.universeId}
+        selectedUniverseId={h.universeId}
       />
 
-      <CurateHub snapshot={hub} />
+      <CurateHub snapshot={h!} />
     </div>
   );
 }

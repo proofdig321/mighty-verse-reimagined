@@ -69,8 +69,9 @@ export default async function CreateWorkPage() {
   if (!user) redirect("/auth/sign-in");
   const participantId = await getParticipantId(supabase);
   if (!participantId) redirect("/auth/sign-in");
+  const pid = participantId!;
 
-  const context = await getContext(participantId);
+  const context = await getContext(pid);
 
   return (
     <CreateWorkClient

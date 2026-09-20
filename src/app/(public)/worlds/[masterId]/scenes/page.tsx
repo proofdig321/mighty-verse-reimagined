@@ -6,7 +6,7 @@ import { getServiceClient } from "@/lib/authority/validate";
 import SceneDeckClient from "@/components/scene-deck-client";
 import { PublicHero } from "@/components/public-hero";
 import { buttonVariants } from "@/components/ui/button";
-import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, public2_5dHref, publicHolographicHref } from "@/lib/experience/destinations";
 
 type SceneItem = {
   master_id: string;
@@ -151,7 +151,7 @@ export default async function UniverseScenesPage({
             <Link href="/editor" className={buttonVariants({ size: "sm", variant: "outline" })}>
               Build Experience →
             </Link>
-            <Link href={publicWorldHref(masterId)} className={buttonVariants({ size: "sm" })} data-experience-entry="2.5d">
+            <Link href={public2_5dHref(masterId)} className={buttonVariants({ size: "sm" })} data-experience-entry="2.5d">
               {ENTER_2_5D_LABEL}
             </Link>
             <Link href={publicHolographicHref(masterId)} className={buttonVariants({ size: "sm", variant: "outline" })} data-experience-entry="holographic">

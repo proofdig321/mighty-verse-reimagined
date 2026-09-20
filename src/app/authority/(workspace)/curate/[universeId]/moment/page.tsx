@@ -22,8 +22,9 @@ export default async function CurateMomentPage({
 
   const assembly = await loadUniverseAssembly(universeId);
   if (!assembly) notFound();
+  const asm = assembly!;
 
-  const title = assembly.title ?? "Untitled universe";
+  const title = asm.title ?? "Untitled universe";
 
   return (
     <div className="space-y-8">
@@ -31,7 +32,7 @@ export default async function CurateMomentPage({
         items={[
           { label: "Authority", href: "/authority" },
           { label: "Curate", href: CURATE_STUDIO_HREF },
-          { label: title, href: curateHubHref(assembly.master_id) },
+          { label: title, href: curateHubHref(asm.master_id) },
           { label: "Add Creative Moment" },
         ]}
       />
@@ -49,8 +50,8 @@ export default async function CurateMomentPage({
 
       <div className="rounded-xl border border-border bg-card px-5 py-5 space-y-4 max-w-2xl">
         <RegisterCreativeMoment
-          universeId={assembly.master_id}
-          universeTitle={assembly.title}
+          universeId={asm.master_id}
+          universeTitle={asm.title}
           defaultOpen
         />
       </div>

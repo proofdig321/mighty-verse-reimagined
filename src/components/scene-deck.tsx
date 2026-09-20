@@ -393,7 +393,7 @@ export default function SceneDeck({
     if (isRevealed && scene.href) {
       return (
         <div key={scene.id} className="flex shrink-0 flex-col gap-2">
-          <Link href={scene.href} className="block" onClick={(e) => {
+          <Link href={scene.href} className="block" onClick={(e: { preventDefault: () => void }) => {
             if (draggedInteraction.current || draggedId) {
               e.preventDefault();
               draggedInteraction.current = false;

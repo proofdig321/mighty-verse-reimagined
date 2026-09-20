@@ -10,6 +10,7 @@ export default async function ProfilePage() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
+  const u = user!;
 
   const participantId = await getParticipantId(supabase);
 
@@ -45,7 +46,7 @@ export default async function ProfilePage() {
         {/* Auth identity */}
         <div className="space-y-1">
           <p className="text-foreground text-xs font-medium uppercase tracking-wider">Account</p>
-          <p className="text-foreground text-sm">{user.email ?? "—"}</p>
+          <p className="text-foreground text-sm">{u.email ?? "—"}</p>
         </div>
 
         {/* Participant status */}

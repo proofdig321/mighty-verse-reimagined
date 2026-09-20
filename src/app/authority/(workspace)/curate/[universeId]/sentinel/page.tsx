@@ -26,9 +26,10 @@ export default async function CurateSentinelPage({
 
   const assembly = await loadUniverseAssembly(universeId);
   if (!assembly) notFound();
+  const asm = assembly!;
 
-  const title = assembly.title ?? "Untitled universe";
-  const inspection = await loadInspectionContext(assembly.master_id, [assembly.master_id]);
+  const title = asm.title ?? "Untitled universe";
+  const inspection = await loadInspectionContext(asm.master_id, [asm.master_id]);
 
   return (
     <div className="space-y-8">
@@ -36,7 +37,7 @@ export default async function CurateSentinelPage({
         items={[
           { label: "Authority", href: "/authority" },
           { label: "Curate", href: CURATE_STUDIO_HREF },
-          { label: title, href: curateHubHref(assembly.master_id) },
+          { label: title, href: curateHubHref(asm.master_id) },
           { label: "Sentinel" },
         ]}
       />
@@ -53,13 +54,13 @@ export default async function CurateSentinelPage({
         </p>
         <div className="flex flex-wrap gap-2 pt-1">
           <Link
-            href={creativeSuiteSentinelHref(assembly.master_id, "curate")}
+            href={creativeSuiteSentinelHref(asm.master_id, "curate")}
             className={cn(buttonVariants({ size: "sm" }))}
           >
             Open Storyboard · Sentinel
           </Link>
           <Link
-            href={creativeSuiteStoryboardHref(assembly.master_id, "curate", "references")}
+            href={creativeSuiteStoryboardHref(asm.master_id, "curate", "references")}
             className={cn(buttonVariants({ size: "sm", variant: "outline" }))}
           >
             Open Storyboard · References
@@ -68,7 +69,7 @@ export default async function CurateSentinelPage({
       </div>
 
       <CurateClient
-        universeId={assembly.master_id}
+        universeId={asm.master_id}
         mural={inspection.mural}
         scenes={inspection.scenes}
         availableAssets={inspection.availableAssets}

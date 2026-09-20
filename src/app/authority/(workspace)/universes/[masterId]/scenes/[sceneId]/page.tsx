@@ -24,6 +24,7 @@ export default async function UniverseSceneWorkspacePage({
   const scenes = suiteScenes(workspace.data);
   const scene = scenes.find((row) => row.master_id === sceneId);
   if (!scene) notFound();
+  const s = scene!;
   const title = workspace.data.title ?? "Untitled universe";
   const layers = composeExperienceProjection({
     canonical_layers: (workspace.intelligence?.holographic ?? []).filter(
@@ -40,7 +41,7 @@ export default async function UniverseSceneWorkspacePage({
       {...studioShellFromWorkspace(
         workspace,
         "scenes",
-        sceneShortTitle(scene.title) ?? scene.title ?? "Scene",
+        sceneShortTitle(s.title) ?? s.title ?? "Scene",
       )}
     >
       <div className="suite-stack">
@@ -72,8 +73,8 @@ export default async function UniverseSceneWorkspacePage({
             </h2>
           </div>
           <StudioPreview
-            universeTitle={scene.title ?? title}
-            scenes={[scene]}
+            universeTitle={s.title ?? title}
+            scenes={[s]}
             layers={layers}
             experienceHref={`/worlds/${workspace.data.master_id}/holographic`}
             universeHref={`/worlds/${workspace.data.master_id}`}

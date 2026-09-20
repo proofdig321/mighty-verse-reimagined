@@ -8,7 +8,7 @@ import MediaHero from "@/components/media-hero";
 import { UniverseWorldExperience } from "@/components/experience/universe-world";
 import { sceneStillUrl } from "@/lib/experience/universe-world";
 import { loadUniverseProductionResults } from "@/lib/assemble/load-production";
-import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, public2_5dHref, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
 
 type MuralRow = {
   master_id: string;
@@ -368,23 +368,24 @@ export default async function WorldPage({
   const { masterId } = await params;
   const data = await getPageData(masterId);
   if (!data) notFound();
+  const page = data!;
 
-  const title = data.title ?? (data.canonical_type === "mural" ? "Mural" : "Universe");
+  const title = page.title ?? (page.canonical_type === "mural" ? "Mural" : "Universe");
 
   // ── MURAL LAYOUT — Section 06 ─────────────────────────────────────────────
-  if (data.canonical_type === "mural") {
+  if (page.canonical_type === "mural") {
     return (
       <div className="min-h-screen bg-background">
 
         {/* Breadcrumb */}
-        {data.universe_master_id && (
+        {page.universe_master_id && (
           <div className="border-b border-border/50 bg-card/20">
             <div className="mx-auto max-w-7xl px-6 py-3">
               <Link
-                href={`/worlds/${data.universe_master_id}`}
+                href={`/worlds/${page.universe_master_id}`}
                 className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                ← Back to Universe{data.universe_title ? ` · ${data.universe_title}` : ""}
+                ← Back to Universe{page.universe_title ? ` · ${page.universe_title}` : ""}
               </Link>
             </div>
           </div>
@@ -395,9 +396,9 @@ export default async function WorldPage({
           <div className="mx-auto max-w-7xl px-6 py-8">
             <div className="space-y-1">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Mural</p>
-              {data.universe_title && (
+              {page.universe_title && (
                 <p className="text-xs font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                  {data.universe_title}
+                  {page.universe_title}
                 </p>
               )}
               <h1
@@ -406,29 +407,29 @@ export default async function WorldPage({
               >
                 {title}
               </h1>
-              {data.description && (
+              {page.description && (
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
-                  {data.description.length > 160 ? data.description.slice(0, 160).trimEnd() + "…" : data.description}
+                  {page.description.length > 160 ? page.description.slice(0, 160).trimEnd() + "…" : page.description}
                 </p>
               )}
-              {data.universe_master_id ? (
+              {page.universe_master_id ? (
                 <div className="mt-4 flex flex-wrap gap-2">
                   <Link
-                    href={publicWorldHref(data.universe_master_id)}
+                    href={public2_5dHref(page.universe_master_id)}
                     className={buttonVariants({ size: "lg" })}
                     data-experience-entry="2.5d"
                   >
                     {ENTER_2_5D_LABEL}
                   </Link>
                   <Link
-                    href={publicHolographicHref(data.universe_master_id)}
+                    href={publicHolographicHref(page.universe_master_id)}
                     className={buttonVariants({ size: "lg", variant: "outline" })}
                     data-experience-entry="holographic"
                   >
                     {HOLOGRAPHIC_EXPERIENCE_LABEL}
                   </Link>
-                  {data.scenes.length > 0 ? (
-                    <Link href={`/worlds/${data.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
+                  {page.scenes.length > 0 ? (
+                    <Link href={`/worlds/${page.universe_master_id}/scenes`} className={buttonVariants({ variant: "outline", size: "lg" })}>
                       Scene Deck
                     </Link>
                   ) : null}
@@ -444,15 +445,15 @@ export default async function WorldPage({
           {/* Left: player — takes natural video height */}
           <div className="flex-1 min-w-0 bg-black">
             <MediaHero
-              media={data.media}
-              projectionId={data.projection_id ?? ""}
-              masterId={data.master_id}
-              canonicalStateId={data.canonical_state_id ?? ""}
-              title={`${data.universe_title ? `${data.universe_title} — ` : ""}${title}`}
+              media={page.media}
+              projectionId={page.projection_id ?? ""}
+              masterId={page.master_id}
+              canonicalStateId={page.canonical_state_id ?? ""}
+              title={`${page.universe_title ? `${page.universe_title} — ` : ""}${title}`}
               typeLabel="Mural"
-              credit={data.description}
+              credit={page.description}
               collectible={false}
-              timelineScenes={data.scenes
+              timelineScenes={page.scenes
                 .filter((scene) => scene.start_ms != null && scene.end_ms != null)
                 .map((scene) => ({ id: scene.master_id, title: scene.title, startMs: scene.start_ms!, endMs: scene.end_ms! }))}
               deckScenes={[]}
@@ -463,11 +464,11 @@ export default async function WorldPage({
           <div className="w-full lg:w-72 xl:w-80 shrink-0 border-t lg:border-t-0 lg:border-l border-border bg-card/50 lg:sticky lg:top-0 lg:max-h-screen lg:overflow-y-auto scrollbar-hidden">
             <div className="px-5 py-4 border-b border-border">
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Scenes</p>
-              <p className="text-xs text-foreground font-medium mt-0.5">{data.scenes.length} total</p>
+              <p className="text-xs text-foreground font-medium mt-0.5">{page.scenes.length} total</p>
             </div>
             <div className="divide-y divide-border">
-              {data.scenes.length > 0 ? (
-                data.scenes.map((s, i) => (
+              {page.scenes.length > 0 ? (
+                page.scenes.map((s, i) => (
                   <Link
                     key={s.master_id}
                     href={s.projection_id ? `/moments/${s.projection_id}` : "#"}
@@ -488,9 +489,9 @@ export default async function WorldPage({
                 <p className="px-5 py-4 text-sm text-muted-foreground">No scenes yet.</p>
               )}
             </div>
-            {data.scenes.length > 0 ? (
+            {page.scenes.length > 0 ? (
               <div className="px-5 py-4 border-t border-border">
-                <Link href={`/worlds/${data.universe_master_id}/scenes`}>
+                <Link href={`/worlds/${page.universe_master_id}/scenes`}>
                   <Button variant="outline" className="w-full text-xs h-9">View Scene Deck</Button>
                 </Link>
               </div>
@@ -503,16 +504,16 @@ export default async function WorldPage({
   }
 
   // ── UNIVERSE LAYOUT ────────────────────────────────────────────────────────
-  const muralStill = data.media?.playback_id
+  const muralStill = page.media?.playback_id
     ? sceneStillUrl({
-        provider: data.media.provider,
-        storage_ref: data.media.playback_id,
+        provider: page.media.provider,
+        storage_ref: page.media.playback_id,
         start_ms: 5000,
       })
     : sceneStillUrl({
-        provider: data.scenes[0]?.provider,
-        storage_ref: data.scenes[0]?.playback_id,
-        start_ms: data.scenes[0]?.start_ms ?? 5000,
+        provider: page.scenes[0]?.provider,
+        storage_ref: page.scenes[0]?.playback_id,
+        start_ms: page.scenes[0]?.start_ms ?? 5000,
       });
   const productionResults = await loadUniverseProductionResults(masterId);
   const productionSceneIds = productionResults
@@ -522,19 +523,19 @@ export default async function WorldPage({
   return (
     <div className="min-h-screen bg-background">
 
-      {data.media?.playback_id && data.projection_id && data.canonical_state_id ? (
+      {page.media?.playback_id && page.projection_id && page.canonical_state_id ? (
         <div className="border-b border-border" data-universe-mural-stage="live">
           <MediaHero
-            media={data.media}
-            projectionId={data.projection_id}
-            masterId={data.playback_master_id}
-            canonicalStateId={data.canonical_state_id}
+            media={page.media}
+            projectionId={page.projection_id}
+            masterId={page.playback_master_id}
+            canonicalStateId={page.canonical_state_id}
             title={title}
-            typeLabel={data.playback_master_id === data.master_id ? "Universe" : "Mural"}
-            credit={data.description}
+            typeLabel={page.playback_master_id === page.master_id ? "Universe" : "Mural"}
+            credit={page.description}
             collectible={false}
             showIdentity={false}
-            timelineScenes={data.scenes
+            timelineScenes={page.scenes
               .filter((scene) => scene.start_ms != null && scene.end_ms != null)
               .map((scene) => ({
                 id: scene.master_id,
@@ -549,12 +550,12 @@ export default async function WorldPage({
       <UniverseWorldExperience
         universeId={masterId}
         title={title}
-        description={data.description}
-        attributionRoles={data.attribution_roles}
-        murals={data.murals}
-        scenes={data.scenes}
-        moments={data.moments}
-        sceneMoments={data.scene_moments}
+        description={page.description}
+        attributionRoles={page.attribution_roles}
+        murals={page.murals}
+        scenes={page.scenes}
+        moments={page.moments}
+        sceneMoments={page.scene_moments}
         muralStill={muralStill}
         productionSceneIds={productionSceneIds}
       />

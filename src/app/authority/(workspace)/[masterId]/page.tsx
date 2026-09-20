@@ -20,28 +20,32 @@ export default async function AuthorityWorkPage({
   const svc = getServiceClient();
 
   // Verify authority
-  const { data: authorities } = await svc
+  const { data: authoritiesRaw } = await svc
     .from("authority_record")
     .select("authority_id, authority_type, scope_type, scope_subject_id, capabilities")
     .eq("holder_ref", participantId)
     .eq("revoked", false)
     .order("created_at", { ascending: false });
 
+  const authorities = authoritiesRaw;
   if (!authorities || authorities.length === 0) redirect("/auth/sign-in");
+  const auths = authorities!;
 
-  const platformAuthority = authorities.find((a) => a.scope_type === "platform") ?? null;
-  const masterAuthorities = authorities.filter((a) => a.scope_type === "master");
+  const platformAuthority = auths.find((a) => a.scope_type === "platform") ?? null;
+  const masterAuthorities = auths.filter((a) => a.scope_type === "master");
   const visibleMasterIds = masterAuthorities.map((a) => a.scope_subject_id).filter(Boolean) as string[];
 
   if (!platformAuthority && !visibleMasterIds.includes(masterId)) notFound();
 
-  const { data: master } = await svc
+  const { data: masterRaw } = await svc
     .from("master")
     .select("master_id, canonical_type, parent_master_id, current_state_id, created_at")
     .eq("master_id", masterId)
     .single();
 
+  const master = masterRaw;
   if (!master) notFound();
+  const m = master!;
 
   const [{ data: states }, { data: projections }] = await Promise.all([
     svc.from("canonical_state").select("canonical_state_id, master_id, version, authorisation_state, integrity_hash, created_at").eq("master_id", masterId).order("created_at", { ascending: false }),
@@ -81,10 +85,10 @@ export default async function AuthorityWorkPage({
   // B5: parent context
   let parentTitle: string | null = null;
   let parentCanonicalType: string | null = null;
-  if (master.parent_master_id) {
+  if (m.parent_master_id) {
     const [{ data: parentPres }, { data: parentMaster }] = await Promise.all([
-      svc.from("work_presentation").select("title").eq("master_id", master.parent_master_id).maybeSingle(),
-      svc.from("master").select("canonical_type").eq("master_id", master.parent_master_id).maybeSingle(),
+      svc.from("work_presentation").select("title").eq("master_id", m.parent_master_id).maybeSingle(),
+      svc.from("master").select("canonical_type").eq("master_id", m.parent_master_id).maybeSingle(),
     ]);
     parentTitle = parentPres?.title ?? null;
     parentCanonicalType = parentMaster?.canonical_type ?? null;
@@ -92,7 +96,7 @@ export default async function AuthorityWorkPage({
 
   // B5: children (murals for universe, scenes for mural)
   let childItems: { master_id: string; title: string | null; canonical_type: string }[] = [];
-  const childType = master.canonical_type === "universe" ? "mural" : master.canonical_type === "mural" ? "scene" : null;
+  const childType = m.canonical_type === "universe" ? "mural" : m.canonical_type === "mural" ? "scene" : null;
   if (childType) {
     const { data: childMasters } = await svc
       .from("master")
@@ -149,10 +153,10 @@ export default async function AuthorityWorkPage({
     .limit(5);
 
   const authority = {
-    authority_id: authorities[0].authority_id,
-    authority_type: authorities[0].authority_type,
-    scope_type: authorities[0].scope_type,
-    capabilities: authorities[0].capabilities,
+    authority_id: auths[0].authority_id,
+    authority_type: auths[0].authority_type,
+    scope_type: auths[0].scope_type,
+    capabilities: auths[0].capabilities,
   };
 
   const participantList = (participants ?? []).map((p) => {
@@ -171,7 +175,7 @@ export default async function AuthorityWorkPage({
   return (
     <AuthorityWorkClient
       authority={authority}
-      master={master}
+      master={m as never}
       states={states ?? []}
       projections={projections ?? []}
       bindings={(bindings ?? []) as never}
@@ -180,7 +184,7 @@ export default async function AuthorityWorkPage({
       realizations={realizations ?? []}
       participants={participantList}
       parentTitle={parentTitle}
-      parentMasterId={master.parent_master_id}
+      parentMasterId={m.parent_master_id}
       parentCanonicalType={parentCanonicalType}
       childItems={childItems}
       rightsHolderLabel={rightsHolderLabel}

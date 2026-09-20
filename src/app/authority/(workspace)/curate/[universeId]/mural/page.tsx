@@ -24,10 +24,11 @@ export default async function CurateMuralPage({
 
   const assembly = await loadUniverseAssembly(universeId);
   if (!assembly) notFound();
+  const asm = assembly!;
 
-  const title = assembly.title ?? "Untitled universe";
-  const mural = assembly.murals[0] ?? null;
-  const hubHref = curateHubHref(assembly.master_id);
+  const title = asm.title ?? "Untitled universe";
+  const mural = asm.murals[0] ?? null;
+  const hubHref = curateHubHref(asm.master_id);
 
   return (
     <div className="space-y-8">
@@ -63,8 +64,8 @@ export default async function CurateMuralPage({
           </div>
         ) : (
           <RegisterMural
-            universeId={assembly.master_id}
-            universeTitle={assembly.title}
+            universeId={asm.master_id}
+            universeTitle={asm.title}
             fromCurate
             defaultOpen
           />

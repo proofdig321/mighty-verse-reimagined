@@ -28,10 +28,11 @@ export default async function CurateAttachPage({
     loadCurateStudioMedia(),
   ]);
   if (!hub) notFound();
+  const h = hub!;
 
-  const title = hub.universeTitle;
-  const hubHref = curateHubHref(hub.universeId);
-  const target = studio.universes.find((universe) => universe.master_id === hub.universeId) ?? null;
+  const title = h.universeTitle;
+  const hubHref = curateHubHref(h.universeId);
+  const target = studio.universes.find((universe) => universe.master_id === h.universeId) ?? null;
 
   return (
     <div className="space-y-8">
@@ -56,12 +57,12 @@ export default async function CurateAttachPage({
       </div>
 
       <div className="rounded-xl border border-border bg-card px-5 py-5 space-y-4 max-w-2xl">
-        {!hub.muralRegistered ? (
+        {!h.muralRegistered ? (
           <div className="space-y-3" role="status">
             <p className="text-sm text-foreground">
               {title} has no Mural yet. Register the Mural before attaching media.
             </p>
-            <Link href={curateMuralHref(hub.universeId)} className={buttonVariants({ size: "sm" })}>
+            <Link href={curateMuralHref(h.universeId)} className={buttonVariants({ size: "sm" })}>
               Register Mural
             </Link>
           </div>
@@ -73,8 +74,8 @@ export default async function CurateAttachPage({
             <CurateAttachSources
               media={studio.media}
               universes={[target]}
-              lockedUniverseId={hub.universeId}
-              initialAssetId={hub.incomingAssetId}
+              lockedUniverseId={h.universeId}
+              initialAssetId={h.incomingAssetId}
             />
             <Link href="/authority/media/intake" className={buttonVariants({ size: "sm", variant: "outline" })}>
               Add new media

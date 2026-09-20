@@ -13,7 +13,7 @@ import {
 } from "@/lib/experience/universe-world";
 import { cn } from "@/lib/utils";
 import { CreativeMomentCard } from "./creative-moment-card";
-import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref } from "@/lib/experience/destinations";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, public2_5dHref, publicHolographicHref } from "@/lib/experience/destinations";
 
 export type UniverseWorldExperienceProps = {
   universeId: string;
@@ -68,12 +68,13 @@ export function UniverseWorldExperience({
   const sceneDeckHref = `/worlds/${universeId}/scenes`;
   const muralHref = mural ? `/worlds/${mural.master_id}` : null;
   const holographicHref = publicHolographicHref(universeId);
+  const spatialHref = public2_5dHref(universeId);
   const productionSet = new Set(productionSceneIds);
 
   return (
-    <div className="world-experience" data-experience-entry="2.5d" aria-label={`${ENTER_2_5D_LABEL} · ${title}`}>
+    <div className="world-experience" data-experience-entry="universe" aria-label={`Universe · ${title}`}>
       <section className="world-identity" aria-labelledby="world-identity-heading">
-        <p className="world-kicker">Universe · 2.5D</p>
+        <p className="world-kicker">Universe</p>
         <h1 id="world-identity-heading" className="world-title">
           {title}
         </h1>
@@ -85,8 +86,16 @@ export function UniverseWorldExperience({
         ) : null}
         <div className="world-actions">
           <Link
-            href={holographicHref}
+            href={spatialHref}
             className={cn(buttonVariants({ size: "lg" }), "world-action-primary")}
+            data-experience-entry="2.5d"
+          >
+            {ENTER_2_5D_LABEL}
+            <span className="sr-only">{` for ${title}`}</span>
+          </Link>
+          <Link
+            href={holographicHref}
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
             data-experience-entry="holographic"
           >
             {HOLOGRAPHIC_EXPERIENCE_LABEL}

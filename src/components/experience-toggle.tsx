@@ -1,16 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL } from "@/lib/experience/destinations";
+import { UNIVERSE_LABEL, ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL } from "@/lib/experience/destinations";
 
 export default function ExperienceToggle({
   universeHref,
+  spatialHref,
   experienceHref,
   current,
 }: {
   universeHref: string;
+  /** /worlds/[id]/2.5d */
+  spatialHref: string;
   experienceHref: string;
-  current: "universe" | "experience";
+  current: "universe" | "spatial" | "experience";
 }) {
   return (
     <div className="flex items-center gap-3">
@@ -20,9 +23,22 @@ export default function ExperienceToggle({
           href={universeHref}
           aria-current={current === "universe" ? "page" : undefined}
           className="px-3 py-1 rounded-full text-xs font-medium"
-          data-experience-entry="2.5d"
+          data-experience-entry="universe"
           style={
             current === "universe"
+              ? { background: "var(--accent-mv)", color: "#000" }
+              : { color: "var(--muted-foreground)" }
+          }
+        >
+          {UNIVERSE_LABEL}
+        </Link>
+        <Link
+          href={spatialHref}
+          aria-current={current === "spatial" ? "page" : undefined}
+          className="px-3 py-1 rounded-full text-xs font-medium"
+          data-experience-entry="2.5d"
+          style={
+            current === "spatial"
               ? { background: "var(--accent-mv)", color: "#000" }
               : { color: "var(--muted-foreground)" }
           }

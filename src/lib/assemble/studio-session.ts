@@ -18,7 +18,7 @@ export async function requireStudioWorkspace(
 
   const workspace = await loadStudioWorkspace(masterId, fromCurate);
   if (!workspace) notFound();
-  return workspace;
+  return workspace!;
 }
 
 export async function requireStudioUser(next = "/studio"): Promise<{ participantId: string }> {
@@ -29,5 +29,5 @@ export async function requireStudioUser(next = "/studio"): Promise<{ participant
   if (!user) redirect(`/auth/sign-in?next=${next}`);
   const participantId = await getParticipantId(supabase);
   if (!participantId) redirect(`/auth/sign-in?next=${next}`);
-  return { participantId };
+  return { participantId: participantId! };
 }

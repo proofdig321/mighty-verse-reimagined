@@ -143,6 +143,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
 
   const data = await getData(assetId);
   if (!data) notFound();
+  const d = data!;
 
   // Load metadata status (non-fatal if unavailable)
   const [canonicalMeta, metadataReport] = await Promise.all([
@@ -152,11 +153,11 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
       .catch(() => null),
   ]);
 
-  const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness, registrant } = data;
+  const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness, registrant } = d;
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
   const isReference = isCuratedReferenceProvider(asset.provider);
   const isThumbnail = !isReference && (asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail"));
-  const bound = data.bindings.find((binding) => binding.masterId);
+  const bound = d.bindings.find((binding) => binding.masterId);
   const title = intake?.title ?? bound?.masterTitle ?? (isPlaceholder ? "Placeholder asset" : "Untitled media");
   const provenance = parseReferenceProvenance(intake?.provenance_notes);
   const inspectable = isInspectableAssetType(asset.asset_type) && !isPlaceholder && !isThumbnail && !isReference;
@@ -300,7 +301,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
           </span>
         </div>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {readiness.steps.map((step) => (
+          {readiness.steps.map((step: { label: string; state: string }) => (
             <div key={step.label} className="flex items-center gap-1.5 text-xs">
               <span className={step.state === "complete" ? "text-emerald-400" : step.state === "not-applicable" ? "text-muted-foreground/30" : "text-muted-foreground/50"}>
                 {step.state === "complete" ? "✓" : step.state === "not-applicable" ? "—" : "○"}

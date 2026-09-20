@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import ArtworkFrame from "@/components/artwork-frame";
 import ProjectionMediaPlayer from "@/components/player/projection-media-player";
-import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
+import { ENTER_2_5D_LABEL, HOLOGRAPHIC_EXPERIENCE_LABEL, public2_5dHref, publicHolographicHref } from "@/lib/experience/destinations";
 
 type SceneMomentData = MomentData & {
   sceneTitle: string | null;
@@ -189,9 +189,10 @@ export default async function MomentPage({
   const { projectionId } = await params;
   const moment = await getMoment(projectionId);
   if (!moment) notFound();
+  const m = moment!;
 
   const { projection, canonical_state, master, provenance, attribution, media, presentation,
-          sceneTitle, sceneDescription, muralTitle, muralMasterId, universeMasterId, universeTitle, cmTitle, cmMasterId } = moment;
+          sceneTitle, sceneDescription, muralTitle, muralMasterId, universeMasterId, universeTitle, cmTitle, cmMasterId } = m;
 
   const isScene = master.canonical_type === "scene";
   const title = isScene
@@ -310,7 +311,7 @@ export default async function MomentPage({
               <div className="space-y-1.5">
                 <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">Creator</p>
                 <div className="flex flex-wrap gap-2">
-                  {attribution.roles.map((role, idx) => (
+                  {attribution.roles.map((role: { role_type: string }, idx: number) => (
                     <span key={idx} className="text-sm text-foreground capitalize">
                       {role.role_type?.replace(/-/g, " ")}
                     </span>
@@ -360,7 +361,7 @@ export default async function MomentPage({
             {/* Action buttons */}
             <div className="flex flex-wrap gap-3">
               {universeMasterId ? (
-                <Link href={publicWorldHref(universeMasterId)} className={buttonVariants()} data-experience-entry="2.5d">
+                <Link href={public2_5dHref(universeMasterId)} className={buttonVariants()} data-experience-entry="2.5d">
                   {ENTER_2_5D_LABEL}
                 </Link>
               ) : (

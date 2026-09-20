@@ -9,6 +9,7 @@ import { productionLayersFromResults } from "@/lib/production/projection";
 import { composeHolographicProgram, type ExperienceSurfaceLinks } from "@/lib/experience/holographic-program";
 import { HolographicStage } from "@/components/experience/holographic-stage";
 import ExperienceToggle from "@/components/experience-toggle";
+import { public2_5dHref } from "@/lib/experience/destinations";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -32,33 +33,34 @@ export default async function HolographicWorldPage({
   const { masterId } = await params;
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();
+  const assembly = data!;
   const [intelligence, productionResults, source] = await Promise.all([
-    loadSentinelIntelligence(data, { includeObservations: false }),
-    loadUniverseProductionResults(data.master_id),
-    loadSuiteSourcePreview(data),
+    loadSentinelIntelligence(assembly, { includeObservations: false }),
+    loadUniverseProductionResults(assembly.master_id),
+    loadSuiteSourcePreview(assembly),
   ]);
-  const title = data.title ?? "Universe";
+  const title = assembly.title ?? "Universe";
   const program = composeHolographicProgram({
     title,
     layers: intelligence?.holographic ?? [],
     realizations: productionLayersFromResults(productionResults),
     source,
-    moments: data.creative_moments,
+    moments: assembly.creative_moments,
   });
-  const mural = data.murals[0] ?? null;
+  const mural = assembly.murals[0] ?? null;
   const scenes = mural?.scenes ?? [];
   const links: ExperienceSurfaceLinks = {
-    universeHref: `/worlds/${data.master_id}`,
+    universeHref: `/worlds/${assembly.master_id}`,
     muralHref: mural ? `/worlds/${mural.master_id}` : null,
-    sceneDeckHref: scenes.length > 0 ? `/worlds/${data.master_id}/scenes` : null,
+    sceneDeckHref: scenes.length > 0 ? `/worlds/${assembly.master_id}/scenes` : null,
     sceneHref: Object.fromEntries(
       scenes.map((scene) => [
         scene.master_id,
-        scene.projection_id ? `/moments/${scene.projection_id}` : `/worlds/${data.master_id}/scenes`,
+        scene.projection_id ? `/moments/${scene.projection_id}` : `/worlds/${assembly.master_id}/scenes`,
       ]),
     ),
     momentHref: Object.fromEntries(
-      data.creative_moments.map((moment) => [moment.master_id, `/creative-moments/${moment.master_id}`]),
+      assembly.creative_moments.map((moment) => [moment.master_id, `/creative-moments/${moment.master_id}`]),
     ),
   };
 
@@ -68,7 +70,7 @@ export default async function HolographicWorldPage({
       <div className="border-b border-border/50 bg-card/20">
         <div className="mx-auto max-w-7xl px-6 py-3">
           <Link
-            href={`/worlds/${data.master_id}`}
+            href={`/worlds/${assembly.master_id}`}
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             ← Back to Universe · {title}
@@ -87,9 +89,9 @@ export default async function HolographicWorldPage({
               >
                 {title}
               </h1>
-              {data.description ? (
+              {assembly.description ? (
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
-                  {data.description.length > 160 ? data.description.slice(0, 160).trimEnd() + "…" : data.description}
+                  {assembly.description.length > 160 ? assembly.description.slice(0, 160).trimEnd() + "…" : assembly.description}
                 </p>
               ) : (
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
@@ -98,8 +100,9 @@ export default async function HolographicWorldPage({
               )}
             </div>
             <ExperienceToggle
-              universeHref={`/worlds/${data.master_id}`}
-              experienceHref={`/worlds/${data.master_id}/holographic`}
+              universeHref={`/worlds/${assembly.master_id}`}
+              spatialHref={public2_5dHref(assembly.master_id)}
+              experienceHref={`/worlds/${assembly.master_id}/holographic`}
               current="experience"
             />
           </div>
@@ -114,7 +117,7 @@ export default async function HolographicWorldPage({
 
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="flex flex-wrap gap-2">
-          <Link href={`/worlds/${data.master_id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+          <Link href={`/worlds/${assembly.master_id}`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
             Return to Universe
           </Link>
           {mural ? (
@@ -123,7 +126,7 @@ export default async function HolographicWorldPage({
             </Link>
           ) : null}
           {scenes.length > 0 ? (
-            <Link href={`/worlds/${data.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
+            <Link href={`/worlds/${assembly.master_id}/scenes`} className={cn(buttonVariants({ variant: "outline", size: "sm" }))}>
               Scene Deck
             </Link>
           ) : null}
