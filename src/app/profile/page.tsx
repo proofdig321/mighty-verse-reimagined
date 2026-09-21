@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getParticipantId } from "@/lib/supabase/participant";
 import { getServiceClient } from "@/lib/authority/validate";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import SignOutButton from "./sign-out-button";
 
@@ -14,7 +15,6 @@ export default async function ProfilePage() {
 
   const participantId = await getParticipantId(supabase);
 
-  // Fetch identity links for this participant (server-side only)
   const identityLinks = participantId
     ? await (async () => {
         const svc = getServiceClient();
@@ -27,54 +27,52 @@ export default async function ProfilePage() {
       })()
     : [];
 
-  // Filter out the seed placeholder — only show real identity types
-  const visibleLinks = identityLinks.filter(
-    (l) => l.identity_type !== "other"
-  );
+  const visibleLinks = identityLinks.filter((l) => l.identity_type !== "other");
 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto max-w-sm px-4 pt-12 pb-16 space-y-6">
-
         <div>
-          <h1 className="text-foreground text-lg font-semibold">Profile</h1>
-          <p className="text-muted-foreground text-xs mt-0.5">Your participant identity</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Account</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-foreground">Profile</h1>
         </div>
 
-        <Separator />
-
-        {/* Auth identity */}
-        <div className="space-y-1">
-          <p className="text-foreground text-xs font-medium uppercase tracking-wider">Account</p>
-          <p className="text-foreground text-sm">{u.email ?? "—"}</p>
-        </div>
-
-        {/* Participant status */}
-        <div className="space-y-1">
-          <p className="text-foreground text-xs font-medium uppercase tracking-wider">Participant</p>
-          {participantId ? (
-            <Badge variant="secondary">active</Badge>
-          ) : (
-            <p className="text-muted-foreground text-xs">No participant record linked yet.</p>
-          )}
-        </div>
-
-        {/* Verified identity links (non-placeholder only) */}
-        {visibleLinks.length > 0 && (
-          <div className="space-y-2">
-            <p className="text-foreground text-xs font-medium uppercase tracking-wider">Identities</p>
-            <div className="flex flex-wrap gap-2">
-              {visibleLinks.map((l, i) => (
-                <div key={i} className="flex items-center gap-1.5">
-                  <Badge variant="outline" className="capitalize">{l.identity_type.replace(/-/g, " ")}</Badge>
-                  {l.verified && <span className="text-muted-foreground text-xs">verified</span>}
-                </div>
-              ))}
+        <Card className="bg-card/80">
+          <CardHeader>
+            <CardTitle className="text-sm">Account</CardTitle>
+            <CardDescription>{u.email ?? "—"}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">Participant status</p>
+              {participantId ? (
+                <Badge variant="secondary">Active</Badge>
+              ) : (
+                <Badge variant="outline" className="text-muted-foreground">Not linked</Badge>
+              )}
             </div>
-          </div>
-        )}
-
-        <Separator />
+            {visibleLinks.length > 0 && (
+              <>
+                <Separator />
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground">Verified identities</p>
+                  <div className="flex flex-wrap gap-2">
+                    {visibleLinks.map((l, i) => (
+                      <div key={i} className="flex items-center gap-1.5">
+                        <Badge variant="outline" className="capitalize">
+                          {l.identity_type.replace(/-/g, " ")}
+                        </Badge>
+                        {l.verified && (
+                          <span className="text-[10px] text-emerald-400">verified</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
 
         <SignOutButton />
       </div>
