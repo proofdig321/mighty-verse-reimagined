@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { sceneShortTitle } from "@/lib/assemble/composition";
@@ -81,9 +83,21 @@ export function StoryboardLeftColumn({
               ))}
             </div>
             {saveState.status !== "idle" && (
-              <p className={cn("text-xs", saveState.status === "failed" || saveState.status === "unavailable" ? "text-destructive" : "text-muted-foreground")} data-generation-status={saveState.status}>
-                {saveState.message}
-              </p>
+              saveState.status === "failed" || saveState.status === "unavailable" ? (
+                <Alert variant="destructive">
+                  <AlertCircle size={12} />
+                  <AlertDescription className="text-xs">{saveState.message}</AlertDescription>
+                </Alert>
+              ) : saveState.status === "ready" ? (
+                <Alert className="border-emerald-500/30 bg-emerald-500/10 py-2">
+                  <CheckCircle2 size={12} className="text-emerald-400" />
+                  <AlertDescription className="text-xs text-emerald-300">{saveState.message}</AlertDescription>
+                </Alert>
+              ) : (
+                <p className="text-xs text-muted-foreground animate-pulse" data-generation-status={saveState.status}>
+                  {saveState.message}
+                </p>
+              )
             )}
           </div>
         )}

@@ -54,6 +54,7 @@ import { StoryboardLeftColumn } from "./storyboard-left-column";
 import { StoryboardCenterColumn } from "./storyboard-center-column";
 import { StoryboardRightColumn } from "./storyboard-right-column";
 import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
+import { StoryboardProgressBar } from "./storyboard-progress-bar";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly"; // kept for initialTab compat
 type GenerationState = {
@@ -1018,6 +1019,9 @@ export function StoryboardWorkspace({
         onClose={() => { if (!deleteBusy) setDeleteOpen(false); }}
         onConfirm={() => void confirmDeleteWorkspace()}
       />
+
+      {/* ── Progress ── */}
+      <StoryboardProgressBar progress={progress} />
 
       {/* ── Three-column workstation ── */}
       <div className="storyboard-workstation">

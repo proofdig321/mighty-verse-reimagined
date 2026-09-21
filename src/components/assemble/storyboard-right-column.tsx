@@ -5,6 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { secondsFromMs } from "@/lib/media/timing";
@@ -379,23 +382,12 @@ export function StoryboardRightColumn({
         </p>
 
         {/* Mode toggle */}
-        <div className="inline-flex rounded-md border border-border overflow-hidden mb-3">
-          {(["still", "motion"] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              className={cn(
-                "px-3 py-1 text-xs font-medium transition-colors",
-                realizationMode === mode
-                  ? "bg-foreground text-background"
-                  : "text-muted-foreground hover:text-foreground",
-              )}
-              onClick={() => setRealizationMode(mode)}
-            >
-              {mode === "still" ? "Still" : "Motion"}
-            </button>
-          ))}
-        </div>
+        <Tabs value={realizationMode} onValueChange={(v) => setRealizationMode(v as "still" | "motion")} className="mb-3">
+          <TabsList className="h-7">
+            <TabsTrigger value="still" className="text-xs h-6">Still</TabsTrigger>
+            <TabsTrigger value="motion" className="text-xs h-6">Motion</TabsTrigger>
+          </TabsList>
+        </Tabs>
 
         {realizationMode === "still" && (
           <div className="space-y-2">
@@ -561,9 +553,16 @@ export function StoryboardRightColumn({
         )}
 
         {mediaState.status !== "idle" && (
-          <p className={cn("mt-2 text-xs", mediaState.status === "failed" || mediaState.status === "unavailable" ? "text-destructive" : "text-muted-foreground")} data-generation-status={mediaState.status}>
-            {mediaState.message}
-          </p>
+          mediaState.status === "failed" || mediaState.status === "unavailable" || mediaState.status === "blocked" ? (
+            <Alert variant="destructive" className="mt-2 py-2">
+              <AlertCircle size={12} />
+              <AlertDescription className="text-xs">{mediaState.message}</AlertDescription>
+            </Alert>
+          ) : (
+            <p className="mt-2 text-xs text-muted-foreground" data-generation-status={mediaState.status}>
+              {mediaState.message}
+            </p>
+          )
         )}
 
         {/* Provenance */}
@@ -600,12 +599,15 @@ export function StoryboardRightColumn({
 function JobFailure({ job }: { job: JobCard }) {
   const copy = operatorGenerationMessage(job.error?.message);
   return (
-    <div className="space-y-1" data-generation-failure="true">
-      <p className="text-sm text-foreground">{copy.operator}</p>
-      <details>
-        <summary className="cursor-pointer text-xs text-muted-foreground">Technical details</summary>
-        <p className="mt-1 font-mono text-[11px] text-muted-foreground">{copy.technical}</p>
-      </details>
-    </div>
+    <Alert variant="destructive" className="py-2" data-generation-failure="true">
+      <AlertCircle size={12} />
+      <AlertDescription className="text-xs">
+        <p>{copy.operator}</p>
+        <details className="mt-1">
+          <summary className="cursor-pointer text-[10px] opacity-70">Technical details</summary>
+          <p className="mt-1 font-mono text-[10px] opacity-70">{copy.technical}</p>
+        </details>
+      </AlertDescription>
+    </Alert>
   );
 }

@@ -947,6 +947,38 @@ html[data-theme="paper"] {
     gap: 1.25rem;
   }
 
+  /* Three-column storyboard workstation */
+  .storyboard-workstation {
+    display: grid;
+    gap: 1rem;
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
+  .storyboard-col-left,
+  .storyboard-col-center,
+  .storyboard-col-right {
+    min-width: 0;
+  }
+
+  @media (min-width: 768px) {
+    .storyboard-workstation {
+      grid-template-columns: 1fr 1fr;
+    }
+    .storyboard-col-right {
+      grid-column: 1 / -1;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .storyboard-workstation {
+      grid-template-columns: minmax(14rem, 18rem) minmax(12rem, 16rem) minmax(0, 1fr);
+    }
+    .storyboard-col-right {
+      grid-column: auto;
+    }
+  }
+
   .storyboard-composer-column {
     display: grid;
     gap: 1.1rem;

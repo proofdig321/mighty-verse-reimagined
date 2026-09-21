@@ -1,45 +1,45 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import { Menu, X } from "lucide-react";
+import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 export function StudioRail({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
 
   return (
     <div className="studio-rail-slot">
+      {/* Mobile trigger — only visible below lg */}
       <div className="studio-rail-mobile">
         <Button
           type="button"
           variant="outline"
           size="sm"
           aria-expanded={open}
-          aria-controls="studio-nav-drawer"
           onClick={() => setOpen(true)}
         >
-          <Menu />
+          <Menu size={14} />
           Studio
         </Button>
       </div>
-      {open ? (
-        <button
-          type="button"
-          className="studio-nav-backdrop"
-          aria-label="Close Studio navigation"
-          onClick={() => setOpen(false)}
-        />
-      ) : null}
-      <aside id="studio-nav-drawer" className={cn("studio-workspace-rail", open && "is-open")}>
-        <div className="studio-rail-drawer-head">
-          <p className="text-xs font-semibold">Studio</p>
-          <Button type="button" variant="ghost" size="icon-xs" aria-label="Close Studio navigation" onClick={() => setOpen(false)}>
-            <X />
-          </Button>
-        </div>
-        <div onClick={() => setOpen(false)}>{children}</div>
+
+      {/* Desktop rail — always visible at lg+ via CSS */}
+      <aside className="studio-workspace-rail">
+        {children}
       </aside>
+
+      {/* Mobile Sheet — replaces bespoke backdrop + fixed aside */}
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="w-[min(18rem,88vw)] p-0 flex flex-col">
+          <SheetHeader className="px-4 py-3 border-b border-border">
+            <SheetTitle className="text-sm">Studio</SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto p-3" onClick={() => setOpen(false)}>
+            {children}
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

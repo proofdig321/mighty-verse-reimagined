@@ -4,6 +4,11 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { safeAuthNext } from "@/lib/auth-next";
 import { authEmailRedirectTo } from "@/lib/auth-origin";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 export default function SignInForm({
   next,
@@ -22,54 +27,50 @@ export default function SignInForm({
     e.preventDefault();
     setLoading(true);
     setError(null);
-
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: {
-        emailRedirectTo: authEmailRedirectTo(redirectOrigin, destination),
-      },
+      options: { emailRedirectTo: authEmailRedirectTo(redirectOrigin, destination) },
     });
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setSubmitted(true);
-    }
+    if (error) setError(error.message);
+    else setSubmitted(true);
     setLoading(false);
   }
 
   if (submitted) {
     return (
-      <p className="text-muted-foreground text-sm">
-        Check your email for a sign-in link.
-      </p>
+      <Alert className="border-emerald-500/30 bg-emerald-500/10">
+        <CheckCircle2 size={14} className="text-emerald-400" />
+        <AlertDescription className="text-emerald-300">
+          Check your email for a sign-in link.
+        </AlertDescription>
+      </Alert>
     );
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-1">
-        <label htmlFor="email" className="text-foreground text-sm">
-          Email
-        </label>
-        <input
+      <div className="space-y-1.5">
+        <Label htmlFor="email">Email</Label>
+        <Input
           id="email"
           type="email"
           required
+          autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+          placeholder="you@example.com"
         />
       </div>
-      {error && <p className="text-destructive text-sm">{error}</p>}
-      <button
-        type="submit"
-        disabled={loading}
-        className="bg-primary text-primary-foreground w-full rounded-md px-3 py-2 text-sm font-medium disabled:opacity-50"
-      >
+      {error && (
+        <Alert variant="destructive">
+          <AlertCircle size={14} />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+      <Button type="submit" disabled={loading} className="w-full">
         {loading ? "Sending…" : "Send sign-in link"}
-      </button>
+      </Button>
     </form>
   );
 }
