@@ -1069,13 +1069,6 @@ html[data-theme="paper"] {
     }
   }
 
-  .storyboard-stage {
-    display: grid;
-    gap: 1.25rem;
-    min-height: min(70vh, 52rem);
-    align-items: stretch;
-  }
-
   .storyboard-progress {
     display: grid;
     gap: 0.75rem;
@@ -1143,27 +1136,6 @@ html[data-theme="paper"] {
     min-height: 2rem;
     flex-wrap: wrap;
     overflow: visible;
-  }
-
-  @media (min-width: 1024px) {
-    .storyboard-stage {
-      grid-template-columns: minmax(16rem, 21rem) minmax(0, 1fr);
-      align-items: start;
-    }
-  }
-
-  @media (min-width: 1536px) {
-    .storyboard-stage {
-      grid-template-columns: minmax(16rem, 20rem) minmax(28rem, 1.4fr) minmax(18rem, 22rem);
-      align-items: start;
-    }
-
-    .storyboard-stage > .studio-inspector {
-      position: sticky;
-      top: 4.75rem;
-      max-height: calc(100vh - 6rem);
-      overflow: auto;
-    }
   }
 
   .storyboard-target-bar {

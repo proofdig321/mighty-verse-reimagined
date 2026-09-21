@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { HierarchyBreadcrumb, type HierarchyBreadcrumbItem } from "@/components/assemble/breadcrumb";
 import { WithdrawWork } from "@/components/assemble/withdraw-work";
 import { GallerySourcePicker } from "@/components/assemble/gallery-source-picker";
@@ -654,11 +655,11 @@ export default function AuthorityWorkClient({
       {editingRights && binding && (
         <div className="rounded-lg border border-border bg-card/50 px-4 py-4 space-y-3">
           <p className="text-sm font-medium">{title} — Video rights</p>
-          <select value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm">
+          <select value={rightsHolderRef} onChange={e => setRightsHolderRef(e.target.value)} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
             <option value="">Select rights owner</option>
             {participants.map(p => <option key={p.participant_id} value={p.participant_id}>{p.label}</option>)}
           </select>
-          <input value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} placeholder="Rights basis" className="border-input bg-background w-full rounded-md border px-3 py-2 text-sm" />
+          <Input value={rightsBasis} onChange={e => setRightsBasis(e.target.value)} placeholder="Rights basis" />
           <div className="flex gap-2">
             <Button size="sm" disabled={busy || !rightsHolderRef || !rightsBasis} onClick={async () => {
               setBusy(true); setMsg(null);
