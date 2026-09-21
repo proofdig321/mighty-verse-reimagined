@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { getServiceClient } from "@/lib/authority/validate";
 import type { ProjectionMedia } from "@/components/player/projection-media-player";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -383,9 +384,10 @@ export default async function WorldPage({
             <div className="mx-auto max-w-7xl px-6 py-3">
               <Link
                 href={`/worlds/${page.universe_master_id}`}
-                className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
-                ← Back to Universe{page.universe_title ? ` · ${page.universe_title}` : ""}
+                <ChevronLeft size={14} />
+                Universe{page.universe_title ? ` · ${page.universe_title}` : ""}
               </Link>
             </div>
           </div>

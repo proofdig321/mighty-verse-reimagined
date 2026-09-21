@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { getServiceClient } from "@/lib/authority/validate";
 import SceneDeckClient from "@/components/scene-deck-client";
 import { PublicHero } from "@/components/public-hero";
@@ -140,7 +141,7 @@ export default async function UniverseScenesPage({
             href={`/worlds/${masterId}`}
             className="hover:text-foreground transition-colors"
           >
-            ← Back to Universe{universeTitle ? ` · ${universeTitle}` : ""}
+            {universeTitle ? ` · ${universeTitle}` : ""}
           </Link>
         }
         eyebrow="Scenes in the Mural"

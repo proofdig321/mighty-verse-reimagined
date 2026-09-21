@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { getServiceClient } from "@/lib/authority/validate";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import { Separator } from "@/components/ui/separator";
@@ -106,9 +107,10 @@ export default async function CreativeMomentPage({
         {cm.universe_master_id ? (
           <Link
             href={`/worlds/${cm.universe_master_id}`}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to Universe{cm.universe_title ? ` · ${cm.universe_title}` : ""}
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <ChevronLeft size={14} />
+                Universe{cm.universe_title ? ` · ${cm.universe_title}` : ""}
           </Link>
         ) : null}
 

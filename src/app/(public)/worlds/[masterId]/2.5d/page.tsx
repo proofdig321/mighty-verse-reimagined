@@ -3,11 +3,13 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
 import { SpatialPresentation } from "@/components/experience/spatial-presentation";
 import ExperienceToggle from "@/components/experience-toggle";
 import { buttonVariants } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 import { public2_5dHref, publicHolographicHref, publicWorldHref } from "@/lib/experience/destinations";
 import { muxThumbnailUrl } from "@/lib/media/thumbnail";
@@ -44,17 +46,19 @@ export default async function SpatialWorldPage({
       <div className="min-h-screen bg-background">
         <div className="border-b border-border/50 bg-card/20">
           <div className="mx-auto max-w-7xl px-6 py-3">
-            <Link
-              href={publicWorldHref(masterId)}
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              ← Back to Universe
+            <Link href={publicWorldHref(masterId)} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
+              <ChevronLeft size={14} />
+              Universe
             </Link>
           </div>
         </div>
-        <p className="mx-auto max-w-7xl px-6 py-10 text-sm text-muted-foreground">
-          This Universe has no spatial stage yet.
-        </p>
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <Alert>
+            <AlertDescription>
+              This Universe has no spatial stage yet. The Mural must be authorised and have media attached before 2.5D is available.
+            </AlertDescription>
+          </Alert>
+        </div>
       </div>
     );
   }
@@ -87,9 +91,10 @@ export default async function SpatialWorldPage({
         <div className="mx-auto max-w-7xl px-6 py-3">
           <Link
             href={publicWorldHref(masterId)}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Back to Universe · {title}
+            <ChevronLeft size={14} />
+            Universe · {title}
           </Link>
         </div>
       </div>

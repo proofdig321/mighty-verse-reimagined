@@ -3,7 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { Search, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
 import ArtworkFrame from "@/components/artwork-frame";
 import MediaVisual from "@/components/media-visual";
 import { PublicHero } from "@/components/public-hero";
@@ -25,7 +27,8 @@ export default function UniversesFilterClient({ universes }: Props) {
 
   const filtered = query.trim()
     ? universes.filter((u) =>
-        (u.title ?? "").toLowerCase().includes(query.toLowerCase())
+        (u.title ?? "").toLowerCase().includes(query.toLowerCase()) ||
+        u.attribution_roles.some((r) => r.toLowerCase().includes(query.toLowerCase()))
       )
     : universes;
 
@@ -40,25 +43,36 @@ export default function UniversesFilterClient({ universes }: Props) {
             : "Explore a Universe to reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience."
         }
         aside={
-          <>
+          <div className="relative">
+            <Search size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <Input
               placeholder="Search universes…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              className="w-48 h-9 text-sm"
+              className="w-52 pl-8 h-9 text-sm"
+              aria-label="Search universes"
             />
-            <select
-              className="h-9 rounded-md border border-input bg-transparent px-3 text-sm text-muted-foreground"
-              defaultValue=""
-            >
-              <option value="">All Genres</option>
-            </select>
-          </>
+          </div>
         }
       />
 
-      {/* Grid */}
       <div className="mx-auto max-w-7xl px-6 py-10 space-y-4">
+        <div className="flex items-center justify-between gap-4">
+          <p className="text-xs text-muted-foreground">
+            {filtered.length} universe{filtered.length !== 1 ? "s" : ""}
+            {query.trim() ? ` matching "${query}"` : ""}
+          </p>
+          {query.trim() && (
+            <button
+              type="button"
+              onClick={() => setQuery("")}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Clear
+            </button>
+          )}
+        </div>
+
         {filtered.length > 0 ? (
           <div className="artifact-grid-wide">
             {filtered.map((u) => (
@@ -81,15 +95,9 @@ export default function UniversesFilterClient({ universes }: Props) {
                     >
                       {u.title ?? "Untitled"}
                     </p>
-                    <span
-                      className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border"
-                      style={{
-                        color: "var(--accent-mv)",
-                        borderColor: "color-mix(in oklch, var(--accent-mv) 40%, transparent)",
-                      }}
-                    >
+                    <Badge variant="outline" className="shrink-0 text-[10px]" style={{ color: "var(--accent-mv)", borderColor: "color-mix(in oklch, var(--accent-mv) 40%, transparent)" }}>
                       Universe
-                    </span>
+                    </Badge>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground truncate">
                     {u.attribution_roles.length > 0
@@ -97,20 +105,29 @@ export default function UniversesFilterClient({ universes }: Props) {
                       : "Various Artists"}
                   </p>
                   <p className="mt-2 text-xs text-muted-foreground">
-                    {experienceJourney ? "Open Universe, then Enter 2.5D" : "Explore, then enter 2.5D"}
+                    {experienceJourney ? "Open Universe → Enter 2.5D" : "Explore → 2.5D or Holographic"}
                   </p>
                 </div>
               </Link>
             ))}
           </div>
         ) : (
-          <div className="rounded-xl border border-border bg-card/40 px-8 py-12 text-center">
-            <p className="text-sm text-muted-foreground">No universes found.</p>
+          <div className="rounded-xl border border-border bg-card/40 px-8 py-16 text-center">
+            <Globe size={24} className="mx-auto mb-3 text-muted-foreground/40" />
+            <p className="text-sm font-medium text-foreground">
+              {query.trim() ? `No universes matching "${query}"` : "No universes yet"}
+            </p>
+            {query.trim() && (
+              <button
+                type="button"
+                onClick={() => setQuery("")}
+                className="mt-2 text-xs text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         )}
-        <p className="text-xs text-muted-foreground pt-2">
-          {filtered.length} universe{filtered.length !== 1 ? "s" : ""}
-        </p>
       </div>
     </div>
   );

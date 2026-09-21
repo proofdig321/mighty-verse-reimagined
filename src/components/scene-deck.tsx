@@ -258,8 +258,13 @@ export default function SceneDeck({
         </span>
 
         {isRevealed && (
-          <span className="absolute inset-x-3 bottom-4 z-10 text-sm font-semibold text-white drop-shadow-lg leading-tight">
-            {scene.title ?? "Undisclosed Scene"}
+          <span className="absolute inset-x-3 bottom-4 z-10 leading-tight">
+            <span className="block text-sm font-semibold text-white drop-shadow-lg">{scene.title ?? "Undisclosed Scene"}</span>
+            {scene.startMs != null && (
+              <span className="block font-mono text-[10px] text-white/60 mt-0.5">
+                {String(Math.floor(scene.startMs / 60000)) + ':' + String(Math.floor((scene.startMs % 60000) / 1000)).padStart(2, '0')}
+              </span>
+            )}
           </span>
         )}
 
@@ -374,8 +379,13 @@ export default function SceneDeck({
         </span>
 
         {isRevealed && (
-          <span className="absolute inset-x-3 bottom-4 z-10 text-sm font-semibold text-white drop-shadow-lg leading-tight">
-            {scene.title ?? "Undisclosed Scene"}
+          <span className="absolute inset-x-3 bottom-4 z-10 leading-tight">
+            <span className="block text-sm font-semibold text-white drop-shadow-lg">{scene.title ?? "Undisclosed Scene"}</span>
+            {scene.startMs != null && (
+              <span className="block font-mono text-[10px] text-white/60 mt-0.5">
+                {String(Math.floor(scene.startMs / 60000)) + ':' + String(Math.floor((scene.startMs % 60000) / 1000)).padStart(2, '0')}
+              </span>
+            )}
           </span>
         )}
 

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ChevronLeft } from "lucide-react";
 import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import { loadSentinelIntelligence } from "@/lib/assemble/load-sentinel-intelligence";
 import { loadSuiteSourcePreview } from "@/lib/assemble/load-source-preview";
@@ -11,6 +12,7 @@ import { HolographicStage } from "@/components/experience/holographic-stage";
 import ExperienceToggle from "@/components/experience-toggle";
 import { public2_5dHref } from "@/lib/experience/destinations";
 import { buttonVariants } from "@/components/ui/button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
@@ -71,9 +73,10 @@ export default async function HolographicWorldPage({
         <div className="mx-auto max-w-7xl px-6 py-3">
           <Link
             href={`/worlds/${assembly.master_id}`}
-            className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
-            ← Back to Universe · {title}
+            <ChevronLeft size={14} />
+            Universe · {title}
           </Link>
         </div>
       </div>
@@ -112,7 +115,13 @@ export default async function HolographicWorldPage({
       {program.clock || program.layers.length > 0 ? (
         <HolographicStage program={program} mode="public" links={links} />
       ) : (
-        <p className="mx-auto max-w-7xl px-6 py-10 text-sm text-muted-foreground">This Universe has no spatial stage yet.</p>
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <Alert>
+            <AlertDescription>
+              This Universe has no spatial stage yet. The Mural must be authorised and have media attached before the Holographic Experience is available.
+            </AlertDescription>
+          </Alert>
+        </div>
       )}
 
       <div className="mx-auto max-w-7xl px-6 py-8">
