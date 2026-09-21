@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Music, FileText } from "lucide-react";
+import { Music, FileText, Film } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { PublicHero } from "@/components/public-hero";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 type MediaItem = {
   asset_id: string;
@@ -18,136 +20,113 @@ type MediaItem = {
 
 type Props = { items: MediaItem[] };
 
-const TABS = ["All Media", "Videos", "Images", "Audio", "Documents"] as const;
+const TABS = ["All", "Video", "Audio", "Image", "Document"] as const;
 type Tab = (typeof TABS)[number];
 
-const TYPE_MAP: Record<Tab, string | null> = {
-  "All Media": null,
-  Videos: "video",
-  Images: "image",
-  Audio: "audio",
-  Documents: "document",
-};
+function matchesTab(item: MediaItem, tab: Tab): boolean {
+  if (tab === "All") return true;
+  const t = item.asset_type?.toLowerCase() ?? "";
+  if (tab === "Video") return t.includes("video");
+  if (tab === "Audio") return t.includes("audio");
+  if (tab === "Image") return t.includes("image");
+  if (tab === "Document") return t.includes("document");
+  return false;
+}
 
-function AssetPreview({ item }: { item: MediaItem }) {
-  const isVideo = item.asset_type?.toLowerCase().includes("video");
-  const isAudio = item.asset_type?.toLowerCase().includes("audio");
-  const isDoc = item.asset_type?.toLowerCase().includes("document");
+function AssetCard({ item }: { item: MediaItem }) {
+  const t = item.asset_type?.toLowerCase() ?? "";
+  const isVideo = t.includes("video");
+  const isAudio = t.includes("audio");
+  const isDoc = t.includes("document");
 
-  if (isVideo) {
-    return (
-      <div className="relative">
-        <MediaVisual
-          playbackId={item.storage_ref ?? undefined}
-          provider={item.provider}
-          title={item.title ?? item.work_title ?? ""}
-          aspectRatio="16/9"
-        />
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="w-8 h-8 rounded-full flex items-center justify-center bg-black/50">
-            <span className="text-white text-xs ml-0.5">▶</span>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (isAudio) {
-    return (
-      <div
-        className="w-full bg-card border border-border rounded-md flex items-center justify-center"
-        style={{ aspectRatio: "16/9" }}
-      >
-        <div className="text-center space-y-1">
-          <Music size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground" />
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Audio</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (isDoc) {
-    return (
-      <div
-        className="w-full bg-card border border-border rounded-md flex items-center justify-center"
-        style={{ aspectRatio: "16/9" }}
-      >
-        <div className="text-center space-y-1">
-          <FileText size={20} strokeWidth={1.5} className="mx-auto text-muted-foreground" />
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Document</p>
-        </div>
-      </div>
-    );
-  }
-
-  return (
+  const visual = isVideo ? (
     <MediaVisual
       playbackId={item.storage_ref ?? undefined}
       provider={item.provider}
       title={item.title ?? item.work_title ?? ""}
       aspectRatio="16/9"
     />
+  ) : (
+    <div
+      className="w-full rounded-lg border border-border bg-card/60 flex items-center justify-center"
+      style={{ aspectRatio: "16/9" }}
+    >
+      {isAudio ? <Music size={18} className="text-muted-foreground/50" /> :
+       isDoc ? <FileText size={18} className="text-muted-foreground/50" /> :
+       <Film size={18} className="text-muted-foreground/50" />}
+    </div>
+  );
+
+  return (
+    <div className="group space-y-2">
+      <div className="overflow-hidden rounded-lg ring-1 ring-foreground/10 transition-shadow group-hover:ring-foreground/20">
+        {visual}
+      </div>
+      <div className="space-y-1 px-0.5">
+        <p className="text-xs font-medium text-foreground truncate leading-snug">
+          {item.title ?? item.work_title ?? <span className="italic text-muted-foreground">Untitled</span>}
+        </p>
+        <div className="flex items-center gap-1.5">
+          <Badge variant="outline" className="h-4 text-[9px] px-1.5 uppercase tracking-wider">
+            {item.asset_type ?? "unknown"}
+          </Badge>
+          {item.rights_holder_ref && (
+            <Badge variant="secondary" className="h-4 text-[9px] px-1.5">Rights</Badge>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function GalleryFilterClient({ items }: Props) {
-  const [tab, setTab] = useState<Tab>("All Media");
+  const [tab, setTab] = useState<Tab>("All");
 
-  const typeFilter = TYPE_MAP[tab];
-  const filtered = typeFilter
-    ? items.filter((i) => i.asset_type?.toLowerCase().includes(typeFilter))
-    : items;
+  const filtered = items.filter((i) => matchesTab(i, tab));
+
+  const counts = Object.fromEntries(
+    TABS.map((t) => [t, items.filter((i) => matchesTab(i, t)).length])
+  ) as Record<Tab, number>;
 
   return (
     <div>
       <PublicHero
-        eyebrow="The full catalogue"
-        title="Media Gallery"
-        description="Images, videos, audio and documents from across the universes."
-        aside={
-          <div className="flex items-center gap-0.5 overflow-x-auto scrollbar-hidden">
-            {TABS.map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={[
-                  "shrink-0 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
-                  tab === t
-                    ? "bg-accent text-foreground"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent/40",
-                ].join(" ")}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        }
+        eyebrow="Media"
+        title="Gallery"
+        description="Public media assets across all Universes. Selecting media here does not imply Universe ownership."
       />
 
-      {/* Grid */}
-      <div className="mx-auto max-w-7xl px-6 py-10">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)}>
+            <TabsList>
+              {TABS.map((t) => (
+                <TabsTrigger key={t} value={t} className="gap-1.5">
+                  {t}
+                  {counts[t] > 0 && (
+                    <span className="text-[10px] text-muted-foreground tabular-nums">{counts[t]}</span>
+                  )}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
+          <p className="text-xs text-muted-foreground shrink-0">
+            {filtered.length} asset{filtered.length !== 1 ? "s" : ""}
+          </p>
+        </div>
+
         {filtered.length === 0 ? (
-          <div className="rounded-xl border border-border bg-card/40 px-8 py-12 text-center">
-            <p className="text-sm text-muted-foreground">
-              No {tab === "All Media" ? "" : tab.toLowerCase() + " "}assets yet.
+          <div className="rounded-xl border border-border bg-card/40 px-8 py-16 text-center">
+            <Film size={24} className="mx-auto mb-3 text-muted-foreground/40" />
+            <p className="text-sm font-medium text-foreground">No {tab === "All" ? "" : tab.toLowerCase() + " "}assets yet</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Media appears here once it is bound to a public projection.
             </p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
             {filtered.map((item) => (
-              <div key={item.asset_id} className="space-y-2">
-                <AssetPreview item={item} />
-                <div className="space-y-0.5 px-0.5">
-                  <p className="text-xs text-foreground truncate">
-                    {item.title ?? item.work_title ?? (
-                      <span className="italic text-muted-foreground">Untitled</span>
-                    )}
-                  </p>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/50">
-                    {item.asset_type ?? "unknown"}
-                  </p>
-                </div>
-              </div>
+              <AssetCard key={item.asset_id} item={item} />
             ))}
           </div>
         )}

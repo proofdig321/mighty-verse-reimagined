@@ -1,4 +1,11 @@
-import Link from "next/link";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 
 export type HierarchyBreadcrumbItem = {
   label: string;
@@ -7,19 +14,21 @@ export type HierarchyBreadcrumbItem = {
 
 export function HierarchyBreadcrumb({ items }: { items: HierarchyBreadcrumbItem[] }) {
   return (
-    <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-      {items.map((item, index) => (
-        <span key={`${item.label}-${index}`} className="contents">
-          {index > 0 && <span className="opacity-30">/</span>}
-          {item.href ? (
-            <Link href={item.href} className="hover:text-foreground transition-colors">
-              {item.label}
-            </Link>
-          ) : (
-            <span className="text-foreground">{item.label}</span>
-          )}
-        </span>
-      ))}
-    </nav>
+    <Breadcrumb>
+      <BreadcrumbList>
+        {items.map((item, index) => (
+          <span key={`${item.label}-${index}`} className="contents">
+            {index > 0 && <BreadcrumbSeparator />}
+            <BreadcrumbItem>
+              {item.href ? (
+                <BreadcrumbLink href={item.href}>{item.label}</BreadcrumbLink>
+              ) : (
+                <BreadcrumbPage>{item.label}</BreadcrumbPage>
+              )}
+            </BreadcrumbItem>
+          </span>
+        ))}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 }

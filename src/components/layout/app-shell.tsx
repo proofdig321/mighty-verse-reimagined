@@ -9,6 +9,7 @@ import { ThemePresetControl } from "@/components/theme/theme-preset-control";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 export type AppNavItem = {
@@ -115,7 +116,7 @@ export function AppShell({
             {group.items.map((item) => {
               const Icon = item.icon;
               const active = isActive(item);
-              return (
+              const linkEl = (
                 <Link
                   key={item.href}
                   href={item.href}
@@ -134,6 +135,15 @@ export function AppShell({
                   {collapsed ? null : item.label}
                 </Link>
               );
+              if (collapsed) {
+                return (
+                  <Tooltip key={item.href}>
+                    <TooltipTrigger render={linkEl} />
+                    <TooltipContent side="right">{item.label}</TooltipContent>
+                  </Tooltip>
+                );
+              }
+              return linkEl;
             })}
           </div>
         </div>

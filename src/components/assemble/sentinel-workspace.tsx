@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { EvidenceBadge, ConfidenceBadge } from "./evidence-badge";
 import { cn } from "@/lib/utils";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { formatShotWindow, cameraEvidenceStatus, evidenceStatusLabel, temporalEvidenceStatus, visualEvidenceStatus, type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
@@ -212,7 +213,7 @@ export function SentinelWorkspace({
                   {formatShotWindow(selected)} · {formatTimelineMs(selected.duration_ms)}
                 </CardDescription>
               </div>
-              <Badge variant="outline" className="capitalize">{selected.confidence}</Badge>
+              <ConfidenceBadge confidence={selected.confidence} />
             </div>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -226,19 +227,19 @@ export function SentinelWorkspace({
                 <dd className="mt-1 text-sm">{selected.what_happens}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Camera · {evidenceStatusLabel(cameraEvidenceStatus(selected))}</dt>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">Camera <EvidenceBadge status={cameraEvidenceStatus(selected)} /></dt>
                 <dd className="mt-1 text-sm">{selected.camera_explanation || selected.camera} · {selected.framing}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Motion · {evidenceStatusLabel(temporalEvidenceStatus(selected.motion))}</dt>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">Motion <EvidenceBadge status={temporalEvidenceStatus(selected.motion)} /></dt>
                 <dd className="mt-1 text-sm">{selected.motion}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Subjects · {evidenceStatusLabel(visualEvidenceStatus(selected.subjects[0]?.description))}</dt>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">Subjects <EvidenceBadge status={visualEvidenceStatus(selected.subjects[0]?.description)} /></dt>
                 <dd className="mt-1 text-sm">{selected.subjects.length ? selected.subjects.map((subject) => `${subject.description}${subject.position ? ` — ${subject.position}` : ""}`).join(" · ") : "None identified"}</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Environment · {evidenceStatusLabel(visualEvidenceStatus(selected.environment))}</dt>
+                <dt className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground flex items-center gap-1.5">Environment <EvidenceBadge status={visualEvidenceStatus(selected.environment)} /></dt>
                 <dd className="mt-1 text-sm">{selected.environment}{selected.lighting ? ` · ${selected.lighting}` : ""}</dd>
               </div>
               <div>

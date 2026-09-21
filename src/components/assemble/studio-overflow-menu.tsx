@@ -2,6 +2,14 @@
 
 import type { ReactNode } from "react";
 import { MoreHorizontal } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLinkItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 export function StudioOverflowMenu({
   label,
@@ -11,15 +19,18 @@ export function StudioOverflowMenu({
   children: ReactNode;
 }) {
   return (
-    <details className="studio-overflow">
-      <summary className="studio-overflow-trigger" aria-label={label}>
-        <MoreHorizontal />
-        <span className="sr-only">{label}</span>
-      </summary>
-      <div className="studio-overflow-panel" role="menu" aria-label={label}>
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button type="button" variant="outline" size="icon-sm" aria-label={label}>
+            <MoreHorizontal size={14} />
+          </Button>
+        }
+      />
+      <DropdownMenuContent align="end">
         {children}
-      </div>
-    </details>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -31,9 +42,9 @@ export function StudioOverflowLink({
   children: ReactNode;
 }) {
   return (
-    <a href={href} role="menuitem" className="studio-overflow-item">
+    <DropdownMenuLinkItem href={href}>
       {children}
-    </a>
+    </DropdownMenuLinkItem>
   );
 }
 
@@ -49,18 +60,12 @@ export function StudioOverflowItem({
   destructive?: boolean;
 }) {
   return (
-    <button
-      type="button"
-      role="menuitem"
-      className={destructive ? "studio-overflow-item is-destructive" : "studio-overflow-item"}
+    <DropdownMenuItem
+      onClick={onSelect}
       disabled={disabled}
-      onClick={(event) => {
-        const root = event.currentTarget.closest("details");
-        if (root) root.open = false;
-        onSelect?.();
-      }}
+      variant={destructive ? "destructive" : "default"}
     >
       {children}
-    </button>
+    </DropdownMenuItem>
   );
 }
