@@ -2,16 +2,26 @@
 
 import { useState } from "react";
 import type { MetadataConsistencyReport, CanonicalMediaMetadata } from "@/lib/media/metadata-types";
-import { formatIsrcDisplay } from "@/lib/media/isrc";
+import { formatIsrcDisplay, recordingCategory, RECORDING_CATEGORY_LABELS } from "@/lib/media/isrc";
+
+/** A sibling realization on the same master — shown for context only. */
+type SiblingRealization = {
+  realization_id: string;
+  realization_type: string;
+  isrc: string | null;
+  version_label: string | null;
+};
 
 type Props = {
   assetId: string;
   initialMeta: CanonicalMediaMetadata | null;
   initialReport: MetadataConsistencyReport | null;
   intakeIsrc?: string | null;
+  /** Other realizations on the same master, for multi-ISRC display. */
+  siblingRealizations?: SiblingRealization[];
 };
 
-export function MetadataStatusPanel({ assetId, initialMeta, initialReport, intakeIsrc }: Props) {
+export function MetadataStatusPanel({ assetId, initialMeta, initialReport, intakeIsrc, siblingRealizations }: Props) {
   const [meta, setMeta] = useState(initialMeta);
   const [report, setReport] = useState(initialReport);
   const [syncing, setSyncing] = useState(false);
@@ -92,7 +102,16 @@ export function MetadataStatusPanel({ assetId, initialMeta, initialReport, intak
                 {meta?.isrc ? "✓" : "○"}
               </span>
               <span className="text-muted-foreground">
-                {meta?.isrc ? `ISRC: ${formatIsrcDisplay(meta.isrc)}` : "ISRC not yet assigned"}
+                {meta?.isrc
+                  ? <>
+                      <span className="text-foreground/50 mr-1">
+                        {meta.realizationType
+                          ? RECORDING_CATEGORY_LABELS[recordingCategory(meta.realizationType)] ?? meta.realizationType
+                          : "Recording"}
+                      </span>
+                      <span className="font-mono">{formatIsrcDisplay(meta.isrc)}</span>
+                    </>
+                  : "ISRC not yet assigned for this recording"}
               </span>
             </div>
           </div>
@@ -175,9 +194,45 @@ export function MetadataStatusPanel({ assetId, initialMeta, initialReport, intak
           </div>
         )}
 
+        {/* Sibling recording ISRCs — other realizations on the same master */}
+        {siblingRealizations && siblingRealizations.length > 0 && (
+          <div className="space-y-1 border-t border-border pt-3">
+            <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              Other Recordings — Same Work
+            </p>
+            <p className="text-[10px] text-muted-foreground/50 mb-2">
+              Each recording has its own ISRC. These are distinct identifiers, not alternatives.
+            </p>
+            <div className="space-y-1 text-xs">
+              {siblingRealizations.map((r) => {
+                const cat = RECORDING_CATEGORY_LABELS[recordingCategory(r.realization_type)] ?? r.realization_type;
+                return (
+                  <div key={r.realization_id} className="flex items-start gap-2">
+                    <span className={r.isrc ? "text-emerald-400 mt-0.5" : "text-muted-foreground/40 mt-0.5"}>
+                      {r.isrc ? "✓" : "○"}
+                    </span>
+                    <div>
+                      <span className="text-muted-foreground/70">{cat}</span>
+                      {r.version_label && (
+                        <span className="text-muted-foreground/40 ml-1">({r.version_label})</span>
+                      )}
+                      <span className="ml-2">
+                        {r.isrc
+                          ? <span className="font-mono text-foreground/70">{formatIsrcDisplay(r.isrc)}</span>
+                          : <span className="text-muted-foreground/40 italic">Not yet assigned</span>}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Embedding note */}
         <div className="border-t border-border pt-3">
           <p className="text-[10px] text-muted-foreground/50">
+            Each recording realization carries its own ISRC. ISRC is never shared across distinct recordings.
             Native embedding: MP3 (ID3v2) and raster images (XMP) supported on upload.
             Video assets hosted on Livepeer: original bytes are provider-managed — portable canonical representation stored as sidecar only.
             Embedded metadata is evidence only and is never automatically promoted to canonical state.

@@ -81,34 +81,56 @@ export function isrcPrefix(isrc: string): string {
 
 /**
  * Determine whether a realization_type is ISRC-eligible.
- * Sound recordings and music video recordings both require ISRCs.
- * Visualisations, animations, and other non-recording types do not.
+ *
+ * Every distinct media recording/realization in Mighty Verse is capable of
+ * carrying its own ISRC. ISRC identifies the specific recording, not the work.
+ * No realization type is blanket-excluded merely because it is visual or derived.
+ *
+ * Eligible types (all realization_type values that represent distinct recordings):
+ *   original-recording  — sound recording
+ *   music-video         — music video recording
+ *   animated-video      — animated audiovisual recording
+ *   visualisation       — audiovisual visualisation recording
+ *   live-performance    — live sound recording
+ *   broadcast-recording — broadcast sound recording
+ *
+ * Not eligible:
+ *   other — catch-all; operator must reclassify before ISRC assignment
  */
 export function isIsrcEligible(realizationType: string): boolean {
   return realizationType === "original-recording" ||
          realizationType === "music-video" ||
+         realizationType === "animated-video" ||
+         realizationType === "visualisation" ||
          realizationType === "live-performance" ||
          realizationType === "broadcast-recording";
 }
 
 /**
  * Determine the recording category for display and ISRC workflow.
- * Sound Recording vs Music Video Recording is a mandatory distinction.
+ *
+ * Returns a deterministic category string for each realization_type.
+ * Used by the Authority UI to label ISRCs distinctly per recording type.
+ * ISRC is NEVER shared across categories — each recording gets its own.
  */
-export function recordingCategory(realizationType: string): "sound-recording" | "music-video" | "other" {
+export function recordingCategory(
+  realizationType: string
+): "sound-recording" | "music-video" | "animated-video" | "visualisation" | "other" {
   if (realizationType === "original-recording" ||
       realizationType === "live-performance" ||
       realizationType === "broadcast-recording") {
     return "sound-recording";
   }
-  if (realizationType === "music-video") {
-    return "music-video";
-  }
+  if (realizationType === "music-video") return "music-video";
+  if (realizationType === "animated-video") return "animated-video";
+  if (realizationType === "visualisation") return "visualisation";
   return "other";
 }
 
 export const RECORDING_CATEGORY_LABELS: Record<string, string> = {
   "sound-recording": "Sound Recording",
   "music-video":     "Music Video Recording",
+  "animated-video":  "Animated Video Recording",
+  "visualisation":   "Visualisation Recording",
   "other":           "Other",
 };

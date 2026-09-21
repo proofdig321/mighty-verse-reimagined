@@ -99,8 +99,8 @@ export function deriveDistributionReadiness(input: DistributionReadinessInput): 
       summary: input.isrcEligible
         ? isrcReady
           ? input.isrc ?? input.isrcStatus ?? "Assigned"
-          : "Sound/music-video realizations need an ISRC before music-platform projections."
-        : "Not applicable — this realization is not an ISRC recording.",
+          : "This recording realization needs its own ISRC before music-platform projections."
+        : "Not applicable — this realization type does not carry an ISRC.",
       href: input.isrcHref ?? undefined,
       actionLabel: input.isrcEligible ? "Open ISRC" : undefined,
     },
