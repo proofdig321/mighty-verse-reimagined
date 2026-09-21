@@ -150,7 +150,7 @@ export default async function UniverseScenesPage({
         aside={
           <>
             <Link href="/editor" className={buttonVariants({ size: "sm", variant: "outline" })}>
-              Build Experience →
+              Custom Sequence →
             </Link>
             <Link href={public2_5dHref(masterId)} className={buttonVariants({ size: "sm" })} data-experience-entry="2.5d">
               {ENTER_2_5D_LABEL}

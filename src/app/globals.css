@@ -850,12 +850,6 @@ html[data-theme="paper"] {
     min-width: 0;
   }
 
-  .studio-rail-mobile,
-  .studio-rail-drawer-head,
-  .studio-nav-backdrop {
-    display: none;
-  }
-
   .studio-inspector-toggle {
     grid-column: 1 / -1;
     justify-self: start;
@@ -1042,55 +1036,7 @@ html[data-theme="paper"] {
     }
   }
 
-  @media (max-width: 1023px) {
-    .studio-rail-mobile {
-      display: flex;
-    }
 
-    .studio-nav-backdrop {
-      display: block;
-      position: fixed;
-      inset: 0;
-      z-index: 39;
-      background: color-mix(in oklch, var(--background) 45%, transparent);
-    }
-
-    .studio-workspace-rail {
-      display: none;
-    }
-
-    .studio-workspace-rail.is-open {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-      position: fixed;
-      inset: 0 auto 0 0;
-      z-index: 40;
-      width: min(18rem, 88vw);
-      padding: 0.85rem;
-      overflow: auto;
-      background: var(--sidebar);
-      border-right: 1px solid var(--border);
-    }
-
-    .studio-rail-drawer-head {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 0.5rem;
-    }
-
-    .studio-workspace-rail.is-open .studio-rail {
-      display: grid;
-      overflow: visible;
-      padding-bottom: 0;
-    }
-
-    .studio-workspace-rail.is-open .studio-rail-group ul {
-      display: grid;
-      gap: 0.15rem;
-    }
-  }
 
   @media (min-width: 1280px) {
     .studio-workspace {
@@ -2849,6 +2795,20 @@ html[data-theme="paper"] {
     .holographic-depth {
       transition: none;
       transform: none;
+    }
+
+    .scene-deck-card,
+    .artifact-card,
+    .artifact-card:hover,
+    .artifact-card:focus-visible {
+      transition: none;
+      transform: none;
+    }
+
+    .scene-deck-card:hover,
+    .scene-deck-card:focus-visible,
+    .scene-deck-card-selected {
+      transform: translateY(0) !important;
     }
   }
 }

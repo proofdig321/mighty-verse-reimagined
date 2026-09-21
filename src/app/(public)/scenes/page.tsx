@@ -93,7 +93,7 @@ export default async function ScenesPage() {
         aside={
           <>
             <Link href="/editor">
-              <Button size="sm">Build Experience →</Button>
+              <Button size="sm" variant="outline">Custom Sequence →</Button>
             </Link>
             <Link href="/universes">
               <Button variant="outline" size="sm">Explore Universes</Button>

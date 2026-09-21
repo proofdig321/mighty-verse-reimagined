@@ -11,7 +11,7 @@ export function StudioRail({ children }: { children: ReactNode }) {
   return (
     <div className="studio-rail-slot">
       {/* Mobile trigger — only visible below lg */}
-      <div className="studio-rail-mobile">
+      <div className="lg:hidden">
         <Button
           type="button"
           variant="outline"
