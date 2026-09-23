@@ -2,16 +2,9 @@
 
 /**
  * Creative operation selector.
- *
- * Maps creator intent (what do you want to make?) to the correct
- * GenerationJobKind based on available inputs and provider capability.
- *
- * The creator sees: Still · Clip · Animation · GIF · Reel
- * The system resolves: still / motion / animate-still / first-last-frame /
- *   reference-motion / extend / animation / gif / reel
- *
- * This is the only place that maps intent → kind.
- * The rest of the system uses GenerationJobKind directly.
+ * Maps creator intent to GenerationJobKind based on available inputs.
+ * Creator sees: Still · Clip · Animation · GIF · Reel
+ * System resolves the correct GenerationJobKind internally.
  */
 
 import { cn } from "@/lib/utils";
@@ -40,28 +33,6 @@ export function intentAvailable(intent: CreativeIntent, capability: Capability):
   return Boolean(capability.video);
 }
 
-/**
- * Resolve the correct GenerationJobKind for a given intent + available inputs.
- *
- * still:
- *   → "still" always
- *
- * clip:
- *   has firstFrame + lastFrame → "first-last-frame"
- *   has firstFrame (still)     → "animate-still"
- *   has referenceUrls          → "reference-motion"  (character/style stills)
- *   has extensionVideoUri      → "extend"
- *   otherwise                  → "motion" (text-to-video)
- *
- * animation:
- *   → "animation" always (Veo cinematic animation style)
- *
- * gif:
- *   → "gif" (ffmpeg derives from existing motion or still)
- *
- * reel:
- *   → "reel" (ffmpeg assembles from panel stills/motion)
- */
 export function resolveKind(input: {
   intent: CreativeIntent;
   firstFrame: string;
@@ -73,7 +44,6 @@ export function resolveKind(input: {
   if (input.intent === "animation") return "animation";
   if (input.intent === "gif") return "gif";
   if (input.intent === "reel") return "reel";
-  // clip — resolve based on available inputs
   if (input.firstFrame && input.lastFrame) return "first-last-frame";
   if (input.firstFrame) return "animate-still";
   if (input.referenceUrls.length > 0) return "reference-motion";
@@ -91,7 +61,11 @@ export function CreativeIntentPicker({
   capability: Capability;
 }) {
   return (
-    <div className="flex flex-wrap gap-1.5" role="group" aria-label="What do you want to make?">
+    <div
+      className="inline-flex items-center rounded-full border border-border/50 bg-muted/40 p-0.5"
+      role="group"
+      aria-label="Output type"
+    >
       {INTENTS.map((intent) => {
         const available = intentAvailable(intent.id, capability);
         const isSelected = selected === intent.id;
@@ -103,12 +77,12 @@ export function CreativeIntentPicker({
             title={available ? intent.description : `${intent.description} — provider not configured`}
             onClick={() => onSelect(intent.id)}
             className={cn(
-              "px-3 py-1 rounded-full text-xs font-medium border transition-colors",
+              "px-3 py-1 rounded-full text-xs font-medium transition-all",
               isSelected
-                ? "border-primary bg-primary/20 text-foreground"
+                ? "bg-background text-foreground shadow-sm"
                 : available
-                ? "border-border/60 bg-card/60 text-muted-foreground hover:border-border hover:text-foreground"
-                : "border-border/30 bg-transparent text-muted-foreground/30 cursor-not-allowed",
+                ? "text-muted-foreground hover:text-foreground"
+                : "text-muted-foreground/25 cursor-not-allowed",
             )}
           >
             {intent.label}

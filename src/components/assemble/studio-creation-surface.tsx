@@ -576,6 +576,18 @@ export function StudioCreationSurface({
 
             {/* ── DIRECTIVE — dominant creative input ── */}
             <div className="studio-composer">
+              {/* Intent tabs — one flat pill row, SeedVideo pattern */}
+              <div className="flex items-center justify-between mb-2">
+                <CreativeIntentPicker
+                  selected={intent}
+                  onSelect={setIntent}
+                  capability={capability}
+                />
+                {capability && (
+                  <span className="text-[9px] text-muted-foreground/50">{capability.provider}</span>
+                )}
+              </div>
+
               <Textarea
                 className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/50"
                 value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
@@ -593,36 +605,26 @@ export function StudioCreationSurface({
                 placeholder={
                   selected
                     ? `Describe what you want to create for "${selected.title}"…`
-                    : "Select a panel, then describe what you want to create…"
+                    : "Describe what you want to create…"
                 }
               />
 
-              {/* ── GENERATION CONTROLS ── */}
-              <div className="studio-composer-bar mt-2">
-                {/* Left: intent picker + contextual controls */}
-                <div className="flex flex-wrap items-center gap-2">
-                  <CreativeIntentPicker
-                    selected={intent}
-                    onSelect={setIntent}
-                    capability={capability}
-                  />
-
-                  {/* Aspect ratio — always shown */}
+              {/* ── ONE-ROW CONTROLS BAR: ratio · duration · hint · Generate ── */}
+              <div className="studio-composer-bar mt-3">
+                <div className="flex items-center gap-1.5">
                   <select
                     aria-label="Aspect ratio"
-                    className="h-7 rounded-full border border-border bg-background px-2.5 text-xs text-foreground"
+                    className="h-7 rounded-full border border-border/60 bg-background px-2.5 text-xs text-foreground"
                     value={aspectRatio}
                     onChange={(e) => onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9")}
                   >
                     <option value="16:9">16:9</option>
                     <option value="9:16">9:16</option>
                   </select>
-
-                  {/* Duration — only for video intents */}
                   {(intent === "clip" || intent === "animation") && (
                     <select
                       aria-label="Duration"
-                      className="h-7 rounded-full border border-border bg-background px-2.5 text-xs text-foreground"
+                      className="h-7 rounded-full border border-border/60 bg-background px-2.5 text-xs text-foreground"
                       value={durationSeconds}
                       onChange={(e) => onSetDuration(Number(e.target.value) as 4 | 6 | 8)}
                     >
@@ -631,19 +633,10 @@ export function StudioCreationSurface({
                       <option value={8}>8s</option>
                     </select>
                   )}
-
-                  {/* Resolved kind hint — only when non-obvious */}
                   {intent === "clip" && resolvedKind !== "motion" && (
-                    <span className="text-[9px] text-muted-foreground">{kindHint[resolvedKind]}</span>
-                  )}
-
-                  {/* Provider label */}
-                  {capability && (
-                    <span className="text-[9px] text-muted-foreground/60">{capability.provider}</span>
+                    <span className="text-[9px] text-muted-foreground/60 px-1">{kindHint[resolvedKind]}</span>
                   )}
                 </div>
-
-                {/* Right: generate button */}
                 <Button
                   type="button"
                   size="sm"
