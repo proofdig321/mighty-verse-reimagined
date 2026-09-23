@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Sparkles, Eye, EyeOff, Film, Layers, Clapperboard } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Film, Layers, Clapperboard } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
+import { OutputFormatPicker } from "./output-format-picker";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
@@ -139,14 +140,41 @@ export function StudioCreationSurface({
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
+  const [outputFormat, setOutputFormat] = useState<GenerationJobKind>("still");
 
   const hasSentinel = Boolean(selectedObservation || selectedFrame);
   const hasRefs = references.filter((r) => r.still_url).length > 0 || workFrames.length > 0;
   const hasStill = Boolean(selected?.still);
   const hasMotion = Boolean(selected?.endpoint);
-  const canTextToVideo = Boolean(capability?.video);
-  const canImageToVideo = Boolean(capability?.video) && hasStill;
-  const canGenerateStill = Boolean(capability?.image || capability?.text);
+
+  function handleGenerate() {
+    if (outputFormat === "still") {
+      onGenerateStill();
+    } else {
+      const extra: Record<string, unknown> = {};
+      if (outputFormat === "animate-still" && selected?.still) extra.still_url = selected.still;
+      if (outputFormat === "first-last-frame") { extra.first_frame_url = firstFrame; extra.last_frame_url = lastFrame; }
+      if (outputFormat === "reference-motion") extra.first_frame_url = firstFrame;
+      if (outputFormat === "extend" && selectedJob?.result?.provider_video_uri) extra.extension_video_uri = selectedJob.result.provider_video_uri;
+      onEnqueue(outputFormat, extra);
+    }
+  }
+
+  const generateDisabled = (() => {
+    if (outputFormat === "still") return !stillReady.available;
+    if (outputFormat === "animate-still") return !hasStill;
+    if (outputFormat === "first-last-frame") return !firstFrame || !lastFrame;
+    if (outputFormat === "extend") return !selectedJob?.result?.provider_video_uri;
+    return !motionReady.available;
+  })();
+
+  const generateTitle = (() => {
+    if (outputFormat === "still") return stillReady.reason ?? undefined;
+    if (outputFormat === "animate-still" && !hasStill) return "Generate a still first";
+    if (outputFormat === "first-last-frame" && (!firstFrame || !lastFrame)) return "Select first and last frames";
+    if (outputFormat === "extend" && !selectedJob?.result?.provider_video_uri) return "Generate a clip first to extend";
+    return motionReady.reason ?? undefined;
+  })();
 
   return (
     <div className="studio-creation-surface">
@@ -450,56 +478,25 @@ export function StudioCreationSurface({
                 placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Select a panel, then describe what you want to create…"}
               />
 
-              <div className="studio-composer-bar mt-3">
-                <div className="studio-composer-controls">
-                  <select
-                    aria-label="Aspect ratio"
-                    className="h-7 rounded-full border border-border bg-background px-2.5 text-xs text-foreground"
-                    value={aspectRatio}
-                    onChange={(e) => onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9")}
-                  >
-                    <option value="16:9">16:9</option>
-                    <option value="9:16">9:16</option>
-                  </select>
-                  {canTextToVideo && (
-                    <select
-                      aria-label="Duration"
-                      className="h-7 rounded-full border border-border bg-background px-2.5 text-xs text-foreground"
-                      value={durationSeconds}
-                      onChange={(e) => onSetDuration(Number(e.target.value) as 4 | 6 | 8)}
-                    >
-                      <option value={4}>4s</option>
-                      <option value={6}>6s</option>
-                      <option value={8}>8s</option>
-                    </select>
-                  )}
-                  {capability && <span className="text-[10px] text-muted-foreground px-1">{capability.label}</span>}
-                </div>
-                <div className="flex items-center gap-2">
-                  {canGenerateStill && (
-                    <Button type="button" size="sm" variant="outline" disabled={!stillReady.available} title={stillReady.reason ?? "Generate still"} onClick={onGenerateStill} className="h-8">Still</Button>
-                  )}
-                  {canTextToVideo && (
-                    <Button type="button" size="sm" disabled={!motionReady.available} title={motionReady.reason ?? "Generate"} onClick={() => onEnqueue(motionKind)} className="h-8 gap-1.5">
-                      <Sparkles size={13} />Generate
-                    </Button>
-                  )}
-                  {!canTextToVideo && !canGenerateStill && (
-                    <Button type="button" size="sm" disabled={!stillReady.available} title={stillReady.reason ?? "Generate"} onClick={onGenerateStill} className="h-8 gap-1.5">
-                      <Sparkles size={13} />Generate
-                    </Button>
-                  )}
-                </div>
-              </div>
-
-              {canImageToVideo && hasStill && selected?.still && (
-                <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={selected.still} alt="" className="h-6 w-10 rounded object-cover border border-border/60" />
-                  <span>Image to video available</span>
-                  <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => onEnqueue("animate-still", { still_url: selected.still })}>Use still</Button>
-                </div>
-              )}
+              <OutputFormatPicker
+                selected={outputFormat}
+                onSelect={setOutputFormat}
+                capability={capability}
+                hasStill={hasStill}
+                hasMotion={hasMotion}
+                aspectRatio={aspectRatio}
+                onSetAspect={onSetAspect}
+                durationSeconds={durationSeconds}
+                onSetDuration={onSetDuration}
+                firstFrame={firstFrame}
+                lastFrame={lastFrame}
+                onSetFirstFrame={onSetFirstFrame}
+                onSetLastFrame={onSetLastFrame}
+                onGenerate={handleGenerate}
+                generateDisabled={generateDisabled}
+                generateTitle={generateTitle}
+                workFrames={workFrames}
+              />
 
               {mediaState.status !== "idle" && (
                 mediaState.status === "failed" || mediaState.status === "unavailable" || mediaState.status === "blocked" ? (
