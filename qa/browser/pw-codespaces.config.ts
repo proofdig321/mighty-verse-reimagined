@@ -1,0 +1,39 @@
+import { defineConfig } from "@playwright/test";
+
+const baseURL = process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3000";
+
+export default defineConfig({
+  testDir: "./smoke",
+  testMatch: /.*\.smoke\.ts/,
+  outputDir: "./test-results",
+  fullyParallel: false,
+  workers: 1,
+  retries: 0,
+  timeout: 60_000,
+  expect: { timeout: 20_000 },
+  reporter: [["list"]],
+  use: {
+    baseURL,
+    browserName: "chromium",
+    // no channel — uses Playwright-managed Chromium headless shell
+    headless: true,
+    screenshot: "on",
+    trace: "retain-on-failure",
+    video: "off",
+    actionTimeout: 15_000,
+    navigationTimeout: 45_000,
+    launchOptions: {
+      args: [
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--autoplay-policy=no-user-gesture-required",
+      ],
+    },
+  },
+  webServer: {
+    command: "npm run dev",
+    url: baseURL,
+    reuseExistingServer: true,
+    timeout: 120_000,
+  },
+});

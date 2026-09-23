@@ -8,10 +8,14 @@ import { expectCreativeSuiteComposition } from "../lib/suite-composition";
 test("curate route loads the authority surface or the real auth gate", async ({ page, observe }, testInfo) => {
   const response = await page.goto(ROUTES.curate, { waitUntil: "domcontentloaded" });
   expect(response, "curate navigation produced a response").toBeTruthy();
+  // If still on curate, wait briefly for any client-side auth redirect
+  if (/\/authority\/curate/.test(page.url())) {
+    await page.waitForURL(/\/auth\/sign-in/, { timeout: 5000 }).catch(() => {});
+  }
 
   const onSignIn = /\/auth\/sign-in/.test(page.url());
   const curateHeading = page.getByRole("heading", { name: /^Curate$/i });
-  const signInHeading = page.getByRole("heading", { name: /Sign in/i });
+  const signInHeading = page.locator('[data-slot="card-title"]').filter({ hasText: /Sign in/i });
 
   if (onSignIn) {
     await expect(signInHeading).toBeVisible();

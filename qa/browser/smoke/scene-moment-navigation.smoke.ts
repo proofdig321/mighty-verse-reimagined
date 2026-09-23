@@ -36,6 +36,8 @@ test("Super Hero Ego Universe and Mural expose sibling Scene Moment routes", asy
   await page.getByRole("link", { name: /View Scene Deck/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeScenes}$`));
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
+  // Wait for deck hydration before asserting Go to scene buttons
+  await expect(page.getByRole("button", { name: /Go to scene 1:/ })).toBeVisible({ timeout: 20000 });
 
   for (const [index, scene] of Object.values(SCENE_MOMENTS).entries()) {
     await expect(

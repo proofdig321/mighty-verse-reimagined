@@ -205,7 +205,10 @@ test("Sentinel persists source-media inspection without creating canonical work"
       .first()
       .isVisible()
       .catch(() => false);
-    if (videoReady) {
+    // Also check the asset is not discarded before attempting a live inspection run
+    const pageContent = await page.content();
+    const assetPlayable = videoReady && !pageContent.includes("operator:discarded");
+    if (assetPlayable) {
       await page.getByLabel("Frames to sample").fill("5");
       await page.getByRole("button", { name: "Run Inspection" }).click();
       await expect(page.getByText(/Inspection complete/)).toBeVisible({ timeout: 120_000 });

@@ -9,7 +9,8 @@ test("unauthenticated Universe listing redirects to sign-in", async ({ page, obs
   const response = await page.goto(ROUTES.authorityUniverses, { waitUntil: "domcontentloaded" });
   expect(response, "universes listing produced a response").toBeTruthy();
   await expect(page).toHaveURL(/\/auth\/sign-in/);
-  await expect(page.getByRole("heading", { name: /Sign in/i })).toBeVisible();
+  // CardTitle renders as a div (data-slot="card-title"), not a heading element
+  await expect(page.locator('[data-slot="card-title"]').filter({ hasText: /Sign in/i })).toBeVisible();
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Authority Universes auth gate", page.url(), [
     `${ROUTES.authorityUniverses} redirected to sign-in without a session`,
@@ -20,7 +21,8 @@ test("unauthenticated Universe workspace redirects to sign-in", async ({ page, o
   const response = await page.goto(ROUTES.authorityUniverseWorkspace, { waitUntil: "domcontentloaded" });
   expect(response, "universe workspace produced a response").toBeTruthy();
   await expect(page).toHaveURL(/\/auth\/sign-in/);
-  await expect(page.getByRole("heading", { name: /Sign in/i })).toBeVisible();
+  // CardTitle renders as a div (data-slot="card-title"), not a heading element
+  await expect(page.locator('[data-slot="card-title"]').filter({ hasText: /Sign in/i })).toBeVisible();
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Universe workspace auth gate", page.url(), [
     `${ROUTES.authorityUniverseWorkspace} redirected to sign-in without a session`,

@@ -10,9 +10,7 @@ import { expectUniverseExperience } from "../lib/universe-experience";
 
 const LIVE_PRODUCTION = {
   realizationId: "041a0567-cccb-431b-94e1-aaab8422e7eb",
-  mediaAssetId: "82fba04f-d313-411c-8f6b-3ea53c2c09ce",
-  muxAssetId: "g004q8Ah8fLnTyV2vJwMN8r01DTUExpypfYwcWYnqsd7c",
-  playbackId: "J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE",
+  mediaAssetId: CANON.muxAssetId,
 } as const;
 
 function readLocalEnv(): Record<string, string> {
@@ -103,13 +101,13 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   const notes: string[] = [];
 
   await page.goto(ROUTES.home, { waitUntil: "domcontentloaded" });
-  await page.getByRole("link", { name: "Universes", exact: true }).click();
+  await page.getByRole("link", { name: "Universes", exact: true }).first().click();
   await page.locator(`[data-universe-card="${CANON.universeId}"]`).first().click();
 
   await page.getByRole("link", { name: /View Mural/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.muralLive}$`));
   await expect(page.getByText("Mural", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("link", { name: /Back to Universe/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Universe ·/i })).toBeVisible();
   await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicExperience(page);
   notes.push("Universe → Mural → Holographic Experience");
@@ -126,7 +124,7 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   notes.push("Universe → Powerhouse Scene → Holographic Experience");
 
   await page.getByRole("link", { name: /Return to Universe/i }).click();
-  await page.getByRole("link", { name: /Enter Scene Deck/i }).click();
+  await page.getByRole("link", { name: /Enter Scene Deck/i }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeScenes}$`));
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
   await expect(page.locator('[data-experience-entry="holographic"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
@@ -141,10 +139,11 @@ test("Universe Mural Scene and Creative Moment click paths share one Experience"
   notes.push("Universe → Scene Deck → Powerhouse → Holographic Experience");
 
   await page.getByRole("link", { name: /Return to Universe/i }).click();
-  await page
-    .locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`)
+  const proverbMoment = page.locator(`[data-moment-id="${CREATIVE_MOMENTS.proverb.masterId}"]`);
+  await expect(proverbMoment).toBeVisible({ timeout: 30000 });
+  await proverbMoment
     .getByRole("link", { name: /View Creative Moment/i })
-    .click();
+    .click({ timeout: 30000 });
   await expect(page).toHaveURL(new RegExp(`/creative-moments/${CREATIVE_MOMENTS.proverb.masterId}$`));
   await expect(page.getByText("Creative Moment", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Powerhouse", exact: true })).toBeVisible();
@@ -184,12 +183,12 @@ test("Dashboard and header Creative Studio are reachable by clicking visible UI"
   await page.goto(ROUTES.authority, { waitUntil: "domcontentloaded" });
   await page.locator('[data-product-nav="studio"]').first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.studio}$`));
-  await expect(page.getByRole("main").getByText("Creative Studio").first()).toBeVisible();
+  await expect(page.getByText("Creative Studio").first()).toBeVisible();
   notes.push("Dashboard Creative Studio → Studio home");
 
   await page.getByRole("link", { name: CANON.universeTitle, exact: true }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseWorkspace}$`));
-  await expect(page.getByRole("main").getByText("Creative Studio").first()).toBeVisible();
+  await expect(page.getByText("Creative Studio").first()).toBeVisible();
   notes.push("clicked Super Hero Ego → Studio");
 
   await page.getByRole("link", { name: "Dashboard", exact: true }).click();

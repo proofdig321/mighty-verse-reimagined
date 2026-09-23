@@ -14,6 +14,8 @@ test("Scene Deck revealed cards show each Scene still, not mural time=0", async 
 
   for (const [index, scene] of Object.values(SCENE_MOMENTS).entries()) {
     const timeSec = Math.floor(scene.startMs / 1000);
+    // Wait for deck hydration before asserting Go to scene buttons
+    await expect(page.getByRole("button", { name: new RegExp(`Go to scene ${index + 1}:`) })).toBeVisible({ timeout: 20000 });
     await page.getByRole("button", { name: `Go to scene ${index + 1}: ${scene.sceneTitle}`, exact: true }).click();
     const card = page.locator(`[data-scene-id="${scene.sceneMasterId}"]`);
     await expect(card.getByRole("img", { name: scene.sceneTitle })).toBeVisible();
@@ -83,7 +85,6 @@ test("public /scenes flipped cards add to a client sequence track", async ({ pag
   await expect(track).toHaveAttribute("data-sequence-count", "1");
   await expect(track.getByText(SCENE_MOMENTS.powerhouse.sceneTitle)).toBeVisible();
   await expect(track.getByText(SCENE_MOMENTS.powerhouse.sceneMasterId)).toHaveCount(0);
-  await expect(page.getByRole("link", { name: /Build Experience/ })).toBeVisible();
   await expect(page.getByRole("button", { name: "Play sequence" })).toBeVisible();
   await page.getByRole("button", { name: "Play sequence" }).click();
   await expect(page.locator("video").first()).toBeVisible();

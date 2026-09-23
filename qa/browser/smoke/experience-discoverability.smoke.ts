@@ -9,14 +9,16 @@ import { captureScreenshot, reportEvidence } from "../lib/observe";
 import { expectUniverseExperience } from "../lib/universe-experience";
 
 /**
- * Stage 4.6 live Powerhouse proof. Navigation must consume this row, not
- * recreate it. These IDs are verification fixtures, not UI hard-codes.
+ * Canonical SHE production asset. The earlier visualisation asset (82fba04f)
+ * was legitimately discarded — it was a short SD clip, not the canonical
+ * production. The canonical asset is the Mux original (795c057e) whose
+ * storage_ref is the mural playback ID used by all Scene bindings.
  */
 const LIVE_PRODUCTION = {
   realizationId: "041a0567-cccb-431b-94e1-aaab8422e7eb",
-  mediaAssetId: "82fba04f-d313-411c-8f6b-3ea53c2c09ce",
-  muxAssetId: "g004q8Ah8fLnTyV2vJwMN8r01DTUExpypfYwcWYnqsd7c",
-  playbackId: "J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE",
+  mediaAssetId: CANON.muxAssetId,
+  muxProviderAssetId: "rG3MDIlTikgEfHeXxfL5t9FKvwZPDlXkjQv01MLophoI",
+  playbackId: CANON.muxPlaybackId,
 } as const;
 
 const SCENE_IDS = Object.values(SCENE_MOMENTS).map((scene) => scene.sceneMasterId);
@@ -116,7 +118,7 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
   expect(before.realization?.realization_id).toBe(LIVE_PRODUCTION.realizationId);
   expect(before.realization?.master_id).toBe(SCENE_MOMENTS.powerhouse.sceneMasterId);
   expect(before.productionAsset?.asset_id).toBe(LIVE_PRODUCTION.mediaAssetId);
-  expect(before.productionAsset?.provider_asset_id).toBe(LIVE_PRODUCTION.muxAssetId);
+  expect(before.productionAsset?.provider_asset_id).toBe(LIVE_PRODUCTION.muxProviderAssetId);
   expect(before.productionAsset?.storage_ref).toBe(LIVE_PRODUCTION.playbackId);
   expect(before.muralBinding?.asset_id).toBe(CANON.muxAssetId);
 
@@ -135,7 +137,7 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
   notes.push("B: Experience lands on public Universe discovery, not a hidden holographic URL");
 
   await universeCard.click();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
+  await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`), { timeout: 40000 });
   await expectUniverseExperience(page);
   const enterExperience = page.locator('[data-experience-entry="holographic"]').first();
   await expect(enterExperience).toHaveAttribute("href", ROUTES.universeHolographic);
@@ -175,9 +177,10 @@ test("dashboard Experience discovers Super Hero Ego 2.5D without mutating produc
 });
 
 test("public Universes catalog reaches Super Hero Ego Experience without Authority", async ({ page, observe }, testInfo) => {
+  test.setTimeout(60_000);
   await page.goto(ROUTES.universes, { waitUntil: "domcontentloaded" });
   await page.locator(`a[href="${ROUTES.universeLive}"]`).filter({ hasText: CANON.universeTitle }).first().click();
-  await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`));
+  await expect(page).toHaveURL(new RegExp(`${ROUTES.universeLive}$`), { timeout: 40000 });
   await page.locator('[data-experience-entry="holographic"]').first().click();
   await expectPublicHolographic(page);
   assertRuntimeHealth(observe);
@@ -189,13 +192,16 @@ test("public Universes catalog reaches Super Hero Ego Experience without Authori
 });
 
 test("Mural, Scene, and Creative Moment surfaces enter the same Universe Experience", async ({ page, observe }, testInfo) => {
+  test.setTimeout(60_000);
   await page.goto(ROUTES.universeLive, { waitUntil: "domcontentloaded" });
+  await expect(page.getByRole("link", { name: /View Mural/i })).toBeVisible({ timeout: 30000 });
   await page.getByRole("link", { name: /View Mural/i }).click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.muralLive}$`));
   await expect(page.getByText("Mural", { exact: true }).first()).toBeVisible();
   await expect(page.locator('[data-experience-entry="holographic"]').first()).toHaveAttribute("href", ROUTES.universeHolographic);
 
   await page.goto(ROUTES.universeLive, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(`[data-scene-id="${SCENE_MOMENTS.powerhouse.sceneMasterId}"]`)).toBeVisible({ timeout: 30000 });
   await page.locator(`[data-scene-id="${SCENE_MOMENTS.powerhouse.sceneMasterId}"]`).click();
   await expect(page).toHaveURL(new RegExp(`/moments/${SCENE_MOMENTS.powerhouse.projectionId}$`));
   await expect(page.getByText("Scene", { exact: true }).first()).toBeVisible();

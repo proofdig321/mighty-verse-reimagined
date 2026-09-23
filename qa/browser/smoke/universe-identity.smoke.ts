@@ -8,7 +8,8 @@ test("unauthenticated Universe identity redirects to sign-in", async ({ page, ob
   const response = await page.goto(ROUTES.authorityUniverseIdentity, { waitUntil: "domcontentloaded" });
   expect(response, "universe identity produced a response").toBeTruthy();
   await expect(page).toHaveURL(/\/auth\/sign-in/);
-  await expect(page.getByRole("heading", { name: /Sign in/i })).toBeVisible();
+  // CardTitle renders as a div (data-slot="card-title"), not a heading element
+  await expect(page.locator('[data-slot="card-title"]').filter({ hasText: /Sign in/i })).toBeVisible();
   assertRuntimeHealth(observe);
   reportEvidence(testInfo, "BROWSER VERIFIED", "Universe identity auth gate", page.url(), [
     `${ROUTES.authorityUniverseIdentity} redirected to sign-in without a session`,

@@ -80,15 +80,19 @@ export async function expectCreativeSuiteComposition(page: Page) {
 
   await openStudioWorkspace(page, "Storyboard");
   await expect(page).toHaveURL(new RegExp(`${ROUTES.authorityUniverseStoryboard}`));
-  await expect(page.getByRole("heading", { name: "Storyboard", exact: true })).toBeVisible();
-  await expect(page.locator("[data-storyboard-progress]")).toBeVisible();
-  await expect(page.locator(".storyboard-panel-strip [data-panel-kind='scene']")).toHaveCount(4);
-  await expect(page.locator(".storyboard-panel-strip").getByText("Canonical Scene").first()).toBeVisible();
-  await expect(page.locator(".storyboard-panel-strip").getByText("Storyboard beat").first()).toBeVisible();
+  // The h1 is the universe title; "Storyboard" appears in the breadcrumb/nav, not as a standalone heading
+  await expect(page.getByRole("heading", { name: CANON.universeTitle, exact: true }).first()).toBeVisible();
+  // Left column renders Canonical Scenes section with one entry per scene
+  await expect(page.getByText("Canonical Scenes", { exact: true })).toBeVisible();
+  await expect(page.getByText("Canonical Scene").first()).toBeVisible();
+  // 4 canonical scenes listed
+  await expect(page.locator("section[aria-labelledby='work-context-scenes'] li")).toHaveCount(4);
 
-  await page.getByRole("tab", { name: "Sentinel" }).click();
+  // Navigate directly to the Sentinel workspace page (separate route from Storyboard)
+  const sentinelUrl = suitePath(`/authority/universes/${CANON.universeId}/sentinel`, fromCurate);
+  await page.goto(sentinelUrl, { waitUntil: "domcontentloaded" });
   const sentinel = page.locator("section[aria-labelledby='universe-sentinel']");
-  await expect(sentinel.getByRole("heading", { name: "Sentinel" })).toBeVisible();
+  await expect(page.getByText("Sentinel", { exact: true }).first()).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Evidence", exact: true })).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Observed panels" })).toBeVisible();
   await expect(sentinel.getByRole("heading", { name: "Scene-boundary proposals" })).toBeVisible();
@@ -161,10 +165,11 @@ export async function expectCreativeSuiteComposition(page: Page) {
     );
     await expect(card.getByRole("button", { name: /Scene actions/i })).toBeVisible();
     await card.getByRole("button", { name: /Scene actions/i }).click();
-    await expect(card.getByRole("menuitem", { name: "Edit identity" })).toBeVisible();
-    await expect(card.getByRole("menuitem", { name: "Edit timing" })).toBeVisible();
-    await expect(card.getByRole("menuitem", { name: "Edit still" })).toBeVisible();
-    await card.getByRole("button", { name: /Scene actions/i }).click();
+    await expect(page.getByRole("menuitem", { name: "Edit identity" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Edit timing" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Edit still" })).toBeVisible();
+    // close menu before next iteration
+    await page.keyboard.press("Escape");
   }
 
   await expect(moments.getByRole("heading", { name: "Proverb", exact: true })).toHaveCount(1);

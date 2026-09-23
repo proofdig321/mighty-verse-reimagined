@@ -30,14 +30,17 @@ test("Super Hero Ego Universe renders mural, scenes, and records Mux playback ev
   expect(overflowX, `narrow viewport horizontal overflow ${overflowX}px`).toBeLessThan(24);
   await page.setViewportSize({ width: 1280, height: 800 });
 
-  await page.getByRole("link", { name: /Enter Scene Deck/i }).click();
+  await page.getByRole("link", { name: /Enter Scene Deck/i }).first().click();
   await expect(page).toHaveURL(new RegExp(`${ROUTES.universeScenes}$`));
   await expect(page.getByRole("heading", { name: /Scene Deck/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /shuffle/i })).toBeVisible();
+  // Wait for client hydration — shuffle button confirms the deck is interactive
+  await expect(page.getByRole("button", { name: /shuffle/i })).toBeVisible({ timeout: 20000 });
+  // Universe scenes page: 4 SHE scenes → deck mode (gridView = 4 > 4 = false)
+  // → timeline scrubber renders "Go to scene" dot-nav buttons
   for (const [index, title] of CANON.sceneTitles.entries()) {
     await expect(
       page.getByRole("button", { name: new RegExp(`Go to scene ${index + 1}: ${title}`) }),
-    ).toBeVisible();
+    ).toBeVisible({ timeout: 20000 });
   }
   await page.getByRole("button", { name: `Go to scene 1: ${CANON.sceneTitles[0]}`, exact: true }).click();
   await expect(

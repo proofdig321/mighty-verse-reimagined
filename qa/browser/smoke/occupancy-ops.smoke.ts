@@ -38,7 +38,11 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
 
   await page.goto(ROUTES.authorityUniverses, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: "Universes", exact: true })).toBeVisible();
-  const sheRow = page.locator("tr[data-occupancy='curated']").filter({ hasText: CANON.universeTitle });
+  // Filter by the exact title link text to avoid matching rows whose description
+  // contains "Super Hero Ego" (e.g. Live Amp whose description references SHE).
+  const sheRow = page
+    .locator("tr[data-occupancy='curated']")
+    .filter({ has: page.getByRole("link", { name: CANON.universeTitle, exact: true }) });
   await expect(sheRow).toBeVisible();
   await expect(sheRow.getByRole("link", { name: /Open Creative Studio/i })).toBeVisible();
   await expect(sheRow.getByRole("link", { name: /^Edit$/ })).toHaveAttribute(
@@ -67,10 +71,13 @@ test("clinical occupancy keeps Super Hero Ego curated and Father Raymond on its 
     "href",
     ROUTES.authorityFatherRaymondMuralRecord,
   );
-  const establish = page.getByRole("link", { name: /Establish Scene/i });
-  await expect(establish.first()).toBeVisible();
-  await expect(establish.first()).toHaveAttribute("href", ROUTES.authorityFatherRaymondSentinel);
-  notes.push("Father Raymond hub next work is Establish Scene on its own Sentinel");
+  // FR now has 4 canonical Scenes and 0 Creative Moments.
+  // resolveNextAction returns "Add Creative Moment" — not "Establish Scene".
+  // The Sentinel row still exposes "Open Sentinel" (scenes exist).
+  const sentinelLink = page.getByRole("link", { name: /Open Sentinel/i });
+  await expect(sentinelLink.first()).toBeVisible();
+  await expect(sentinelLink.first()).toHaveAttribute("href", ROUTES.authorityFatherRaymondSentinel);
+  notes.push("Father Raymond hub Sentinel row shows Open Sentinel (4 canonical Scenes exist)");
   const attach = page.getByRole("link", { name: "Attach media" });
   if (await attach.count()) {
     await expect(attach.first()).toHaveAttribute("href", ROUTES.authorityFatherRaymondAttach);

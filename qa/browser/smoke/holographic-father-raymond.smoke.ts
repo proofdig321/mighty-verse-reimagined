@@ -14,8 +14,9 @@ test("Father Raymond holographic Experience plays the mural Mux without inventin
   await expect(page.locator("[data-holographic-cinema]")).toHaveCount(1);
   await expect(page.locator("[data-holographic-cinema]")).toHaveAttribute("data-hologram", "live");
   await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
-  await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(0);
-  notes.push("Father Raymond Experience is a live mural cinema without invented Scenes");
+  // FR now has 4 authorised canonical Scenes — the holographic Experience renders them
+  await expect(page.locator("[data-holographic-kind='scene']")).toHaveCount(4);
+  notes.push("Father Raymond Experience renders its 4 canonical Scenes in the holographic cinema");
 
   const player = page.locator("[data-holographic-kind='mural'] video");
   await expect(player).toHaveCount(1);

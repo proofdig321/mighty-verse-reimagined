@@ -18,6 +18,8 @@ test("Gallery YouTube retry fetches a file instead of sending the watch page to 
 
   await page.goto(ROUTES.authorityMedia, { waitUntil: "domcontentloaded" });
   await expect(page.getByRole("heading", { name: /Media Library/i })).toBeVisible();
+  // Intake rows are in the Intake tab
+  await page.getByRole("tab", { name: "Intake" }).click();
 
   const row = page.locator("[data-intake-id]").filter({ hasText: RAWBEATS_TITLE }).first();
   await expect(row).toBeVisible();
