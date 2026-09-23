@@ -937,38 +937,43 @@ html[data-theme="paper"] {
   }
 
   .storyboard-workspace {
-    display: grid;
-    gap: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - 3.5rem);
+    overflow: hidden;
+  }
+
+  .storyboard-header {
+    flex-shrink: 0;
   }
 
   /* Unified creative workspace — sidebar + creation surface */
   .studio-unified-workspace {
     display: grid;
-    gap: 1rem;
+    gap: 0;
     grid-template-columns: 1fr;
-    align-items: start;
+    flex: 1;
     min-height: 0;
+    overflow: hidden;
   }
 
   .studio-context-sidebar {
     min-width: 0;
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    background: color-mix(in oklch, var(--card) 60%, transparent);
   }
 
   .studio-creation-surface {
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
   }
 
   @media (min-width: 768px) {
     .studio-unified-workspace {
       grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
-      align-items: start;
-    }
-
-    .studio-context-sidebar {
-      position: sticky;
-      top: 5rem;
-      max-height: calc(100vh - 6rem);
-      overflow-y: auto;
     }
   }
 
@@ -979,11 +984,33 @@ html[data-theme="paper"] {
   }
 
   .studio-result-area {
-    min-width: 0;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    background:
+      radial-gradient(circle at 60% 40%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 55%),
+      radial-gradient(circle at 20% 80%, color-mix(in oklch, var(--accent-mv) 6%, transparent), transparent 45%);
+  }
+
+  .studio-result-area > * {
+    width: 100%;
+    max-width: 56rem;
   }
 
   .studio-sentinel-advisory {
+    flex-shrink: 0;
     min-width: 0;
+  }
+
+  .studio-composer-wrap {
+    flex-shrink: 0;
+    border-top: 1px solid var(--border);
+    padding: 1rem 1.25rem 1.25rem;
+    background: color-mix(in oklch, var(--card) 80%, transparent);
   }
 
   .storyboard-composer-column {

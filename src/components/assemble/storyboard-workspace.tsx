@@ -946,9 +946,9 @@ export function StoryboardWorkspace({
   }
 
   return (
-    <div className="storyboard-workspace" data-storyboard-layout="workstation">
+    <div className="storyboard-workspace multiverse-page" data-storyboard-layout="workstation">
       {/* ── Top bar ── */}
-      <div className="storyboard-header">
+      <div className="storyboard-header px-4 py-2 border-b border-border/60 bg-card/60 backdrop-blur-sm">
         <div className="min-w-0 flex flex-wrap items-center gap-2">
           {universeId ? null : (
             <HierarchyBreadcrumb
@@ -1015,7 +1015,7 @@ export function StoryboardWorkspace({
       />
 
       {/* ── Unified creative workspace ── */}
-      <div className="studio-unified-workspace">
+      <div className="studio-unified-workspace" style={{ height: 'calc(100vh - 3.5rem - 2.75rem - 2.5rem)' }}>
         {/* LEFT — Context sidebar: panels + scenes */}
         <StudioContextSidebar
           universeTitle={universeTitle}
@@ -1072,26 +1072,28 @@ export function StoryboardWorkspace({
       </div>
 
       {/* ASSEMBLY — footer status bar */}
-      <StoryboardAssemblyBar
-        assemblyItems={assemblyItems}
-        panelCount={persistedPanels.length}
-        universeId={universeId}
-        canAddSelected={Boolean(selected)}
-        onAddSelected={() => {
-          if (!selected) return;
-          const next = [...assemblyItems, {
-            id: `${Date.now()}`,
-            kind: selected.endpoint ? "motion" as const : "still" as const,
-            label: selected.title,
-            panel_id: selectedId,
-            url: selected.still,
-            playback_id: selectedJob?.result?.playback_id ?? null,
-            endpoint: selected.endpoint,
-          }];
-          setAssemblyItems(next);
-          void mutate("Save assembly", "save-assembly", { items: next });
-        }}
-      />
+      <div className="flex-shrink-0">
+        <StoryboardAssemblyBar
+          assemblyItems={assemblyItems}
+          panelCount={persistedPanels.length}
+          universeId={universeId}
+          canAddSelected={Boolean(selected)}
+          onAddSelected={() => {
+            if (!selected) return;
+            const next = [...assemblyItems, {
+              id: `${Date.now()}`,
+              kind: selected.endpoint ? "motion" as const : "still" as const,
+              label: selected.title,
+              panel_id: selectedId,
+              url: selected.still,
+              playback_id: selectedJob?.result?.playback_id ?? null,
+              endpoint: selected.endpoint,
+            }];
+            setAssemblyItems(next);
+            void mutate("Save assembly", "save-assembly", { items: next });
+          }}
+        />
+      </div>
     </div>
   );
 }
