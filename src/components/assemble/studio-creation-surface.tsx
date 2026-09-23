@@ -5,14 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, Eye, EyeOff, Film, Layers, Clapperboard } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Film, Layers, Clapperboard, Sparkles, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
-import { OutputFormatPicker } from "./output-format-picker";
+import { CreativeIntentPicker, resolveKind, intentAvailable } from "./creative-operation";
+import type { CreativeIntent } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
@@ -137,44 +138,100 @@ export function StudioCreationSurface({
   onCancelJob: (jobId: string) => void;
   onWorkUpdate: (work: StoryboardWorkRecord) => void;
 }) {
+  // ── State ──
+  const [intent, setIntent] = useState<CreativeIntent>("still");
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
-  const [outputFormat, setOutputFormat] = useState<GenerationJobKind>("still");
+  const [localFirstFrame, setLocalFirstFrame] = useState("");
+  const [localLastFrame, setLocalLastFrame] = useState("");
 
-  const hasSentinel = Boolean(selectedObservation || selectedFrame);
-  const hasRefs = references.filter((r) => r.still_url).length > 0 || workFrames.length > 0;
+  // ── Derived ──
   const hasStill = Boolean(selected?.still);
   const hasMotion = Boolean(selected?.endpoint);
+  const hasSentinel = Boolean(selectedObservation || selectedFrame);
+  const hasRefs = references.filter((r) => r.still_url).length > 0 || workFrames.length > 0;
+
+  // Reference stills for reference-motion: gallery refs + work frames
+  const referenceStillUrls = [
+    ...references.map((r) => r.still_url).filter((u): u is string => Boolean(u)),
+    ...workFrames.map((f) => f.still_url),
+  ];
+
+  // Extension URI from the most recent completed motion job
+  const extensionVideoUri = selectedJob?.result?.provider_video_uri ?? null;
+
+  // Resolve the actual kind from intent + available inputs
+  const resolvedKind = resolveKind({
+    intent,
+    firstFrame: localFirstFrame || firstFrame || selected?.still || "",
+    lastFrame: localLastFrame || lastFrame,
+    referenceUrls: referenceStillUrls,
+    extensionVideoUri,
+  });
+
+  // What the resolved kind means in plain language (shown under the picker)
+  const kindHint: Record<string, string> = {
+    "still": "Generates a single image frame",
+    "motion": "Text-to-video via Veo",
+    "animate-still": "Animates your still image",
+    "first-last-frame": "Interpolates between first and last frame",
+    "reference-motion": "Motion guided by your reference images",
+    "extend": "Extends your existing clip",
+    "animation": "Cinematic animation style via Veo",
+    "gif": "Derives a looping GIF from existing motion or still",
+    "reel": "Assembles a short-form reel from panel stills/clips",
+  };
+
+  // Generate readiness
+  const isClipIntent = intent === "clip";
+  const generateReady = (() => {
+    if (intent === "still") return stillReady;
+    if (resolvedKind === "animate-still") return { available: hasStill, reason: hasStill ? null : "Generate a still first, then animate it" };
+    if (resolvedKind === "first-last-frame") {
+      const ok = Boolean((localFirstFrame || firstFrame) && (localLastFrame || lastFrame));
+      return { available: ok, reason: ok ? null : "Select a first frame and a last frame below" };
+    }
+    if (resolvedKind === "reference-motion") return { available: referenceStillUrls.length > 0, reason: referenceStillUrls.length > 0 ? null : "Add reference images via Source or Gallery" };
+    if (resolvedKind === "extend") return { available: Boolean(extensionVideoUri), reason: extensionVideoUri ? null : "Generate a clip first, then extend it" };
+    if (intent === "gif") return { available: hasStill || hasMotion, reason: (hasStill || hasMotion) ? null : "Generate a still or clip first" };
+    if (intent === "reel") return { available: workFrames.length > 0 || hasStill, reason: (workFrames.length > 0 || hasStill) ? null : "Add source frames or generate stills first" };
+    return motionReady;
+  })();
 
   function handleGenerate() {
-    if (outputFormat === "still") {
+    if (intent === "still") {
       onGenerateStill();
-    } else {
-      const extra: Record<string, unknown> = {};
-      if (outputFormat === "animate-still" && selected?.still) extra.still_url = selected.still;
-      if (outputFormat === "first-last-frame") { extra.first_frame_url = firstFrame; extra.last_frame_url = lastFrame; }
-      if (outputFormat === "reference-motion") extra.first_frame_url = firstFrame;
-      if (outputFormat === "extend" && selectedJob?.result?.provider_video_uri) extra.extension_video_uri = selectedJob.result.provider_video_uri;
-      onEnqueue(outputFormat, extra);
+      return;
     }
+    const extra: Record<string, unknown> = {
+      duration_seconds: durationSeconds,
+      aspect_ratio: aspectRatio,
+    };
+    if (resolvedKind === "animate-still") {
+      extra.still_url = selected?.still;
+      extra.first_frame_url = selected?.still;
+    }
+    if (resolvedKind === "first-last-frame") {
+      extra.first_frame_url = localFirstFrame || firstFrame || selected?.still;
+      extra.last_frame_url = localLastFrame || lastFrame;
+    }
+    if (resolvedKind === "reference-motion") {
+      extra.reference_urls = referenceStillUrls.slice(0, 3);
+    }
+    if (resolvedKind === "extend") {
+      extra.extension_video_uri = extensionVideoUri;
+    }
+    if (intent === "gif") {
+      extra.playback_id = motionJob?.result?.playback_id ?? selectedJob?.result?.playback_id ?? null;
+      extra.still_url = selected?.still;
+    }
+    if (intent === "reel") {
+      extra.still_urls = workFrames.map((f) => f.still_url);
+      extra.playback_ids = [];
+    }
+    onEnqueue(resolvedKind, extra);
   }
-
-  const generateDisabled = (() => {
-    if (outputFormat === "still") return !stillReady.available;
-    if (outputFormat === "animate-still") return !hasStill;
-    if (outputFormat === "first-last-frame") return !firstFrame || !lastFrame;
-    if (outputFormat === "extend") return !selectedJob?.result?.provider_video_uri;
-    return !motionReady.available;
-  })();
-
-  const generateTitle = (() => {
-    if (outputFormat === "still") return stillReady.reason ?? undefined;
-    if (outputFormat === "animate-still" && !hasStill) return "Generate a still first";
-    if (outputFormat === "first-last-frame" && (!firstFrame || !lastFrame)) return "Select first and last frames";
-    if (outputFormat === "extend" && !selectedJob?.result?.provider_video_uri) return "Generate a clip first to extend";
-    return motionReady.reason ?? undefined;
-  })();
 
   return (
     <div className="studio-creation-surface">
@@ -227,22 +284,19 @@ export function StudioCreationSurface({
               <a href={previewHref} className="text-xs text-primary hover:underline">Open full Experience →</a>
             </div>
             {intelligence?.holographic && intelligence.holographic.length > 0 ? (
-              <div className="rounded-xl overflow-hidden border border-border/40">
-                {/* Holographic stage rendered server-side via link — client preview uses stills grid */}
-                <ol className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
-                  {intelligence.holographic.map((layer, i) => (
-                    <li key={i} className="space-y-1">
-                      {layer.still_url ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={layer.still_url} alt="" className="aspect-video w-full rounded-lg object-cover border border-border/40" />
-                      ) : (
-                        <div className="aspect-video w-full rounded-lg bg-card/40 border border-border/30 suite-still-placeholder" />
-                      )}
-                      <p className="text-[10px] text-muted-foreground truncate">{layer.title ?? `Layer ${i + 1}`}</p>
-                    </li>
-                  ))}
-                </ol>
-              </div>
+              <ol className="grid grid-cols-2 gap-3 p-4 sm:grid-cols-3 lg:grid-cols-4">
+                {intelligence.holographic.map((layer, i) => (
+                  <li key={i} className="space-y-1">
+                    {layer.still_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={layer.still_url} alt="" className="aspect-video w-full rounded-lg object-cover border border-border/40" />
+                    ) : (
+                      <div className="aspect-video w-full rounded-lg bg-card/40 border border-border/30 suite-still-placeholder" />
+                    )}
+                    <p className="text-[10px] text-muted-foreground truncate">{layer.title ?? `Layer ${i + 1}`}</p>
+                  </li>
+                ))}
+              </ol>
             ) : scenes.length > 0 ? (
               <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
                 {scenes.map((scene, i) => (
@@ -272,24 +326,48 @@ export function StudioCreationSurface({
       {/* ── Create view ── */}
       {surfaceView === "create" && (
         <>
-          {/* Result / Preview area — grows */}
+          {/* RESULT AREA — grows to fill space */}
           <div className="studio-result-area">
             {hasMotion && selected?.endpoint ? (
-              <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />
+              <div className="w-full max-w-3xl space-y-2">
+                <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />
+                {/* Extend action — surfaces from result, not from format picker */}
+                {extensionVideoUri && intentAvailable("clip", capability) && (
+                  <div className="flex items-center gap-2 px-1">
+                    <span className="text-[10px] text-muted-foreground">Clip ready</span>
+                    <Button
+                      type="button" size="sm" variant="outline" className="h-6 text-[10px]"
+                      onClick={() => { setIntent("clip"); onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio }); }}
+                    >Extend clip</Button>
+                    <Button
+                      type="button" size="sm" variant="outline" className="h-6 text-[10px]"
+                      onClick={() => onEnqueue("gif", { playback_id: motionJob?.result?.playback_id ?? selectedJob?.result?.playback_id, still_url: selected?.still })}
+                    >Export GIF</Button>
+                  </div>
+                )}
+              </div>
             ) : hasStill && selected?.still ? (
               <div className="relative w-full max-w-3xl rounded-xl overflow-hidden bg-muted/20 shadow-2xl">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={selected.still} alt="" className="w-full aspect-video object-cover" />
-                {selected.title && (
-                  <div className="absolute bottom-0 inset-x-0 px-4 py-3 bg-gradient-to-t from-background/90 to-transparent">
-                    <p className="text-sm font-semibold text-foreground truncate">{selected.title}</p>
-                    {selected.time && <p className="font-mono text-[10px] text-muted-foreground">{selected.time}</p>}
-                  </div>
-                )}
+                <div className="absolute bottom-0 inset-x-0 px-4 py-3 bg-gradient-to-t from-background/90 to-transparent">
+                  {selected.title && <p className="text-sm font-semibold text-foreground truncate">{selected.title}</p>}
+                  {selected.time && <p className="font-mono text-[10px] text-muted-foreground">{selected.time}</p>}
+                  {/* Animate action — surfaces from result */}
+                  {intentAvailable("clip", capability) && (
+                    <div className="mt-2 flex gap-2">
+                      <Button
+                        type="button" size="sm" variant="outline" className="h-6 text-[10px] bg-background/60"
+                        onClick={() => { setIntent("clip"); onEnqueue("animate-still", { still_url: selected.still, first_frame_url: selected.still, duration_seconds: durationSeconds, aspect_ratio: aspectRatio }); }}
+                      >Animate still</Button>
+                    </div>
+                  )}
+                </div>
               </div>
             ) : selected ? (
               <div className="relative w-full max-w-3xl aspect-video rounded-xl bg-card/40 border border-border/40 flex items-center justify-center">
                 <div className="text-center px-6">
+                  <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1">{selected.kind}</p>
                   <p className="text-base font-semibold text-foreground">{selected.title}</p>
                   {selected.description && <p className="mt-2 text-sm text-muted-foreground line-clamp-3">{selected.description}</p>}
                   {selected.time && <p className="mt-2 font-mono text-[10px] text-muted-foreground">{selected.time}</p>}
@@ -297,14 +375,14 @@ export function StudioCreationSurface({
               </div>
             ) : (
               <div className="w-full max-w-3xl aspect-video rounded-xl border border-dashed border-border/30 flex items-center justify-center">
-                <div className="text-center space-y-3">
+                <div className="text-center space-y-2">
                   <Clapperboard size={28} className="mx-auto text-muted-foreground/30" />
-                  <p className="text-sm text-muted-foreground/60">Select a panel or create one to begin</p>
+                  <p className="text-sm text-muted-foreground/50">Select a panel to begin</p>
                 </div>
               </div>
             )}
 
-            {/* Job status */}
+            {/* Job status inline with result */}
             {selectedJob && (selectedJob.status === "queued" || selectedJob.status === "submitted" || selectedJob.status === "processing") && (
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground animate-pulse" data-generation-status={selectedJob.status}>
@@ -323,102 +401,135 @@ export function StudioCreationSurface({
             )}
           </div>
 
-          {/* Composer — anchored at bottom */}
-          <div className="studio-composer-wrap">
-            {/* Sentinel advisory */}
-            {hasSentinel && (
-              <div className="studio-sentinel-advisory mb-3">
-                <button
-                  type="button"
-                  className="w-full flex items-center justify-between gap-2 px-3 py-2 rounded-lg border border-border/60 bg-card/60 hover:bg-card transition-colors text-left"
-                  onClick={() => setSentinelOpen((v) => !v)}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel Advisory</span>
+          {/* COMPOSER — anchored at bottom */}
+          <div className="studio-composer-wrap space-y-3">
+
+            {/* ── CONTEXT STRIP: panel + sentinel evidence ── */}
+            <div className="flex flex-wrap items-start gap-3">
+              {/* Panel context */}
+              {selected && (
+                <div className="flex-1 min-w-0">
+                  <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                    {selected.kind === "Canonical Scene" ? "Scene" : "Panel"}
+                  </p>
+                  <p className="text-xs font-medium text-foreground truncate">{selected.title}</p>
+                  {selected.time && <p className="font-mono text-[10px] text-muted-foreground">{selected.time}</p>}
+                </div>
+              )}
+
+              {/* Sentinel evidence — compact, collapsible */}
+              {hasSentinel && (
+                <div className="shrink-0">
+                  <button
+                    type="button"
+                    className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-border/60 bg-card/60 hover:bg-card transition-colors text-left"
+                    onClick={() => setSentinelOpen((v) => !v)}
+                  >
+                    <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel</span>
                     {selectedObservation && <Badge variant="outline" className="text-[9px] h-4 px-1">Evidence</Badge>}
-                  </div>
-                  {sentinelOpen ? <EyeOff size={12} className="text-muted-foreground shrink-0" /> : <Eye size={12} className="text-muted-foreground shrink-0" />}
-                </button>
-                {sentinelOpen && (
-                  <div className="mt-1 px-3 py-3 rounded-lg border border-border/60 bg-card/40 space-y-3">
-                    {selectedObservation && (
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">Observed from source media</p>
-                        <dl className="grid gap-1.5 text-xs">
-                          <div className="flex gap-2">
-                            <dt className="text-muted-foreground w-16 shrink-0">Timing</dt>
-                            <dd className="font-mono text-foreground">{formatTimelineMs(selectedObservation.start_ms)} – {formatTimelineMs(selectedObservation.end_ms)}</dd>
-                          </div>
-                          {selectedObservation.subjects && (
-                            <div className="flex gap-2"><dt className="text-muted-foreground w-16 shrink-0">Subject</dt><dd className="text-foreground">{selectedObservation.subjects}</dd></div>
-                          )}
-                          {selectedObservation.action && (
-                            <div className="flex gap-2"><dt className="text-muted-foreground w-16 shrink-0">Movement</dt><dd className="text-foreground">{selectedObservation.action}</dd></div>
-                          )}
-                          {selectedObservation.camera && (
-                            <div className="flex gap-2">
-                              <dt className="text-muted-foreground w-16 shrink-0">Camera</dt>
-                              <dd className="text-foreground">{selectedObservation.camera_explanation || selectedObservation.camera}{selectedObservation.framing ? ` · ${selectedObservation.framing}` : ""}</dd>
-                            </div>
-                          )}
-                          {selectedObservation.what_happens && (
-                            <div className="flex gap-2"><dt className="text-muted-foreground w-16 shrink-0">Scene</dt><dd className="text-foreground line-clamp-2">{selectedObservation.what_happens}</dd></div>
-                          )}
-                        </dl>
-                        <p className="mt-2 text-[10px] text-muted-foreground">Sentinel observes. It does not author creative meaning.</p>
-                        <div className="mt-2">
-                          <Button
-                            type="button" size="sm" variant="outline" className="h-6 text-[10px]"
-                            onClick={() => {
-                              if (!selectedPersisted) return;
-                              onDraftChange({
-                                ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id,
-                                generation_metadata: {
-                                  ...selectedPersisted.generation_metadata, ...draftPanel.generation_metadata,
-                                  transformation_instruction: [editorPanel.generation_metadata?.transformation_instruction, selectedObservation.action].filter(Boolean).join(". "),
-                                },
-                              });
-                            }}
-                          >Use as reference</Button>
+                    {sentinelOpen ? <ChevronUp size={10} className="text-muted-foreground" /> : <ChevronDown size={10} className="text-muted-foreground" />}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Sentinel evidence detail — only when open */}
+            {hasSentinel && sentinelOpen && (
+              <div className="px-3 py-3 rounded-lg border border-border/60 bg-card/40 space-y-2">
+                {selectedObservation && (
+                  <>
+                    <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Observed from source media — advisory only</p>
+                    <dl className="grid gap-1 text-xs">
+                      {selectedObservation.subjects && (
+                        <div className="flex gap-2"><dt className="text-muted-foreground w-14 shrink-0">Subject</dt><dd className="text-foreground">{selectedObservation.subjects}</dd></div>
+                      )}
+                      {selectedObservation.action && (
+                        <div className="flex gap-2"><dt className="text-muted-foreground w-14 shrink-0">Movement</dt><dd className="text-foreground">{selectedObservation.action}</dd></div>
+                      )}
+                      {selectedObservation.camera && (
+                        <div className="flex gap-2">
+                          <dt className="text-muted-foreground w-14 shrink-0">Camera</dt>
+                          <dd className="text-foreground">{selectedObservation.camera_explanation || selectedObservation.camera}{selectedObservation.framing ? ` · ${selectedObservation.framing}` : ""}</dd>
                         </div>
+                      )}
+                      {selectedObservation.what_happens && (
+                        <div className="flex gap-2"><dt className="text-muted-foreground w-14 shrink-0">Scene</dt><dd className="text-foreground line-clamp-2">{selectedObservation.what_happens}</dd></div>
+                      )}
+                      <div className="flex gap-2">
+                        <dt className="text-muted-foreground w-14 shrink-0">Timing</dt>
+                        <dd className="font-mono text-foreground">{formatTimelineMs(selectedObservation.start_ms)} – {formatTimelineMs(selectedObservation.end_ms)}</dd>
                       </div>
-                    )}
-                    {selectedFrame && (
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-1">Attached frame</p>
-                        <p className="text-xs text-foreground">{selectedFrame.source_title} · {formatTimelineMs(selectedFrame.timestamp_ms)}</p>
-                      </div>
-                    )}
-                  </div>
+                    </dl>
+                    <div className="flex items-center gap-2 pt-1">
+                      <p className="text-[9px] text-muted-foreground flex-1">Sentinel observes. Creator decides.</p>
+                      <Button
+                        type="button" size="sm" variant="outline" className="h-6 text-[10px]"
+                        onClick={() => {
+                          if (!selectedPersisted) return;
+                          onDraftChange({
+                            ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id,
+                            generation_metadata: {
+                              ...selectedPersisted.generation_metadata, ...draftPanel.generation_metadata,
+                              transformation_instruction: [editorPanel.generation_metadata?.transformation_instruction, selectedObservation.action].filter(Boolean).join(". "),
+                            },
+                          });
+                        }}
+                      >Use as reference</Button>
+                    </div>
+                  </>
+                )}
+                {selectedFrame && (
+                  <p className="text-xs text-foreground">{selectedFrame.source_title} · {formatTimelineMs(selectedFrame.timestamp_ms)}</p>
                 )}
               </div>
             )}
 
-            {/* References strip */}
+            {/* ── REFERENCES — compact visual strip ── */}
             {hasRefs && (
-              <div className="mb-3">
+              <div>
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground mb-2"
+                  className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground mb-1.5"
                   onClick={() => setRefsOpen((v) => !v)}
                 >
                   References
-                  <span className="text-[9px] normal-case tracking-normal font-normal">{references.filter((r) => r.still_url).length + workFrames.length} attached</span>
+                  <span className="text-[9px] normal-case tracking-normal font-normal opacity-60">
+                    {references.filter((r) => r.still_url).length + workFrames.length}
+                  </span>
+                  {refsOpen ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
                 </button>
                 {refsOpen && (
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     {workFrames.map((frame, i) => (
-                      <div key={i} className="relative w-16 rounded overflow-hidden border border-border/60">
+                      <button
+                        key={i}
+                        type="button"
+                        title={`${frame.source_title} · ${formatTimelineMs(frame.timestamp_ms)}`}
+                        onClick={() => {
+                          if (!localFirstFrame) { setLocalFirstFrame(frame.still_url); onSetFirstFrame(frame.still_url); }
+                          else if (!localLastFrame) { setLocalLastFrame(frame.still_url); onSetLastFrame(frame.still_url); }
+                        }}
+                        className={cn(
+                          "relative w-14 rounded overflow-hidden border transition-colors",
+                          (localFirstFrame === frame.still_url || firstFrame === frame.still_url) ? "border-primary" :
+                          (localLastFrame === frame.still_url || lastFrame === frame.still_url) ? "border-accent-mv" :
+                          "border-border/50 hover:border-border"
+                        )}
+                      >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={frame.still_url} alt="" className="aspect-video w-full object-cover" />
-                        <p className="px-1 py-0.5 text-[9px] text-muted-foreground truncate bg-card/80">{frame.source_title}</p>
-                      </div>
+                        {(localFirstFrame === frame.still_url || firstFrame === frame.still_url) && (
+                          <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-primary/80 text-white">1st</span>
+                        )}
+                        {(localLastFrame === frame.still_url || lastFrame === frame.still_url) && (
+                          <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-accent/80 text-white">last</span>
+                        )}
+                      </button>
                     ))}
                     {references.filter((r) => r.still_url).map((ref) => (
-                      <div key={ref.asset_id} className="relative w-16 rounded overflow-hidden border border-border/60">
+                      <div key={ref.asset_id} className="relative w-14 rounded overflow-hidden border border-border/50" title={ref.title}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={ref.still_url!} alt="" className="aspect-video w-full object-cover" />
-                        <p className="px-1 py-0.5 text-[9px] text-muted-foreground truncate bg-card/80">{ref.title}</p>
                       </div>
                     ))}
                   </div>
@@ -426,78 +537,127 @@ export function StudioCreationSurface({
               </div>
             )}
 
-            {/* Panel details */}
+            {/* ── PANEL DETAILS — collapsible ── */}
             {selectedPersisted && (
-              <div className="mb-3">
+              <div>
                 <button
                   type="button"
-                  className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground mb-2"
+                  className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground hover:text-foreground"
                   onClick={() => setPanelDetailsOpen((v) => !v)}
                 >
                   Panel details
+                  {panelDetailsOpen ? <ChevronUp size={9} /> : <ChevronDown size={9} />}
                 </button>
                 {panelDetailsOpen && (
-                  <div className="space-y-2">
-                    <details className="text-xs">
-                      <summary className="cursor-pointer text-muted-foreground">Camera / framing / environment</summary>
-                      <div className="mt-2 grid grid-cols-2 gap-2">
-                        {(["camera", "camera_movement", "framing", "environment", "characters", "transition"] as const).map((field) => (
-                          <div key={field}>
-                            <label htmlFor={`panel-detail-${field}`} className="block text-[10px] uppercase tracking-[0.12em] text-muted-foreground mb-0.5 capitalize">
-                              {field.replace("_", " ")}
-                            </label>
-                            <input
-                              id={`panel-detail-${field}`}
-                              className="w-full h-7 rounded border border-input bg-background px-2 text-sm text-foreground"
-                              value={(editorPanel[field] as string) ?? ""}
-                              onChange={(e) => onDraftChange({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, [field]: e.target.value })}
-                            />
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                    <Button type="button" size="sm" variant="outline" onClick={onSavePanel}>Save panel</Button>
-                    {selectedPersisted.user_locked && <p className="text-[10px] text-muted-foreground">Authored — AI will not overwrite this panel silently.</p>}
+                  <div className="mt-2 space-y-2">
+                    <div className="grid grid-cols-2 gap-2">
+                      {(["camera", "camera_movement", "framing", "environment", "characters", "transition"] as const).map((field) => (
+                        <div key={field}>
+                          <label htmlFor={`pd-${field}`} className="block text-[9px] uppercase tracking-[0.12em] text-muted-foreground mb-0.5 capitalize">
+                            {field.replace("_", " ")}
+                          </label>
+                          <input
+                            id={`pd-${field}`}
+                            className="w-full h-7 rounded border border-input bg-background px-2 text-xs text-foreground"
+                            value={(editorPanel[field] as string) ?? ""}
+                            onChange={(e) => onDraftChange({ ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id, [field]: e.target.value })}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button type="button" size="sm" variant="outline" className="h-7" onClick={onSavePanel}>Save panel</Button>
+                      {selectedPersisted.user_locked && <p className="text-[9px] text-muted-foreground">Authored — AI will not overwrite silently.</p>}
+                    </div>
                   </div>
                 )}
               </div>
             )}
 
-            {/* Directive + generation */}
+            {/* ── DIRECTIVE — dominant creative input ── */}
             <div className="studio-composer">
               <Textarea
-                className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/60"
+                className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/50"
                 value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
                 onChange={(e) => {
                   if (!selectedPersisted) return;
                   onDraftChange({
                     ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id,
-                    generation_metadata: { ...selectedPersisted.generation_metadata, ...draftPanel.generation_metadata, transformation_instruction: e.target.value },
+                    generation_metadata: {
+                      ...selectedPersisted.generation_metadata,
+                      ...draftPanel.generation_metadata,
+                      transformation_instruction: e.target.value,
+                    },
                   });
                 }}
-                placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Select a panel, then describe what you want to create…"}
+                placeholder={
+                  selected
+                    ? `Describe what you want to create for "${selected.title}"…`
+                    : "Select a panel, then describe what you want to create…"
+                }
               />
 
-              <OutputFormatPicker
-                selected={outputFormat}
-                onSelect={setOutputFormat}
-                capability={capability}
-                hasStill={hasStill}
-                hasMotion={hasMotion}
-                aspectRatio={aspectRatio}
-                onSetAspect={onSetAspect}
-                durationSeconds={durationSeconds}
-                onSetDuration={onSetDuration}
-                firstFrame={firstFrame}
-                lastFrame={lastFrame}
-                onSetFirstFrame={onSetFirstFrame}
-                onSetLastFrame={onSetLastFrame}
-                onGenerate={handleGenerate}
-                generateDisabled={generateDisabled}
-                generateTitle={generateTitle}
-                workFrames={workFrames}
-              />
+              {/* ── GENERATION CONTROLS ── */}
+              <div className="studio-composer-bar mt-2">
+                {/* Left: intent picker + contextual controls */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <CreativeIntentPicker
+                    selected={intent}
+                    onSelect={setIntent}
+                    capability={capability}
+                  />
 
+                  {/* Aspect ratio — always shown */}
+                  <select
+                    aria-label="Aspect ratio"
+                    className="h-7 rounded-full border border-border bg-background px-2.5 text-xs text-foreground"
+                    value={aspectRatio}
+                    onChange={(e) => onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9")}
+                  >
+                    <option value="16:9">16:9</option>
+                    <option value="9:16">9:16</option>
+                  </select>
+
+                  {/* Duration — only for video intents */}
+                  {(intent === "clip" || intent === "animation") && (
+                    <select
+                      aria-label="Duration"
+                      className="h-7 rounded-full border border-border bg-background px-2.5 text-xs text-foreground"
+                      value={durationSeconds}
+                      onChange={(e) => onSetDuration(Number(e.target.value) as 4 | 6 | 8)}
+                    >
+                      <option value={4}>4s</option>
+                      <option value={6}>6s</option>
+                      <option value={8}>8s</option>
+                    </select>
+                  )}
+
+                  {/* Resolved kind hint — only when non-obvious */}
+                  {intent === "clip" && resolvedKind !== "motion" && (
+                    <span className="text-[9px] text-muted-foreground">{kindHint[resolvedKind]}</span>
+                  )}
+
+                  {/* Provider label */}
+                  {capability && (
+                    <span className="text-[9px] text-muted-foreground/60">{capability.provider}</span>
+                  )}
+                </div>
+
+                {/* Right: generate button */}
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={!generateReady.available}
+                  title={generateReady.reason ?? `Generate ${intent}`}
+                  onClick={handleGenerate}
+                  className="h-8 gap-1.5 shrink-0"
+                >
+                  <Sparkles size={13} />
+                  {intent === "still" ? "Still" : intent === "clip" ? "Clip" : intent === "animation" ? "Animate" : intent === "gif" ? "GIF" : "Reel"}
+                </Button>
+              </div>
+
+              {/* Generation state feedback */}
               {mediaState.status !== "idle" && (
                 mediaState.status === "failed" || mediaState.status === "unavailable" || mediaState.status === "blocked" ? (
                   <Alert variant="destructive" className="mt-2 py-2">
@@ -505,9 +665,9 @@ export function StudioCreationSurface({
                     <AlertDescription className="text-xs">{mediaState.message}</AlertDescription>
                   </Alert>
                 ) : mediaState.status === "ready" ? (
-                  <p className="mt-2 text-xs text-muted-foreground">{mediaState.message}</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground">{mediaState.message}</p>
                 ) : (
-                  <p className="mt-2 text-xs text-muted-foreground animate-pulse" data-generation-status={mediaState.status}>{mediaState.message}</p>
+                  <p className="mt-1.5 text-xs text-muted-foreground animate-pulse" data-generation-status={mediaState.status}>{mediaState.message}</p>
                 )
               )}
             </div>
