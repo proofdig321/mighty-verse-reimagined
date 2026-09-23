@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatTimelineMs, secondsFromMs } from "@/lib/media/timing";
+import { formatTimelineMs } from "@/lib/media/timing";
 import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import type { SentinelIntelligence, StoryboardPanel } from "@/lib/media/sentinel-intelligence";
@@ -20,20 +20,13 @@ import {
 import type { StoryboardOutputType } from "@/lib/storyboard/artifact";
 import { ASSIST_ACTIONS } from "@/lib/storyboard/assist";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
-import { jobUiLabel, generationProviderLabel, type GenerationJobKind } from "@/lib/ai/jobs";
-import { SentinelIntelligencePanel } from "./sentinel-intelligence";
-import { SentinelSummary, SentinelWorkspace } from "./sentinel-workspace";
-import { AssociateStoryboard } from "./associate-storyboard";
-import { StoryboardHlsPreview } from "./storyboard-hls-preview";
+import { jobUiLabel, type GenerationJobKind } from "@/lib/ai/jobs";
 import { StoryboardResetDialog } from "./storyboard-reset-dialog";
 import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
-import { StoryboardSourceMedia } from "./storyboard-source-media";
-import { creativeSuiteWorkspaceHref, curateHubHref } from "@/lib/assemble/studio";
-import { deriveStoryboardProgress, storyboardOperatorChainLabel } from "@/lib/assemble/storyboard-progress";
-import { STUDIO_INTERACTION_PHASES, studioInteractionLabel, studioPhaseForTab } from "@/lib/assemble/studio-interaction";
+import { curateHubHref } from "@/lib/assemble/studio";
 import { cn } from "@/lib/utils";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
-import { type CinematicAnalysis, type CinematicShot, cameraEvidenceStatus, evidenceStatusLabel } from "@/lib/media/cinematic-evidence";
+import { type CinematicAnalysis, type CinematicShot } from "@/lib/media/cinematic-evidence";
 import {
   emptyHistory,
   historyStorageKey,
@@ -47,16 +40,16 @@ import {
   type AuthoringSnapshot,
   type HistoryState,
 } from "@/lib/storyboard/history";
-import { derivePanelUiStatus, motionGenerationReady, motionRequirement, panelUiLabel, primaryMotionKind, stillGenerationReady } from "@/lib/storyboard/panel-state";
+import { motionGenerationReady, primaryMotionKind, stillGenerationReady } from "@/lib/storyboard/panel-state";
 import type { ResetScope } from "@/lib/storyboard/mutations";
 import { HierarchyBreadcrumb } from "./breadcrumb";
-import { StoryboardLeftColumn } from "./storyboard-left-column";
-import { StoryboardCenterColumn } from "./storyboard-center-column";
-import { StoryboardRightColumn } from "./storyboard-right-column";
+import { StudioContextSidebar } from "./studio-context-sidebar";
+import { StudioCreationSurface } from "./studio-creation-surface";
 import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
-import { StoryboardProgressBar } from "./storyboard-progress-bar";
+import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
+import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 
-type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly"; // kept for initialTab compat
+type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
   message: string;
@@ -128,6 +121,7 @@ export function StoryboardWorkspace({
   backHref?: string;
 }) {
   const router = useRouter();
+  // tab kept for API compat (importSentinel, addCinematicReferences use setTab)
   const [tab, setTab] = useState<MaterialTab>(initialTab);
   const [script, setScript] = useState(initialBody);
   const [work, setWork] = useState<StoryboardWorkRecord | null>(null);
@@ -1020,84 +1014,61 @@ export function StoryboardWorkspace({
         onConfirm={() => void confirmDeleteWorkspace()}
       />
 
-      {/* ── Progress ── */}
-      <StoryboardProgressBar progress={progress} />
+      {/* ── Unified creative workspace ── */}
+      <div className="studio-unified-workspace">
+        {/* LEFT — Context sidebar: panels + scenes */}
+        <StudioContextSidebar
+          universeTitle={universeTitle}
+          workTitle={workTitle}
+          persistedPanels={persistedPanels}
+          sentinelPanels={sentinelPanels}
+          scenes={scenes}
+          selectedId={selectedId}
+          panelStills={panelStills}
+          pendingPanels={pendingPanels}
+          jobs={jobs}
+          onSelect={(id) => {
+            setSelectedId(id);
+            const panel = persistedPanels.find((p) => p.panel_id === id);
+            if (panel) { setDraftPanel(panel); setFirstFrame(panel.still_url ?? ""); }
+          }}
+          onCreatePanel={() => void mutate("Create panel", "create-panel", {})}
+        />
 
-      {/* ── Three-column workstation ── */}
-      <div className="storyboard-workstation">
-        {/* LEFT — Work Context */}
-        <div className="storyboard-col-left">
-          <StoryboardLeftColumn
-            script={script}
-            hasPanels={persistedPanels.length > 0}
-            saveState={saveState}
-            scenes={scenes}
-            universeId={universeId}
-            inspectHref={inspectHref}
-            onScriptChange={(value) => { setScript(value); setDirty(true); }}
-            onSave={() => void saveBody()}
-            onGenerate={() => void generateStoryboard()}
-            onAssist={(id) => void assist(id)}
-            onSelectScene={(id) => setSelectedId(id)}
-          />
-        </div>
-
-        {/* CENTER — Storyboard Outline */}
-        <div className="storyboard-col-center">
-          <StoryboardCenterColumn
-            persistedPanels={persistedPanels}
-            sentinelPanels={sentinelPanels}
-            scenes={scenes}
-            selectedId={selectedId}
-            panelStills={panelStills}
-            pendingPanels={pendingPanels}
-            jobs={jobs}
-            onSelect={(id) => {
-              setSelectedId(id);
-              const panel = persistedPanels.find((p) => p.panel_id === id);
-              if (panel) { setDraftPanel(panel); setFirstFrame(panel.still_url ?? ""); }
-            }}
-            onCreatePanel={() => void mutate("Create panel", "create-panel", {})}
-          />
-        </div>
-
-        {/* RIGHT — Active Panel Workspace */}
-        <div className="storyboard-col-right">
-          <StoryboardRightColumn
-            selected={selected}
-            selectedPersisted={selectedPersisted}
-            editorPanel={editorPanel}
-            draftPanel={draftPanel}
-            selectedObservation={selectedObservation}
-            selectedFrame={selectedFrame}
-            mediaState={mediaState}
-            stillJob={stillJob ?? null}
-            motionJob={motionJob ?? null}
-            selectedJob={selectedJob ?? null}
-            stillReady={stillReady}
-            motionReady={motionReady}
-            motionKind={motionKind}
-            firstFrame={firstFrame}
-            lastFrame={lastFrame}
-            durationSeconds={durationSeconds}
-            aspectRatio={aspectRatio}
-            activeReferenceUrls={activeReferenceUrls}
-            references={references}
-            workFrames={work?.frames ?? []}
-            onDraftChange={(patch) => setDraftPanel(patch)}
-            onSavePanel={() => void savePanelEdits()}
-            onGenerateStill={() => void generateMedia("still")}
-            onEnqueue={(kind, extra) => void enqueue(kind, extra)}
-            onSetFirstFrame={setFirstFrame}
-            onSetLastFrame={setLastFrame}
-            onSetDuration={setDurationSeconds}
-            onSetAspect={setAspectRatio}
-            onRetryJob={(jobId) => void retryJob(jobId)}
-            onCancelJob={(jobId) => void cancelJob(jobId)}
-            onManageReferences={() => setTab("references")}
-            onManageSentinel={() => setTab("sentinel")}
-          />
-        </div>
+        {/* MAIN — Creation surface */}
+        <StudioCreationSurface
+          selected={selected}
+          selectedPersisted={selectedPersisted}
+          editorPanel={editorPanel}
+          draftPanel={draftPanel}
+          selectedObservation={selectedObservation}
+          selectedFrame={selectedFrame}
+          mediaState={mediaState}
+          stillJob={stillJob ?? null}
+          motionJob={motionJob ?? null}
+          selectedJob={selectedJob ?? null}
+          stillReady={stillReady}
+          motionReady={motionReady}
+          motionKind={motionKind}
+          firstFrame={firstFrame}
+          lastFrame={lastFrame}
+          durationSeconds={durationSeconds}
+          aspectRatio={aspectRatio}
+          activeReferenceUrls={activeReferenceUrls}
+          references={references}
+          workFrames={work?.frames ?? []}
+          capability={capability}
+          onDraftChange={(patch) => setDraftPanel(patch)}
+          onSavePanel={() => void savePanelEdits()}
+          onGenerateStill={() => void generateMedia("still")}
+          onEnqueue={(kind, extra) => void enqueue(kind, extra)}
+          onSetFirstFrame={setFirstFrame}
+          onSetLastFrame={setLastFrame}
+          onSetDuration={setDurationSeconds}
+          onSetAspect={setAspectRatio}
+          onRetryJob={(jobId) => void retryJob(jobId)}
+          onCancelJob={(jobId) => void cancelJob(jobId)}
+        />
       </div>
 
       {/* ASSEMBLY — footer status bar */}

@@ -941,36 +941,49 @@ html[data-theme="paper"] {
     gap: 1.25rem;
   }
 
-  /* Three-column storyboard workstation */
-  .storyboard-workstation {
+  /* Unified creative workspace — sidebar + creation surface */
+  .studio-unified-workspace {
     display: grid;
     gap: 1rem;
     grid-template-columns: 1fr;
     align-items: start;
+    min-height: 0;
   }
 
-  .storyboard-col-left,
-  .storyboard-col-center,
-  .storyboard-col-right {
+  .studio-context-sidebar {
+    min-width: 0;
+  }
+
+  .studio-creation-surface {
     min-width: 0;
   }
 
   @media (min-width: 768px) {
-    .storyboard-workstation {
-      grid-template-columns: 1fr 1fr;
+    .studio-unified-workspace {
+      grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
+      align-items: start;
     }
-    .storyboard-col-right {
-      grid-column: 1 / -1;
+
+    .studio-context-sidebar {
+      position: sticky;
+      top: 5rem;
+      max-height: calc(100vh - 6rem);
+      overflow-y: auto;
     }
   }
 
   @media (min-width: 1280px) {
-    .storyboard-workstation {
-      grid-template-columns: minmax(14rem, 18rem) minmax(12rem, 16rem) minmax(0, 1fr);
+    .studio-unified-workspace {
+      grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
     }
-    .storyboard-col-right {
-      grid-column: auto;
-    }
+  }
+
+  .studio-result-area {
+    min-width: 0;
+  }
+
+  .studio-sentinel-advisory {
+    min-width: 0;
   }
 
   .storyboard-composer-column {
@@ -1056,75 +1069,6 @@ html[data-theme="paper"] {
     display: flex;
     flex-wrap: wrap;
     gap: 0.4rem;
-  }
-
-  .storyboard-assist-diff {
-    display: grid;
-    gap: 0.75rem;
-  }
-
-  @media (min-width: 768px) {
-    .storyboard-assist-diff {
-      grid-template-columns: 1fr 1fr;
-    }
-  }
-
-  .storyboard-progress {
-    display: grid;
-    gap: 0.75rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
-    border-radius: var(--radius);
-    background: color-mix(in oklch, var(--card) 88%, transparent);
-  }
-
-  .storyboard-progress-track {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.5rem;
-  }
-
-  @media (min-width: 768px) {
-    .storyboard-progress-track {
-      grid-template-columns: repeat(6, minmax(0, 1fr));
-    }
-  }
-
-  .storyboard-progress-step {
-    min-width: 0;
-  }
-
-  .storyboard-progress-step button,
-  .storyboard-progress-step p {
-    margin: 0.35rem 0 0;
-    font-size: 0.68rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--muted-foreground);
-  }
-
-  .storyboard-progress-step[data-complete="true"] p {
-    color: var(--foreground);
-  }
-
-  .storyboard-progress-bar {
-    height: 0.35rem;
-    border-radius: 999px;
-    background: color-mix(in oklch, var(--muted) 80%, transparent);
-    overflow: hidden;
-  }
-
-  .storyboard-progress-bar span {
-    display: block;
-    height: 100%;
-    width: 100%;
-    background: var(--accent-mv);
-    transform-origin: left center;
-    transform: scaleX(0);
-  }
-
-  .storyboard-progress-step[data-complete="true"] .storyboard-progress-bar span {
-    transform: scaleX(1);
   }
 
   .storyboard-tab-panel {
