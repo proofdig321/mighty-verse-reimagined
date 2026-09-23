@@ -41,14 +41,13 @@ export function resolveKind(input: {
   extensionVideoUri: string | null;
 }): GenerationJobKind {
   if (input.intent === "still") return "still";
-  if (input.intent === "animation") return "animation";
   if (input.intent === "gif") return "gif";
   if (input.intent === "reel") return "reel";
   if (input.firstFrame && input.lastFrame) return "first-last-frame";
-  if (input.firstFrame) return "animate-still";
   if (input.referenceUrls.length > 0) return "reference-motion";
+  if (input.firstFrame) return "animate-still";
   if (input.extensionVideoUri) return "extend";
-  return "motion";
+  return input.intent === "animation" ? "animation" : "motion";
 }
 
 export function CreativeIntentPicker({

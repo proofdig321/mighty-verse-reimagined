@@ -143,7 +143,7 @@ export function StoryboardWorkspace({
   const [draftPanel, setDraftPanel] = useState<Partial<StoryboardPanelRecord>>({});
   const [firstFrame, setFirstFrame] = useState<string>("");
   const [lastFrame, setLastFrame] = useState<string>("");
-  const [durationSeconds, setDurationSeconds] = useState<4 | 6 | 8>(8);
+  const [durationSeconds, setDurationSeconds] = useState<number>(8);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);

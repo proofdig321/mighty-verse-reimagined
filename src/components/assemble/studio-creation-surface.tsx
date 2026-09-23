@@ -120,7 +120,7 @@ export function StudioCreationSurface({
   motionKind: GenerationJobKind;
   firstFrame: string;
   lastFrame: string;
-  durationSeconds: 4 | 6 | 8;
+  durationSeconds: number;
   aspectRatio: "16:9" | "9:16";
   activeReferenceUrls: string[];
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
@@ -132,7 +132,7 @@ export function StudioCreationSurface({
   onEnqueue: (kind: GenerationJobKind, extra?: Record<string, unknown>) => void;
   onSetFirstFrame: (url: string) => void;
   onSetLastFrame: (url: string) => void;
-  onSetDuration: (v: 4 | 6 | 8) => void;
+  onSetDuration: (v: number) => void;
   onSetAspect: (v: "16:9" | "9:16") => void;
   onRetryJob: (jobId: string) => void;
   onCancelJob: (jobId: string) => void;
@@ -622,16 +622,18 @@ export function StudioCreationSurface({
                     <option value="9:16">9:16</option>
                   </select>
                   {(intent === "clip" || intent === "animation") && (
-                    <select
-                      aria-label="Duration"
-                      className="h-7 rounded-full border border-border/60 bg-background px-2.5 text-xs text-foreground"
-                      value={durationSeconds}
-                      onChange={(e) => onSetDuration(Number(e.target.value) as 4 | 6 | 8)}
-                    >
-                      <option value={4}>4s</option>
-                      <option value={6}>6s</option>
-                      <option value={8}>8s</option>
-                    </select>
+                    <div className="flex items-center h-7 rounded-full border border-border/60 bg-background px-2.5 gap-1">
+                      <input
+                        aria-label="Duration in seconds"
+                        type="number"
+                        min={1}
+                        step={1}
+                        value={durationSeconds}
+                        onChange={(e) => onSetDuration(Math.max(1, Number(e.target.value)))}
+                        className="w-8 bg-transparent text-xs text-foreground text-center outline-none"
+                      />
+                      <span className="text-xs text-muted-foreground">s</span>
+                    </div>
                   )}
                   {intent === "clip" && resolvedKind !== "motion" && (
                     <span className="text-[9px] text-muted-foreground/60 px-1">{kindHint[resolvedKind]}</span>
