@@ -46,10 +46,12 @@ import { HierarchyBreadcrumb } from "./breadcrumb";
 import { StudioContextSidebar } from "./studio-context-sidebar";
 import { StudioCreationSurface } from "./studio-creation-surface";
 import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
+import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
+type SurfaceView = "create" | "source" | "preview";
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
   message: string;
@@ -162,6 +164,7 @@ export function StoryboardWorkspace({
   const [analysing, setAnalysing] = useState(false);
   const [sentinelMessage, setSentinelMessage] = useState<string | null>(null);
   const [sentinelError, setSentinelError] = useState<string | null>(null);
+  const [surfaceView, setSurfaceView] = useState<SurfaceView>("create");
   const savedSnapshot = useRef<AuthoringSnapshot | null>(null);
   const autosaveTimer = useRef<number | null>(null);
 
@@ -1037,6 +1040,14 @@ export function StoryboardWorkspace({
 
         {/* MAIN — Creation surface */}
         <StudioCreationSurface
+          surfaceView={surfaceView}
+          onSurfaceView={setSurfaceView}
+          work={work}
+          intelligence={intelligence}
+          previewHref={previewHref}
+          universeTitle={universeTitle}
+          universeId={universeId}
+          scenes={scenes}
           selected={selected}
           selectedPersisted={selectedPersisted}
           editorPanel={editorPanel}
@@ -1068,6 +1079,7 @@ export function StoryboardWorkspace({
           onSetAspect={setAspectRatio}
           onRetryJob={(jobId) => void retryJob(jobId)}
           onCancelJob={(jobId) => void cancelJob(jobId)}
+          onWorkUpdate={(w) => applyWork(w)}
         />
       </div>
 
