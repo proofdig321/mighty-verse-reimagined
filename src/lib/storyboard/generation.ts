@@ -575,6 +575,10 @@ export async function processGenerationJob(jobId: string, participantId: string)
     if (current.kind === "extend" && !extensionUri) {
       throw new Error("Extend needs a generated Veo video to continue from. The original clip is not overwritten.");
     }
+    const editUri = typeof request.edit_video_uri === "string" ? request.edit_video_uri : null;
+    if (current.kind === "edit" && !editUri) {
+      throw new Error("Edit needs a source video URI and a text directive describing the change.");
+    }
     const submitted = await submitVeoGeneration({
       prompt,
       aspectRatio: motion.aspectRatio ?? "16:9",
@@ -590,6 +594,7 @@ export async function processGenerationJob(jobId: string, participantId: string)
         ? await Promise.all(referenceUrls.slice(0, 3).map((url) => fetchImageRef(url)))
         : [],
       extensionVideoUri: current.kind === "extend" ? extensionUri : null,
+      editVideoUri: current.kind === "edit" ? editUri : null,
     });
     if (!submitted.ok) {
       const mapped = failFromProvider(submitted);

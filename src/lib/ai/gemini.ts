@@ -358,6 +358,7 @@ export type VeoSubmitInput = {
   lastFrame?: VeoImageRef | null;
   referenceImages?: VeoImageRef[];
   extensionVideoUri?: string | null;
+  editVideoUri?: string | null;
 };
 
 function imagePayload(image: VeoImageRef) {
@@ -369,7 +370,10 @@ function imagePayload(image: VeoImageRef) {
 
 export function veoRequestBody(input: VeoSubmitInput) {
   const instance: Record<string, unknown> = { prompt: input.prompt };
-  if (input.extensionVideoUri) {
+  if (input.editVideoUri) {
+    // Video editing: source video + text directive
+    instance.video = { uri: input.editVideoUri };
+  } else if (input.extensionVideoUri) {
     instance.video = { uri: input.extensionVideoUri };
   } else if (input.referenceImages?.length) {
     instance.referenceImages = input.referenceImages.slice(0, 3).map((image) => ({

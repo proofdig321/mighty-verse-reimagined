@@ -18,20 +18,31 @@ export type CreativePreset = {
   intent: CreativeIntent;
   defaults: {
     aspectRatio?: "16:9" | "9:16";
-    durationSeconds?: number;
+    durationSeconds?: 4 | 6 | 8;
     promptPrefix?: string;
+    generateAudio?: boolean;
   };
 };
 
 export const PRESETS: CreativePreset[] = [
-  { id: "cinematic",    label: "Cinematic",    intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
-  { id: "performance",  label: "Performance",  intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 6 } },
-  { id: "music-video",  label: "Music Video",  intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
-  { id: "social",       label: "Social/Reel",  intent: "reel",      defaults: { aspectRatio: "9:16", durationSeconds: 6 } },
-  { id: "visualizer",   label: "Visualizer",   intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
-  { id: "transform",    label: "Transform",    intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
-  { id: "extend",       label: "Extend",       intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
+  { id: "cinematic",   label: "Cinematic",   intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
+  { id: "performance", label: "Performance", intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 6, generateAudio: true } },
+  { id: "music-video", label: "Music Video", intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: true } },
+  { id: "social",      label: "Social/Reel", intent: "reel",      defaults: { aspectRatio: "9:16", durationSeconds: 6, generateAudio: false } },
+  { id: "visualizer",  label: "Visualizer",  intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
+  { id: "transform",   label: "Transform",   intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
+  { id: "extend",      label: "Extend",      intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
 ];
+
+/** Veo only accepts these durations. */
+export const VEO_DURATIONS = [4, 6, 8] as const;
+export type VeoDuration = (typeof VEO_DURATIONS)[number];
+
+export function clampVeoDuration(v: number): VeoDuration {
+  if (v <= 4) return 4;
+  if (v <= 6) return 6;
+  return 8;
+}
 
 const INTENTS: { id: CreativeIntent; label: string; description: string }[] = [
   { id: "still",     label: "Image",   description: "Generate a still image" },
@@ -72,11 +83,14 @@ export function resolveKind(input: {
   referenceUrls: string[];
   extensionVideoUri: string | null;
   sourceVideoUri?: string | null;
+  editVideoUri?: string | null;
 }): GenerationJobKind {
   if (input.intent === "still") return "still";
   if (input.intent === "gif") return "gif";
   if (input.intent === "reel") return "reel";
-  // Extension: source video present and intent is clip/animation
+  // Edit: source video + directive (distinct from extend)
+  if (input.editVideoUri && !input.extensionVideoUri) return "edit";
+  // Extension: source video present, no first frame, no refs
   if (input.extensionVideoUri && !input.firstFrame && !input.referenceUrls.length) return "extend";
   // First + last frame
   if (input.firstFrame && input.lastFrame) return "first-last-frame";
@@ -89,7 +103,6 @@ export function resolveKind(input: {
 
 /**
  * Describe the active workflow in creator-facing language.
- * Used for contextual hints in the UI.
  */
 export function describeWorkflow(input: {
   intent: CreativeIntent;
@@ -97,10 +110,12 @@ export function describeWorkflow(input: {
   hasLastFrame: boolean;
   hasReferences: boolean;
   hasExtensionVideo: boolean;
+  hasEditVideo?: boolean;
 }): string {
   if (input.intent === "still") return "Text to image";
   if (input.intent === "gif") return "Create GIF";
   if (input.intent === "reel") return "Assemble reel";
+  if (input.hasEditVideo && !input.hasExtensionVideo) return "Edit video";
   if (input.hasExtensionVideo && !input.hasFirstFrame && !input.hasReferences) return "Extend video";
   if (input.hasFirstFrame && input.hasLastFrame) return "First + last frame";
   if (input.hasReferences) return "Reference to video";

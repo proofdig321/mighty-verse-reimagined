@@ -49,6 +49,7 @@ import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
+import type { VeoDuration } from "./creative-operation";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
 type SurfaceView = "create" | "source" | "preview";
@@ -144,7 +145,7 @@ export function StoryboardWorkspace({
   const [draftPanel, setDraftPanel] = useState<Partial<StoryboardPanelRecord>>({});
   const [firstFrame, setFirstFrame] = useState<string>("");
   const [lastFrame, setLastFrame] = useState<string>("");
-  const [durationSeconds, setDurationSeconds] = useState<number>(8);
+  const [durationSeconds, setDurationSeconds] = useState<import("./creative-operation").VeoDuration>(8);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
@@ -949,6 +950,39 @@ export function StoryboardWorkspace({
     });
   }
 
+  async function saveArtifactToPanel(panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) {
+    const panel = persistedPanels.find((p) => p.panel_id === panelId);
+    if (!panel || !work) return;
+    const response = await fetch("/api/authority/storyboard", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        universe_id: universeId,
+        action: "save-panel",
+        panel_id: panelId,
+        patch: {
+          ...(patch.still_url ? { still_url: patch.still_url } : {}),
+          ...(patch.asset_id ? { active_still_asset_id: patch.asset_id } : {}),
+          ...(patch.endpoint_ref ? { motion_endpoint: patch.endpoint_ref } : {}),
+          ...(patch.playback_id ? { motion_playback_id: patch.playback_id } : {}),
+          generation_metadata: {
+            ...panel.generation_metadata,
+            saved_artifact: { ...patch, saved_at: new Date().toISOString() },
+          },
+        },
+      }),
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (payload.panel && work) {
+      const next: StoryboardWorkRecord = {
+        ...work,
+        panels: work.panels.map((p) => (p.panel_id === payload.panel.panel_id ? payload.panel : p)),
+      };
+      applyWork(next);
+      setMediaState({ status: "ready", message: "Artifact saved to panel." });
+    }
+  }
+
   return (
     <div className="storyboard-workspace multiverse-page" data-storyboard-layout="workstation">
       {/* ── Top bar ── */}
@@ -1076,11 +1110,13 @@ export function StoryboardWorkspace({
           onEnqueue={(kind, extra) => void enqueue(kind, extra)}
           onSetFirstFrame={setFirstFrame}
           onSetLastFrame={setLastFrame}
-          onSetDuration={setDurationSeconds}
+          onSetDuration={(v: VeoDuration) => setDurationSeconds(v)}
           onSetAspect={setAspectRatio}
           onRetryJob={(jobId) => void retryJob(jobId)}
           onCancelJob={(jobId) => void cancelJob(jobId)}
           onWorkUpdate={(w) => applyWork(w)}
+          cinematicShots={cinematicShots}
+          onSaveArtifactToPanel={(panelId, patch) => void saveArtifactToPanel(panelId, patch)}
         />
       </div>
 

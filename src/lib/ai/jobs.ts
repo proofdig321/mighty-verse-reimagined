@@ -26,6 +26,7 @@ export type GenerationJobKind =
   | "first-last-frame"
   | "reference-motion"
   | "extend"
+  | "edit"
   | "gif"
   | "reel"
   | "animation";

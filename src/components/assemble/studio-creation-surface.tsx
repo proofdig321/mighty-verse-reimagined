@@ -3,19 +3,26 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Film, Layers, Clapperboard, Sparkles, ChevronDown, ChevronUp, Plus, X, ImagePlus } from "lucide-react";
+import {
+  AlertCircle, Film, Layers, Clapperboard, Sparkles,
+  ChevronDown, ChevronUp, Plus, X, ImagePlus, Volume2, VolumeX,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
-import { CreativeIntentPicker, resolveKind, intentAvailable, describeWorkflow, modeAvailable } from "./creative-operation";
-import type { CreativeIntent, Capability } from "./creative-operation";
+import {
+  CreativeIntentPicker, resolveKind, intentAvailable,
+  describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS,
+} from "./creative-operation";
+import type { CreativeIntent, Capability, VeoDuration } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 import type { SuiteScene } from "@/lib/assemble/suite";
+import type { CinematicShot } from "@/lib/media/cinematic-evidence";
 
 type SurfaceView = "create" | "source" | "preview";
 
@@ -30,7 +37,14 @@ type JobCard = {
   status: string;
   progress: number | null;
   error: { message?: string } | null;
-  result: { still_url?: string; endpoint_ref?: string; playback_id?: string; provider_video_uri?: string | null; has_audio?: boolean | null } | null;
+  result: {
+    still_url?: string;
+    endpoint_ref?: string;
+    playback_id?: string;
+    provider_video_uri?: string | null;
+    has_audio?: boolean | null;
+    asset_id?: string;
+  } | null;
   panel_id: string | null;
   retryable: boolean;
 };
@@ -60,9 +74,10 @@ export function StudioCreationSurface({
   mediaState, stillJob, motionJob, selectedJob, stillReady, motionReady,
   motionKind, firstFrame, lastFrame, durationSeconds, aspectRatio,
   activeReferenceUrls, references, workFrames, capability,
+  cinematicShots,
   onDraftChange, onSavePanel, onGenerateStill, onEnqueue,
   onSetFirstFrame, onSetLastFrame, onSetDuration, onSetAspect,
-  onRetryJob, onCancelJob, onWorkUpdate,
+  onRetryJob, onCancelJob, onWorkUpdate, onSaveArtifactToPanel,
 }: {
   surfaceView: SurfaceView; onSurfaceView: (v: SurfaceView) => void;
   work: StoryboardWorkRecord | null; intelligence: SentinelIntelligence | null;
@@ -82,20 +97,24 @@ export function StudioCreationSurface({
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
   workFrames: { source_title: string; timestamp_ms: number; still_url: string; panel_id: string | null }[];
   capability: Capability & { provider?: string; label?: string; models?: { text: string; image: string; video: string } } | null;
+  cinematicShots: CinematicShot[];
   onDraftChange: (patch: Partial<StoryboardPanelRecord>) => void; onSavePanel: () => void;
   onGenerateStill: () => void; onEnqueue: (kind: GenerationJobKind, extra?: Record<string, unknown>) => void;
   onSetFirstFrame: (url: string) => void; onSetLastFrame: (url: string) => void;
-  onSetDuration: (v: number) => void; onSetAspect: (v: "16:9" | "9:16") => void;
+  onSetDuration: (v: VeoDuration) => void; onSetAspect: (v: "16:9" | "9:16") => void;
   onRetryJob: (jobId: string) => void; onCancelJob: (jobId: string) => void;
   onWorkUpdate: (work: StoryboardWorkRecord) => void;
+  onSaveArtifactToPanel: (panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) => void;
 }) {
   const [intent, setIntent] = useState<CreativeIntent>("still");
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [generateAudio, setGenerateAudio] = useState(false);
   const [localFirstFrame, setLocalFirstFrame] = useState("");
   const [localLastFrame, setLocalLastFrame] = useState("");
+  const [editVideoUri, setEditVideoUri] = useState("");
   const [selectedRefUrls, setSelectedRefUrls] = useState<Set<string>>(new Set());
 
   function toggleRef(url: string) {
@@ -115,10 +134,17 @@ export function StudioCreationSurface({
   const extensionVideoUri = selectedJob?.result?.provider_video_uri ?? null;
   const effectiveFirstFrame = localFirstFrame || firstFrame || "";
   const effectiveLastFrame = localLastFrame || lastFrame || "";
+  const effectiveEditUri = editVideoUri || extensionVideoUri || "";
+
+  // Sentinel shots available as usable frames
+  const sentinelFrames = cinematicShots
+    .filter((s) => s.still_url)
+    .map((s) => ({ url: s.still_url!, label: `Shot ${String(s.sequence).padStart(2, "0")} · ${formatTimelineMs(s.time_ms)}`, kind: "sentinel" as const }));
 
   const allRefThumbs = [
     ...workFrames.map((f) => ({ url: f.still_url, label: formatTimelineMs(f.timestamp_ms), kind: "frame" as const })),
     ...references.filter((r) => r.still_url).map((r) => ({ url: r.still_url!, label: r.title, kind: "gallery" as const })),
+    ...sentinelFrames,
   ];
 
   const resolvedKind = resolveKind({
@@ -127,6 +153,7 @@ export function StudioCreationSurface({
     lastFrame: effectiveLastFrame,
     referenceUrls: referenceStillUrls,
     extensionVideoUri,
+    editVideoUri: effectiveEditUri || null,
   });
 
   const workflow = describeWorkflow({
@@ -135,11 +162,17 @@ export function StudioCreationSurface({
     hasLastFrame: Boolean(effectiveLastFrame),
     hasReferences: referenceStillUrls.length > 0,
     hasExtensionVideo: Boolean(extensionVideoUri),
+    hasEditVideo: Boolean(effectiveEditUri) && !extensionVideoUri,
   });
 
   const canExtend = Boolean(extensionVideoUri) && modeAvailable("video-extension", capability);
+  const canEdit = modeAvailable("text-to-video", capability); // Veo supports editing when configured
   const canFirstLast = modeAvailable("first-last-frame", capability);
   const canReference = modeAvailable("reference-images", capability);
+  const canAudio = modeAvailable("text-to-video", capability); // audio is a Veo parameter
+
+  const veoDuration = clampVeoDuration(durationSeconds);
+  const isVideoIntent = intent === "clip" || intent === "animation";
 
   const generateReady = (() => {
     if (intent === "still") return stillReady;
@@ -150,6 +183,7 @@ export function StudioCreationSurface({
     }
     if (resolvedKind === "reference-motion") return { available: referenceStillUrls.length > 0, reason: referenceStillUrls.length > 0 ? null : "Add at least one reference" };
     if (resolvedKind === "extend") return { available: Boolean(extensionVideoUri), reason: extensionVideoUri ? null : "Generate a clip first" };
+    if (resolvedKind === "edit") return { available: Boolean(effectiveEditUri), reason: effectiveEditUri ? null : "Paste a video URI to edit" };
     if (intent === "gif") return { available: hasStill || hasMotion, reason: (hasStill || hasMotion) ? null : "Generate a still or clip first" };
     if (intent === "reel") return { available: workFrames.length > 0 || hasStill, reason: (workFrames.length > 0 || hasStill) ? null : "Add source frames first" };
     return motionReady;
@@ -157,18 +191,22 @@ export function StudioCreationSurface({
 
   function handleGenerate() {
     if (intent === "still") { onGenerateStill(); return; }
-    const extra: Record<string, unknown> = { duration_seconds: durationSeconds, aspect_ratio: aspectRatio };
+    const extra: Record<string, unknown> = {
+      duration_seconds: veoDuration,
+      aspect_ratio: aspectRatio,
+      generate_audio: generateAudio,
+    };
     if (resolvedKind === "animate-still") { extra.still_url = selected?.still; extra.first_frame_url = selected?.still; }
     if (resolvedKind === "first-last-frame") { extra.first_frame_url = effectiveFirstFrame || selected?.still; extra.last_frame_url = effectiveLastFrame; }
     if (resolvedKind === "reference-motion") { extra.reference_urls = referenceStillUrls.slice(0, 3); }
     if (resolvedKind === "extend") { extra.extension_video_uri = extensionVideoUri; }
+    if (resolvedKind === "edit") { extra.edit_video_uri = effectiveEditUri; }
     if (intent === "gif") { extra.playback_id = motionJob?.result?.playback_id ?? selectedJob?.result?.playback_id ?? null; extra.still_url = selected?.still; }
     if (intent === "reel") { extra.still_urls = workFrames.map((f) => f.still_url); extra.playback_ids = []; }
     onEnqueue(resolvedKind, extra);
   }
 
   const generateLabel = intent === "still" ? "Image" : intent === "clip" ? "Video" : intent === "animation" ? "Animate" : intent === "gif" ? "GIF" : "Reel";
-  const isVideoIntent = intent === "clip" || intent === "animation";
 
   return (
     <div className="studio-creation-surface">
@@ -236,16 +274,14 @@ export function StudioCreationSurface({
       {/* Create view */}
       {surfaceView === "create" && (
         <>
-          {/* COMPOSER — primary, full width, at top */}
+          {/* COMPOSER */}
           <div className="studio-composer-wrap">
 
-            {/* Context header: panel name + sentinel */}
+            {/* Context header */}
             <div className="studio-context-header">
               {selected ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="suite-kicker shrink-0">
-                    {selected.kind === "Canonical Scene" ? "Scene" : "Panel"}
-                  </span>
+                  <span className="suite-kicker shrink-0">{selected.kind === "Canonical Scene" ? "Scene" : "Panel"}</span>
                   <span className="text-xs font-medium text-foreground truncate">{selected.title}</span>
                   {selected.time && (
                     <span className="font-mono suite-kicker shrink-0 normal-case tracking-normal font-normal">{selected.time}</span>
@@ -269,15 +305,13 @@ export function StudioCreationSurface({
               )}
             </div>
 
-            {/* Panel details — progressive disclosure */}
+            {/* Panel details */}
             {panelDetailsOpen && selectedPersisted && (
               <div className="studio-panel-details">
                 <div className="grid grid-cols-2 gap-2">
                   {(["camera","camera_movement","framing","environment","characters","transition"] as const).map((field) => (
                     <div key={field}>
-                      <label htmlFor={`pd-${field}`} className="block suite-kicker mb-0.5 capitalize">
-                        {field.replace("_"," ")}
-                      </label>
+                      <label htmlFor={`pd-${field}`} className="block suite-kicker mb-0.5 capitalize">{field.replace("_"," ")}</label>
                       <input id={`pd-${field}`}
                         className="w-full h-7 rounded border border-input bg-background px-2 text-xs text-foreground"
                         value={(editorPanel[field] as string) ?? ""}
@@ -293,7 +327,7 @@ export function StudioCreationSurface({
               </div>
             )}
 
-            {/* Sentinel evidence — advisory only */}
+            {/* Sentinel evidence — advisory, with usable material */}
             {hasSentinel && sentinelOpen && (
               <div className="studio-sentinel-detail">
                 <p className="suite-kicker mb-2">Sentinel evidence — advisory only</p>
@@ -320,6 +354,39 @@ export function StudioCreationSurface({
                 {selectedFrame && (
                   <p className="text-xs text-foreground mb-2">{selectedFrame.source_title} · {formatTimelineMs(selectedFrame.timestamp_ms)}</p>
                 )}
+                {/* Cinematic shots as usable frames */}
+                {cinematicShots.length > 0 && (
+                  <div className="mb-3">
+                    <p className="suite-kicker mb-1.5">Frames — select to use as reference</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {cinematicShots.filter((s) => s.still_url).slice(0, 12).map((shot) => {
+                        const isFirst = effectiveFirstFrame === shot.still_url;
+                        const isLast = effectiveLastFrame === shot.still_url;
+                        const isRef = selectedRefUrls.has(shot.still_url!);
+                        return (
+                          <button key={shot.shot_id} type="button"
+                            title={`Shot ${shot.sequence} · ${formatTimelineMs(shot.time_ms)} — ${shot.what_happens}`}
+                            onClick={() => {
+                              const url = shot.still_url!;
+                              if (!isRef && !isFirst && !isLast) { toggleRef(url); }
+                              else if (isRef) { toggleRef(url); setLocalFirstFrame(url); onSetFirstFrame(url); }
+                              else if (isFirst) { setLocalFirstFrame(""); onSetFirstFrame(""); setLocalLastFrame(url); onSetLastFrame(url); }
+                              else { setLocalLastFrame(""); onSetLastFrame(""); }
+                            }}
+                            className={cn(
+                              "relative w-12 aspect-video rounded overflow-hidden border-2 transition-all",
+                              isFirst ? "border-primary" : isLast ? "border-accent-mv" : isRef ? "border-amber-400" : "border-border hover:border-foreground/40"
+                            )}>
+                            <img src={shot.still_url!} alt="" className="w-full h-full object-cover" />
+                            <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-black/60 text-white leading-tight">
+                              {isFirst ? "start" : isLast ? "end" : isRef ? "ref" : String(shot.sequence).padStart(2,"0")}
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
                 <div className="flex items-center gap-2">
                   <p className="suite-kicker flex-1">Creator decides.</p>
                   {selectedObservation && (
@@ -335,7 +402,7 @@ export function StudioCreationSurface({
                         });
                         setSentinelOpen(false);
                       }}>
-                      Use as reference
+                      Use as directive
                     </Button>
                   )}
                 </div>
@@ -354,7 +421,7 @@ export function StudioCreationSurface({
                 </div>
               </div>
 
-              {/* Directive — dominant input */}
+              {/* Directive */}
               <Textarea
                 className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/40"
                 value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
@@ -368,7 +435,7 @@ export function StudioCreationSurface({
                 placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe what you want to create…"}
               />
 
-              {/* Reference chips — always visible when refs exist */}
+              {/* Reference chips */}
               {allRefThumbs.length > 0 && (
                 <div className="studio-ref-chips">
                   {allRefThumbs.slice(0, refsOpen ? undefined : 6).map((ref, i) => {
@@ -408,7 +475,7 @@ export function StudioCreationSurface({
                 </div>
               )}
 
-              {/* Add reference — always visible */}
+              {/* Add reference */}
               {allRefThumbs.length === 0 && (
                 <button type="button"
                   className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
@@ -418,7 +485,7 @@ export function StudioCreationSurface({
                 </button>
               )}
 
-              {/* Contextual: first frame from panel still */}
+              {/* Contextual: use panel still as start frame */}
               {isVideoIntent && hasStill && selected?.still && !effectiveFirstFrame && (
                 <div className="flex items-center gap-2 rounded-lg border border-border/50 px-2.5 py-1.5">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -431,13 +498,24 @@ export function StudioCreationSurface({
                 </div>
               )}
 
-              {/* Contextual: extend — when a generated clip exists */}
+              {/* Contextual: extend */}
               {isVideoIntent && canExtend && extensionVideoUri && (
                 <div className="flex items-center gap-2 rounded-lg border border-border/50 px-2.5 py-1.5">
                   <span className="text-xs text-muted-foreground flex-1">Generated clip available — extend it</span>
                   <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] shrink-0"
-                    onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio })}>
+                    onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: veoDuration, aspect_ratio: aspectRatio, generate_audio: generateAudio })}>
                     Extend
+                  </Button>
+                </div>
+              )}
+
+              {/* Contextual: edit video — separate from extend */}
+              {isVideoIntent && canEdit && extensionVideoUri && (
+                <div className="flex items-center gap-2 rounded-lg border border-border/50 px-2.5 py-1.5">
+                  <span className="text-xs text-muted-foreground flex-1">Edit this clip with a directive</span>
+                  <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] shrink-0"
+                    onClick={() => { setEditVideoUri(extensionVideoUri); setAdvancedOpen(true); }}>
+                    Edit
                   </Button>
                 </div>
               )}
@@ -451,13 +529,22 @@ export function StudioCreationSurface({
                     <option value="9:16">9:16</option>
                   </select>
                   {isVideoIntent && (
-                    <div className="studio-control-pill flex items-center gap-1">
-                      <input aria-label="Duration in seconds" type="number" min={1} max={8} step={1}
-                        value={durationSeconds}
-                        onChange={(e) => onSetDuration(Math.max(1, Math.min(8, Number(e.target.value))))}
-                        className="w-7 bg-transparent text-xs text-center outline-none" />
-                      <span className="text-xs text-muted-foreground">s</span>
-                    </div>
+                    <select aria-label="Duration in seconds" className="studio-control-pill"
+                      value={veoDuration}
+                      onChange={(e) => onSetDuration(clampVeoDuration(Number(e.target.value)))}>
+                      {VEO_DURATIONS.map((d) => (
+                        <option key={d} value={d}>{d}s</option>
+                      ))}
+                    </select>
+                  )}
+                  {isVideoIntent && canAudio && (
+                    <button type="button"
+                      title={generateAudio ? "Generated audio on" : "Generated audio off"}
+                      onClick={() => setGenerateAudio((v) => !v)}
+                      className={cn("studio-control-pill gap-1", generateAudio && "border-primary/50 text-primary")}>
+                      {generateAudio ? <Volume2 size={11} /> : <VolumeX size={11} />}
+                      <span className="text-xs">Audio</span>
+                    </button>
                   )}
                   {isVideoIntent && (
                     <button type="button"
@@ -477,7 +564,7 @@ export function StudioCreationSurface({
                 </Button>
               </div>
 
-              {/* Advanced controls — progressive disclosure */}
+              {/* Advanced controls */}
               {advancedOpen && isVideoIntent && (
                 <div className="studio-advanced-controls">
                   {canFirstLast && (
@@ -489,9 +576,7 @@ export function StudioCreationSurface({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={effectiveFirstFrame} alt="" className="w-12 h-8 rounded object-cover" />
                             <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
-                              onClick={() => { setLocalFirstFrame(""); onSetFirstFrame(""); }}>
-                              Clear
-                            </button>
+                              onClick={() => { setLocalFirstFrame(""); onSetFirstFrame(""); }}>Clear</button>
                           </div>
                         ) : (
                           <p className="text-xs text-muted-foreground/50">Select from references above</p>
@@ -504,14 +589,31 @@ export function StudioCreationSurface({
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img src={effectiveLastFrame} alt="" className="w-12 h-8 rounded object-cover" />
                             <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
-                              onClick={() => { setLocalLastFrame(""); onSetLastFrame(""); }}>
-                              Clear
-                            </button>
+                              onClick={() => { setLocalLastFrame(""); onSetLastFrame(""); }}>Clear</button>
                           </div>
                         ) : (
                           <p className="text-xs text-muted-foreground/50">Select from references above</p>
                         )}
                       </div>
+                    </div>
+                  )}
+                  {/* Edit video URI input */}
+                  {canEdit && (
+                    <div>
+                      <p className="suite-kicker mb-1">Edit video — source URI</p>
+                      <div className="flex gap-2">
+                        <input
+                          className="flex-1 h-7 rounded border border-input bg-background px-2 text-xs text-foreground"
+                          placeholder="gs://… or https://… video URI to edit"
+                          value={editVideoUri}
+                          onChange={(e) => setEditVideoUri(e.target.value)}
+                        />
+                        {editVideoUri && (
+                          <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
+                            onClick={() => setEditVideoUri("")}>Clear</button>
+                        )}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">Write your edit directive in the prompt above.</p>
                     </div>
                   )}
                 </div>
@@ -530,16 +632,27 @@ export function StudioCreationSurface({
             </div>
           </div>
 
-          {/* RESULT — scrolls below composer */}
+          {/* RESULT */}
           <div className="studio-result-area">
             {hasMotion && selected?.endpoint ? (
               <div className="studio-result-card">
                 <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />
+                {selectedJob?.result?.has_audio && (
+                  <p className="flex items-center gap-1 text-[10px] text-muted-foreground px-0.5">
+                    <Volume2 size={10} /> Generated audio included
+                  </p>
+                )}
                 <div className="studio-result-actions">
                   {canExtend && extensionVideoUri && (
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                      onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio })}>
+                      onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: veoDuration, aspect_ratio: aspectRatio, generate_audio: generateAudio })}>
                       Extend
+                    </Button>
+                  )}
+                  {canEdit && extensionVideoUri && (
+                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
+                      onClick={() => { setEditVideoUri(extensionVideoUri); setAdvancedOpen(true); }}>
+                      Edit
                     </Button>
                   )}
                   <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
@@ -552,9 +665,17 @@ export function StudioCreationSurface({
                       Use as reference
                     </Button>
                   )}
-                  {selectedPersisted && (
+                  {selectedPersisted && selectedJob?.result && (
                     <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
-                      onClick={() => onSavePanel()}>
+                      onClick={() => {
+                        const r = selectedJob.result!;
+                        onSaveArtifactToPanel(selectedPersisted.panel_id, {
+                          still_url: r.still_url,
+                          asset_id: r.asset_id,
+                          endpoint_ref: r.endpoint_ref,
+                          playback_id: r.playback_id,
+                        });
+                      }}>
                       Save to panel
                     </Button>
                   )}
@@ -567,18 +688,31 @@ export function StudioCreationSurface({
                 <div className="studio-result-actions">
                   {intentAvailable("clip", capability) && (
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                      onClick={() => { setIntent("clip"); onEnqueue("animate-still", { still_url: selected.still, first_frame_url: selected.still, duration_seconds: durationSeconds, aspect_ratio: aspectRatio }); }}>
+                      onClick={() => { setIntent("clip"); onEnqueue("animate-still", { still_url: selected.still, first_frame_url: selected.still, duration_seconds: veoDuration, aspect_ratio: aspectRatio, generate_audio: generateAudio }); }}>
                       Animate
                     </Button>
                   )}
+                  {/* Variation: re-generate with same prompt + existing image as reference */}
                   <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                    onClick={() => onEnqueue("still", { still_url: selected.still })}>
+                    onClick={() => {
+                      toggleRef(selected.still!);
+                      onGenerateStill();
+                    }}>
                     Variation
                   </Button>
                   <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
                     onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
                     Use as reference
                   </Button>
+                  {selectedPersisted && stillJob?.result && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
+                      onClick={() => {
+                        const r = stillJob.result!;
+                        onSaveArtifactToPanel(selectedPersisted.panel_id, { still_url: r.still_url, asset_id: r.asset_id });
+                      }}>
+                      Save to panel
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : selected ? (

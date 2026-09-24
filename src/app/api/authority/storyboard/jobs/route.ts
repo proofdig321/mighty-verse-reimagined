@@ -15,6 +15,7 @@ const KINDS = new Set<GenerationJobKind>([
   "first-last-frame",
   "reference-motion",
   "extend",
+  "edit",
   "gif",
   "reel",
   "animation",
