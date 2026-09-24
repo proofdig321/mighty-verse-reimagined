@@ -1039,6 +1039,21 @@ html[data-theme="paper"] {
   }
 
 
+  /* Unified workspace layout */
+  .studio-unified-workspace {
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+  }
+
+  .studio-context-sidebar {
+    width: 13rem;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    padding: 0.75rem 0.5rem;
+    overflow-y: auto;
+  }
+
   /* Studio creation surface */
   .studio-creation-surface {
     min-width: 0;
