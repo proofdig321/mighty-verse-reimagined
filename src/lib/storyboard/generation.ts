@@ -661,7 +661,7 @@ async function finishVeoJob(
   await writeJob(getServiceClient(), current.job_id, {
     status: "completed",
     progress: 100,
-    result: { ...persisted, prompt, has_audio: polled.hasAudio, creates_canonical: false },
+    result: { ...persisted, prompt, has_audio: persisted.has_audio, creates_canonical: false },
     completed_at: new Date().toISOString(),
   });
   return (await getGenerationJob({ participantId, jobId: current.job_id }))!;

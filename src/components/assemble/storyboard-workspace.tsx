@@ -73,7 +73,7 @@ type JobCard = {
   status: string;
   progress: number | null;
   error: { message?: string } | null;
-  result: { still_url?: string; endpoint_ref?: string; playback_id?: string; provider_video_uri?: string | null; has_audio?: boolean | null } | null;
+  result: { still_url?: string; endpoint_ref?: string; playback_id?: string; provider_video_uri?: string | null; has_audio?: boolean | null; asset_id?: string } | null;
   panel_id: string | null;
   retryable: boolean;
 };

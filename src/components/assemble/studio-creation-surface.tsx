@@ -15,9 +15,9 @@ import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
 import {
   CreativeIntentPicker, resolveKind, intentAvailable,
-  describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS,
+  describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS, PRESETS,
 } from "./creative-operation";
-import type { CreativeIntent, Capability, VeoDuration } from "./creative-operation";
+import type { CreativeIntent, Capability, VeoDuration, CreativePreset } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
@@ -107,6 +107,7 @@ export function StudioCreationSurface({
   onSaveArtifactToPanel: (panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) => void;
 }) {
   const [intent, setIntent] = useState<CreativeIntent>("still");
+  const [activePreset, setActivePreset] = useState<string | null>(null);
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
@@ -116,6 +117,18 @@ export function StudioCreationSurface({
   const [localLastFrame, setLocalLastFrame] = useState("");
   const [editVideoUri, setEditVideoUri] = useState("");
   const [selectedRefUrls, setSelectedRefUrls] = useState<Set<string>>(new Set());
+
+  function applyPreset(preset: CreativePreset) {
+    if (activePreset === preset.id) {
+      setActivePreset(null);
+      return;
+    }
+    setActivePreset(preset.id);
+    setIntent(preset.intent);
+    if (preset.defaults.durationSeconds) onSetDuration(preset.defaults.durationSeconds);
+    if (preset.defaults.aspectRatio) onSetAspect(preset.defaults.aspectRatio);
+    if (preset.defaults.generateAudio !== undefined) setGenerateAudio(preset.defaults.generateAudio);
+  }
 
   function toggleRef(url: string) {
     setSelectedRefUrls((prev) => {
@@ -420,6 +433,27 @@ export function StudioCreationSurface({
                   {capability && <span className="suite-kicker normal-case tracking-normal font-normal">{(capability as { provider?: string }).provider}</span>}
                 </div>
               </div>
+
+              {/* Presets */}
+              {capability?.configured && (
+                <div className="flex flex-wrap gap-1">
+                  {PRESETS.filter((p) => intentAvailable(p.intent, capability)).map((preset) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => applyPreset(preset)}
+                      className={cn(
+                        "px-2.5 py-0.5 rounded-full border text-[10px] font-medium transition-all",
+                        activePreset === preset.id
+                          ? "border-primary/60 bg-primary/10 text-foreground"
+                          : "border-border/50 text-muted-foreground hover:text-foreground hover:border-foreground/30",
+                      )}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
 
               {/* Directive */}
               <Textarea
