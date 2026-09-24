@@ -1039,28 +1039,52 @@ html[data-theme="paper"] {
   }
 
 
-  /* Unified workspace layout */
+  /* Unified workspace layout — full page, no nested scroll prison */
   .studio-unified-workspace {
     display: flex;
     flex-direction: row;
-    overflow: hidden;
+    align-items: flex-start;
+    min-height: calc(100vh - 3.5rem - 2.75rem - 2.5rem);
   }
 
   .studio-context-sidebar {
-    width: 13rem;
+    width: 14rem;
     flex-shrink: 0;
     border-right: 1px solid var(--border);
     padding: 0.75rem 0.5rem;
+    position: sticky;
+    top: 0;
+    max-height: calc(100vh - 3.5rem - 2.75rem - 2.5rem);
     overflow-y: auto;
   }
 
-  /* Studio creation surface */
+  /* Panel cards — visual, full-width thumbnail */
+  .studio-panel-card {
+    width: 100%;
+    text-align: left;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    overflow: hidden;
+    transition: border-color 150ms, background 150ms;
+    background: color-mix(in oklch, var(--card) 60%, transparent);
+  }
+
+  .studio-panel-card:hover {
+    border-color: color-mix(in oklch, var(--primary) 40%, var(--border));
+    background: color-mix(in oklch, var(--card) 90%, transparent);
+  }
+
+  .studio-panel-card-selected {
+    border-color: var(--primary);
+    background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  }
+
+  /* Studio creation surface — grows naturally, no overflow hidden */
   .studio-creation-surface {
+    flex: 1;
     min-width: 0;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    height: 100%;
   }
 
   /* View tabs */
@@ -1092,15 +1116,11 @@ html[data-theme="paper"] {
     border-bottom-color: var(--primary);
   }
 
-  /* Result area */
+  /* Result area — natural height, no forced centering */
   .studio-result-area {
-    flex: 1;
-    min-height: 0;
-    overflow-y: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
     padding: 1.5rem;
     background:
       radial-gradient(circle at 65% 35%, color-mix(in oklch, var(--primary) 6%, transparent), transparent 55%),
@@ -1125,7 +1145,7 @@ html[data-theme="paper"] {
   .studio-result-empty {
     width: 100%;
     max-width: 52rem;
-    aspect-ratio: 16/9;
+    padding: 2rem;
     border-radius: var(--radius);
     border: 1px dashed color-mix(in oklch, var(--border) 60%, transparent);
     display: flex;
@@ -1133,13 +1153,12 @@ html[data-theme="paper"] {
     align-items: center;
     justify-content: center;
     text-align: center;
-    padding: 2rem;
+    min-height: 8rem;
   }
 
-  /* Composer wrap */
+  /* Composer wrap — primary element, sits at top */
   .studio-composer-wrap {
-    flex-shrink: 0;
-    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
     padding: 0.75rem 1rem 1rem;
     background: color-mix(in oklch, var(--card) 80%, transparent);
     display: flex;

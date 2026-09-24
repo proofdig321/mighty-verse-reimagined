@@ -13,11 +13,11 @@ import type { GenerationJobKind } from "@/lib/ai/jobs";
 export type CreativeIntent = "still" | "clip" | "animation" | "gif" | "reel";
 
 const INTENTS: { id: CreativeIntent; label: string; description: string }[] = [
-  { id: "still",     label: "Still",     description: "Single image frame" },
-  { id: "clip",      label: "Clip",      description: "Video clip" },
-  { id: "animation", label: "Animation", description: "Cinematic animation" },
-  { id: "gif",       label: "GIF",       description: "Looping GIF" },
-  { id: "reel",      label: "Reel",      description: "Short-form reel" },
+  { id: "still",     label: "Image",  description: "Generate a still image" },
+  { id: "clip",      label: "Video",  description: "Generate a video clip" },
+  { id: "animation", label: "Animate", description: "Cinematic animation" },
+  { id: "gif",       label: "GIF",    description: "Looping GIF" },
+  { id: "reel",      label: "Reel",   description: "Short-form reel" },
 ];
 
 type Capability = {

@@ -89,7 +89,6 @@ export function StudioCreationSurface({
   onRetryJob: (jobId: string) => void; onCancelJob: (jobId: string) => void;
   onWorkUpdate: (work: StoryboardWorkRecord) => void;
 }) {
-  // ── State ──
   const [intent, setIntent] = useState<CreativeIntent>("still");
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
@@ -108,7 +107,6 @@ export function StudioCreationSurface({
     });
   }
 
-  // ── Derived ──
   const hasStill = Boolean(selected?.still);
   const hasMotion = Boolean(selected?.endpoint);
   const hasSentinel = Boolean(selectedObservation || selectedFrame);
@@ -153,12 +151,12 @@ export function StudioCreationSurface({
     onEnqueue(resolvedKind, extra);
   }
 
-  const generateLabel = intent === "still" ? "Still" : intent === "clip" ? "Video" : intent === "animation" ? "Animate" : intent === "gif" ? "GIF" : "Reel";
+  const generateLabel = intent === "still" ? "Image" : intent === "clip" ? "Video" : intent === "animation" ? "Animate" : intent === "gif" ? "GIF" : "Reel";
 
   return (
     <div className="studio-creation-surface">
 
-      {/* ── View tabs ── */}
+      {/* View tabs */}
       <div className="studio-view-tabs">
         {VIEWS.map(({ id, label, icon: Icon }) => (
           <button key={id} type="button" onClick={() => onSurfaceView(id)}
@@ -171,7 +169,7 @@ export function StudioCreationSurface({
         )}
       </div>
 
-      {/* ── Source view ── */}
+      {/* Source view */}
       {surfaceView === "source" && (
         <div className="studio-result-area overflow-y-auto">
           <div className="w-full max-w-2xl">
@@ -184,12 +182,12 @@ export function StudioCreationSurface({
         </div>
       )}
 
-      {/* ── 2.5D Preview view ── */}
+      {/* 2.5D Preview view */}
       {surfaceView === "preview" && (
         <div className="studio-result-area overflow-y-auto">
           <div className="w-full max-w-4xl space-y-4">
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">2.5D Preview</p>
+              <p className="suite-kicker">2.5D Preview</p>
               <a href={previewHref} className="text-xs text-primary hover:underline">Full Experience →</a>
             </div>
             {intelligence?.holographic && intelligence.holographic.length > 0 ? (
@@ -199,7 +197,7 @@ export function StudioCreationSurface({
                     {layer.still_url
                       ? <img src={layer.still_url} alt="" className="aspect-video w-full rounded-lg object-cover border border-border/40" />
                       : <div className="aspect-video w-full rounded-lg bg-card/40 border border-border/30" />}
-                    <p className="text-[10px] text-muted-foreground truncate">{layer.title ?? `Layer ${i + 1}`}</p>
+                    <p className="suite-kicker normal-case tracking-normal font-normal truncate">{layer.title ?? `Layer ${i + 1}`}</p>
                   </li>
                 ))}
               </ol>
@@ -212,7 +210,7 @@ export function StudioCreationSurface({
                 </div>
               </div>
             )}
-            <p className="text-[10px] text-muted-foreground">
+            <p className="suite-kicker normal-case tracking-normal font-normal">
               Sentinel evidence informs layers — it does not create Scenes.{" "}
               <a href={previewHref} className="text-primary hover:underline">Full Experience →</a>
             </p>
@@ -220,88 +218,13 @@ export function StudioCreationSurface({
         </div>
       )}
 
-      {/* ── Create view ── */}
+      {/* Create view — composer primary at top, result scrolls below */}
       {surfaceView === "create" && (
         <>
-          {/* RESULT AREA */}
-          <div className="studio-result-area">
-            {hasMotion && selected?.endpoint ? (
-              <div className="studio-result-card">
-                <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />
-                <div className="studio-result-actions">
-                  {extensionVideoUri && intentAvailable("clip", capability) && (
-                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                      onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio })}>
-                      Extend
-                    </Button>
-                  )}
-                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                    onClick={() => onEnqueue("gif", { playback_id: motionJob?.result?.playback_id ?? selectedJob?.result?.playback_id, still_url: selected?.still })}>
-                    Export GIF
-                  </Button>
-                  {selected.still && (
-                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
-                      onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
-                      Use as reference
-                    </Button>
-                  )}
-                </div>
-              </div>
-            ) : hasStill && selected?.still ? (
-              <div className="studio-result-card">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={selected.still} alt="" className="w-full aspect-video object-cover rounded-xl" />
-                <div className="studio-result-actions">
-                  {intentAvailable("clip", capability) && (
-                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
-                      onClick={() => { setIntent("clip"); onEnqueue("animate-still", { still_url: selected.still, first_frame_url: selected.still, duration_seconds: durationSeconds, aspect_ratio: aspectRatio }); }}>
-                      Animate
-                    </Button>
-                  )}
-                  <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
-                    onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
-                    Use as reference
-                  </Button>
-                </div>
-              </div>
-            ) : selected ? (
-              <div className="studio-result-empty">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">{selected.kind}</p>
-                <p className="text-base font-semibold text-foreground mt-1">{selected.title}</p>
-                {selected.description && <p className="mt-2 text-sm text-muted-foreground/70 line-clamp-3">{selected.description}</p>}
-                {selected.time && <p className="mt-2 font-mono text-[10px] text-muted-foreground/50">{selected.time}</p>}
-              </div>
-            ) : (
-              <div className="studio-result-empty">
-                <Clapperboard size={28} className="mx-auto text-muted-foreground/20 mb-3" />
-                <p className="text-sm text-muted-foreground/40">Select a panel, then describe what you want to create</p>
-              </div>
-            )}
-
-            {/* Job progress / error — inline with result */}
-            {selectedJob && ["queued","submitted","processing"].includes(selectedJob.status) && (
-              <div className="flex items-center gap-2 mt-3">
-                <span className="text-xs text-muted-foreground animate-pulse" data-generation-status={selectedJob.status}>
-                  {jobUiLabel(selectedJob.status as never)}{selectedJob.progress != null ? ` · ${selectedJob.progress}%` : ""}
-                </span>
-                <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => onCancelJob(selectedJob.job_id)}>Cancel</Button>
-              </div>
-            )}
-            {selectedJob && ["failed","unavailable","blocked"].includes(selectedJob.status) && (
-              <div className="flex items-center gap-2 mt-3">
-                <AlertCircle size={12} className="text-destructive shrink-0" />
-                <span className="text-xs text-destructive">{operatorGenerationMessage(selectedJob.error?.message).operator}</span>
-                {selectedJob.retryable && (
-                  <Button type="button" size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => onRetryJob(selectedJob.job_id)}>Try again</Button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* COMPOSER */}
+          {/* COMPOSER — always visible, full width */}
           <div className="studio-composer-wrap">
 
-            {/* Context header — panel name + sentinel button, one quiet line */}
+            {/* Context header */}
             <div className="studio-context-header">
               {selected ? (
                 <div className="flex items-center gap-2 min-w-0">
@@ -331,13 +254,13 @@ export function StudioCreationSurface({
               )}
             </div>
 
-            {/* Panel details — progressive disclosure */}
+            {/* Panel details */}
             {panelDetailsOpen && selectedPersisted && (
               <div className="studio-panel-details">
                 <div className="grid grid-cols-2 gap-2">
                   {(["camera","camera_movement","framing","environment","characters","transition"] as const).map((field) => (
                     <div key={field}>
-                      <label htmlFor={`pd-${field}`} className="block text-[9px] uppercase tracking-[0.12em] text-muted-foreground mb-0.5 capitalize">
+                      <label htmlFor={`pd-${field}`} className="block suite-kicker mb-0.5 capitalize">
                         {field.replace("_"," ")}
                       </label>
                       <input id={`pd-${field}`}
@@ -350,12 +273,12 @@ export function StudioCreationSurface({
                 </div>
                 <div className="flex items-center gap-2 mt-2">
                   <Button type="button" size="sm" variant="outline" className="h-7" onClick={onSavePanel}>Save</Button>
-                  {selectedPersisted.user_locked && <p className="text-[9px] text-muted-foreground">Authored — AI will not overwrite.</p>}
+                  {selectedPersisted.user_locked && <p className="suite-kicker normal-case tracking-normal font-normal">Authored — AI will not overwrite.</p>}
                 </div>
               </div>
             )}
 
-            {/* Sentinel evidence — progressive disclosure */}
+            {/* Sentinel evidence */}
             {hasSentinel && sentinelOpen && (
               <div className="studio-sentinel-detail">
                 <p className="suite-kicker mb-2">Sentinel evidence — advisory only</p>
@@ -404,16 +327,13 @@ export function StudioCreationSurface({
               </div>
             )}
 
-            {/* COMPOSER BOX — Seedance pattern */}
+            {/* Composer box */}
             <div className="studio-composer">
-
-              {/* Intent pills — top of box */}
               <div className="flex items-center justify-between">
                 <CreativeIntentPicker selected={intent} onSelect={setIntent} capability={capability} />
                 {capability && <span className="suite-kicker normal-case tracking-normal font-normal">{capability.provider}</span>}
               </div>
 
-              {/* Directive — dominant input */}
               <Textarea
                 className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/40"
                 value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
@@ -427,7 +347,6 @@ export function StudioCreationSurface({
                 placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe what you want to create…"}
               />
 
-              {/* References — always visible chips */}
               {allRefThumbs.length > 0 && (
                 <div className="studio-ref-chips">
                   {allRefThumbs.slice(0, refsOpen ? undefined : 6).map((ref, i) => {
@@ -467,13 +386,10 @@ export function StudioCreationSurface({
                 </div>
               )}
 
-              {/* Controls bar + Generate */}
               <div className="studio-composer-bar">
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <select aria-label="Aspect ratio"
-                    className="studio-control-pill"
-                    value={aspectRatio}
-                    onChange={(e) => onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9")}>
+                  <select aria-label="Aspect ratio" className="studio-control-pill"
+                    value={aspectRatio} onChange={(e) => onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9")}>
                     <option value="16:9">16:9</option>
                     <option value="9:16">9:16</option>
                   </select>
@@ -497,7 +413,6 @@ export function StudioCreationSurface({
                 </Button>
               </div>
 
-              {/* Generation feedback */}
               {mediaState.status !== "idle" && (
                 ["failed","unavailable","blocked"].includes(mediaState.status) ? (
                   <p className="text-xs text-destructive">{mediaState.message}</p>
@@ -508,6 +423,80 @@ export function StudioCreationSurface({
                 )
               )}
             </div>
+          </div>
+
+          {/* RESULT — scrolls below composer */}
+          <div className="studio-result-area">
+            {hasMotion && selected?.endpoint ? (
+              <div className="studio-result-card">
+                <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />
+                <div className="studio-result-actions">
+                  {extensionVideoUri && intentAvailable("clip", capability) && (
+                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
+                      onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio })}>
+                      Extend
+                    </Button>
+                  )}
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
+                    onClick={() => onEnqueue("gif", { playback_id: motionJob?.result?.playback_id ?? selectedJob?.result?.playback_id, still_url: selected?.still })}>
+                    Export GIF
+                  </Button>
+                  {selected.still && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
+                      onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
+                      Use as reference
+                    </Button>
+                  )}
+                </div>
+              </div>
+            ) : hasStill && selected?.still ? (
+              <div className="studio-result-card">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={selected.still} alt="" className="w-full aspect-video object-cover rounded-xl" />
+                <div className="studio-result-actions">
+                  {intentAvailable("clip", capability) && (
+                    <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
+                      onClick={() => { setIntent("clip"); onEnqueue("animate-still", { still_url: selected.still, first_frame_url: selected.still, duration_seconds: durationSeconds, aspect_ratio: aspectRatio }); }}>
+                      Animate
+                    </Button>
+                  )}
+                  <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
+                    onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
+                    Use as reference
+                  </Button>
+                </div>
+              </div>
+            ) : selected ? (
+              <div className="studio-result-empty">
+                <p className="suite-kicker mb-1">{selected.kind}</p>
+                <p className="text-base font-semibold text-foreground">{selected.title}</p>
+                {selected.description && <p className="mt-2 text-sm text-muted-foreground/70 line-clamp-3">{selected.description}</p>}
+                {selected.time && <p className="mt-2 font-mono suite-kicker normal-case tracking-normal font-normal">{selected.time}</p>}
+              </div>
+            ) : (
+              <div className="studio-result-empty">
+                <Clapperboard size={24} className="mx-auto text-muted-foreground/20 mb-2" />
+                <p className="text-sm text-muted-foreground/40">Select a panel and describe what you want to create</p>
+              </div>
+            )}
+
+            {selectedJob && ["queued","submitted","processing"].includes(selectedJob.status) && (
+              <div className="flex items-center gap-2 mt-3">
+                <span className="text-xs text-muted-foreground animate-pulse" data-generation-status={selectedJob.status}>
+                  {jobUiLabel(selectedJob.status as never)}{selectedJob.progress != null ? ` · ${selectedJob.progress}%` : ""}
+                </span>
+                <Button type="button" size="sm" variant="ghost" className="h-6 text-[10px]" onClick={() => onCancelJob(selectedJob.job_id)}>Cancel</Button>
+              </div>
+            )}
+            {selectedJob && ["failed","unavailable","blocked"].includes(selectedJob.status) && (
+              <div className="flex items-center gap-2 mt-3">
+                <AlertCircle size={12} className="text-destructive shrink-0" />
+                <span className="text-xs text-destructive">{operatorGenerationMessage(selectedJob.error?.message).operator}</span>
+                {selectedJob.retryable && (
+                  <Button type="button" size="sm" variant="outline" className="h-6 text-[10px]" onClick={() => onRetryJob(selectedJob.job_id)}>Try again</Button>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}

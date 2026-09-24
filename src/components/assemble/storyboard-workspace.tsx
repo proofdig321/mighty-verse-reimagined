@@ -1018,7 +1018,7 @@ export function StoryboardWorkspace({
       />
 
       {/* ── Unified creative workspace ── */}
-      <div className="studio-unified-workspace" style={{ height: 'calc(100vh - 3.5rem - 2.75rem - 2.5rem)' }}>
+      <div className="studio-unified-workspace">
         {/* LEFT — Context sidebar: panels + scenes */}
         <StudioContextSidebar
           universeTitle={universeTitle}
