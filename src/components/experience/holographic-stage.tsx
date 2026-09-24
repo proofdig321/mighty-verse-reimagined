@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type PointerEvent, type TouchEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { Maximize2, Volume2, VolumeX } from "lucide-react";
 import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
@@ -154,9 +154,16 @@ export function HolographicStage({
       return;
     }
     const rect = event.currentTarget.getBoundingClientRect();
-    // Input → MouseViewController → ViewerPose → renderer.
-    // The renderer receives a pose, not raw pointer coordinates.
     controllerRef.current.onPointerMove(event.clientX, event.clientY, rect);
+    poseRef.current = controllerRef.current.getPose();
+  }
+
+  function onTouchMove(event: TouchEvent<HTMLDivElement>) {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    controllerRef.current.onPointerMove(touch.clientX, touch.clientY, rect);
     poseRef.current = controllerRef.current.getPose();
   }
 
@@ -294,6 +301,8 @@ export function HolographicStage({
             ref={cinemaRef}
             onPointerMove={onMove}
             onPointerLeave={onLeave}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onLeave}
           >
             {mural ? (
               <LayerCard layer={mural} active title={layerTitle(mural)} mode={mode} chrome={false}>

@@ -145,6 +145,17 @@ export function StudioCreationSurface({
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
   const [localFirstFrame, setLocalFirstFrame] = useState("");
   const [localLastFrame, setLocalLastFrame] = useState("");
+  const [selectedRefUrls, setSelectedRefUrls] = useState<Set<string>>(new Set());
+
+  function toggleRef(url: string) {
+    setSelectedRefUrls((prev) => {
+      const next = new Set(prev);
+      if (next.has(url)) { next.delete(url); return next; }
+      if (next.size >= 3) return prev; // max 3
+      next.add(url);
+      return next;
+    });
+  }
 
   // ── Derived ──
   const hasStill = Boolean(selected?.still);
@@ -152,11 +163,8 @@ export function StudioCreationSurface({
   const hasSentinel = Boolean(selectedObservation || selectedFrame);
   const hasRefs = references.filter((r) => r.still_url).length > 0 || workFrames.length > 0;
 
-  // Reference stills for reference-motion: gallery refs + work frames
-  const referenceStillUrls = [
-    ...references.map((r) => r.still_url).filter((u): u is string => Boolean(u)),
-    ...workFrames.map((f) => f.still_url),
-  ];
+  // Reference stills for reference-motion: only explicitly selected ones
+  const referenceStillUrls = Array.from(selectedRefUrls);
 
   // Extension URI from the most recent completed motion job
   const extensionVideoUri = selectedJob?.result?.provider_video_uri ?? null;
@@ -500,38 +508,64 @@ export function StudioCreationSurface({
                 </button>
                 {refsOpen && (
                   <div className="flex flex-wrap gap-1.5">
-                    {workFrames.map((frame, i) => (
-                      <button
-                        key={i}
-                        type="button"
-                        title={`${frame.source_title} · ${formatTimelineMs(frame.timestamp_ms)}`}
-                        onClick={() => {
-                          if (!localFirstFrame) { setLocalFirstFrame(frame.still_url); onSetFirstFrame(frame.still_url); }
-                          else if (!localLastFrame) { setLocalLastFrame(frame.still_url); onSetLastFrame(frame.still_url); }
-                        }}
-                        className={cn(
-                          "relative w-14 rounded overflow-hidden border transition-colors",
-                          (localFirstFrame === frame.still_url || firstFrame === frame.still_url) ? "border-primary" :
-                          (localLastFrame === frame.still_url || lastFrame === frame.still_url) ? "border-accent-mv" :
-                          "border-border/50 hover:border-border"
-                        )}
-                      >
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={frame.still_url} alt="" className="aspect-video w-full object-cover" />
-                        {(localFirstFrame === frame.still_url || firstFrame === frame.still_url) && (
-                          <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-primary/80 text-white">1st</span>
-                        )}
-                        {(localLastFrame === frame.still_url || lastFrame === frame.still_url) && (
-                          <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-accent/80 text-white">last</span>
-                        )}
-                      </button>
-                    ))}
-                    {references.filter((r) => r.still_url).map((ref) => (
-                      <div key={ref.asset_id} className="relative w-14 rounded overflow-hidden border border-border/50" title={ref.title}>
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img src={ref.still_url!} alt="" className="aspect-video w-full object-cover" />
-                      </div>
-                    ))}
+                    {workFrames.map((frame, i) => {
+                      const isFirst = localFirstFrame === frame.still_url || firstFrame === frame.still_url;
+                      const isLast = localLastFrame === frame.still_url || lastFrame === frame.still_url;
+                      const isRef = selectedRefUrls.has(frame.still_url);
+                      return (
+                        <button
+                          key={i}
+                          type="button"
+                          title={`${frame.source_title} · ${formatTimelineMs(frame.timestamp_ms)} — tap to toggle reference / 1st / last`}
+                          onClick={() => {
+                            if (!isRef && !isFirst && !isLast) {
+                              toggleRef(frame.still_url);
+                            } else if (isRef) {
+                              toggleRef(frame.still_url);
+                              setLocalFirstFrame(frame.still_url); onSetFirstFrame(frame.still_url);
+                            } else if (isFirst) {
+                              setLocalFirstFrame(""); onSetFirstFrame("");
+                              setLocalLastFrame(frame.still_url); onSetLastFrame(frame.still_url);
+                            } else {
+                              setLocalLastFrame(""); onSetLastFrame("");
+                            }
+                          }}
+                          className={cn(
+                            "relative w-14 rounded overflow-hidden border-2 transition-colors touch-manipulation",
+                            isFirst ? "border-primary" : isLast ? "border-accent-mv" : isRef ? "border-yellow-400" : "border-border/50 hover:border-border"
+                          )}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={frame.still_url} alt="" className="aspect-video w-full object-cover" />
+                          {isFirst && <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-primary/80 text-white">1st</span>}
+                          {isLast && <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-accent/80 text-white">last</span>}
+                          {isRef && !isFirst && !isLast && <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-yellow-500/80 text-white">ref</span>}
+                        </button>
+                      );
+                    })}
+                    {references.filter((r) => r.still_url).map((ref) => {
+                      const isRef = selectedRefUrls.has(ref.still_url!);
+                      return (
+                        <button
+                          key={ref.asset_id}
+                          type="button"
+                          title={`${ref.title} — tap to ${isRef ? "remove" : "add"} reference${!isRef && selectedRefUrls.size >= 3 ? " (max 3)" : ""}`}
+                          disabled={!isRef && selectedRefUrls.size >= 3}
+                          onClick={() => toggleRef(ref.still_url!)}
+                          className={cn(
+                            "relative w-14 rounded overflow-hidden border-2 transition-colors touch-manipulation",
+                            isRef ? "border-yellow-400" : "border-border/50 hover:border-border disabled:opacity-40"
+                          )}
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={ref.still_url!} alt="" className="aspect-video w-full object-cover" />
+                          {isRef && <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-yellow-500/80 text-white">ref</span>}
+                        </button>
+                      );
+                    })}
+                    {selectedRefUrls.size > 0 && (
+                      <p className="w-full text-[9px] text-muted-foreground/60">{selectedRefUrls.size}/3 references selected</p>
+                    )}
                   </div>
                 )}
               </div>
