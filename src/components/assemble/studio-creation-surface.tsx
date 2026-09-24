@@ -167,7 +167,7 @@ export function StudioCreationSurface({
           </button>
         ))}
         {universeTitle && (
-          <span className="ml-auto text-[10px] text-muted-foreground/50 truncate max-w-[12rem]">{universeTitle}</span>
+          <span className="suite-kicker ml-auto normal-case tracking-normal font-normal truncate max-w-[12rem]">{universeTitle}</span>
         )}
       </div>
 
