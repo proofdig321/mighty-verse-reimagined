@@ -2,9 +2,7 @@
 
 import Link from "next/link";
 import { useRef } from "react";
-import MediaVisual from "@/components/media-visual";
-import ArtworkFrame from "@/components/artwork-frame";
-import { muxPlaybackIdFromRef } from "@/lib/media/thumbnail";
+import { muxPlaybackIdFromRef, muxThumbnailUrl } from "@/lib/media/thumbnail";
 
 export function UniverseCard({
   masterId,
@@ -23,6 +21,8 @@ export function UniverseCard({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const pid = visualPlaybackId ? (muxPlaybackIdFromRef(visualPlaybackId) ?? visualPlaybackId) : null;
+  const isMux = pid && (visualProvider === "mux" || !visualPlaybackId?.startsWith("http"));
+  const posterUrl = isMux && pid ? muxThumbnailUrl(pid, 3, 640) : null;
 
   function playVideo() {
     const v = videoRef.current;
@@ -45,27 +45,23 @@ export function UniverseCard({
       onTouchStart={playVideo}
     >
       <div className="artifact-card-media">
-        {pid ? (
-          <>
-            <MediaVisual
-              playbackId={pid}
-              provider={visualProvider}
-              title={title ?? "Universe"}
-              aspectRatio="16/9"
-            />
-            <video
-              ref={videoRef}
-              className="artifact-card-hover-video"
-              src={`https://stream.mux.com/${pid}.m3u8`}
-              muted
-              loop
-              playsInline
-              preload="none"
-              aria-hidden="true"
-            />
-          </>
+        {posterUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={posterUrl} alt={title ?? ""} />
         ) : (
-          <ArtworkFrame artworkUrl={null} alt={title ?? ""} aspectRatio="16/9" />
+          <div className="artifact-card-placeholder" />
+        )}
+        {pid && (
+          <video
+            ref={videoRef}
+            className="artifact-card-hover-video"
+            src={`https://stream.mux.com/${pid}.m3u8`}
+            muted
+            loop
+            playsInline
+            preload="none"
+            aria-hidden="true"
+          />
         )}
       </div>
       <div className="artifact-copy">

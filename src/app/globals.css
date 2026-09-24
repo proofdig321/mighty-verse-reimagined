@@ -273,7 +273,8 @@ html[data-theme="paper"] {
     background: color-mix(in oklch, var(--background) 94%, var(--primary));
   }
 
-  /* ── Hero base ── */
+
+  /* Hero base */
   .public-hero {
     position: relative;
     overflow: hidden;
@@ -281,12 +282,11 @@ html[data-theme="paper"] {
     background: linear-gradient(115deg, color-mix(in oklch, var(--card) 82%, var(--primary)), var(--background) 65%);
   }
 
-  /* When a video is present the gradient background is replaced by the video scrim */
   .public-hero[data-hero-has-video="true"] {
-    background: transparent;
+    background: #000;
   }
 
-  /* ── Hero video background ── */
+  /* Hero video background */
   .hero-video-bg {
     position: absolute;
     inset: 0;
@@ -300,54 +300,43 @@ html[data-theme="paper"] {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    object-position: center 30%;
+    object-position: center 25%;
+    opacity: 0.5;
   }
 
-  .hero-video-still {
-    /* still image fallback — same sizing */
-  }
-
+  /* Single clean vignette */
   .hero-video-scrim {
     position: absolute;
     inset: 0;
-    background:
-      linear-gradient(to bottom,
-        color-mix(in oklch, var(--background) 55%, transparent) 0%,
-        color-mix(in oklch, var(--background) 20%, transparent) 40%,
-        color-mix(in oklch, var(--background) 70%, transparent) 100%
-      ),
-      linear-gradient(to right,
-        color-mix(in oklch, var(--background) 60%, transparent) 0%,
-        transparent 60%
-      );
+    background: linear-gradient(
+      105deg,
+      rgba(0,0,0,0.75) 0%,
+      rgba(0,0,0,0.35) 50%,
+      rgba(0,0,0,0.55) 100%
+    );
   }
 
-  /* ── Hero trailer trigger — hidden visually, stacked under proxy button ── */
+  /* Hero trailer trigger — hidden, wired via HeroTrailerWire */
   .hero-trailer-trigger {
     position: absolute;
+    width: 1px;
+    height: 1px;
     opacity: 0;
     pointer-events: none;
-    width: 0;
-    height: 0;
     overflow: hidden;
   }
 
-  /* Proxy button in the actions row clicks the real trigger via JS */
-  .hero-trailer-proxy {
-    cursor: pointer;
-  }
-
-  /* ── Trailer modal ── */
+  /* Trailer modal */
   .hero-trailer-modal {
     position: fixed;
     inset: 0;
     z-index: 9999;
-    background: rgba(0, 0, 0, 0.88);
+    background: rgba(0,0,0,0.92);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 1rem;
-    animation: hero-modal-in 200ms ease;
+    animation: hero-modal-in 180ms ease;
   }
 
   @keyframes hero-modal-in {
@@ -389,7 +378,7 @@ html[data-theme="paper"] {
     cursor: pointer;
   }
 
-  /* ── Parallax layers ── */
+  /* Parallax layers */
   .public-hero-parallax {
     position: relative;
     isolation: isolate;
@@ -402,6 +391,7 @@ html[data-theme="paper"] {
     will-change: transform;
   }
 
+  /* Subtle colour bloom — only when no video */
   .public-hero-layer-back {
     background:
       radial-gradient(circle at 22% 18%, color-mix(in oklch, var(--accent-mv) 28%, transparent), transparent 42%),
@@ -413,23 +403,11 @@ html[data-theme="paper"] {
     );
   }
 
-  /* When video is present, tone down the gradient blobs so they don't fight the video */
-  .public-hero[data-hero-has-video="true"] .public-hero-layer-back {
-    opacity: 0.35;
-  }
-
+  /* Hide gradient blobs and diagonal grid entirely when video is present */
+  .public-hero[data-hero-has-video="true"] .public-hero-layer-back,
+  .public-hero[data-hero-has-video="true"] .public-hero-layer-mid,
   .public-hero-layer-mid {
-    background: repeating-linear-gradient(135deg, transparent 0 18px, color-mix(in oklch, var(--primary) 13%, transparent) 19px 20px);
-    opacity: 0.45;
-    transform: translate3d(
-      calc(var(--hero-px, 0) * var(--hero-parallax, 0.75) * -88px),
-      calc((var(--hero-py, 0) * var(--hero-parallax, 0.75) * -40px) + (var(--hero-scroll, 0) * 64px)),
-      0
-    );
-  }
-
-  .public-hero[data-hero-has-video="true"] .public-hero-layer-mid {
-    opacity: 0.18;
+    display: none;
   }
 
   .public-hero-content {
@@ -442,12 +420,22 @@ html[data-theme="paper"] {
     );
   }
 
+  /* Force white text over video */
+  .public-hero[data-hero-has-video="true"] .public-hero-content h1,
+  .public-hero[data-hero-has-video="true"] .public-hero-content p:not(.text-accent-mv) {
+    color: #fff;
+  }
+
+  .public-hero[data-hero-has-video="true"] .public-hero-content .text-muted-foreground {
+    color: rgba(255,255,255,0.62);
+  }
+
   .public-hero[data-public-hero="page"] .public-hero-content,
   .public-hero[data-public-hero="page"] .public-hero-layer {
     transform: none;
   }
 
-  /* ── Kinetic cycler ── */
+  /* Kinetic cycler */
   .kinetic-cycler {
     display: inline-block;
     color: var(--accent-mv);
@@ -462,14 +450,14 @@ html[data-theme="paper"] {
 
   .kinetic-cycler[data-visible="false"] {
     opacity: 0;
-    transform: translateY(6px);
+    transform: translateY(8px);
   }
 
-  /* ── Scroll reveal ── */
+  /* Scroll reveal */
   .scroll-reveal {
     opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 500ms ease, transform 500ms ease;
+    transform: translateY(16px);
+    transition: opacity 480ms ease, transform 480ms ease;
   }
 
   .scroll-reveal[data-revealed="true"] {
@@ -478,28 +466,32 @@ html[data-theme="paper"] {
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .scroll-reveal {
-      opacity: 1;
-      transform: none;
-      transition: none;
-    }
-    .kinetic-cycler {
-      transition: none;
-    }
+    .scroll-reveal { opacity: 1; transform: none; transition: none; }
+    .kinetic-cycler { transition: none; }
   }
 
-  /* ── Artifact card hover video ── */
+  /* Universe card media — fixed aspect ratio container */
   .artifact-card-media {
     position: relative;
+    aspect-ratio: 16/9;
     overflow: hidden;
+    background: var(--card);
   }
 
-  .artifact-card-hover-video {
+  /* All direct children fill the container */
+  .artifact-card-media > * {
     position: absolute;
     inset: 0;
     width: 100%;
     height: 100%;
+  }
+
+  .artifact-card-media img,
+  .artifact-card-media video {
     object-fit: cover;
+  }
+
+  .artifact-card-hover-video {
     opacity: 0;
     transition: opacity 300ms ease;
     pointer-events: none;
@@ -510,15 +502,10 @@ html[data-theme="paper"] {
     opacity: 1;
   }
 
-  /* On touch devices show video on tap (handled via JS play) */
-  @media (hover: none) {
-    .artifact-card-hover-video {
-      opacity: 0;
-    }
-    .artifact-card-hover-video.playing {
-      opacity: 1;
-    }
+  .artifact-card-placeholder {
+    background: linear-gradient(145deg, oklch(0.22 0.06 290), oklch(0.16 0.04 280));
   }
+
 
   .artifact-card {
     position: relative;

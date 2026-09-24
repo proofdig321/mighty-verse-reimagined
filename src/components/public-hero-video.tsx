@@ -3,11 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { muxPlaybackIdFromRef } from "@/lib/media/thumbnail";
 
-/**
- * Muted autoplay background video for the hero.
- * Falls back to the still image if video cannot play (mobile data-saver, etc).
- * Also owns the "Watch Trailer" fullscreen modal.
- */
 export function PublicHeroVideo({
   playbackId,
   stillUrl,
@@ -17,54 +12,81 @@ export function PublicHeroVideo({
   stillUrl: string | null;
   title: string;
 }) {
-  const videoRef = useRef<HTMLVideoElement>(null);
+  const bgRef = useRef<HTMLVideoElement>(null);
+  const modalRef = useRef<HTMLVideoElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
-  const [videoFailed, setVideoFailed] = useState(false);
+  const [bgFailed, setBgFailed] = useState(false);
   const pid = muxPlaybackIdFromRef(playbackId) ?? playbackId;
   const hlsUrl = `https://stream.mux.com/${pid}.m3u8`;
 
-  useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
-    // HLS via native (Safari/iOS) or fall back gracefully
+  // Wire hls.js to a video element. Returns cleanup fn.
+  async function attachHls(video: HTMLVideoElement, onFail?: () => void) {
     if (video.canPlayType("application/vnd.apple.mpegurl")) {
       video.src = hlsUrl;
-    } else {
-      // For Chrome/Firefox load hls.js lazily — if it fails, videoFailed handles it
-      import("hls.js").then(({ default: Hls }) => {
-        if (!Hls.isSupported()) { setVideoFailed(true); return; }
-        const hls = new Hls({ autoStartLoad: true, startLevel: 0, maxBufferLength: 8 });
-        hls.loadSource(hlsUrl);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) setVideoFailed(true); });
-        return () => hls.destroy();
-      }).catch(() => setVideoFailed(true));
+      return;
     }
+    try {
+      const { default: Hls } = await import("hls.js");
+      if (!Hls.isSupported()) { onFail?.(); return; }
+      const hls = new Hls({ autoStartLoad: true, startLevel: 0, maxBufferLength: 12 });
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+      hls.on(Hls.Events.ERROR, (_e, data) => { if (data.fatal) { onFail?.(); hls.destroy(); } });
+      // store cleanup on the element so we can call it on unmount
+      (video as HTMLVideoElement & { _hlsDestroy?: () => void })._hlsDestroy = () => hls.destroy();
+    } catch {
+      onFail?.();
+    }
+  }
+
+  // Background video
+  useEffect(() => {
+    const video = bgRef.current;
+    if (!video) return;
+    void attachHls(video, () => setBgFailed(true));
+    return () => {
+      const v = video as HTMLVideoElement & { _hlsDestroy?: () => void };
+      v._hlsDestroy?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hlsUrl]);
+
+  // Modal video — attach hls.js when modal opens
+  useEffect(() => {
+    if (!modalOpen) return;
+    const video = modalRef.current;
+    if (!video) return;
+    void attachHls(video);
+    return () => {
+      const v = video as HTMLVideoElement & { _hlsDestroy?: () => void };
+      v._hlsDestroy?.();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen, hlsUrl]);
 
   return (
     <>
-      {/* Background layer */}
+      {/* Background */}
       <div className="hero-video-bg" aria-hidden="true">
-        {!videoFailed ? (
+        {!bgFailed ? (
           <video
-            ref={videoRef}
+            ref={bgRef}
             autoPlay
             muted
             loop
             playsInline
             poster={stillUrl ?? undefined}
-            onError={() => setVideoFailed(true)}
+            onError={() => setBgFailed(true)}
             className="hero-video-el"
           />
         ) : stillUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={stillUrl} alt="" className="hero-video-el hero-video-still" />
+          <img src={stillUrl} alt="" className="hero-video-el" />
         ) : null}
         <div className="hero-video-scrim" />
       </div>
 
-      {/* Trailer modal trigger — exported as data attr so parent can wire a button */}
+      {/* Trailer modal */}
       {modalOpen && (
         <div
           className="hero-trailer-modal"
@@ -83,27 +105,25 @@ export function PublicHeroVideo({
               ✕
             </button>
             <video
+              ref={modalRef}
               autoPlay
               controls
               playsInline
               poster={stillUrl ?? undefined}
               className="hero-trailer-video"
-              src={`https://stream.mux.com/${pid}.m3u8`}
             />
           </div>
         </div>
       )}
 
-      {/* Expose open fn via custom event so the server-rendered button can trigger it */}
+      {/* Hidden trigger — clicked by HeroTrailerWire via data-hero-trailer-proxy */}
       <button
         type="button"
         className="hero-trailer-trigger"
         data-hero-trailer-trigger=""
         aria-label={`Watch ${title} trailer`}
         onClick={() => setModalOpen(true)}
-      >
-        Watch Trailer
-      </button>
+      />
     </>
   );
 }
