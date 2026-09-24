@@ -4,12 +4,11 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
-import ArtworkFrame from "@/components/artwork-frame";
-import MediaVisual from "@/components/media-visual";
 import { PublicHero } from "@/components/public-hero";
 import { KineticCycler } from "@/components/kinetic-cycler";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { HeroTrailerWire } from "@/components/hero-trailer-wire";
+import { UniverseCard } from "@/components/universe-card";
 import { Button } from "@/components/ui/button";
 import { muxStillFromPlayback } from "@/lib/media/thumbnail";
 
@@ -24,14 +23,10 @@ export default async function HomePage() {
     (w: DiscoveryUniverse) => !!w.title && w.canonical_type === "universe"
   );
 
-  // First universe with video drives the hero background
   const heroUniverse = featured.find((w) => w.visual_playback_id) ?? featured[0] ?? null;
   const heroVideoId = heroUniverse?.visual_playback_id ?? null;
-  const heroStill = heroVideoId
-    ? muxStillFromPlayback(heroVideoId, 4, 1920)
-    : null;
+  const heroStill = heroVideoId ? muxStillFromPlayback(heroVideoId, 4, 1920) : null;
 
-  // Kinetic cycler labels — universe titles + fallback
   const cyclerLabels =
     featured.length > 0
       ? featured.map((w) => w.title ?? "Universe").slice(0, 8)
@@ -66,13 +61,11 @@ export default async function HomePage() {
                 Explore Universes
               </Button>
             </Link>
-            {/* Trailer button — wired by PublicHeroVideo's trigger button via CSS stacking */}
             {heroVideoId ? (
               <Button
                 variant="outline"
-                className="h-11 px-6 text-sm hero-trailer-proxy"
+                className="h-11 px-6 text-sm"
                 data-hero-trailer-proxy=""
-                type="button"
               >
                 Watch Trailer
               </Button>
@@ -112,81 +105,14 @@ export default async function HomePage() {
           <div className="artifact-grid-wide">
             {featured.map((w: DiscoveryUniverse, i) => (
               <ScrollReveal key={w.master_id} delay={i * 80}>
-                <Link
-                  href={`/worlds/${w.master_id}`}
-                  className="artifact-card group"
-                  data-universe-card={w.master_id}
-                >
-                  <div className="artifact-card-media">
-                    {w.visual_playback_id ? (
-                      <>
-                        {/* Static poster — always visible */}
-                        <MediaVisual
-                          playbackId={w.visual_playback_id}
-                          provider={w.visual_provider}
-                          title={w.title ?? "Universe"}
-                          aspectRatio="16/9"
-                        />
-                        {/* Hover video preview */}
-                        <video
-                          className="artifact-card-hover-video"
-                          src={`https://stream.mux.com/${w.visual_playback_id}.m3u8`}
-                          muted
-                          loop
-                          playsInline
-                          preload="none"
-                          aria-hidden="true"
-                          onMouseEnter={(e) => {
-                            const v = e.currentTarget;
-                            v.load();
-                            void v.play().catch(() => null);
-                          }}
-                          onMouseLeave={(e) => {
-                            e.currentTarget.pause();
-                          }}
-                          onTouchStart={(e) => {
-                            const v = e.currentTarget;
-                            v.load();
-                            void v.play().catch(() => null);
-                          }}
-                        />
-                      </>
-                    ) : (
-                      <ArtworkFrame
-                        artworkUrl={null}
-                        alt={w.title ?? ""}
-                        aspectRatio="16/9"
-                      />
-                    )}
-                  </div>
-                  <div className="artifact-copy">
-                    <div className="flex items-start justify-between gap-2">
-                      <p
-                        className="text-base font-semibold text-foreground truncate group-hover:opacity-80 transition-opacity"
-                        style={{ fontFamily: "var(--font-display, inherit)" }}
-                      >
-                        {w.title}
-                      </p>
-                      <span
-                        className="shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded border"
-                        style={{
-                          color: "var(--accent-mv)",
-                          borderColor: "color-mix(in oklch, var(--accent-mv) 40%, transparent)",
-                        }}
-                      >
-                        Universe
-                      </span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground truncate">
-                      {w.attribution_roles.length > 0
-                        ? w.attribution_roles.map((r) => r.replace(/-/g, " ")).join(", ")
-                        : "Various Artists"}
-                    </p>
-                    <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                      <span>{w.projections.length} Creative Moment{w.projections.length !== 1 ? "s" : ""}</span>
-                    </div>
-                  </div>
-                </Link>
+                <UniverseCard
+                  masterId={w.master_id}
+                  title={w.title}
+                  visualPlaybackId={w.visual_playback_id}
+                  visualProvider={w.visual_provider}
+                  attributionRoles={w.attribution_roles}
+                  projectionCount={w.projections.length}
+                />
               </ScrollReveal>
             ))}
           </div>
@@ -212,12 +138,7 @@ export default async function HomePage() {
             ].map(({ icon, label, sub }) => (
               <ScrollReveal key={label}>
                 <div className="bg-card px-5 py-6 h-full">
-                  <span
-                    className="text-xl"
-                    style={{ color: "var(--accent-mv)" }}
-                  >
-                    {icon}
-                  </span>
+                  <span className="text-xl" style={{ color: "var(--accent-mv)" }}>{icon}</span>
                   <p className="mt-3 text-sm font-semibold text-foreground">{label}</p>
                   <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
                 </div>
