@@ -11,32 +11,83 @@ function bindHeroParallax(surface: HTMLDivElement) {
     surface.style.setProperty("--hero-parallax", String(HOLOGRAPHIC_PARALLAX_STRENGTH));
   }
 
+  function getScroll() {
+    const box = surface.getBoundingClientRect();
+    return Math.min(1, Math.max(0, window.scrollY / Math.max(1, box.height)));
+  }
+
   function onPointer(event: PointerEvent) {
     const box = surface.getBoundingClientRect();
     const x = (event.clientX - box.left) / Math.max(1, box.width) - 0.5;
     const y = (event.clientY - box.top) / Math.max(1, box.height) - 0.5;
-    const scroll = Math.min(1, Math.max(0, window.scrollY / Math.max(1, box.height)));
-    apply(x, y, scroll);
+    apply(x, y, getScroll());
+  }
+
+  function onTouch(event: TouchEvent) {
+    const touch = event.touches[0];
+    if (!touch) return;
+    const box = surface.getBoundingClientRect();
+    const x = (touch.clientX - box.left) / Math.max(1, box.width) - 0.5;
+    const y = (touch.clientY - box.top) / Math.max(1, box.height) - 0.5;
+    apply(x, y, getScroll());
   }
 
   function onScroll() {
-    const box = surface.getBoundingClientRect();
-    const scroll = Math.min(1, Math.max(0, window.scrollY / Math.max(1, box.height)));
-    apply(Number(surface.style.getPropertyValue("--hero-px") || 0), Number(surface.style.getPropertyValue("--hero-py") || 0), scroll);
+    const px = Number(surface.style.getPropertyValue("--hero-px") || 0);
+    const py = Number(surface.style.getPropertyValue("--hero-py") || 0);
+    apply(px, py, getScroll());
   }
 
   function onLeave() {
-    apply(0, 0, Math.min(1, Math.max(0, window.scrollY / Math.max(1, surface.getBoundingClientRect().height))));
+    apply(0, 0, getScroll());
+  }
+
+  // Gyroscope for mobile — DeviceOrientationEvent
+  let gyroCleanup: (() => void) | null = null;
+  function bindGyro() {
+    function onOrientation(event: DeviceOrientationEvent) {
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      // gamma = left/right tilt (-90 to 90), beta = front/back tilt (-180 to 180)
+      const x = Math.max(-0.5, Math.min(0.5, (event.gamma ?? 0) / 45));
+      const y = Math.max(-0.5, Math.min(0.5, ((event.beta ?? 0) - 45) / 60));
+      apply(x, y, getScroll());
+    }
+    window.addEventListener("deviceorientation", onOrientation, { passive: true });
+    gyroCleanup = () => window.removeEventListener("deviceorientation", onOrientation);
+  }
+
+  // Request gyro permission on iOS 13+
+  if (typeof DeviceOrientationEvent !== "undefined") {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const DOE = DeviceOrientationEvent as any;
+    if (typeof DOE.requestPermission === "function") {
+      // iOS — bind on first touch to avoid permission prompt on load
+      const onFirstTouch = () => {
+        DOE.requestPermission().then((state: string) => {
+          if (state === "granted") bindGyro();
+        }).catch(() => null);
+        surface.removeEventListener("touchstart", onFirstTouch);
+      };
+      surface.addEventListener("touchstart", onFirstTouch, { passive: true });
+    } else {
+      bindGyro();
+    }
   }
 
   apply(0, 0, 0);
   surface.addEventListener("pointermove", onPointer);
   surface.addEventListener("pointerleave", onLeave);
+  surface.addEventListener("touchmove", onTouch, { passive: true });
+  surface.addEventListener("touchend", onLeave, { passive: true });
   window.addEventListener("scroll", onScroll, { passive: true });
+
   return () => {
     surface.removeEventListener("pointermove", onPointer);
     surface.removeEventListener("pointerleave", onLeave);
+    surface.removeEventListener("touchmove", onTouch);
+    surface.removeEventListener("touchend", onLeave);
     window.removeEventListener("scroll", onScroll);
+    gyroCleanup?.();
   };
 }
 

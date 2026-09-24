@@ -273,6 +273,7 @@ html[data-theme="paper"] {
     background: color-mix(in oklch, var(--background) 94%, var(--primary));
   }
 
+  /* ── Hero base ── */
   .public-hero {
     position: relative;
     overflow: hidden;
@@ -280,6 +281,115 @@ html[data-theme="paper"] {
     background: linear-gradient(115deg, color-mix(in oklch, var(--card) 82%, var(--primary)), var(--background) 65%);
   }
 
+  /* When a video is present the gradient background is replaced by the video scrim */
+  .public-hero[data-hero-has-video="true"] {
+    background: transparent;
+  }
+
+  /* ── Hero video background ── */
+  .hero-video-bg {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .hero-video-el {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center 30%;
+  }
+
+  .hero-video-still {
+    /* still image fallback — same sizing */
+  }
+
+  .hero-video-scrim {
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(to bottom,
+        color-mix(in oklch, var(--background) 55%, transparent) 0%,
+        color-mix(in oklch, var(--background) 20%, transparent) 40%,
+        color-mix(in oklch, var(--background) 70%, transparent) 100%
+      ),
+      linear-gradient(to right,
+        color-mix(in oklch, var(--background) 60%, transparent) 0%,
+        transparent 60%
+      );
+  }
+
+  /* ── Hero trailer trigger — hidden visually, stacked under proxy button ── */
+  .hero-trailer-trigger {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+
+  /* Proxy button in the actions row clicks the real trigger via JS */
+  .hero-trailer-proxy {
+    cursor: pointer;
+  }
+
+  /* ── Trailer modal ── */
+  .hero-trailer-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: rgba(0, 0, 0, 0.88);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    animation: hero-modal-in 200ms ease;
+  }
+
+  @keyframes hero-modal-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+  }
+
+  .hero-trailer-inner {
+    position: relative;
+    width: 100%;
+    max-width: 64rem;
+    aspect-ratio: 16/9;
+    background: #000;
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .hero-trailer-video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .hero-trailer-close {
+    position: absolute;
+    top: 0.75rem;
+    right: 0.75rem;
+    z-index: 10;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid rgba(255,255,255,0.2);
+    cursor: pointer;
+  }
+
+  /* ── Parallax layers ── */
   .public-hero-parallax {
     position: relative;
     isolation: isolate;
@@ -303,6 +413,11 @@ html[data-theme="paper"] {
     );
   }
 
+  /* When video is present, tone down the gradient blobs so they don't fight the video */
+  .public-hero[data-hero-has-video="true"] .public-hero-layer-back {
+    opacity: 0.35;
+  }
+
   .public-hero-layer-mid {
     background: repeating-linear-gradient(135deg, transparent 0 18px, color-mix(in oklch, var(--primary) 13%, transparent) 19px 20px);
     opacity: 0.45;
@@ -311,6 +426,10 @@ html[data-theme="paper"] {
       calc((var(--hero-py, 0) * var(--hero-parallax, 0.75) * -40px) + (var(--hero-scroll, 0) * 64px)),
       0
     );
+  }
+
+  .public-hero[data-hero-has-video="true"] .public-hero-layer-mid {
+    opacity: 0.18;
   }
 
   .public-hero-content {
@@ -326,6 +445,79 @@ html[data-theme="paper"] {
   .public-hero[data-public-hero="page"] .public-hero-content,
   .public-hero[data-public-hero="page"] .public-hero-layer {
     transform: none;
+  }
+
+  /* ── Kinetic cycler ── */
+  .kinetic-cycler {
+    display: inline-block;
+    color: var(--accent-mv);
+    transition: opacity 350ms ease, transform 350ms ease;
+    will-change: opacity, transform;
+  }
+
+  .kinetic-cycler[data-visible="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .kinetic-cycler[data-visible="false"] {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  /* ── Scroll reveal ── */
+  .scroll-reveal {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 500ms ease, transform 500ms ease;
+  }
+
+  .scroll-reveal[data-revealed="true"] {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-reveal {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+    .kinetic-cycler {
+      transition: none;
+    }
+  }
+
+  /* ── Artifact card hover video ── */
+  .artifact-card-media {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .artifact-card-hover-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0;
+    transition: opacity 300ms ease;
+    pointer-events: none;
+  }
+
+  .artifact-card:hover .artifact-card-hover-video,
+  .artifact-card:focus-within .artifact-card-hover-video {
+    opacity: 1;
+  }
+
+  /* On touch devices show video on tap (handled via JS play) */
+  @media (hover: none) {
+    .artifact-card-hover-video {
+      opacity: 0;
+    }
+    .artifact-card-hover-video.playing {
+      opacity: 1;
+    }
   }
 
   .artifact-card {

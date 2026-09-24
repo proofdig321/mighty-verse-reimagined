@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { PublicHeroParallax } from "@/components/public-hero-parallax";
+import { PublicHeroVideo } from "@/components/public-hero-video";
 
 export type PublicHeroStat = {
   n: ReactNode;
@@ -15,6 +16,12 @@ export type PublicHeroProps = {
   aside?: ReactNode;
   stats?: PublicHeroStat[];
   size?: "display" | "page";
+  /** Mux playback ID for the background video (display size only) */
+  videoPlaybackId?: string | null;
+  /** Still image URL shown while video loads or as fallback */
+  stillUrl?: string | null;
+  /** Universe title used for trailer modal aria-label */
+  universeTitle?: string;
 };
 
 /**
@@ -31,79 +38,92 @@ export function PublicHero({
   aside,
   stats,
   size = "page",
+  videoPlaybackId,
+  stillUrl,
+  universeTitle = "Mighty Verse",
 }: PublicHeroProps) {
   const display = size === "display";
+  const hasVideo = display && Boolean(videoPlaybackId);
 
   return (
     <section
       className="public-hero relative overflow-hidden"
       data-public-hero={size}
+      data-hero-has-video={hasVideo ? "true" : "false"}
     >
+      {hasVideo && videoPlaybackId ? (
+        <PublicHeroVideo
+          playbackId={videoPlaybackId}
+          stillUrl={stillUrl ?? null}
+          title={universeTitle}
+        />
+      ) : null}
+
       <PublicHeroParallax enabled={display}>
-      <div
-        className={`relative z-10 mx-auto max-w-7xl px-6 ${
-          display ? "py-24 md:py-36" : "py-10 md:py-14"
-        }`}
-      >
         <div
-          className={
-            aside
-              ? "flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"
-              : undefined
-          }
+          className={`relative z-10 mx-auto max-w-7xl px-6 ${
+            display ? "py-24 md:py-36" : "py-10 md:py-14"
+          }`}
         >
-          <div className={display ? "max-w-3xl space-y-7" : "max-w-3xl space-y-3"}>
-            {kicker ? <div className="text-xs text-muted-foreground">{kicker}</div> : null}
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
-              {eyebrow}
-            </p>
-            <h1
-              className={
-                display
-                  ? "text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl"
-                  : "text-3xl font-semibold tracking-tight text-foreground md:text-5xl"
-              }
-              style={{ fontFamily: "var(--font-display, inherit)" }}
-            >
-              {title}
-            </h1>
-            {description ? (
-              <div
+          <div
+            className={
+              aside
+                ? "flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between"
+                : undefined
+            }
+          >
+            <div className={display ? "max-w-3xl space-y-7" : "max-w-3xl space-y-3"}>
+              {kicker ? <div className="text-xs text-muted-foreground">{kicker}</div> : null}
+              <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
+                {eyebrow}
+              </p>
+              <h1
                 className={
                   display
-                    ? "max-w-lg text-lg leading-relaxed text-muted-foreground"
-                    : "max-w-2xl text-sm text-muted-foreground"
+                    ? "text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl"
+                    : "text-3xl font-semibold tracking-tight text-foreground md:text-5xl"
                 }
+                style={{ fontFamily: "var(--font-display, inherit)" }}
               >
-                {description}
-              </div>
-            ) : null}
-            {actions ? (
-              <div className={`flex flex-wrap gap-3 ${display ? "pt-2" : "pt-1"}`}>
-                {actions}
-              </div>
-            ) : null}
-          </div>
-          {aside ? <div className="flex shrink-0 flex-wrap items-center gap-2">{aside}</div> : null}
-        </div>
-        {stats && stats.length > 0 ? (
-          <div className="mt-16 flex flex-wrap gap-8 border-t border-border/40 pt-8">
-            {stats.map(({ n, label }) => (
-              <div key={label} className="flex items-baseline gap-2">
-                <span
-                  className="text-3xl font-semibold text-foreground"
-                  style={{ fontFamily: "var(--font-display, inherit)" }}
+                {title}
+              </h1>
+              {description ? (
+                <div
+                  className={
+                    display
+                      ? "max-w-lg text-lg leading-relaxed text-muted-foreground"
+                      : "max-w-2xl text-sm text-muted-foreground"
+                  }
                 >
-                  {n}
-                </span>
-                <span className="text-xs uppercase tracking-widest text-muted-foreground">
-                  {label}
-                </span>
-              </div>
-            ))}
+                  {description}
+                </div>
+              ) : null}
+              {actions ? (
+                <div className={`flex flex-wrap gap-3 ${display ? "pt-2" : "pt-1"}`}>
+                  {actions}
+                </div>
+              ) : null}
+            </div>
+            {aside ? <div className="flex shrink-0 flex-wrap items-center gap-2">{aside}</div> : null}
           </div>
-        ) : null}
-      </div>
+          {stats && stats.length > 0 ? (
+            <div className="mt-16 flex flex-wrap gap-8 border-t border-border/40 pt-8">
+              {stats.map(({ n, label }) => (
+                <div key={label} className="flex items-baseline gap-2">
+                  <span
+                    className="text-3xl font-semibold text-foreground"
+                    style={{ fontFamily: "var(--font-display, inherit)" }}
+                  >
+                    {n}
+                  </span>
+                  <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                    {label}
+                  </span>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
       </PublicHeroParallax>
     </section>
   );
