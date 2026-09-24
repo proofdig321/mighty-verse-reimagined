@@ -3,15 +3,15 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { AlertCircle, Film, Layers, Clapperboard, Sparkles, ChevronDown, ChevronUp, Plus, X } from "lucide-react";
+import { AlertCircle, Film, Layers, Clapperboard, Sparkles, ChevronDown, ChevronUp, Plus, X, ImagePlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
-import { CreativeIntentPicker, resolveKind, intentAvailable } from "./creative-operation";
-import type { CreativeIntent } from "./creative-operation";
+import { CreativeIntentPicker, resolveKind, intentAvailable, describeWorkflow, modeAvailable } from "./creative-operation";
+import type { CreativeIntent, Capability } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
@@ -81,7 +81,7 @@ export function StudioCreationSurface({
   activeReferenceUrls: string[];
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
   workFrames: { source_title: string; timestamp_ms: number; still_url: string; panel_id: string | null }[];
-  capability: { provider: string; configured: boolean; text?: boolean; image?: boolean; video?: boolean; label: string } | null;
+  capability: Capability & { provider?: string; label?: string; models?: { text: string; image: string; video: string } } | null;
   onDraftChange: (patch: Partial<StoryboardPanelRecord>) => void; onSavePanel: () => void;
   onGenerateStill: () => void; onEnqueue: (kind: GenerationJobKind, extra?: Record<string, unknown>) => void;
   onSetFirstFrame: (url: string) => void; onSetLastFrame: (url: string) => void;
@@ -93,6 +93,7 @@ export function StudioCreationSurface({
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const [localFirstFrame, setLocalFirstFrame] = useState("");
   const [localLastFrame, setLocalLastFrame] = useState("");
   const [selectedRefUrls, setSelectedRefUrls] = useState<Set<string>>(new Set());
@@ -112,6 +113,9 @@ export function StudioCreationSurface({
   const hasSentinel = Boolean(selectedObservation || selectedFrame);
   const referenceStillUrls = Array.from(selectedRefUrls);
   const extensionVideoUri = selectedJob?.result?.provider_video_uri ?? null;
+  const effectiveFirstFrame = localFirstFrame || firstFrame || "";
+  const effectiveLastFrame = localLastFrame || lastFrame || "";
+
   const allRefThumbs = [
     ...workFrames.map((f) => ({ url: f.still_url, label: formatTimelineMs(f.timestamp_ms), kind: "frame" as const })),
     ...references.filter((r) => r.still_url).map((r) => ({ url: r.still_url!, label: r.title, kind: "gallery" as const })),
@@ -119,17 +123,29 @@ export function StudioCreationSurface({
 
   const resolvedKind = resolveKind({
     intent,
-    firstFrame: localFirstFrame || firstFrame || selected?.still || "",
-    lastFrame: localLastFrame || lastFrame,
+    firstFrame: effectiveFirstFrame || selected?.still || "",
+    lastFrame: effectiveLastFrame,
     referenceUrls: referenceStillUrls,
     extensionVideoUri,
   });
 
+  const workflow = describeWorkflow({
+    intent,
+    hasFirstFrame: Boolean(effectiveFirstFrame || selected?.still),
+    hasLastFrame: Boolean(effectiveLastFrame),
+    hasReferences: referenceStillUrls.length > 0,
+    hasExtensionVideo: Boolean(extensionVideoUri),
+  });
+
+  const canExtend = Boolean(extensionVideoUri) && modeAvailable("video-extension", capability);
+  const canFirstLast = modeAvailable("first-last-frame", capability);
+  const canReference = modeAvailable("reference-images", capability);
+
   const generateReady = (() => {
     if (intent === "still") return stillReady;
-    if (resolvedKind === "animate-still") return { available: hasStill, reason: hasStill ? null : "Generate a still first" };
+    if (resolvedKind === "animate-still") return { available: hasStill, reason: hasStill ? null : "Generate or select a still first" };
     if (resolvedKind === "first-last-frame") {
-      const ok = Boolean((localFirstFrame || firstFrame) && (localLastFrame || lastFrame));
+      const ok = Boolean(effectiveFirstFrame && effectiveLastFrame);
       return { available: ok, reason: ok ? null : "Select a first and last frame" };
     }
     if (resolvedKind === "reference-motion") return { available: referenceStillUrls.length > 0, reason: referenceStillUrls.length > 0 ? null : "Add at least one reference" };
@@ -143,7 +159,7 @@ export function StudioCreationSurface({
     if (intent === "still") { onGenerateStill(); return; }
     const extra: Record<string, unknown> = { duration_seconds: durationSeconds, aspect_ratio: aspectRatio };
     if (resolvedKind === "animate-still") { extra.still_url = selected?.still; extra.first_frame_url = selected?.still; }
-    if (resolvedKind === "first-last-frame") { extra.first_frame_url = localFirstFrame || firstFrame || selected?.still; extra.last_frame_url = localLastFrame || lastFrame; }
+    if (resolvedKind === "first-last-frame") { extra.first_frame_url = effectiveFirstFrame || selected?.still; extra.last_frame_url = effectiveLastFrame; }
     if (resolvedKind === "reference-motion") { extra.reference_urls = referenceStillUrls.slice(0, 3); }
     if (resolvedKind === "extend") { extra.extension_video_uri = extensionVideoUri; }
     if (intent === "gif") { extra.playback_id = motionJob?.result?.playback_id ?? selectedJob?.result?.playback_id ?? null; extra.still_url = selected?.still; }
@@ -152,6 +168,7 @@ export function StudioCreationSurface({
   }
 
   const generateLabel = intent === "still" ? "Image" : intent === "clip" ? "Video" : intent === "animation" ? "Animate" : intent === "gif" ? "GIF" : "Reel";
+  const isVideoIntent = intent === "clip" || intent === "animation";
 
   return (
     <div className="studio-creation-surface">
@@ -171,7 +188,7 @@ export function StudioCreationSurface({
 
       {/* Source view */}
       {surfaceView === "source" && (
-        <div className="studio-result-area overflow-y-auto">
+        <div className="studio-result-area">
           <div className="w-full max-w-2xl">
             <StoryboardSourceMedia
               workId={work?.work_id ?? null} sources={work?.sources ?? []}
@@ -184,7 +201,7 @@ export function StudioCreationSurface({
 
       {/* 2.5D Preview view */}
       {surfaceView === "preview" && (
-        <div className="studio-result-area overflow-y-auto">
+        <div className="studio-result-area">
           <div className="w-full max-w-4xl space-y-4">
             <div className="flex items-center justify-between">
               <p className="suite-kicker">2.5D Preview</p>
@@ -202,12 +219,10 @@ export function StudioCreationSurface({
                 ))}
               </ol>
             ) : (
-              <div className="aspect-video w-full rounded-xl border border-dashed border-border/30 flex items-center justify-center">
-                <div className="text-center space-y-2">
-                  <Layers size={24} className="mx-auto text-muted-foreground/40" />
-                  <p className="text-sm text-muted-foreground/60">Add source media and run Sentinel to generate 2.5D layers</p>
-                  <Button type="button" size="sm" variant="outline" onClick={() => onSurfaceView("source")}>Add source media</Button>
-                </div>
+              <div className="rounded-xl border border-dashed border-border/30 p-8 flex flex-col items-center gap-3 text-center">
+                <Layers size={24} className="text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground/60">Add source media and run Sentinel to generate 2.5D layers</p>
+                <Button type="button" size="sm" variant="outline" onClick={() => onSurfaceView("source")}>Add source media</Button>
               </div>
             )}
             <p className="suite-kicker normal-case tracking-normal font-normal">
@@ -218,13 +233,13 @@ export function StudioCreationSurface({
         </div>
       )}
 
-      {/* Create view — composer primary at top, result scrolls below */}
+      {/* Create view */}
       {surfaceView === "create" && (
         <>
-          {/* COMPOSER — always visible, full width */}
+          {/* COMPOSER — primary, full width, at top */}
           <div className="studio-composer-wrap">
 
-            {/* Context header */}
+            {/* Context header: panel name + sentinel */}
             <div className="studio-context-header">
               {selected ? (
                 <div className="flex items-center gap-2 min-w-0">
@@ -254,7 +269,7 @@ export function StudioCreationSurface({
               )}
             </div>
 
-            {/* Panel details */}
+            {/* Panel details — progressive disclosure */}
             {panelDetailsOpen && selectedPersisted && (
               <div className="studio-panel-details">
                 <div className="grid grid-cols-2 gap-2">
@@ -278,7 +293,7 @@ export function StudioCreationSurface({
               </div>
             )}
 
-            {/* Sentinel evidence */}
+            {/* Sentinel evidence — advisory only */}
             {hasSentinel && sentinelOpen && (
               <div className="studio-sentinel-detail">
                 <p className="suite-kicker mb-2">Sentinel evidence — advisory only</p>
@@ -329,11 +344,17 @@ export function StudioCreationSurface({
 
             {/* Composer box */}
             <div className="studio-composer">
-              <div className="flex items-center justify-between">
+
+              {/* Intent + workflow label */}
+              <div className="flex items-center justify-between gap-2 flex-wrap">
                 <CreativeIntentPicker selected={intent} onSelect={setIntent} capability={capability} />
-                {capability && <span className="suite-kicker normal-case tracking-normal font-normal">{capability.provider}</span>}
+                <div className="flex items-center gap-2">
+                  <span className="suite-kicker normal-case tracking-normal font-normal opacity-60">{workflow}</span>
+                  {capability && <span className="suite-kicker normal-case tracking-normal font-normal">{(capability as { provider?: string }).provider}</span>}
+                </div>
               </div>
 
+              {/* Directive — dominant input */}
               <Textarea
                 className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/40"
                 value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
@@ -347,11 +368,12 @@ export function StudioCreationSurface({
                 placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe what you want to create…"}
               />
 
+              {/* Reference chips — always visible when refs exist */}
               {allRefThumbs.length > 0 && (
                 <div className="studio-ref-chips">
                   {allRefThumbs.slice(0, refsOpen ? undefined : 6).map((ref, i) => {
-                    const isFirst = localFirstFrame === ref.url || firstFrame === ref.url;
-                    const isLast = localLastFrame === ref.url || lastFrame === ref.url;
+                    const isFirst = effectiveFirstFrame === ref.url;
+                    const isLast = effectiveLastFrame === ref.url;
                     const isRef = selectedRefUrls.has(ref.url);
                     return (
                       <button key={i} type="button"
@@ -368,8 +390,8 @@ export function StudioCreationSurface({
                         )}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={ref.url} alt="" className="w-full h-full object-cover" />
-                        {isFirst && <span className="studio-ref-chip-label">1st</span>}
-                        {isLast && <span className="studio-ref-chip-label">last</span>}
+                        {isFirst && <span className="studio-ref-chip-label">start</span>}
+                        {isLast && <span className="studio-ref-chip-label">end</span>}
                         {isRef && !isFirst && !isLast && <span className="studio-ref-chip-label">ref</span>}
                       </button>
                     );
@@ -381,11 +403,46 @@ export function StudioCreationSurface({
                     </button>
                   )}
                   {selectedRefUrls.size > 0 && (
-                    <span className="text-[9px] text-muted-foreground/50 self-center">{selectedRefUrls.size}/3</span>
+                    <span className="text-[9px] text-muted-foreground/50 self-center">{selectedRefUrls.size}/3 ref</span>
                   )}
                 </div>
               )}
 
+              {/* Add reference — always visible */}
+              {allRefThumbs.length === 0 && (
+                <button type="button"
+                  className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
+                  onClick={() => onSurfaceView("source")}>
+                  <ImagePlus size={13} />
+                  Add reference from source media
+                </button>
+              )}
+
+              {/* Contextual: first frame from panel still */}
+              {isVideoIntent && hasStill && selected?.still && !effectiveFirstFrame && (
+                <div className="flex items-center gap-2 rounded-lg border border-border/50 px-2.5 py-1.5">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={selected.still} alt="" className="w-8 h-6 rounded object-cover shrink-0" />
+                  <p className="text-xs text-muted-foreground flex-1">Use panel image as start frame</p>
+                  <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] shrink-0"
+                    onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
+                    Set start
+                  </Button>
+                </div>
+              )}
+
+              {/* Contextual: extend — when a generated clip exists */}
+              {isVideoIntent && canExtend && extensionVideoUri && (
+                <div className="flex items-center gap-2 rounded-lg border border-border/50 px-2.5 py-1.5">
+                  <span className="text-xs text-muted-foreground flex-1">Generated clip available — extend it</span>
+                  <Button type="button" size="sm" variant="outline" className="h-6 text-[10px] shrink-0"
+                    onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio })}>
+                    Extend
+                  </Button>
+                </div>
+              )}
+
+              {/* Controls bar */}
               <div className="studio-composer-bar">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <select aria-label="Aspect ratio" className="studio-control-pill"
@@ -393,14 +450,21 @@ export function StudioCreationSurface({
                     <option value="16:9">16:9</option>
                     <option value="9:16">9:16</option>
                   </select>
-                  {(intent === "clip" || intent === "animation") && (
+                  {isVideoIntent && (
                     <div className="studio-control-pill flex items-center gap-1">
-                      <input aria-label="Duration in seconds" type="number" min={1} step={1}
+                      <input aria-label="Duration in seconds" type="number" min={1} max={8} step={1}
                         value={durationSeconds}
-                        onChange={(e) => onSetDuration(Math.max(1, Number(e.target.value)))}
+                        onChange={(e) => onSetDuration(Math.max(1, Math.min(8, Number(e.target.value))))}
                         className="w-7 bg-transparent text-xs text-center outline-none" />
                       <span className="text-xs text-muted-foreground">s</span>
                     </div>
+                  )}
+                  {isVideoIntent && (
+                    <button type="button"
+                      className={cn("studio-control-pill text-xs", advancedOpen && "border-primary/50")}
+                      onClick={() => setAdvancedOpen((v) => !v)}>
+                      Advanced
+                    </button>
                   )}
                 </div>
                 <Button type="button" size="sm"
@@ -413,6 +477,47 @@ export function StudioCreationSurface({
                 </Button>
               </div>
 
+              {/* Advanced controls — progressive disclosure */}
+              {advancedOpen && isVideoIntent && (
+                <div className="studio-advanced-controls">
+                  {canFirstLast && (
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <p className="suite-kicker mb-1">Start frame</p>
+                        {effectiveFirstFrame ? (
+                          <div className="flex items-center gap-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={effectiveFirstFrame} alt="" className="w-12 h-8 rounded object-cover" />
+                            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
+                              onClick={() => { setLocalFirstFrame(""); onSetFirstFrame(""); }}>
+                              Clear
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground/50">Select from references above</p>
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="suite-kicker mb-1">End frame</p>
+                        {effectiveLastFrame ? (
+                          <div className="flex items-center gap-2">
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img src={effectiveLastFrame} alt="" className="w-12 h-8 rounded object-cover" />
+                            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
+                              onClick={() => { setLocalLastFrame(""); onSetLastFrame(""); }}>
+                              Clear
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground/50">Select from references above</p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Generation feedback */}
               {mediaState.status !== "idle" && (
                 ["failed","unavailable","blocked"].includes(mediaState.status) ? (
                   <p className="text-xs text-destructive">{mediaState.message}</p>
@@ -431,7 +536,7 @@ export function StudioCreationSurface({
               <div className="studio-result-card">
                 <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />
                 <div className="studio-result-actions">
-                  {extensionVideoUri && intentAvailable("clip", capability) && (
+                  {canExtend && extensionVideoUri && (
                     <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
                       onClick={() => onEnqueue("extend", { extension_video_uri: extensionVideoUri, duration_seconds: durationSeconds, aspect_ratio: aspectRatio })}>
                       Extend
@@ -447,6 +552,12 @@ export function StudioCreationSurface({
                       Use as reference
                     </Button>
                   )}
+                  {selectedPersisted && (
+                    <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
+                      onClick={() => onSavePanel()}>
+                      Save to panel
+                    </Button>
+                  )}
                 </div>
               </div>
             ) : hasStill && selected?.still ? (
@@ -460,6 +571,10 @@ export function StudioCreationSurface({
                       Animate
                     </Button>
                   )}
+                  <Button type="button" size="sm" variant="outline" className="h-7 text-xs"
+                    onClick={() => onEnqueue("still", { still_url: selected.still })}>
+                    Variation
+                  </Button>
                   <Button type="button" size="sm" variant="ghost" className="h-7 text-xs"
                     onClick={() => { setLocalFirstFrame(selected.still!); onSetFirstFrame(selected.still!); }}>
                     Use as reference

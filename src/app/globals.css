@@ -1313,6 +1313,17 @@ html[data-theme="paper"] {
     flex-shrink: 0;
   }
 
+  /* Advanced controls */
+  .studio-advanced-controls {
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+    background: color-mix(in oklch, var(--card) 60%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   /* Mobile */
   @media (max-width: 640px) {
     .studio-composer-wrap { padding: 0.625rem 0.75rem 0.875rem; }

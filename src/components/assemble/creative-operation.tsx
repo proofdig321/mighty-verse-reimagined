@@ -2,9 +2,9 @@
 
 /**
  * Creative operation selector.
- * Maps creator intent to GenerationJobKind based on available inputs.
- * Creator sees: Still · Clip · Animation · GIF · Reel
- * System resolves the correct GenerationJobKind internally.
+ * Creator sees: Image · Video · Animate · GIF · Reel
+ * System resolves the correct GenerationJobKind from intent + available inputs.
+ * Backend kinds are never exposed as primary vocabulary.
  */
 
 import { cn } from "@/lib/utils";
@@ -12,19 +12,41 @@ import type { GenerationJobKind } from "@/lib/ai/jobs";
 
 export type CreativeIntent = "still" | "clip" | "animation" | "gif" | "reel";
 
-const INTENTS: { id: CreativeIntent; label: string; description: string }[] = [
-  { id: "still",     label: "Image",  description: "Generate a still image" },
-  { id: "clip",      label: "Video",  description: "Generate a video clip" },
-  { id: "animation", label: "Animate", description: "Cinematic animation" },
-  { id: "gif",       label: "GIF",    description: "Looping GIF" },
-  { id: "reel",      label: "Reel",   description: "Short-form reel" },
+export type CreativePreset = {
+  id: string;
+  label: string;
+  intent: CreativeIntent;
+  defaults: {
+    aspectRatio?: "16:9" | "9:16";
+    durationSeconds?: number;
+    promptPrefix?: string;
+  };
+};
+
+export const PRESETS: CreativePreset[] = [
+  { id: "cinematic",    label: "Cinematic",    intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
+  { id: "performance",  label: "Performance",  intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 6 } },
+  { id: "music-video",  label: "Music Video",  intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
+  { id: "social",       label: "Social/Reel",  intent: "reel",      defaults: { aspectRatio: "9:16", durationSeconds: 6 } },
+  { id: "visualizer",   label: "Visualizer",   intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
+  { id: "transform",    label: "Transform",    intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
+  { id: "extend",       label: "Extend",       intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8 } },
 ];
 
-type Capability = {
+const INTENTS: { id: CreativeIntent; label: string; description: string }[] = [
+  { id: "still",     label: "Image",   description: "Generate a still image" },
+  { id: "clip",      label: "Video",   description: "Generate a video clip" },
+  { id: "animation", label: "Animate", description: "Cinematic animation" },
+  { id: "gif",       label: "GIF",     description: "Looping GIF" },
+  { id: "reel",      label: "Reel",    description: "Short-form reel" },
+];
+
+export type Capability = {
   configured: boolean;
   text?: boolean;
   image?: boolean;
   video?: boolean;
+  modes?: Record<string, { available: boolean; reason: string | null }>;
 } | null;
 
 export function intentAvailable(intent: CreativeIntent, capability: Capability): boolean {
@@ -33,21 +55,57 @@ export function intentAvailable(intent: CreativeIntent, capability: Capability):
   return Boolean(capability.video);
 }
 
+export function modeAvailable(mode: string, capability: Capability): boolean {
+  if (!capability?.configured) return false;
+  if (!capability.modes) return Boolean(capability.video);
+  return capability.modes[mode]?.available ?? false;
+}
+
+/**
+ * Resolve the backend GenerationJobKind from creator intent + available inputs.
+ * The creator never sees these kind names.
+ */
 export function resolveKind(input: {
   intent: CreativeIntent;
   firstFrame: string;
   lastFrame: string;
   referenceUrls: string[];
   extensionVideoUri: string | null;
+  sourceVideoUri?: string | null;
 }): GenerationJobKind {
   if (input.intent === "still") return "still";
   if (input.intent === "gif") return "gif";
   if (input.intent === "reel") return "reel";
+  // Extension: source video present and intent is clip/animation
+  if (input.extensionVideoUri && !input.firstFrame && !input.referenceUrls.length) return "extend";
+  // First + last frame
   if (input.firstFrame && input.lastFrame) return "first-last-frame";
+  // Reference images
   if (input.referenceUrls.length > 0) return "reference-motion";
+  // Image to video
   if (input.firstFrame) return "animate-still";
-  if (input.extensionVideoUri) return "extend";
   return input.intent === "animation" ? "animation" : "motion";
+}
+
+/**
+ * Describe the active workflow in creator-facing language.
+ * Used for contextual hints in the UI.
+ */
+export function describeWorkflow(input: {
+  intent: CreativeIntent;
+  hasFirstFrame: boolean;
+  hasLastFrame: boolean;
+  hasReferences: boolean;
+  hasExtensionVideo: boolean;
+}): string {
+  if (input.intent === "still") return "Text to image";
+  if (input.intent === "gif") return "Create GIF";
+  if (input.intent === "reel") return "Assemble reel";
+  if (input.hasExtensionVideo && !input.hasFirstFrame && !input.hasReferences) return "Extend video";
+  if (input.hasFirstFrame && input.hasLastFrame) return "First + last frame";
+  if (input.hasReferences) return "Reference to video";
+  if (input.hasFirstFrame) return "Animate image";
+  return "Text to video";
 }
 
 export function CreativeIntentPicker({

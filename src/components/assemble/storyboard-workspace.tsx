@@ -85,6 +85,7 @@ type CapabilityCard = {
   video?: boolean;
   label: string;
   models?: { text: string; image: string; video: string };
+  modes?: Record<string, { available: boolean; reason: string | null }>;
 };
 
 export function StoryboardWorkspace({
