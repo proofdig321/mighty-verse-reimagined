@@ -305,19 +305,21 @@ export function StudioCreationSurface({
             <div className="studio-context-header">
               {selected ? (
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="text-[10px] text-muted-foreground/50 uppercase tracking-[0.14em] shrink-0">
+                  <span className="suite-kicker shrink-0">
                     {selected.kind === "Canonical Scene" ? "Scene" : "Panel"}
                   </span>
                   <span className="text-xs font-medium text-foreground truncate">{selected.title}</span>
-                  {selected.time && <span className="font-mono text-[10px] text-muted-foreground/50 shrink-0">{selected.time}</span>}
+                  {selected.time && (
+                    <span className="font-mono suite-kicker shrink-0 normal-case tracking-normal font-normal">{selected.time}</span>
+                  )}
                   <button type="button"
-                    className="text-[10px] text-muted-foreground/50 hover:text-foreground ml-1 shrink-0"
+                    className="suite-kicker normal-case tracking-normal font-normal text-primary hover:underline ml-1 shrink-0"
                     onClick={() => setPanelDetailsOpen((v) => !v)}>
-                    Details
+                    {panelDetailsOpen ? "Hide" : "Details"}
                   </button>
                 </div>
               ) : (
-                <span className="text-xs text-muted-foreground/40">No panel selected</span>
+                <span className="suite-kicker normal-case tracking-normal font-normal">No panel selected</span>
               )}
               {hasSentinel && (
                 <button type="button"
@@ -356,7 +358,7 @@ export function StudioCreationSurface({
             {/* Sentinel evidence — progressive disclosure */}
             {hasSentinel && sentinelOpen && (
               <div className="studio-sentinel-detail">
-                <p className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground mb-2">Sentinel evidence — advisory only</p>
+                <p className="suite-kicker mb-2">Sentinel evidence — advisory only</p>
                 {selectedObservation && (
                   <dl className="grid gap-1 text-xs mb-3">
                     {selectedObservation.subjects && (
@@ -381,7 +383,7 @@ export function StudioCreationSurface({
                   <p className="text-xs text-foreground mb-2">{selectedFrame.source_title} · {formatTimelineMs(selectedFrame.timestamp_ms)}</p>
                 )}
                 <div className="flex items-center gap-2">
-                  <p className="text-[9px] text-muted-foreground flex-1">Creator decides.</p>
+                  <p className="suite-kicker flex-1">Creator decides.</p>
                   {selectedObservation && (
                     <Button type="button" size="sm" variant="outline" className="h-6 text-[10px]"
                       onClick={() => {
@@ -408,7 +410,7 @@ export function StudioCreationSurface({
               {/* Intent pills — top of box */}
               <div className="flex items-center justify-between">
                 <CreativeIntentPicker selected={intent} onSelect={setIntent} capability={capability} />
-                {capability && <span className="text-[9px] text-muted-foreground/40">{capability.provider}</span>}
+                {capability && <span className="suite-kicker normal-case tracking-normal font-normal">{capability.provider}</span>}
               </div>
 
               {/* Directive — dominant input */}

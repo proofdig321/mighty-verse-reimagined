@@ -1132,13 +1132,15 @@ html[data-theme="paper"] {
     gap: 0.5rem;
   }
 
-  /* Context header — one quiet line */
+  /* Context header — one quiet line, matches suite-kicker baseline */
   .studio-context-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.75rem;
-    min-height: 1.5rem;
+    min-height: 1.75rem;
+    padding-bottom: 0.25rem;
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
   }
 
   .studio-sentinel-btn {
@@ -1148,14 +1150,15 @@ html[data-theme="paper"] {
     font-size: 0.625rem;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.18em;
     color: var(--muted-foreground);
-    padding: 0.25rem 0.625rem;
+    padding: 0.2rem 0.5rem;
     border-radius: 999px;
     border: 1px solid var(--border);
     background: transparent;
     transition: background 150ms, color 150ms;
     flex-shrink: 0;
+    line-height: 1;
   }
 
   .studio-sentinel-btn:hover,
