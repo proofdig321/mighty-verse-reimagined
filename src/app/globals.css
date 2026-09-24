@@ -1038,165 +1038,252 @@ html[data-theme="paper"] {
     min-width: 0;
   }
 
-  .studio-composer {
-    display: grid;
-    gap: 0.85rem;
-    padding: 1rem 1.1rem 1.05rem;
-    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
-    border-radius: calc(var(--radius) + 4px);
-    background: color-mix(in oklch, var(--card) 88%, transparent);
-  }
 
-  .studio-composer-mode {
-    border-radius: 999px;
-    padding: 0.35rem 0.75rem;
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
-    color: var(--muted-foreground);
-  }
-
-  .studio-composer-mode:hover,
-  .studio-composer-mode:focus-visible {
-    color: var(--foreground);
-    background: color-mix(in oklch, var(--accent) 45%, transparent);
-  }
-
-  .studio-composer-mode-current {
-    color: var(--foreground);
-    background: color-mix(in oklch, var(--accent) 80%, transparent);
-  }
-
-  .studio-composer-input {
-    min-height: 8.5rem;
-    font-size: 0.95rem;
-    line-height: 1.55;
-    resize: vertical;
-  }
-
-  .studio-composer-chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-  }
-
-  .studio-composer-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-  }
-
-  .studio-composer-controls {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-  }
-
-  .sentinel-summary {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 0.75rem;
-    align-items: start;
-    padding: 1rem;
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    background: color-mix(in oklch, var(--card) 86%, transparent);
-  }
-
-  .sentinel-summary-stat {
-    display: grid;
-    gap: 0.2rem;
-  }
-
-  .sentinel-summary-cta {
-    grid-column: 1 / -1;
-    justify-self: start;
-  }
-
-  .storyboard-workspace {
-    display: flex;
-    flex-direction: column;
-    height: calc(100vh - 3.5rem);
-    overflow: hidden;
-  }
-
-  .storyboard-header {
-    flex-shrink: 0;
-  }
-
-  /* Unified creative workspace — sidebar + creation surface */
-  .studio-unified-workspace {
-    display: grid;
-    gap: 0;
-    grid-template-columns: 1fr;
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-  }
-
-  .studio-context-sidebar {
-    min-width: 0;
-    border-right: 1px solid var(--border);
-    overflow-y: auto;
-    background: color-mix(in oklch, var(--card) 60%, transparent);
-  }
-
+  /* Studio creation surface */
   .studio-creation-surface {
     min-width: 0;
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    height: 100%;
   }
 
-  @media (min-width: 768px) {
-    .studio-unified-workspace {
-      grid-template-columns: minmax(11rem, 14rem) minmax(0, 1fr);
-    }
+  /* View tabs */
+  .studio-view-tabs {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    padding: 0 1rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
   }
 
-  @media (min-width: 1280px) {
-    .studio-unified-workspace {
-      grid-template-columns: minmax(13rem, 16rem) minmax(0, 1fr);
-    }
+  .studio-view-tab {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    border-bottom: 2px solid transparent;
+    transition: color 150ms, border-color 150ms;
   }
 
+  .studio-view-tab:hover { color: var(--foreground); }
+
+  .studio-view-tab-active {
+    color: var(--foreground);
+    border-bottom-color: var(--primary);
+  }
+
+  /* Result area */
   .studio-result-area {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow-y: auto;
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
     padding: 1.5rem;
     background:
-      radial-gradient(circle at 60% 40%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 55%),
-      radial-gradient(circle at 20% 80%, color-mix(in oklch, var(--accent-mv) 6%, transparent), transparent 45%);
+      radial-gradient(circle at 65% 35%, color-mix(in oklch, var(--primary) 6%, transparent), transparent 55%),
+      radial-gradient(circle at 20% 75%, color-mix(in oklch, var(--accent-mv) 5%, transparent), transparent 45%);
   }
 
-  .studio-result-area > * {
+  .studio-result-card {
     width: 100%;
-    max-width: 56rem;
+    max-width: 52rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
-  .studio-sentinel-advisory {
-    flex-shrink: 0;
-    min-width: 0;
+  .studio-result-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 0 0.25rem;
   }
 
+  .studio-result-empty {
+    width: 100%;
+    max-width: 52rem;
+    aspect-ratio: 16/9;
+    border-radius: var(--radius);
+    border: 1px dashed color-mix(in oklch, var(--border) 60%, transparent);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 2rem;
+  }
+
+  /* Composer wrap */
   .studio-composer-wrap {
     flex-shrink: 0;
     border-top: 1px solid var(--border);
-    padding: 1rem 1.25rem 1.25rem;
+    padding: 0.75rem 1rem 1rem;
     background: color-mix(in oklch, var(--card) 80%, transparent);
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
   }
 
-  .storyboard-composer-column {
-    display: grid;
-    gap: 1.1rem;
-    min-width: 0;
+  /* Context header — one quiet line */
+  .studio-context-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    min-height: 1.5rem;
   }
+
+  .studio-sentinel-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted-foreground);
+    padding: 0.25rem 0.625rem;
+    border-radius: 999px;
+    border: 1px solid var(--border);
+    background: transparent;
+    transition: background 150ms, color 150ms;
+    flex-shrink: 0;
+  }
+
+  .studio-sentinel-btn:hover,
+  .studio-sentinel-btn-open {
+    background: color-mix(in oklch, var(--accent-mv) 12%, transparent);
+    color: var(--foreground);
+    border-color: color-mix(in oklch, var(--accent-mv) 40%, transparent);
+  }
+
+  /* Panel details */
+  .studio-panel-details {
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 70%, transparent);
+  }
+
+  /* Sentinel detail */
+  .studio-sentinel-detail {
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 30%, var(--border));
+    background: color-mix(in oklch, var(--accent-mv) 5%, var(--card));
+  }
+
+  /* Composer box — Seedance pattern */
+  .studio-composer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem 0.875rem;
+    border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+    border-radius: calc(var(--radius) + 4px);
+    background: color-mix(in oklch, var(--card) 90%, transparent);
+  }
+
+  .studio-composer-input {
+    min-height: 5rem;
+    font-size: 0.9rem;
+    line-height: 1.55;
+  }
+
+  /* Reference chips */
+  .studio-ref-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    align-items: center;
+  }
+
+  .studio-ref-chip {
+    position: relative;
+    width: 3rem;
+    aspect-ratio: 16/9;
+    border-radius: 4px;
+    overflow: hidden;
+    border: 2px solid var(--border);
+    transition: border-color 150ms;
+    flex-shrink: 0;
+  }
+
+  .studio-ref-chip:hover { border-color: var(--foreground); }
+  .studio-ref-chip-selected { border-color: oklch(0.78 0.15 75); }
+  .studio-ref-chip-first { border-color: var(--primary); }
+  .studio-ref-chip-last { border-color: var(--accent-mv); }
+
+  .studio-ref-chip-label {
+    position: absolute;
+    bottom: 0;
+    inset-inline: 0;
+    text-align: center;
+    font-size: 0.5rem;
+    background: rgba(0,0,0,0.65);
+    color: #fff;
+    line-height: 1.4;
+  }
+
+  .studio-ref-chip-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.125rem;
+    width: 2rem;
+    aspect-ratio: 1;
+    border-radius: 4px;
+    border: 1px dashed var(--border);
+    font-size: 0.625rem;
+    color: var(--muted-foreground);
+    transition: border-color 150ms, color 150ms;
+  }
+
+  .studio-ref-chip-more:hover { border-color: var(--foreground); color: var(--foreground); }
+
+  /* Controls bar */
+  .studio-composer-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+
+  .studio-control-pill {
+    height: 1.75rem;
+    padding-inline: 0.625rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+    background: var(--background);
+    font-size: 0.75rem;
+    color: var(--foreground);
+    display: flex;
+    align-items: center;
+  }
+
+  .studio-generate-btn {
+    height: 2rem;
+    gap: 0.375rem;
+    flex-shrink: 0;
+  }
+
+  /* Mobile */
+  @media (max-width: 640px) {
+    .studio-composer-wrap { padding: 0.625rem 0.75rem 0.875rem; }
+    .studio-composer { padding: 0.75rem; }
+    .studio-composer-input { min-height: 4rem; }
+    .studio-result-area { padding: 1rem; }
+  }
+
 
   @media (min-width: 1024px) {
     .studio-workspace {
