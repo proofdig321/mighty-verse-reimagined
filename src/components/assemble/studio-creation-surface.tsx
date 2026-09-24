@@ -319,7 +319,7 @@ export function StudioCreationSurface({
                   </button>
                 </div>
               ) : (
-                <span className="suite-kicker normal-case tracking-normal font-normal">No panel selected</span>
+                <span className="suite-kicker">No panel selected</span>
               )}
               {hasSentinel && (
                 <button type="button"

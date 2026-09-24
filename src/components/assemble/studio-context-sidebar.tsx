@@ -79,9 +79,8 @@ export function StudioContextSidebar({
         {persistedPanels.length === 0 &&
           sentinelPanels.length === 0 &&
           scenes.length === 0 && (
-            <p className="px-1 text-xs text-muted-foreground">
-              No panels yet. Write a directive and generate, or import from
-              Sentinel.
+            <p className="px-1 suite-kicker normal-case tracking-normal font-normal">
+              No panels yet. Write a directive and generate, or import from Sentinel.
             </p>
           )}
 
