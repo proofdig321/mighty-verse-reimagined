@@ -66,6 +66,16 @@ async function getData(assetId: string) {
       : Promise.resolve({ data: null }),
   ]);
 
+  // Sibling realizations — other recordings on the same master (distinct ISRCs, never shared)
+  const siblingMasterId = realization?.master_id ?? null;
+  const { data: siblingRealizations } = siblingMasterId
+    ? await svc
+        .from("media_realization")
+        .select("realization_id, realization_type, isrc, isrc_status, version_label")
+        .eq("master_id", siblingMasterId)
+        .neq("realization_id", realization!.realization_id)
+    : { data: [] };
+
   // Split sheet for this realization
   const { data: splitSheet } = realization
     ? await svc
@@ -127,6 +137,12 @@ async function getData(assetId: string) {
     }),
     rightsLabel,
     realization: realization ?? null,
+    siblingRealizations: (siblingRealizations ?? []).map((r) => ({
+      realization_id: r.realization_id,
+      realization_type: r.realization_type,
+      isrc: r.isrc ?? null,
+      version_label: r.version_label ?? null,
+    })),
     splitSheet,
     readiness,
     registrant: registrant ?? null,
@@ -153,7 +169,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
       .catch(() => null),
   ]);
 
-  const { asset, intake, bindings, rightsLabel, realization, splitSheet, readiness, registrant } = d;
+  const { asset, intake, bindings, rightsLabel, realization, siblingRealizations, splitSheet, readiness, registrant } = d;
   const isPlaceholder = asset.storage_ref.startsWith("seed:placeholder:");
   const isReference = isCuratedReferenceProvider(asset.provider);
   const isThumbnail = !isReference && (asset.storage_ref.startsWith("thumbnail:") || (asset.storage_ref.startsWith("http") && asset.asset_type === "thumbnail"));
@@ -532,6 +548,7 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
         initialMeta={canonicalMeta}
         initialReport={metadataReport}
         intakeIsrc={intake?.isrc ?? null}
+        siblingRealizations={siblingRealizations}
       />
 
       <DistributionReadinessPanel readiness={distribution} />

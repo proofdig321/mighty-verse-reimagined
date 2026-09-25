@@ -2496,6 +2496,71 @@ html[data-theme="paper"] {
     text-transform: capitalize;
   }
 
+  .world-song-identity {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-top: 1.25rem;
+  }
+
+  .world-song-artwork {
+    width: 4.5rem;
+    height: 4.5rem;
+    border-radius: 0.375rem;
+    object-fit: cover;
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .world-song-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding-top: 0.125rem;
+  }
+
+  .world-song-creator {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--foreground);
+  }
+
+  .world-song-genre {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    text-transform: capitalize;
+  }
+
+  .world-song-release {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+  }
+
+  .world-distribution {
+    margin-top: 1rem;
+  }
+
+  .world-distribution-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+    list-style: none;
+    padding: 0;
+  }
+
+  .world-distribution-link {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    transition: color 0.15s;
+  }
+
+  .world-distribution-link:hover {
+    color: var(--foreground);
+  }
+
   .world-actions {
     display: flex;
     flex-wrap: wrap;

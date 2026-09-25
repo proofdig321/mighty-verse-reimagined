@@ -26,6 +26,16 @@ export type UniverseWorldExperienceProps = {
   sceneMoments: UniverseSceneMomentRel[];
   muralStill: { provider: string; storage_ref: string; timeSec: number } | null;
   productionSceneIds?: string[];
+  song?: {
+    work_type: string;
+    genre: string | null;
+    subgenre: string | null;
+    language: string | null;
+    release_date: string | null;
+    creator_name: string | null;
+    artwork_url: string | null;
+  } | null;
+  distributional?: { projection_id: string; title: string | null; url: string | null }[];
 };
 
 function EncounterStill({
@@ -56,6 +66,8 @@ export function UniverseWorldExperience({
   sceneMoments,
   muralStill,
   productionSceneIds = [],
+  song,
+  distributional = [],
 }: UniverseWorldExperienceProps) {
   const mural = murals[0] ?? null;
   const muralStillUrl = muralStill
@@ -84,6 +96,57 @@ export function UniverseWorldExperience({
             {attributionRoles.map((role) => role.replace(/-/g, " ")).join(" · ")}
           </p>
         ) : null}
+
+        {/* Song identity — only when work_type=song or artwork exists */}
+        {song ? (
+          <div className="world-song-identity" data-song-identity="">
+            {song.artwork_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={song.artwork_url}
+                alt={`${title} artwork`}
+                className="world-song-artwork"
+              />
+            ) : null}
+            <div className="world-song-meta">
+              {song.creator_name ? (
+                <p className="world-song-creator">{song.creator_name}</p>
+              ) : null}
+              {(song.genre || song.subgenre) ? (
+                <p className="world-song-genre">
+                  {[song.genre, song.subgenre].filter(Boolean).join(" / ")}
+                </p>
+              ) : null}
+              {song.release_date ? (
+                <p className="world-song-release">{song.release_date}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Distributional projections — only when actual records exist */}
+        {distributional.length > 0 ? (
+          <div className="world-distribution" data-distribution="">
+            <p className="world-kicker">Also available on</p>
+            <ul className="world-distribution-links">
+              {distributional.map((d) =>
+                d.url ? (
+                  <li key={d.projection_id}>
+                    <a
+                      href={d.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="world-distribution-link"
+                    >
+                      {d.title ?? d.url}
+                    </a>
+                  </li>
+                ) : null
+              )}
+            </ul>
+          </div>
+        ) : null}
+
         <div className="world-actions">
           <Link
             href={spatialHref}

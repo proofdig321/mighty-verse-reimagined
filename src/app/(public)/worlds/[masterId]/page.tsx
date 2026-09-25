@@ -21,6 +21,22 @@ type MomentRow = { master_id: string; title: string | null; projection_id: strin
 type SceneRow = { master_id: string; title: string | null; projection_id: string | null; playback_id: string | null; provider: string | null; start_ms: number | null; end_ms: number | null };
 type SceneMomentRow = { scene_master_id: string; moment_master_id: string };
 
+type SongIdentity = {
+  work_type: string;
+  genre: string | null;
+  subgenre: string | null;
+  language: string | null;
+  release_date: string | null;
+  creator_name: string | null;
+  artwork_url: string | null;
+};
+
+type DistributionalLink = {
+  projection_id: string;
+  title: string | null;
+  url: string | null;
+};
+
 type PageData = {
   canonical_type: string;
   master_id: string;
@@ -37,6 +53,8 @@ type PageData = {
   universe_master_id: string | null;
   universe_title: string | null;
   playback_master_id: string;
+  song: SongIdentity | null;
+  distributional: DistributionalLink[];
 };
 
 async function resolveMedia(svc: ReturnType<typeof getServiceClient>, projectionId: string): Promise<ProjectionMedia | null> {
@@ -252,6 +270,90 @@ async function getPageData(masterId: string): Promise<PageData | null> {
 
     const { scenes, sceneMoments } = await loadUniverseSceneEncounters(svc, muralIds);
 
+    // Song identity — from intake linked to the Mural's bound asset
+    let song: SongIdentity | null = null;
+    const muralAssetId = (() => {
+      const muralProj = (muralProjs ?? []).find((p) => murals.find((m) => m.master_id === p.master_id));
+      if (!muralProj) return null;
+      const muralProjId = muralProj.projection_id;
+      // We need the asset_id from the binding — resolve via a separate query
+      return muralProjId;
+    })();
+
+    if (muralAssetId) {
+      const { data: muralBinding } = await svc
+        .from("projection_media_binding")
+        .select("asset_id")
+        .eq("projection_id", muralAssetId)
+        .eq("binding_type", "primary")
+        .maybeSingle();
+      if (muralBinding?.asset_id) {
+        const { data: muralAsset } = await svc
+          .from("media_asset")
+          .select("intake_id")
+          .eq("asset_id", muralBinding.asset_id)
+          .maybeSingle();
+        if (muralAsset?.intake_id) {
+          const { data: intake } = await svc
+            .from("media_intake")
+            .select("work_type, genre, subgenre, language, release_date, creator_name")
+            .eq("intake_id", muralAsset.intake_id)
+            .maybeSingle();
+          if (intake?.work_type === "song") {
+            song = {
+              work_type: intake.work_type,
+              genre: intake.genre ?? null,
+              subgenre: intake.subgenre ?? null,
+              language: intake.language ?? null,
+              release_date: intake.release_date ?? null,
+              creator_name: intake.creator_name ?? null,
+              artwork_url: null,
+            };
+          }
+        }
+      }
+    }
+
+    // Artwork — from work_presentation.artwork_asset_id on the Universe master
+    const { data: univPres } = await svc
+      .from("work_presentation")
+      .select("artwork_asset_id")
+      .eq("master_id", masterId)
+      .maybeSingle();
+    if (univPres?.artwork_asset_id) {
+      const { data: artworkAsset } = await svc
+        .from("media_asset")
+        .select("storage_ref")
+        .eq("asset_id", univPres.artwork_asset_id)
+        .maybeSingle();
+      if (artworkAsset?.storage_ref && song) {
+        song = { ...song, artwork_url: artworkAsset.storage_ref };
+      } else if (artworkAsset?.storage_ref && !song) {
+        // Artwork exists even without song work_type — surface it
+        song = { work_type: "", genre: null, subgenre: null, language: null, release_date: null, creator_name: null, artwork_url: artworkAsset.storage_ref };
+      }
+    }
+
+    // Distributional projections — query for this Universe master
+    const { data: distProjs } = await svc
+      .from("projection")
+      .select("projection_id, content_refs")
+      .eq("master_id", masterId)
+      .eq("projection_type", "distributional");
+    const distProjIds = (distProjs ?? []).map((p) => p.projection_id);
+    const { data: distPres } = distProjIds.length
+      ? await svc
+          .from("projection_presentation")
+          .select("projection_id, title")
+          .in("projection_id", distProjIds)
+      : { data: [] };
+    const distributional: DistributionalLink[] = (distProjs ?? []).map((p) => {
+      const pres = (distPres ?? []).find((d) => d.projection_id === p.projection_id);
+      const refs = p.content_refs as Record<string, unknown> | null;
+      const url = typeof refs?.url === "string" ? refs.url : null;
+      return { projection_id: p.projection_id, title: pres?.title ?? null, url };
+    }).filter((d) => d.url);
+
     return {
       canonical_type: "universe",
       master_id: masterId,
@@ -268,6 +370,8 @@ async function getPageData(masterId: string): Promise<PageData | null> {
       universe_master_id: null,
       universe_title: null,
       playback_master_id: stageMasterId,
+      song,
+      distributional,
     };
   }
 
@@ -345,6 +449,8 @@ async function getPageData(masterId: string): Promise<PageData | null> {
     universe_master_id,
     universe_title,
     playback_master_id: masterId,
+    song: null,
+    distributional: [],
   };
 }
 
@@ -560,6 +666,8 @@ export default async function WorldPage({
         sceneMoments={page.scene_moments}
         muralStill={muralStill}
         productionSceneIds={productionSceneIds}
+        song={page.song}
+        distributional={page.distributional}
       />
     </div>
   );
