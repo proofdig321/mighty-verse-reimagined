@@ -206,28 +206,24 @@ export async function POST(request: Request) {
     const preservedRealizationId = realization_id ?? existingBinding?.realization_id ?? null;
     const preservedAccessLevel = existingBinding?.access_level ?? "public";
 
-    // Delete existing primary binding then insert replacement.
-    // NOTE: these two operations are not atomic. If the insert fails, the projection
-    // will temporarily have no primary binding. A future migration to upsert-by-unique
-    // constraint on (projection_id, binding_type='primary') would eliminate this window.
-    await svc
-      .from("projection_media_binding")
-      .delete()
-      .eq("projection_id", projection_id)
-      .eq("binding_type", "primary");
-
+    // Atomic upsert on (projection_id, binding_type) unique constraint.
+    // ON CONFLICT DO UPDATE replaces the binding in a single statement —
+    // no window where the projection has zero primary bindings.
     const { data: binding, error: bErr } = await svc
       .from("projection_media_binding")
-      .insert({
-        projection_id,
-        asset_id,
-        binding_type: "primary",
-        access_level: preservedAccessLevel,
-        created_by: participantId,
-        realization_id: preservedRealizationId,
-        start_ms: preservedStartMs,
-        end_ms: preservedEndMs,
-      })
+      .upsert(
+        {
+          projection_id,
+          asset_id,
+          binding_type: "primary",
+          access_level: preservedAccessLevel,
+          created_by: participantId,
+          realization_id: preservedRealizationId,
+          start_ms: preservedStartMs,
+          end_ms: preservedEndMs,
+        },
+        { onConflict: "projection_id,binding_type" }
+      )
       .select("binding_id")
       .single();
     if (bErr || !binding) {

@@ -79,7 +79,11 @@ export async function registerMaster(
     .insert({ master_id: master.master_id, version: 1 })
     .select("attribution_id")
     .single();
-  if (aErr || !attr) return { error: `Failed to create attribution_record: ${aErr?.message}` };
+  if (aErr || !attr) {
+    // Compensate: remove the orphan master so the system is not left in a partial state
+    await supabase.from("master").delete().eq("master_id", master.master_id);
+    return { error: `Failed to create attribution_record: ${aErr?.message}` };
+  }
 
   await supabase
     .from("master")
@@ -249,6 +253,125 @@ export async function createCanonicalState(
   await logOperation(advAuth.authority_id, "advance-master-state", masterId, "master", "accepted");
 
   return { data: { canonical_state_id: cs.canonical_state_id, provenance_id: prov.provenance_id } };
+}
+
+// ---------------------------------------------------------------------------
+// 2b. Revise a CanonicalState — supersede old, create new, advance master
+//
+// When canonical truth changes (new content_refs, updated attribution snapshot),
+// the old state is marked superseded and a new authorised state is created.
+// The old state and its provenance are preserved — history is never deleted.
+// Withdrawal (current_state_id = null) is a separate operation (withdrawMaster).
+// ---------------------------------------------------------------------------
+export async function reviseCanonicalState(
+  participantId: string,
+  masterId: string,
+  contentRefs: Record<string, unknown> | null
+): Promise<OperationResult<{ canonical_state_id: string; provenance_id: string; superseded_state_id: string | null }>> {
+  const auth = await validateAuthority(participantId, "create-canonical-state", masterId);
+  if ("error" in auth) return { error: auth.error };
+
+  const advAuth = await validateAuthority(participantId, "advance-master-state", masterId);
+  if ("error" in advAuth) return { error: advAuth.error };
+
+  const supabase = getServiceClient();
+
+  const { data: master } = await supabase
+    .from("master")
+    .select("current_state_id, attribution_ref")
+    .eq("master_id", masterId)
+    .single();
+  if (!master) return { error: "Master not found" };
+
+  const supersededStateId = master.current_state_id ?? null;
+
+  const { data: parentVersion } = supersededStateId
+    ? await supabase
+        .from("canonical_state")
+        .select("version")
+        .eq("canonical_state_id", supersededStateId)
+        .single()
+    : { data: null };
+
+  const version = parentVersion ? parentVersion.version + 1 : 1;
+
+  const hash = await computeHash({
+    authorisation_state: "authorised",
+    authorised_by: auth.authority_id,
+    master_id: masterId,
+    parent_state_id: supersededStateId,
+    version,
+  });
+
+  const { data: cs, error: csErr } = await supabase
+    .from("canonical_state")
+    .insert({
+      master_id: masterId,
+      version,
+      parent_state_id: supersededStateId,
+      authorised_by: auth.authority_id,
+      authorisation_state: "authorised",
+      attribution_snapshot_ref: master.attribution_ref,
+      content_refs: contentRefs ?? null,
+      integrity_hash: hash,
+    })
+    .select("canonical_state_id")
+    .single();
+  if (csErr || !cs) return { error: `Failed to create revised canonical_state: ${csErr?.message}` };
+
+  const provHash = await computeHash({
+    authorised_by: auth.authority_id,
+    relationship_type: "canonical-revision",
+    source_id: supersededStateId,
+    source_type: supersededStateId ? "canonical-state" : null,
+    subject_id: cs.canonical_state_id,
+    subject_type: "canonical-state",
+  });
+
+  const { data: prov, error: pErr } = await supabase
+    .from("provenance_record")
+    .insert({
+      subject_id: cs.canonical_state_id,
+      subject_type: "canonical-state",
+      source_id: supersededStateId,
+      source_type: supersededStateId ? "canonical-state" : null,
+      relationship_type: "canonical-revision",
+      authorised_by: auth.authority_id,
+      public: true,
+      integrity_hash: provHash,
+    })
+    .select("provenance_id")
+    .single();
+  if (pErr || !prov) {
+    // Compensate: remove the new state so we don't leave an unlinked canonical_state
+    await supabase.from("canonical_state").delete().eq("canonical_state_id", cs.canonical_state_id);
+    return { error: `Failed to create provenance_record: ${pErr?.message}` };
+  }
+
+  // Wire provenance_ref on new state
+  await supabase
+    .from("canonical_state")
+    .update({ provenance_ref: prov.provenance_id })
+    .eq("canonical_state_id", cs.canonical_state_id);
+
+  // Mark old state superseded — preserves history, never deletes
+  if (supersededStateId) {
+    await supabase
+      .from("canonical_state")
+      .update({ authorisation_state: "superseded" })
+      .eq("canonical_state_id", supersededStateId);
+  }
+
+  // Advance master.current_state_id to the new state
+  await supabase
+    .from("master")
+    .update({ current_state_id: cs.canonical_state_id })
+    .eq("master_id", masterId);
+
+  await logOperation(auth.authority_id, "revise-canonical-state", cs.canonical_state_id, "canonical-state", "accepted");
+  await logOperation(advAuth.authority_id, "advance-master-state", masterId, "master", "accepted");
+
+  return { data: { canonical_state_id: cs.canonical_state_id, provenance_id: prov.provenance_id, superseded_state_id: supersededStateId } };
 }
 
 // ---------------------------------------------------------------------------
@@ -764,6 +887,13 @@ export async function discardMediaAsset(
     .update({ storage_ref: markDiscardedStorageRef(asset.storage_ref) })
     .eq("asset_id", asset.asset_id);
   if (error) return { error: `Failed to remove media: ${error.message}` };
+
+  // Null the delivery endpoint so discarded media cannot be played back.
+  // This enforces the invariant: discarded media → no playable delivery endpoint.
+  await supabase
+    .from("delivery_variant")
+    .update({ endpoint_ref: null })
+    .eq("asset_id", asset.asset_id);
 
   await logOperation(auth.authority_id, "discard-media-asset", asset.asset_id, "media-asset", "accepted");
   return { data: { asset_id: asset.asset_id } };
