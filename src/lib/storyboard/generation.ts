@@ -28,6 +28,7 @@ import { persistGeneratedImageArtifact, persistStoryboardArtifact } from "./pers
 import { storeCreativeBytes } from "./storage";
 import { loadStoryboardWorkById, updateStoryboardPanel } from "./work";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "./document";
+import { parsePage, pageMeta, type PageMeta } from "../pagination";
 
 const execFileAsync = promisify(execFile);
 
@@ -94,16 +95,22 @@ function failFromProvider(failure: ProviderFailure): { status: GenerationJobStat
 export async function listGenerationJobs(input: {
   participantId: string;
   workId: string;
-}): Promise<GenerationJobRecord[]> {
+  page?: string | null;
+  pageSize?: string | null;
+}): Promise<{ jobs: GenerationJobRecord[]; pagination: PageMeta }> {
   const db = getServiceClient();
-  const { data } = await db
+  const pg = parsePage(input.page, input.pageSize, 40);
+  const { data, count } = await db
     .from("generation_job")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("participant_id", input.participantId)
     .eq("work_id", input.workId)
     .order("created_at", { ascending: false })
-    .limit(40);
-  return (data ?? []).map((row) => mapJob(row as Record<string, unknown>));
+    .range(pg.from, pg.to);
+  return {
+    jobs: (data ?? []).map((row) => mapJob(row as Record<string, unknown>)),
+    pagination: pageMeta(pg, count ?? 0),
+  };
 }
 
 export async function getGenerationJob(input: {

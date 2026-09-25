@@ -171,15 +171,30 @@ async function authorisedIntakeContext() {
 export async function GET(request: Request) {
   const context = await authorisedIntakeContext();
   if ("error" in context) return context.error;
-  const intakeId = new URL(request.url).searchParams.get("intake_id");
-  const query = context.svc.from("media_intake").select("*").order("created_at", { ascending: false });
-  const { data, error } = intakeId ? await query.eq("intake_id", intakeId).maybeSingle() : await query.limit(50);
+  const url = new URL(request.url);
+  const intakeId = url.searchParams.get("intake_id");
+  const query = context.svc.from("media_intake").select("*", { count: "exact" }).order("created_at", { ascending: false });
+  if (intakeId) {
+    const { data, error } = await query.eq("intake_id", intakeId).maybeSingle();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    const rows = data ? [data] : [];
+    const { data: credits } = rows.length
+      ? await context.svc.from("media_intake_credit").select("intake_id, participant_id, role, display_order").in("intake_id", rows.map(row => row.intake_id)).order("display_order")
+      : { data: [] };
+    return NextResponse.json(rows.map(row => ({ ...row, credits: (credits ?? []).filter(credit => credit.intake_id === row.intake_id) })));
+  }
+  const { parsePage: pp, pageMeta: pm } = await import("@/lib/pagination");
+  const pg = pp(url.searchParams.get("page"), url.searchParams.get("page_size"));
+  const { data, error, count } = await query.range(pg.from, pg.to);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   const rows = Array.isArray(data) ? data : data ? [data] : [];
   const { data: credits } = rows.length
     ? await context.svc.from("media_intake_credit").select("intake_id, participant_id, role, display_order").in("intake_id", rows.map(row => row.intake_id)).order("display_order")
     : { data: [] };
-  return NextResponse.json(rows.map(row => ({ ...row, credits: (credits ?? []).filter(credit => credit.intake_id === row.intake_id) })));
+  return NextResponse.json({
+    items: rows.map(row => ({ ...row, credits: (credits ?? []).filter(credit => credit.intake_id === row.intake_id) })),
+    pagination: pm(pg, count ?? 0),
+  });
 }
 
 export async function PATCH(request: Request) {

@@ -57,7 +57,7 @@ async function getContext(currentParticipantId: string) {
     })),
     participants,
     currentParticipantId,
-    orphanUniverses: (await loadUniverseCatalogue())
+    orphanUniverses: (await loadUniverseCatalogue()).rows
       .filter((row) => row.occupancy === "orphan")
       .map((row) => ({ master_id: row.master_id, title: row.title })),
   };

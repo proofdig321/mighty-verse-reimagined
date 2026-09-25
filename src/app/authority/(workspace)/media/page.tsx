@@ -15,6 +15,8 @@ import { parseReferenceProvenance } from "@/lib/production/reference";
 import { parseProductionProvenance, type ProductionApproval } from "@/lib/production/result";
 import MediaLibraryClient from "./media-library-client";
 import { isAwaitingUploadIntake, isDiscardedStorageRef, mediaIsDeletable } from "@/lib/media/discard-asset";
+import { PaginationBar } from "@/components/ui/pagination-bar";
+import { parsePage, pageMeta } from "@/lib/pagination";
 
 export type MediaLibraryItem = {
   asset_id: string;
@@ -49,19 +51,23 @@ export type MediaLibraryItem = {
   deletable: boolean;
 };
 
-async function getData() {
+async function getData(page: string | undefined) {
   const svc = getServiceClient();
+  const pg = parsePage(page, undefined);
 
-  const [{ data: assets }, { data: intakes }] = await Promise.all([
+  const [{ data: assets, count }, { data: intakes }] = await Promise.all([
     svc
       .from("media_asset")
-      .select("asset_id, asset_type, storage_ref, provider, format, duration_ms, rights_holder_ref, rights_basis, created_at, integrity_hash")
-      .order("created_at", { ascending: false }),
+      .select("asset_id, asset_type, storage_ref, provider, format, duration_ms, rights_holder_ref, rights_basis, created_at, integrity_hash", { count: "exact" })
+      .order("created_at", { ascending: false })
+      .range(pg.from, pg.to),
     svc
       .from("media_intake")
       .select("intake_id, asset_id, title, work_type, isrc, isrc_status, creator_name, created_at, master_id, provenance_notes, search_status, source_url, source_type")
       .order("created_at", { ascending: false }),
   ]);
+
+  const pagination = pageMeta(pg, count ?? 0);
 
   const realAssets = (assets ?? []).filter(
     (a) => !a.storage_ref.startsWith("seed:placeholder:") && !isDiscardedStorageRef(a.storage_ref)
@@ -263,16 +269,21 @@ async function getData() {
     isAwaitingUploadIntake({ assetId: i.asset_id, searchStatus: i.search_status })
   );
 
-  return { items, unlinkedIntakes };
+  return { items, unlinkedIntakes, pagination };
 }
 
-export default async function MediaGalleryPage() {
+export default async function MediaGalleryPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/auth/sign-in");
   if (!await getParticipantId(supabase)) redirect("/auth/sign-in");
 
-  const { items, unlinkedIntakes } = await getData();
+  const { page } = await searchParams;
+  const { items, unlinkedIntakes, pagination } = await getData(page);
 
   return (
     <div className="space-y-10">
@@ -283,9 +294,9 @@ export default async function MediaGalleryPage() {
           <p className="text-sm text-muted-foreground">
             Authority production catalogue — sources, curated references, and production results.
             Sentinel observations stay in Sentinel. They are not Gallery assets.
-            {items.length > 0 && (
+            {pagination.total > 0 && (
               <span className="ml-2 text-muted-foreground/60">
-                {items.length} asset{items.length !== 1 ? "s" : ""}
+                {pagination.total} asset{pagination.total !== 1 ? "s" : ""}
               </span>
             )}
           </p>
@@ -299,6 +310,7 @@ export default async function MediaGalleryPage() {
       </div>
 
       <MediaLibraryClient items={items} unlinkedIntakes={unlinkedIntakes} />
+      <PaginationBar meta={pagination} basePath="/authority/media" />
     </div>
   );
 }

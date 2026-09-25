@@ -15,12 +15,12 @@ import { UniverseProjectList } from "@/components/assemble/universe-project-list
 export default async function StudioHomePage() {
   const supabase = await createClient();
   const participantId = await getParticipantId(supabase);
-  const [projects, works] = await Promise.all([
+  const [catalogueResult, works] = await Promise.all([
     loadUniverseCatalogue(),
     participantId ? listStoryboardWorks({ participantId }) : Promise.resolve([]),
   ]);
   const landing = composeStudioLanding(
-    projects.map((project) => ({
+    catalogueResult.rows.map((project) => ({
       master_id: project.master_id,
       title: project.title ?? "Untitled universe",
       description: project.description,

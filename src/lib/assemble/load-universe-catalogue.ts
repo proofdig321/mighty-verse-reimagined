@@ -5,6 +5,7 @@ import {
   type UniverseOccupancy,
 } from "./occupancy";
 import { isProtectedMaster } from "./protected-work";
+import { parsePage, pageMeta, type PageMeta } from "@/lib/pagination";
 
 export type UniverseCatalogueRow = {
   master_id: string;
@@ -16,15 +17,26 @@ export type UniverseCatalogueRow = {
   withdrawable: boolean;
 };
 
-export async function loadUniverseCatalogue(): Promise<UniverseCatalogueRow[]> {
-  const svc = getServiceClient();
-  const { data: masters } = await svc
-    .from("master")
-    .select("master_id, canonical_type, current_state_id, created_at")
-    .eq("canonical_type", "universe")
-    .order("created_at", { ascending: false });
+export type UniverseCatalogueResult = {
+  rows: UniverseCatalogueRow[];
+  pagination: PageMeta;
+};
 
-  if (!masters?.length) return [];
+export async function loadUniverseCatalogue(
+  pageParam?: string | null,
+  pageSizeParam?: string | null,
+): Promise<UniverseCatalogueResult> {
+  const svc = getServiceClient();
+  const pg = parsePage(pageParam, pageSizeParam);
+
+  const { data: masters, count } = await svc
+    .from("master")
+    .select("master_id, canonical_type, current_state_id, created_at", { count: "exact" })
+    .eq("canonical_type", "universe")
+    .order("created_at", { ascending: false })
+    .range(pg.from, pg.to);
+
+  if (!masters?.length) return { rows: [], pagination: pageMeta(pg, count ?? 0) };
 
   const ids = masters.map((m) => m.master_id);
   const [{ data: presentations }, { data: children }, { data: sessions }] = await Promise.all([
@@ -49,7 +61,7 @@ export async function loadUniverseCatalogue(): Promise<UniverseCatalogueRow[]> {
     }
   }
 
-  return masters
+  const rows = masters
     .map((m) => {
       const pres = (presentations ?? []).find((p) => p.master_id === m.master_id);
       const muralIdsForWork = (children ?? [])
@@ -82,4 +94,6 @@ export async function loadUniverseCatalogue(): Promise<UniverseCatalogueRow[]> {
       };
     })
     .filter((row) => row.occupancy !== "withdrawn");
+
+  return { rows, pagination: pageMeta(pg, count ?? 0) };
 }

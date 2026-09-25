@@ -17,6 +17,7 @@ import { getServiceClient } from "../authority/validate";
 import type { GenerationJobStatus } from "../ai/jobs";
 import { runDepthPipeline, type DepthPipelineInput } from "./pipeline";
 import type { DepthProvider } from "./provider";
+import { parsePage, pageMeta, type PageMeta } from "../pagination";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -132,15 +133,23 @@ export async function getDepthJob(jobId: string): Promise<DepthJobRecord | null>
   return data ? mapJob(data as Record<string, unknown>) : null;
 }
 
-export async function listDepthJobsForAsset(sourceAssetId: string): Promise<DepthJobRecord[]> {
+export async function listDepthJobsForAsset(
+  sourceAssetId: string,
+  page?: string | null,
+  pageSize?: string | null,
+): Promise<{ jobs: DepthJobRecord[]; pagination: PageMeta }> {
   const db = getServiceClient();
-  const { data } = await db
+  const pg = parsePage(page, pageSize, 20);
+  const { data, count } = await db
     .from("depth_generation_job")
-    .select("*")
+    .select("*", { count: "exact" })
     .eq("source_asset_id", sourceAssetId)
     .order("created_at", { ascending: false })
-    .limit(20);
-  return (data ?? []).map((row) => mapJob(row as Record<string, unknown>));
+    .range(pg.from, pg.to);
+  return {
+    jobs: (data ?? []).map((row) => mapJob(row as Record<string, unknown>)),
+    pagination: pageMeta(pg, count ?? 0),
+  };
 }
 
 /**

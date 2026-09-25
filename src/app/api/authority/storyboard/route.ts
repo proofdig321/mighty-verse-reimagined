@@ -93,7 +93,8 @@ export async function GET(request: Request) {
   const work = workId
     ? await loadStoryboardWorkById({ workId, participantId })
     : await loadStoryboardWork({ participantId, universeId: universeId || null });
-  const jobs = work ? await listGenerationJobs({ participantId, workId: work.work_id }) : [];
+  const jobsResult = work ? await listGenerationJobs({ participantId, workId: work.work_id }) : { jobs: [], pagination: { page: 1, pageSize: 40, total: 0, totalPages: 1, hasNext: false, hasPrev: false } };
+  const jobs = jobsResult.jobs;
   const capability = aiServiceCapability();
 
   const cinematic = work?.cinematic ?? (work ? await loadStoryboardCinematic(work) : null);

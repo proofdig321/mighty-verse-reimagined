@@ -26,8 +26,12 @@ export async function GET(request: Request) {
   }
 
   if (sourceAssetId) {
-    const jobs = await listDepthJobsForAsset(sourceAssetId);
-    return NextResponse.json({ jobs, creates_canonical: false });
+    const jobs = await listDepthJobsForAsset(
+      sourceAssetId,
+      searchParams.get("page"),
+      searchParams.get("page_size"),
+    );
+    return NextResponse.json({ ...jobs, creates_canonical: false });
   }
 
   return NextResponse.json({ error: "job_id or source_asset_id is required." }, { status: 400 });
