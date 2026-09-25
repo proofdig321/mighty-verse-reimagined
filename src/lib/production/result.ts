@@ -99,6 +99,49 @@ export type ApproveProductionDecision =
       message: string;
     };
 
+/**
+ * Parse production lifecycle state from media_realization.production_notes.
+ * This is the authoritative source for approval/attached state.
+ * media_intake.provenance_notes records intake origin only (immutable after registration).
+ */
+export function parseProductionRealizationNotes(value: string | null | undefined): ProductionResultProvenance | null {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value) as Record<string, unknown>;
+    // Accept both kinds: realization notes use 'production-realization'
+    if (parsed["kind"] !== "production-realization" && parsed["kind"] !== "production-result") return null;
+    const universe_id = parsed["universe_id"] as string | undefined;
+    const scene_master_id = parsed["scene_master_id"] as string | undefined;
+    const mux_asset_id = parsed["mux_asset_id"] as string | undefined;
+    const playback_id = parsed["playback_id"] as string | undefined;
+    if (!isId(universe_id) || !isId(scene_master_id)) return null;
+    if (typeof mux_asset_id !== "string" || !mux_asset_id.trim()) return null;
+    if (typeof playback_id !== "string" || !playback_id.trim()) return null;
+    const approval: ProductionApproval =
+      parsed["approval"] === "approved" || parsed["approval"] === "rejected" ? parsed["approval"] : "awaiting";
+    return {
+      kind: "production-result",
+      universe_id,
+      scene_master_id,
+      mux_asset_id: mux_asset_id.trim(),
+      playback_id: playback_id.trim(),
+      video_infrastructure: VIDEO_INFRASTRUCTURE,
+      executor: typeof parsed["executor"] === "string" ? parsed["executor"] : null,
+      executor_job_id: typeof parsed["executor_job_id"] === "string" ? parsed["executor_job_id"] : null,
+      approval,
+      attached: parsed["attached"] === true,
+      source_asset_id: isId(parsed["source_asset_id"] as string | undefined) ? parsed["source_asset_id"] as string : null,
+      canonical_start_ms: typeof parsed["canonical_start_ms"] === "number" ? parsed["canonical_start_ms"] : null,
+      canonical_end_ms: typeof parsed["canonical_end_ms"] === "number" ? parsed["canonical_end_ms"] : null,
+      plan_id: typeof parsed["plan_id"] === "string" ? parsed["plan_id"] : null,
+      mural_id: isId(parsed["mural_id"] as string | undefined) ? parsed["mural_id"] as string : null,
+      realization_id: isId(parsed["realization_id"] as string | undefined) ? parsed["realization_id"] as string : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 export function parseProductionProvenance(value: string | null | undefined): ProductionResultProvenance | null {
   if (!value) return null;
   try {

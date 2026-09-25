@@ -6,8 +6,7 @@ import { loadUniverseAssembly } from "@/lib/assemble/load-universe";
 import {
   decideApproveProductionResult,
   decideAttachProductionLayer,
-  parseProductionProvenance,
-  productionProvenanceNotes,
+  parseProductionRealizationNotes,
 } from "@/lib/production/result";
 import { isProductionIntegrityHash } from "@/lib/production/lifecycle";
 import { updateProductionRealizationNotes } from "@/lib/production/persist";
@@ -40,15 +39,26 @@ export async function POST(request: Request) {
     : { data: null };
   if (!asset) return NextResponse.json({ error: "Production media asset was not found." }, { status: 404 });
 
-  const { data: intake } = asset.intake_id
+  if (!isProductionIntegrityHash(asset.integrity_hash)) {
+    return NextResponse.json({
+      error: "This asset is not a production result.",
+      code: "not_production",
+    }, { status: 400 });
+  }
+
+  // Read lifecycle state from media_realization.production_notes (authoritative).
+  // media_intake.provenance_notes records intake origin only and is not updated on approve.
+  const realizationId = asset.realization_id;
+  const { data: realization } = realizationId
     ? await svc
-        .from("media_intake")
-        .select("intake_id, master_id, provenance_notes")
-        .eq("intake_id", asset.intake_id)
+        .from("media_realization")
+        .select("realization_id, production_notes")
+        .eq("realization_id", realizationId)
         .maybeSingle()
     : { data: null };
-  const provenance = parseProductionProvenance(intake?.provenance_notes ?? null);
-  if (!provenance || !isProductionIntegrityHash(asset.integrity_hash)) {
+
+  const provenance = parseProductionRealizationNotes(realization?.production_notes ?? null);
+  if (!provenance) {
     return NextResponse.json({
       error: "This asset is not a production result.",
       code: "not_production",
@@ -85,47 +95,8 @@ export async function POST(request: Request) {
     attached = true;
   }
 
-  const notes = productionProvenanceNotes(
-    {
-      ok: true,
-      action: "register_production_result",
-      universe_id: provenance.universe_id,
-      scene_master_id: provenance.scene_master_id,
-      mux_asset_id: provenance.mux_asset_id,
-      playback_id: provenance.playback_id,
-      integrity_hash: asset.integrity_hash ?? "",
-      executor: provenance.executor,
-      executor_job_id: provenance.executor_job_id,
-      source_asset_id: provenance.source_asset_id,
-      canonical_start_ms: provenance.canonical_start_ms,
-      canonical_end_ms: provenance.canonical_end_ms,
-      plan_id: provenance.plan_id,
-      mural_id: provenance.mural_id,
-      realization_id: provenance.realization_id ?? asset.realization_id,
-      creates_universe: false,
-      creates_mural: false,
-      creates_scene: false,
-      creates_creative_moment: false,
-      creates_projection: false,
-      creates_binding: false,
-      creates_realization: false,
-      binds_projection: false,
-      canonicalises: false,
-      replaces_canonical_mux: false,
-    },
-    nextApproval,
-    attached,
-  );
-
-  const { error: updateError } = await svc
-    .from("media_intake")
-    .update({ provenance_notes: notes })
-    .eq("intake_id", intake!.intake_id);
-  if (updateError) {
-    return NextResponse.json({ error: updateError.message }, { status: 500 });
-  }
-
-  const realizationId = provenance.realization_id ?? asset.realization_id;
+  // Update media_realization.production_notes only — single authoritative lifecycle state.
+  // media_intake.provenance_notes is intake origin and is not mutated after registration.
   if (realizationId) {
     await updateProductionRealizationNotes({
       svc,
