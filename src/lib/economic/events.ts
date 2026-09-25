@@ -1,11 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+import { getServiceClient } from "@/lib/authority/validate";
 import { resolveWaterfallVersion, type WaterfallParticipantEntry } from "./waterfall";
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 function calcEntitlementAmount(
   basis: number,
@@ -19,10 +13,8 @@ function calcEntitlementAmount(
   return 0;
 }
 
- 
 async function insertEntitlements(
-   
-  supabase: any,
+  supabase: ReturnType<typeof getServiceClient>,
   eventId: string,
   participants: WaterfallParticipantEntry[],
   economicBasis: number,
@@ -35,8 +27,7 @@ async function insertEntitlements(
     const basis = calculationMode === "sequential" ? remainder : economicBasis;
     const amount = calcEntitlementAmount(basis, p.calculation_method, p.value);
 
-     
-    await (supabase.from("economic_entitlement") as any).insert({
+    await supabase.from("economic_entitlement").insert({
       event_id: eventId,
       participant_ref: p.role,
       participant_role: p.role,

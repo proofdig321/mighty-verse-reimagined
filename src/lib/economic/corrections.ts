@@ -1,11 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { getServiceClient } from "@/lib/authority/validate";
 
 // A9: corrections are new events — original records never modified except status field
 export async function recordCorrection(

@@ -1,11 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
+import { getServiceClient } from "@/lib/authority/validate";
 
 type AttachmentLevel =
   | "platform"
@@ -77,7 +70,7 @@ export async function resolveWaterfallVersion(
 
     if (data) {
        
-      const wv = (data as any).waterfall_version as {
+      const wv = (data as Record<string, unknown>)["waterfall_version"] as {
         waterfall_version_id: string;
         calculation_mode: "independent" | "sequential";
         participants: WaterfallParticipantEntry[];

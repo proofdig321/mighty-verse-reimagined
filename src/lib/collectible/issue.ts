@@ -1,13 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+import { getServiceClient } from "@/lib/authority/validate";
 import type { CollectibleIssuanceInput } from "./types";
 import { recordPrimaryIssuanceEvent } from "@/lib/economic/events";
-
-function getServiceClient() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  );
-}
 
 type IssueResult = {
   collectible_id: string;
