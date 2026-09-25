@@ -15,7 +15,8 @@
  */
 
 import { muxThumbnailUrl, providerThumbnailUrl } from "./thumbnail";
-import { formatTimelineMs } from "./timing";
+import { formatMs } from "./timing";
+import { SCENE_STRUCTURE_ROLES, type SceneStructureRoleId } from "./scene-structure";
 
 export const SENTINEL_MATCH_WINDOW_MS = 15_000;
 export const CUT_INTENSITY = 0.22;
@@ -57,6 +58,7 @@ export type BoundaryProposal = {
   start_delta_ms: number;
   end_delta_ms: number;
   status: "aligned" | "adjust";
+  structure_hint: SceneStructureRoleId | null;
   creates_scene: false;
 };
 
@@ -69,6 +71,7 @@ export type StoryboardPanel = {
   still_url: string | null;
   change_score: number | null;
   is_canonical_scene: boolean;
+  structure_hint: SceneStructureRoleId | null;
 };
 
 export type AnimationBeat = {
@@ -201,6 +204,21 @@ function sceneWindows(scenes: IntelligenceScene[]) {
 }
 
 /**
+ * Derive a musical structure hint from position within the track.
+ * Evidence only — curator always confirms. Never auto-creates Scenes.
+ * Pattern: Intro → Verse 1 → Hook → Verse 2 → Bridge → Outro (for 6+ windows).
+ */
+function deriveStructureHint(index: number, total: number): SceneStructureRoleId {
+  if (total === 1) return "intro";
+  if (index === 0) return "intro";
+  if (index === total - 1) return "outro";
+  const middle = total - 2; // positions 1..total-2
+  const pos = index - 1;   // 0-based within middle
+  const MIDDLE_PATTERN: SceneStructureRoleId[] = ["verse_1", "hook", "verse_2", "bridge", "verse_3"];
+  return MIDDLE_PATTERN[pos % MIDDLE_PATTERN.length] ?? "verse_1";
+}
+
+/**
  * Derive Sentinel intelligence for an existing Universe assembly.
  * Extra boundary candidates become storyboard beats, never new Scenes.
  */
@@ -219,7 +237,7 @@ export function composeSentinelIntelligence(input: {
     .sort((a, b) => a - b);
   const used = new Set<number>();
 
-  const proposals: BoundaryProposal[] = windows.map((scene) => {
+  const proposals: BoundaryProposal[] = windows.map((scene, index) => {
     const startMs = scene.start_ms as number;
     const endMs = scene.end_ms as number;
     const startMatch = nearest(startMs, candidates);
@@ -247,6 +265,7 @@ export function composeSentinelIntelligence(input: {
       start_delta_ms: startDelta,
       end_delta_ms: endDelta,
       status,
+      structure_hint: deriveStructureHint(index, windows.length),
       creates_scene: false,
     };
   });
@@ -260,6 +279,8 @@ export function composeSentinelIntelligence(input: {
   windows.forEach((scene, index) => {
     const startMs = scene.start_ms as number;
     const endMs = scene.end_ms as number;
+    const hint = deriveStructureHint(index, windows.length);
+    const hintLabel = SCENE_STRUCTURE_ROLES.find((r) => r.id === hint)?.label ?? "";
     storyboard.push({
       panel_id: `scene-${scene.master_id}`,
       kind: "scene",
@@ -269,6 +290,7 @@ export function composeSentinelIntelligence(input: {
       still_url: stillFor(scene, startMs),
       change_score: null,
       is_canonical_scene: true,
+      structure_hint: hint,
     });
     for (const observation of input.observations) {
       if (!observation.is_boundary_candidate) continue;
@@ -278,10 +300,11 @@ export function composeSentinelIntelligence(input: {
         kind: "beat",
         time_ms: observation.time_ms,
         scene_master_id: scene.master_id,
-        title: `${scene.title ?? "Scene"} beat · ${formatTimelineMs(observation.time_ms)}`,
+        title: `${hintLabel} beat · ${formatMs(observation.time_ms)}`,
         still_url: stillFor(scene, observation.time_ms),
         change_score: observation.change_score,
         is_canonical_scene: false,
+        structure_hint: hint,
       });
     }
   });
@@ -292,10 +315,11 @@ export function composeSentinelIntelligence(input: {
       kind: "beat",
       time_ms: time,
       scene_master_id: null,
-      title: `Unaligned beat · ${formatTimelineMs(time)}`,
+      title: `Beat · ${formatMs(time)}`,
       still_url: host ? stillFor(host, time) : stillForMural(input.mural, time),
       change_score: input.observations.find((observation) => observation.time_ms === time)?.change_score ?? null,
       is_canonical_scene: false,
+      structure_hint: null,
     });
   }
   storyboard.sort((a, b) => a.time_ms - b.time_ms);

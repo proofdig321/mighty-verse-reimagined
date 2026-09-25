@@ -24,6 +24,13 @@ export function formatTimelineMs(value: number | null): string {
   return `${Math.floor(totalSeconds / 60)}:${String(totalSeconds % 60).padStart(2, "0")}.${String(value % 1000).padStart(3, "0")}`;
 }
 
+/** Human-readable m:ss — use this everywhere in UI. Storage stays ms. */
+export function formatMs(value: number | null | undefined): string {
+  if (value == null || !Number.isFinite(value)) return "—";
+  const s = Math.floor(value / 1000);
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+}
+
 /** Canonical milliseconds remain the storage unit. Operators mark windows in seconds. */
 export function secondsFromMs(ms: number | null | undefined): number {
   if (ms == null || !Number.isFinite(ms)) return 0;

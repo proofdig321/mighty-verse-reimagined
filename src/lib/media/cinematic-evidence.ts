@@ -5,7 +5,7 @@
  */
 
 import { muxThumbnailUrl } from "./thumbnail";
-import { formatTimelineMs } from "./timing";
+import { formatMs } from "./timing";
 
 export const CINEMATIC_KIND = "sentinel-cinematic";
 export const CINEMATIC_ANALYSIS_VERSION = "cinematic-v1";
@@ -122,7 +122,7 @@ export function representativeTimeMs(startMs: number, endMs: number): number {
 }
 
 export function formatShotWindow(shot: Pick<CinematicShot, "start_ms" | "end_ms">): string {
-  return `${formatTimelineMs(shot.start_ms)} – ${formatTimelineMs(shot.end_ms)}`;
+  return `${formatMs(shot.start_ms)} – ${formatMs(shot.end_ms)}`;
 }
 
 export function subjectsLine(subjects: CinematicSubject[]): string {
@@ -334,7 +334,7 @@ export function composeFallbackCinematic(input: {
       narrative: null,
       what_happens:
         change >= 0.28
-          ? `A visual change is observed around ${formatTimelineMs(timeMs)}. This is sampled-frame fallback, not full video understanding.`
+          ? `A visual change is observed around ${formatMs(timeMs)}. This is sampled-frame fallback, not full video understanding.`
           : `This window holds with limited measured change. This is sampled-frame fallback, not full video understanding.`,
       confidence: "low",
       analysis_mode: "sampled-fallback",

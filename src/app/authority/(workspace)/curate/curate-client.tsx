@@ -7,7 +7,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { SecondsField } from "@/components/assemble/seconds-field";
 import { creativeSuiteSentinelHref, creativeSuiteStoryboardHref } from "@/lib/assemble/studio";
-import { markWindowFromPointer, msFromTimelineRatio, secondsFromMs } from "@/lib/media/timing";
+import { markWindowFromPointer, msFromTimelineRatio, secondsFromMs, formatMs } from "@/lib/media/timing";
 import { cn } from "@/lib/utils";
 import {
   inspectVideoForBoundaries,
@@ -38,16 +38,9 @@ import { galleryMediaLabel } from "@/lib/assemble/gallery-source";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmtMs(ms: number | null): string {
-  if (ms == null) return "—";
-  const s = Math.floor(ms / 1000);
-  const m = Math.floor(s / 60);
-  return `${m}:${String(s % 60).padStart(2, "0")}.${String(ms % 1000).padStart(3, "0")}`;
-}
-
 function fmtSec(ms: number | null): string {
   if (ms == null) return "—";
-  return `${(ms / 1000).toFixed(1)}s`;
+  return formatMs(ms);
 }
 
 function StructureSelect({
@@ -81,6 +74,15 @@ function StructureSelect({
 function pct(ms: number, total: number): number {
   if (!total) return 0;
   return Math.min(100, Math.max(0, (ms / total) * 100));
+}
+
+/** Evidence-only structure hint from position — curator always confirms. */
+function positionStructureHint(index: number, total: number): SceneStructureRoleId {
+  if (total <= 1) return "intro";
+  if (index === 0) return "intro";
+  if (index === total - 1) return "outro";
+  const PATTERN: SceneStructureRoleId[] = ["verse_1", "hook", "verse_2", "bridge", "verse_3"];
+  return PATTERN[(index - 1) % PATTERN.length] ?? "verse_1";
 }
 
 async function api(path: string, body: unknown) {
@@ -170,6 +172,7 @@ export default function CurateClient({
   const [storyboardBusy, setStoryboardBusy] = useState(false);
   const markOriginRef = useRef<number | null>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<"start" | "end" | null>(null);
 
   // ── Mural asset binding ─────────────────────────────────────────────────────
   const [bindingAsset, setBindingAsset] = useState(false);
@@ -389,7 +392,7 @@ export default function CurateClient({
       action: "use-still",
       still_url: stillUrl,
       asset_id: mural?.asset_id ?? null,
-      title: title || `Still ${secondsFromMs(timeMs)}s`,
+      title: title || `Still ${formatMs(timeMs)}`,
       time_ms: timeMs,
     });
     setStoryboardBusy(false);
@@ -497,9 +500,9 @@ export default function CurateClient({
                   {mural?.provider === "mux" ? "Mux HLS" : mural?.provider === "livepeer" ? "Livepeer HLS" : "Media Player"}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
-                  <span>{fmtMs(currentMs)}</span>
+                  <span>{formatMs(currentMs)}</span>
                   <span className="opacity-40">/</span>
-                  <span>{fmtMs(effectiveDuration || null)}</span>
+                  <span>{formatMs(effectiveDuration || null)}</span>
                 </div>
               </div>
               <video
@@ -528,14 +531,17 @@ export default function CurateClient({
                 {/* Scrubber bar */}
                 <div
                   ref={timelineRef}
-                  className="relative h-8 rounded bg-muted/30 border border-border cursor-pointer overflow-hidden touch-none"
+                  className="relative h-8 rounded bg-muted/30 border border-border cursor-pointer overflow-visible touch-none select-none"
                   data-sentinel-timeline=""
                   onPointerDown={(event) => {
                     if (event.button !== 0) return;
+                    // If a handle is already captured, ignore body drag
+                    if (dragHandleRef.current) return;
                     event.currentTarget.setPointerCapture(event.pointerId);
                     markOriginRef.current = pointerMs(event.clientX);
                   }}
                   onPointerMove={(event) => {
+                    if (dragHandleRef.current) return;
                     if (markOriginRef.current == null) return;
                     const marked = markWindowFromPointer({
                       originMs: markOriginRef.current,
@@ -548,6 +554,7 @@ export default function CurateClient({
                     }
                   }}
                   onPointerUp={(event) => {
+                    if (dragHandleRef.current) return;
                     if (markOriginRef.current == null) return;
                     const marked = markWindowFromPointer({
                       originMs: markOriginRef.current,
@@ -578,9 +585,63 @@ export default function CurateClient({
                         width: `${pct(manualEnd - manualStart, effectiveDuration)}%`,
                         background: "var(--accent-mv-gold)",
                       }}
-                      title={`Mark ${secondsFromMs(manualStart)}s → ${secondsFromMs(manualEnd)}s`}
+                      title={`Mark ${formatMs(manualStart)} → ${formatMs(manualEnd)}`}
                     />
                   ) : null}
+
+                  {/* Draggable start handle */}
+                  {manualEnd > manualStart && (
+                    <div
+                      className="absolute top-0 bottom-0 w-3 -ml-1.5 z-20 cursor-ew-resize flex items-center justify-center group"
+                      style={{ left: `${pct(manualStart, effectiveDuration)}%` }}
+                      title={`Start: ${formatMs(manualStart)}`}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        dragHandleRef.current = "start";
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        if (dragHandleRef.current !== "start") return;
+                        const ms = pointerMs(e.clientX);
+                        setManualStart(Math.min(ms, manualEnd - 500));
+                      }}
+                      onPointerUp={(e) => {
+                        if (dragHandleRef.current !== "start") return;
+                        dragHandleRef.current = null;
+                        const ms = pointerMs(e.clientX);
+                        setManualStart(Math.min(ms, manualEnd - 500));
+                      }}
+                    >
+                      <div className="w-1 h-5 rounded-full bg-accent-mv-gold opacity-90 group-hover:opacity-100 shadow" />
+                    </div>
+                  )}
+
+                  {/* Draggable end handle */}
+                  {manualEnd > manualStart && (
+                    <div
+                      className="absolute top-0 bottom-0 w-3 -ml-1.5 z-20 cursor-ew-resize flex items-center justify-center group"
+                      style={{ left: `${pct(manualEnd, effectiveDuration)}%` }}
+                      title={`End: ${formatMs(manualEnd)}`}
+                      onPointerDown={(e) => {
+                        e.stopPropagation();
+                        dragHandleRef.current = "end";
+                        e.currentTarget.setPointerCapture(e.pointerId);
+                      }}
+                      onPointerMove={(e) => {
+                        if (dragHandleRef.current !== "end") return;
+                        const ms = pointerMs(e.clientX);
+                        setManualEnd(Math.max(ms, manualStart + 500));
+                      }}
+                      onPointerUp={(e) => {
+                        if (dragHandleRef.current !== "end") return;
+                        dragHandleRef.current = null;
+                        const ms = pointerMs(e.clientX);
+                        setManualEnd(Math.max(ms, manualStart + 500));
+                      }}
+                    >
+                      <div className="w-1 h-5 rounded-full bg-accent-mv-gold opacity-90 group-hover:opacity-100 shadow" />
+                    </div>
+                  )}
 
                   {/* Canonical scenes */}
                   {scenes.map((s) =>
@@ -593,7 +654,7 @@ export default function CurateClient({
                           width: `${pct(s.end_ms - s.start_ms, effectiveDuration)}%`,
                           background: "var(--accent-mv)",
                         }}
-                        title={`${s.title ?? "Scene"}: ${secondsFromMs(s.start_ms)}s → ${secondsFromMs(s.end_ms)}s`}
+                        title={`${s.title ?? "Scene"}: ${formatMs(s.start_ms)} → ${formatMs(s.end_ms)}`}
                       />
                     ) : null
                   )}
@@ -611,7 +672,7 @@ export default function CurateClient({
                             left: `${pct(startMs, effectiveDuration)}%`,
                             background: "var(--accent-mv-gold)",
                           }}
-                          title={`Candidate: ${secondsFromMs(startMs)}s`}
+                          title={`Candidate: ${formatMs(startMs)}`}
                         />
                       );
                     })}
@@ -635,7 +696,7 @@ export default function CurateClient({
                           />
                           <span className="text-foreground">{s.title ?? "Untitled"}</span>
                           {s.start_ms != null && (
-                            <span className="font-mono text-muted-foreground">{fmtMs(s.start_ms)}</span>
+                            <span className="font-mono text-muted-foreground">{formatMs(s.start_ms)}</span>
                           )}
                         </button>
                       ))}
@@ -759,14 +820,14 @@ export default function CurateClient({
                         setSelectedFrameMs(f.timeMs);
                         seekTo(f.timeMs);
                       }}
-                      title={`${secondsFromMs(f.timeMs)}s`}
+                      title={`${formatMs(f.timeMs)}`}
                       className="shrink-0 relative group"
                       data-selected-frame={selectedFrameMs === f.timeMs ? "true" : undefined}
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
                         src={f.dataUrl}
-                        alt={`Frame ${secondsFromMs(f.timeMs)}s`}
+                        alt={`Frame ${formatMs(f.timeMs)}`}
                         className={`h-12 w-20 object-cover rounded border transition-colors ${
                           selectedFrameMs === f.timeMs
                             ? "border-[var(--accent-mv-gold)]"
@@ -774,7 +835,7 @@ export default function CurateClient({
                         }`}
                       />
                       <span className="absolute bottom-0.5 left-0.5 text-[8px] text-white/70 bg-black/50 px-0.5 rounded">
-                        {secondsFromMs(f.timeMs)}s
+                        {formatMs(f.timeMs)}
                       </span>
                     </button>
                   ))}
@@ -814,7 +875,7 @@ export default function CurateClient({
                               if (c) { setSelectedCandidateId(c.candidateId); seekTo(d.fromMs); }
                               else seekTo(d.fromMs);
                             }}
-                            title={`${fmtMs(d.fromMs)} score:${d.changeScore.toFixed(3)}`}
+                            title={`${formatMs(d.fromMs)} score:${d.changeScore.toFixed(3)}`}
                             className="flex-1 min-w-0 rounded-sm transition-colors"
                             style={{
                               height: `${Math.max(4, d.changeScore * 100)}%`,
@@ -892,6 +953,9 @@ export default function CurateClient({
                               <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
                                 EVIDENCE {String(i + 1).padStart(2, "0")}
                               </span>
+                              <span className="text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border border-[var(--accent-mv)]/40 text-[var(--accent-mv)] bg-[var(--accent-mv)]/10">
+                                {SCENE_STRUCTURE_ROLES.find((r) => r.id === positionStructureHint(i, candidates.filter((c) => c.reviewState !== "rejected").length))?.label ?? ""}
+                              </span>
                               <span className={`text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border ${
                                 candidate.confidence === "high"
                                   ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
@@ -913,9 +977,9 @@ export default function CurateClient({
                               )}
                             </div>
                             <div className="flex items-center gap-2 text-sm font-mono">
-                              <span>{fmtMs(startMs)}</span>
+                              <span>{formatMs(startMs)}</span>
                               <span className="text-muted-foreground">→</span>
-                              <span>{fmtMs(endMs)}</span>
+                              <span>{formatMs(endMs)}</span>
                               {endMs != null && (
                                 <span className="text-xs text-muted-foreground font-sans">
                                   ({fmtSec(endMs - startMs)})
@@ -927,7 +991,7 @@ export default function CurateClient({
                                 <span className="text-muted-foreground">Nearest canonical: </span>
                                 <span className="text-foreground font-medium">{nearest.title ?? "Untitled"}</span>
                                 <span className="text-muted-foreground ml-2 font-mono">
-                                  {fmtMs(nearest.start_ms)} → {fmtMs(nearest.end_ms)}
+                                  {formatMs(nearest.start_ms)} → {formatMs(nearest.end_ms)}
                                 </span>
                                 <span className="text-muted-foreground ml-2">
                                   Δ {nearestDiff}ms
@@ -969,8 +1033,8 @@ export default function CurateClient({
                               Pick the editorial structure. Do not leave Sentinel to guess verse vs hook.
                             </p>
                             <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground font-mono">
-                              <span>Start: {fmtMs(startMs)}</span>
-                              <span>End: {fmtMs(endMs)}</span>
+                              <span>Start: {formatMs(startMs)}</span>
+                              <span>End: {formatMs(endMs)}</span>
                             </div>
                             <StructureSelect id={`structure-${candidate.candidateId}`} value={newSceneRole} onChange={setNewSceneRole} />
                             <input
@@ -1005,7 +1069,7 @@ export default function CurateClient({
                         {candidate.reviewState !== "rejected" && !isAdjusting && !isCreating && (
                           <div className="flex flex-wrap gap-2 pt-1">
                             <Button size="sm" variant="outline" onClick={() => { setSelectedCandidateId(candidate.candidateId); seekTo(startMs); }}>
-                              Jump to {fmtMs(startMs)}
+                              Jump to {formatMs(startMs)}
                             </Button>
                             {candidate.reviewState === "pending" && (
                               <>
@@ -1015,6 +1079,7 @@ export default function CurateClient({
                                     setCreatingFromId(candidate.candidateId);
                                     setSelectedCandidateId(candidate.candidateId);
                                     setNewSceneTitle("");
+                                    setNewSceneRole(positionStructureHint(i, candidates.filter((c) => c.reviewState !== "rejected").length));
                                     setCreateMsg(null);
                                   }}
                                 >
