@@ -35,16 +35,22 @@ export async function registerMaster(
   const supabase = getServiceClient();
 
   const insertPayload: Record<string, unknown> = { canonical_type: canonicalType, created_by: participantId };
+  if ((canonicalType === "creative-moment" || canonicalType === "mural" || canonicalType === "scene") && !parentMasterId) {
+    return { error: `A ${canonicalType} requires a parent master.` };
+  }
   if (parentMasterId) {
-    if (canonicalType === "mural") {
+    if (canonicalType === "mural" || canonicalType === "creative-moment") {
       const { data: parentMaster } = await supabase
         .from("master")
         .select("canonical_type")
         .eq("master_id", parentMasterId)
         .single();
       if (!parentMaster) return { error: `Parent master not found: ${parentMasterId}` };
-      if (parentMaster.canonical_type !== "universe") {
+      if (canonicalType === "mural" && parentMaster.canonical_type !== "universe") {
         return { error: `A Mural parent must be a universe (got: ${parentMaster.canonical_type})` };
+      }
+      if (canonicalType === "creative-moment" && parentMaster.canonical_type !== "universe") {
+        return { error: `A Creative Moment parent must be a universe (got: ${parentMaster.canonical_type})` };
       }
     }
     if (canonicalType === "scene") {
