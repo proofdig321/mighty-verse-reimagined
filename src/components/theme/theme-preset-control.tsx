@@ -4,15 +4,15 @@ import { useEffect, useState } from "react";
 import { isThemePreset, THEME_PRESETS, THEME_STORAGE_KEY, type ThemePresetId } from "@/lib/theme/presets";
 
 export function ThemePresetControl() {
-  const [preset, setPreset] = useState<ThemePresetId>("default");
+  const [preset, setPreset] = useState<ThemePresetId>(() => {
+    if (typeof window === "undefined") return "default";
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    return isThemePreset(stored) ? stored : "default";
+  });
 
   useEffect(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (isThemePreset(stored)) {
-      setPreset(stored);
-      document.documentElement.dataset.theme = stored;
-    }
-  }, []);
+    document.documentElement.dataset.theme = preset;
+  }, [preset]);
 
   function apply(next: ThemePresetId) {
     setPreset(next);

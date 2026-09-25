@@ -131,7 +131,7 @@ export function SentinelEvidencePage({
         <div className="space-y-1">
           <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Sentinel</p>
           <p className="max-w-2xl text-sm text-muted-foreground">
-            Observational evidence for {universeTitle}. Sentinel describes this Universe's mural. It does not create Scenes.
+            Observational evidence for {universeTitle}. Sentinel describes this Universe&apos;s mural. It does not create Scenes.
           </p>
         </div>
         <Link href={storyboardHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>

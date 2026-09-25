@@ -166,7 +166,11 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
   const [thumbnailUrl, setThumbnailUrl] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(
+    binding.media_asset?.provider && binding.media_asset.provider !== "mux"
+      ? "Error: This media asset has no supported provider."
+      : null,
+  );
   const startRef = useRef(startMs);
   const endRef = useRef(endMs);
   const previewingRef = useRef(previewing);
@@ -215,8 +219,6 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
 
     if (provider === "mux") {
       loadHls(`https://stream.mux.com/${playbackId}.m3u8`);
-    } else {
-      setMessage("Error: This media asset has no supported provider.");
     }
 
     return () => {

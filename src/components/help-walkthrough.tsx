@@ -53,7 +53,7 @@ const STEPS = [
 export function HelpWalkthrough() {
   const [index, setIndex] = useState(0);
   const [speaking, setSpeaking] = useState(false);
-  const [supported, setSupported] = useState(false);
+  const [supported] = useState(() => typeof window !== "undefined" && "speechSynthesis" in window);
   const indexRef = useRef(0);
 
   useEffect(() => {
@@ -61,7 +61,6 @@ export function HelpWalkthrough() {
   }, [index]);
 
   useEffect(() => {
-    setSupported(typeof window !== "undefined" && "speechSynthesis" in window);
     return () => {
       if (typeof window !== "undefined") window.speechSynthesis?.cancel();
     };

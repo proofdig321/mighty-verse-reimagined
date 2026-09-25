@@ -42,7 +42,7 @@ import {
   resetStoryboardWork,
   restoreStoryboardSnapshot,
   saveStoryboardAssembly,
-  useStillOnStoryboard,
+  applyStillToStoryboard,
 } from "@/lib/storyboard/commands";
 import { listGenerationJobs } from "@/lib/storyboard/generation";
 import { loadStoryboardCinematic, loadAssetCinematic, analyseUniverseSource } from "@/lib/storyboard/analyse-source";
@@ -254,7 +254,7 @@ export async function POST(request: Request) {
       });
       workId = ensured.work_id;
     }
-    const next = await useStillOnStoryboard({
+    const next = await applyStillToStoryboard({
       workId,
       participantId,
       panelId: typeof body.panel_id === "string" ? body.panel_id : null,

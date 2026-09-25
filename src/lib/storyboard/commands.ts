@@ -300,7 +300,7 @@ export async function createStoryboardPanel(input: {
   return (await loadStoryboardWorkById(input)) as StoryboardWorkRecord;
 }
 
-export async function useStillOnStoryboard(input: {
+export async function applyStillToStoryboard(input: {
   workId: string;
   participantId: string;
   panelId?: string | null;

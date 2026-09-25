@@ -57,26 +57,28 @@ export function CurateYoutubeIngest({
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string | null>(newestPending?.session_id ?? null);
-  const [stage, setStage] = useState<UrlIngestStage | null>(
-    newestPending ? classifyUrlIngestStage({ phase: newestPending.phase }) : null,
-  );
-  const [startedAt, setStartedAt] = useState<number | null>(
-    newestPending ? Date.parse(newestPending.created_at) : null,
-  );
-  const [elapsedMs, setElapsedMs] = useState(0);
-  const [activeUrl, setActiveUrl] = useState<string | null>(newestPending?.source_url ?? null);
-  const [youtubeCookies, setYoutubeCookies] = useState("");
-
-  useEffect(() => {
+  const [sessionId, setSessionId] = useState<string | null>(() => {
+    if (newestPending?.session_id) return newestPending.session_id;
     const stored = readStored();
-    if (stored && !sessionId) {
-      setSessionId(stored.sessionId);
-      setActiveUrl(stored.url);
-      setStartedAt(stored.startedAt);
-      setStage("pulling");
-    }
-  }, [sessionId]);
+    return stored?.sessionId ?? null;
+  });
+  const [stage, setStage] = useState<UrlIngestStage | null>(() => {
+    if (newestPending) return classifyUrlIngestStage({ phase: newestPending.phase });
+    const stored = readStored();
+    return stored ? "pulling" : null;
+  });
+  const [startedAt, setStartedAt] = useState<number | null>(() => {
+    if (newestPending) return Date.parse(newestPending.created_at);
+    const stored = readStored();
+    return stored?.startedAt ?? null;
+  });
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [activeUrl, setActiveUrl] = useState<string | null>(() => {
+    if (newestPending?.source_url) return newestPending.source_url;
+    const stored = readStored();
+    return stored?.url ?? null;
+  });
+  const [youtubeCookies, setYoutubeCookies] = useState("");
 
   useEffect(() => {
     if (!startedAt || stage === "ready" || stage === "failed" || !stage) return;

@@ -58,7 +58,6 @@ function bindHeroParallax(surface: HTMLDivElement) {
 
   // Request gyro permission on iOS 13+
   if (typeof DeviceOrientationEvent !== "undefined") {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const DOE = DeviceOrientationEvent as any;
     if (typeof DOE.requestPermission === "function") {
       // iOS — bind on first touch to avoid permission prompt on load
