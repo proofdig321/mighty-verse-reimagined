@@ -601,19 +601,16 @@ export async function processGenerationJob(jobId: string, participantId: string)
       await writeJob(db, jobId, mapped);
       return (await getGenerationJob({ participantId, jobId }))!;
     }
+    // Persist the operation_id and return processing state.
+    // Do NOT poll in the same request — Veo is long-running (minutes).
+    // The next GET /jobs/[jobId] poll will advance via the operation_id branch.
     await writeJob(db, jobId, {
       status: "processing",
       progress: 40,
       operation_id: submitted.operationName,
       model: submitted.model,
     });
-    return finishVeoJob(
-      { ...current, status: "processing", operation_id: submitted.operationName },
-      participantId,
-      work,
-      panel,
-      prompt,
-    );
+    return (await getGenerationJob({ participantId, jobId }))!
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : "Generation failed.";
     await writeJob(db, jobId, {
@@ -683,10 +680,13 @@ export async function cancelGenerationJob(input: { participantId: string; jobId:
 
 export async function retryGenerationJob(input: { participantId: string; jobId: string }): Promise<GenerationJobRecord | null> {
   const job = await getGenerationJob(input);
-  if (!job || !canRetryJob(job.status, job.retryable) && job.status !== "failed" && job.status !== "unavailable") {
+  if (!job || (!canRetryJob(job.status, job.retryable) && job.status !== "failed" && job.status !== "unavailable")) {
     return job;
   }
-  const next = await createGenerationJob({
+  // Queue only — do not immediately process.
+  // The client polls GET /jobs/[jobId] which calls processGenerationJob.
+  // This prevents double-submission of a Veo operation that may still be running remotely.
+  return createGenerationJob({
     participantId: input.participantId,
     workId: job.work_id ?? "",
     panelId: job.panel_id,
@@ -694,5 +694,4 @@ export async function retryGenerationJob(input: { participantId: string; jobId: 
     request: { ...job.request, retry_of: job.job_id },
     prompt: typeof job.request.prompt === "string" ? job.request.prompt : `${job.kind}:${job.panel_id}:${Date.now()}`,
   });
-  return processGenerationJob(next.job_id, input.participantId);
 }
