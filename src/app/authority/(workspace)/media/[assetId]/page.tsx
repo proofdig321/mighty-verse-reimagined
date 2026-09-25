@@ -184,7 +184,8 @@ export default async function MediaAssetPage({ params }: { params: Promise<{ ass
     boundMasterId: bound?.masterId ?? null,
     boundMasterTitle: bound?.masterTitle ?? null,
     publicHref: bound?.masterId ? `/worlds/${bound.masterId}` : null,
-    isrc: realization?.isrc ?? intake?.isrc ?? null,
+    // ISRC is authoritative only from media_realization.isrc — never from intake
+    isrc: realization?.isrc ?? null,
     isrcStatus: realization?.isrc_status ?? intake?.isrc_status ?? null,
     isrcEligible: isIsrcEligible(realization?.realization_type ?? ""),
     identityHref: bound?.masterId ? `/authority/${bound.masterId}` : null,
