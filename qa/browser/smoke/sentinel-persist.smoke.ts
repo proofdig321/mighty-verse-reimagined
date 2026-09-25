@@ -116,7 +116,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
   const unauthorized = await fetch(`${baseURL}/api/authority/media/inspect`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(evidencePayload(CANON.unboundLivepeerAssetId, 2)),
+    body: JSON.stringify(evidencePayload(CANON.discardedAssetId, 2)),
   });
   expect(unauthorized.status).toBe(401);
   notes.push("A: unauthenticated inspection persistence is rejected");
@@ -128,7 +128,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
   const { count: sessionsBefore } = await svc
     .from("inspection_session")
     .select("*", { count: "exact", head: true })
-    .eq("asset_id", CANON.unboundLivepeerAssetId);
+    .eq("asset_id", CANON.discardedAssetId);
   const { count: muxSessionsBefore } = await svc
     .from("inspection_session")
     .select("*", { count: "exact", head: true })
@@ -143,20 +143,20 @@ test("Sentinel persists source-media inspection without creating canonical work"
     expect(invalid.status).toBe(400);
     notes.push("C: invalid asset scope is rejected");
 
-    const first = await postInspect(page, evidencePayload(CANON.unboundLivepeerAssetId, 2));
+    const first = await postInspect(page, evidencePayload(CANON.discardedAssetId, 2));
     expect(first.status).toBe(201);
     expect(first.body.observation_count).toBe(2);
     expect(typeof first.body.session_id).toBe("string");
     createdSessions.push(first.body.session_id);
 
-    const second = await postInspect(page, evidencePayload(CANON.unboundLivepeerAssetId, 4));
+    const second = await postInspect(page, evidencePayload(CANON.discardedAssetId, 4));
     expect(second.status).toBe(201);
     expect(second.body.session_id).not.toBe(first.body.session_id);
     expect(second.body.observation_count).toBe(4);
     createdSessions.push(second.body.session_id);
     notes.push("D: unbound media persist creates a new historical session rather than overwriting");
 
-    const masterScoped = await postInspect(page, evidencePayload(CANON.unboundLivepeerAssetId, 3, CANON.universeId));
+    const masterScoped = await postInspect(page, evidencePayload(CANON.discardedAssetId, 3, CANON.universeId));
     expect(masterScoped.status).toBe(201);
     createdSessions.push(masterScoped.body.session_id);
     notes.push("E: optional master-scoped persist remains valid and still anchors to the media asset");
@@ -166,7 +166,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
       .select("session_id, asset_id, status, frame_count")
       .eq("session_id", first.body.session_id)
       .single();
-    expect(firstSession?.asset_id).toBe(CANON.unboundLivepeerAssetId);
+    expect(firstSession?.asset_id).toBe(CANON.discardedAssetId);
     const { data: firstObs } = await svc
       .from("frame_observation")
       .select("observation_id, time_ms, mean_luminance, change_score, is_boundary_candidate")
@@ -219,7 +219,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
       const { data: latest } = await svc
         .from("inspection_session")
         .select("session_id, frame_count")
-        .eq("asset_id", CANON.unboundLivepeerAssetId)
+        .eq("asset_id", CANON.discardedAssetId)
         .eq("frame_count", 5)
         .order("started_at", { ascending: false })
         .limit(1)
@@ -254,7 +254,7 @@ test("Sentinel persists source-media inspection without creating canonical work"
   const { count: sessionsAfterCleanup } = await svc
     .from("inspection_session")
     .select("*", { count: "exact", head: true })
-    .eq("asset_id", CANON.unboundLivepeerAssetId);
+    .eq("asset_id", CANON.discardedAssetId);
   expect(sessionsAfterCleanup).toBe(sessionsBefore ?? 0);
 
   assertRuntimeHealth(observe, {

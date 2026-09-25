@@ -96,6 +96,10 @@ export function muxMediaRequests(observation: RuntimeObservation): NetworkEntry[
   });
 }
 
+/**
+ * Detect any requests to Livepeer CDN or the retired proxy route.
+ * Post-retirement these should be zero on all pages.
+ */
 export function livepeerRequests(observation: RuntimeObservation): NetworkEntry[] {
   return observation.requests.filter((entry) => {
     const url = entry.url;

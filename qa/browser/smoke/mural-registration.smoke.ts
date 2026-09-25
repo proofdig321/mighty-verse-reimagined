@@ -76,7 +76,7 @@ test("a Universe without a Mural can register one without attaching media", asyn
   notes.push("duplicate untitled Universe mural registration is idempotent");
 
   const occupied = await page.request.post("/api/authority/media", {
-    data: { asset_id: CANON.unboundLivepeerAssetId, universe_id: CANON.universeId },
+    data: { asset_id: CANON.discardedAssetId, universe_id: CANON.universeId },
   });
   expect(occupied.status()).toBe(409);
   const occupiedBody = await occupied.json();

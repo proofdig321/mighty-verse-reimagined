@@ -8,7 +8,7 @@ export const maxDuration = 300;
 
 const ISRC_PATTERN = /^[A-Z]{2}-?[A-Z0-9]{3}-?[0-9]{2}-?[0-9]{5}$/;
 const WORK_TYPES = new Set(["song", "audio", "video", "animation", "other"]);
-const SOURCE_TYPES = new Set(["upload", "external-url", "livepeer-asset", "other"]);
+const SOURCE_TYPES = new Set(["upload", "external-url", "other"]);
 const CREDIT_ROLES = new Set(["primary_artist", "featured_artist", "composer", "lyricist", "producer", "director", "editor", "cinematographer", "performer", "writer", "contributor"]);
 
 function validHttpsUrl(value: unknown): value is string {

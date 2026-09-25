@@ -8,7 +8,7 @@
  * Embedding strategy by media class:
  *   audio-mp3      → ID3v2 tags via node-id3 (TSRC for ISRC, TIT2, TPE1, TCOP)
  *   audio-other    → portable sidecar only (no ffmpeg available)
- *   video          → portable sidecar only (Livepeer holds bytes; no direct embedding)
+ *   video          → portable sidecar only (provider holds bytes; no direct embedding)
  *   image-raster   → XMP via sharp (dc:title, dc:creator, xmpRights, plus sidecar)
  *   image-other    → portable sidecar only
  *   unknown        → portable sidecar only
@@ -200,7 +200,7 @@ ${isrcLine}    </rdf:Description>
 /**
  * Embed metadata into a file buffer and store a portable canonical representation (sidecar).
  *
- * For Livepeer-hosted video/audio-other: sidecar only (original bytes are provider-managed).
+ * For video/audio-other: sidecar only (original bytes are provider-managed).
  * For MP3 buffers: ID3v2 embedding + sidecar.
  * For raster images: XMP embedding + sidecar.
  *
@@ -235,7 +235,7 @@ export async function embedMetadata(
       warnings.push(`Image XMP embedding failed: ${err instanceof Error ? err.message : String(err)}`);
     }
   } else if (mediaClass === "video") {
-    warnings.push("Video: original bytes are provider-managed (Livepeer). Portable canonical representation stored as sidecar.");
+    warnings.push("Video: original bytes are provider-managed. Portable canonical representation stored as sidecar.");
   } else if (mediaClass === "audio-other") {
     warnings.push(`${mediaClass}: native embedding requires ffmpeg (not available). Portable canonical representation stored as sidecar.`);
   }
@@ -262,9 +262,6 @@ export async function embedMetadata(
 /**
  * Check consistency between canonical state and the stored portable representation (sidecar).
  * Used by the Authority UI to show metadata synchronisation status.
- *
- * embeddedIsrc is always null for Livepeer-hosted assets because the original bytes
- * are provider-managed and cannot be read back. This is expected, not an error.
  */
 export async function checkMetadataConsistency(
   assetId: string,
@@ -277,7 +274,7 @@ export async function checkMetadataConsistency(
   return {
     assetId,
     canonicalIsrc: canonicalMeta.isrc,
-    embeddedIsrc: null, // Cannot read from Livepeer HLS; original bytes are provider-managed
+    embeddedIsrc: null, // Cannot read from provider HLS; original bytes are provider-managed
     sidecarIsrc: sidecar?.isrc ?? null,
     isrcConsistent: !sidecar || sidecar.isrc === canonicalMeta.isrc,
     sidecarPresent: !!sidecar,

@@ -66,15 +66,8 @@ export async function GET(request: Request) {
   const mediaClass: MediaClass = asset.asset_type === "audio" ? "audio" : "video";
   const playbackSource = provider.buildPlaybackSource(asset.storage_ref, mediaClass);
 
-  // For Livepeer, the endpoint is a proxy path — resolve the actual HLS URL
-  let hlsUrl: string;
-  if (asset.provider === "livepeer") {
-    // Use the delivery_variant endpoint if available, otherwise the proxy path
-    hlsUrl = variant?.endpoint_ref ?? playbackSource.endpoint;
-  } else {
-    // Mux: use delivery_variant endpoint if available, otherwise build from storage_ref
-    hlsUrl = variant?.endpoint_ref ?? playbackSource.endpoint;
-  }
+  // Mux: use delivery_variant endpoint if available, otherwise build from storage_ref
+  const hlsUrl: string = variant?.endpoint_ref ?? playbackSource.endpoint;
 
   return NextResponse.json({
     asset_id: asset.asset_id,

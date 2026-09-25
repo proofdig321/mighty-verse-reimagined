@@ -287,20 +287,9 @@ export function TimelineEditor({ binding, masterId, onDone, onCancel }: Timeline
     }
 
     if (provider === "mux") {
-      // Mux: construct HLS URL directly from playback ID
-      const hlsUrl = `https://stream.mux.com/${playbackId}.m3u8`;
-      loadHls(hlsUrl);
+      loadHls(`https://stream.mux.com/${playbackId}.m3u8`);
     } else {
-      // Livepeer: resolve via proxy (historical assets)
-      fetch(`/api/livepeer/playback/${playbackId}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(info => {
-          const hls = info?.meta?.source?.find((s: { type: string; url: string }) => s.type === "html5/application/vnd.apple.mpegurl");
-          if (!hls) throw new Error("No HLS source.");
-          setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-          loadHls(hls.url);
-        })
-        .catch(err => setMessage(`Error: ${err instanceof Error ? err.message : "Unable to load preview"}`));
+      setMessage("Error: This media asset has no supported provider.");
     }
 
     return () => {

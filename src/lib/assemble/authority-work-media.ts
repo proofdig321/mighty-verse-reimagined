@@ -1,5 +1,5 @@
 /**
- * Authority work records play the bound Mux (or Livepeer) asset.
+ * Authority work records play the bound Mux asset.
  * MEDIA ≠ CREATIVE WORK — storage_ref is delivery, not identity.
  */
 
@@ -53,7 +53,7 @@ export function toAuthorityProjectionMedia(
     playback_id: playbackId,
     provider,
     media_class: mediaClass,
-    endpoint_ref: provider === "mux" ? muxHlsEndpoint(playbackId) : null,
+    endpoint_ref: muxHlsEndpoint(playbackId),
     is_placeholder: false,
     start_ms: binding.start_ms,
     end_ms: binding.end_ms,

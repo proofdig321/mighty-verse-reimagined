@@ -109,7 +109,6 @@ type Props = {
 
 function hlsUrl(provider: string | null, storageRef: string): string | null {
   if (provider === "mux") return `https://stream.mux.com/${storageRef}.m3u8`;
-  if (provider === "livepeer") return `https://livepeercdn.studio/hls/${storageRef}/index.m3u8`;
   return null;
 }
 
@@ -497,7 +496,7 @@ export default function CurateClient({
             <CardContent className="pt-4 space-y-3">
               <div className="flex items-center justify-between">
                 <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  {mural?.provider === "mux" ? "Mux HLS" : mural?.provider === "livepeer" ? "Livepeer HLS" : "Media Player"}
+                  {mural?.provider === "mux" ? "Mux HLS" : "Media Player"}
                 </p>
                 <div className="flex items-center gap-2 text-xs text-muted-foreground font-mono">
                   <span>{formatMs(currentMs)}</span>

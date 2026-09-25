@@ -11,7 +11,7 @@ test("unassociated media can associate to an existing Universe without creating 
   const baseURL = testInfo.project.use.baseURL ?? "http://localhost:3000";
 
   const unauthorized = await page.request.post("/api/authority/media", {
-    data: { asset_id: CANON.unboundLivepeerAssetId, universe_id: CANON.universeId },
+    data: { asset_id: CANON.discardedAssetId, universe_id: CANON.universeId },
   });
   expect(unauthorized.status(), `unauthenticated association HTTP ${unauthorized.status()}`).toBe(401);
   notes.push("unauthenticated association is rejected");
@@ -40,7 +40,7 @@ test("unassociated media can associate to an existing Universe without creating 
   notes.push("duplicate Super Hero Ego association is idempotent and keeps the existing Mural binding");
 
   const occupied = await page.request.post("/api/authority/media", {
-    data: { asset_id: CANON.unboundLivepeerAssetId, universe_id: CANON.universeId },
+    data: { asset_id: CANON.discardedAssetId, universe_id: CANON.universeId },
   });
   expect(occupied.status(), `occupied mural HTTP ${occupied.status()}`).toBe(409);
   const occupiedBody = await occupied.json();
@@ -48,14 +48,14 @@ test("unassociated media can associate to an existing Universe without creating 
   notes.push("unbound media does not replace Super Hero Ego Mural media");
 
   const missingUniverse = await page.request.post("/api/authority/media", {
-    data: { asset_id: CANON.unboundLivepeerAssetId, universe_id: "00000000-0000-4000-8000-000000000000" },
+    data: { asset_id: CANON.discardedAssetId, universe_id: "00000000-0000-4000-8000-000000000000" },
   });
   expect(missingUniverse.status()).toBe(404);
   notes.push("unknown Universe is rejected");
 
   const wrongProjection = await page.request.post("/api/authority/media", {
     data: {
-      asset_id: CANON.unboundLivepeerAssetId,
+      asset_id: CANON.discardedAssetId,
       universe_id: CANON.universeId,
       projection_id: CANON.swordMasterProjectionId,
     },
@@ -65,7 +65,7 @@ test("unassociated media can associate to an existing Universe without creating 
   expect(wrongBody.code).toBe("wrong_work");
   notes.push("client-supplied Scene projection cannot hijack Universe association");
 
-  const unboundInspect = page.locator(`a[href="/authority/media/inspect?assetId=${CANON.unboundLivepeerAssetId}"]`);
+  const unboundInspect = page.locator(`a[href="/authority/media/inspect?assetId=${CANON.discardedAssetId}"]`);
   const unboundRow = page.locator("tr").filter({ has: unboundInspect });
   await expect(unboundRow.getByText(/Not associated/i)).toBeVisible();
   await unboundRow.getByRole("button", { name: "Associate with Universe" }).click();

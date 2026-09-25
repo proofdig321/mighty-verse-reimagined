@@ -316,41 +316,6 @@ export async function createProjection(
   return { data: { projection_id: proj.projection_id, provenance_id: prov.provenance_id } };
 }
 
-// ---------------------------------------------------------------------------
-// 4. Attach / verify ProjectionMediaBinding (Livepeer asset ingest)
-// ---------------------------------------------------------------------------
-export async function attachMediaBinding(
-  participantId: string,
-  projectionId: string,
-  masterId: string,
-  livepeerAssetId: string,
-  rightsHolderRef?: string | null,
-  rightsBasis?: string | null,
-  realizationId?: string | null,
-  intakeId?: string | null
-): Promise<OperationResult<{ binding_id: string; asset_id: string; variant_id: string }>> {
-  const auth = await validateAuthority(participantId, "authorise-projection", masterId);
-  if ("error" in auth) return { error: auth.error };
-
-  // Delegate to existing ingestLivepeerAsset — it handles media_asset + delivery_variant + binding
-  const { ingestLivepeerAsset } = await import("@/lib/media/ingest");
-  const result = await ingestLivepeerAsset(
-    livepeerAssetId,
-    projectionId,
-    participantId,
-    "primary",
-    "public",
-    rightsHolderRef,
-    rightsBasis ?? "rights recorded during ingest",
-    realizationId ?? null,
-    intakeId ?? null
-  );
-
-  await logOperation(auth.authority_id, "attach-media-binding", result.binding_id, "media-binding", "accepted");
-
-  return { data: result };
-}
-
 export async function createMediaRealization(
   participantId: string,
   masterId: string,

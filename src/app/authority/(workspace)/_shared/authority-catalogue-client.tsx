@@ -216,16 +216,7 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
     if (provider === "mux") {
       loadHls(`https://stream.mux.com/${playbackId}.m3u8`);
     } else {
-      // Livepeer: resolve via proxy (historical assets)
-      fetch(`/api/livepeer/playback/${playbackId}`)
-        .then(response => response.ok ? response.json() : null)
-        .then(info => {
-          const hls = info?.meta?.source?.find((source: { type: string; url: string }) => source.type === "html5/application/vnd.apple.mpegurl");
-          if (!hls) throw new Error("No playable HLS source returned.");
-          setThumbnailUrl(hls.url.replace("/index.m3u8", "/thumbnails/keyframes_0.png"));
-          loadHls(hls.url);
-        })
-        .catch(error => setMessage(`Error: ${error instanceof Error ? error.message : "Unable to load preview"}`));
+      setMessage("Error: This media asset has no supported provider.");
     }
 
     return () => {
@@ -662,7 +653,7 @@ function MediaIntakePanel({ onDone, onCancel, participants, intake }: { onDone: 
         <div hidden={step !== 2}>
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Presentation & audience</p>
         <select value={sourceType} onChange={e => setSourceType(e.target.value)} disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">
-          <option value="external-url">YouTube / HTTPS URL (Mux ingest)</option><option value="upload">Local file</option><option value="livepeer-asset">Existing Livepeer asset</option>
+          <option value="external-url">YouTube / HTTPS URL (Mux ingest)</option><option value="upload">Local file</option>
         </select>
         {sourceType === "external-url" && <input value={sourceUrl} onChange={e => setSourceUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=… Mux will pull this file" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />}
         <div className="grid grid-cols-2 gap-2">

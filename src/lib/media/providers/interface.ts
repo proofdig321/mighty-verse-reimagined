@@ -2,7 +2,7 @@
  * Mighty Verse Media Provider Interface
  *
  * The domain layer calls this interface. Provider-specific mechanics
- * (Mux SDK calls, Livepeer SDK calls) live inside adapters.
+ * (Mux SDK calls) live inside adapters.
  *
  * The domain must not contain scattered if (provider === "mux") branches.
  */
@@ -11,7 +11,7 @@
  * Normalized, provider-independent media classification.
  *
  * "depth" is an application media asset — a depth map associated with a video.
- * It is NOT a native Mux/Livepeer track type. Depth assets are stored in
+ * It is NOT a native Mux track type. Depth assets are stored in
  * Supabase Storage and delivered via signed/CDN URL, independent of the
  * video provider. The renderer does not know or care which CDN served it.
  */
@@ -22,12 +22,12 @@ export type MediaClass = "audio" | "video" | "image" | "depth" | "other";
  * The player receives this and does not need to know which provider produced it.
  */
 export type MediaPlaybackSource = {
-  provider: "mux" | "livepeer";
+  provider: "mux";
   mediaClass: MediaClass;
   protocol: "hls";
   /** Full HLS URL ready for the player. */
   endpoint: string;
-  /** Provider playback identifier (Mux playback_id or Livepeer playbackId). */
+  /** Mux playback_id. */
   playbackId: string;
 };
 
@@ -37,9 +37,9 @@ export type MediaPlaybackSource = {
  * translated into this canonical shape before touching domain records.
  */
 export type ProviderAsset = {
-  /** Provider asset identifier (Mux asset.id, Livepeer asset.id). */
+  /** Provider asset identifier (Mux asset.id). */
   providerAssetId: string;
-  /** Provider playback identifier (Mux playback_id, Livepeer playbackId). */
+  /** Provider playback identifier (Mux playback_id). */
   playbackId: string;
   /** Normalized media class derived from provider track data. */
   mediaClass: MediaClass;
@@ -52,7 +52,6 @@ export type ProviderAsset = {
   /**
    * Content integrity reference.
    * For Mux: "mux:{assetId}" (Mux does not expose SHA-256 hashes directly).
-   * For Livepeer: SHA-256 hash from asset.hash array, or "livepeer:{assetId}".
    */
   integrityHash: string;
 };
@@ -70,7 +69,7 @@ export type DirectUploadResult = {
 
 /**
  * Media provider interface.
- * Implemented by MuxAdapter and LivepeerAdapter.
+ * Implemented by MuxAdapter.
  *
  * Note: webhook processing is intentionally NOT part of this interface.
  * Webhooks are provider-specific and belong in the provider's webhook handler.
@@ -103,7 +102,7 @@ export interface MediaProvider {
    * Build a playback source from a stored provider asset identity.
    * Called by the player layer to construct the HLS endpoint.
    *
-   * @param playbackId  The stored storage_ref (Mux playback_id or Livepeer playbackId).
+   * @param playbackId  The stored storage_ref (Mux playback_id).
    * @param mediaClass  The stored media_class on the media_asset.
    */
   buildPlaybackSource(playbackId: string, mediaClass: MediaClass): MediaPlaybackSource;

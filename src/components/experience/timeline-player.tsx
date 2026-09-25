@@ -34,17 +34,12 @@ export default function TimelinePlayer({ segments, onClose }: Props) {
     const video = videoRef.current;
     setState("loading");
 
-    // Resolve HLS URL — Mux assets have it pre-computed, Livepeer requires proxy
+    // Resolve HLS URL — Mux assets have it pre-computed in hlsUrl
     let hlsSrc: string | null = s.hlsUrl ?? null;
 
     if (!hlsSrc) {
-      const provider = s.provider ?? "livepeer";
-      if (provider === "mux") {
+      if (s.playbackId) {
         hlsSrc = `https://stream.mux.com/${s.playbackId}.m3u8`;
-      } else {
-        // Livepeer: resolve via proxy
-        const info = await fetch(`/api/livepeer/playback/${s.playbackId}`).then(r => r.ok ? r.json() : null).catch(() => null);
-        hlsSrc = info?.meta?.source?.find((x: { type: string }) => x.type === "html5/application/vnd.apple.mpegurl")?.url ?? null;
       }
     }
 

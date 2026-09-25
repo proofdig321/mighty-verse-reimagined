@@ -72,7 +72,7 @@ test("Gallery and Inspect carry selected media into Curate Studio", async ({ pag
   const continueFromUnbound = page.getByRole("link", { name: "Continue in Curate", exact: true });
   if (await continueFromUnbound.count()) {
     await continueFromUnbound.click();
-    await expect(page).toHaveURL(new RegExp(`/authority/curate\\?asset=${CANON.unboundLivepeerAssetId}`));
+    await expect(page).toHaveURL(new RegExp(`/authority/curate\\?asset=${CANON.discardedAssetId}`));
     await expect(page.getByRole("heading", { name: /^Curate$/ })).toBeVisible();
     // Discarded asset is filtered from the table — no aria-current row
     await expect(page.locator("tr[aria-current='true']")).toHaveCount(0);

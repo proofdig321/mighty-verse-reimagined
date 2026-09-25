@@ -9,14 +9,13 @@ import {
   addAttribution,
   createCanonicalState,
   createProjection,
-  attachMediaBinding,
 } from "../src/lib/authority/operations";
 import { createClient } from "@supabase/supabase-js";
 
 const GOLDEN_SHOVEL = "866390ff-5d45-4c15-b64e-e7c0655780b8";
 const WORLD_MASTER_ID = "05ccc0c6-75f9-4864-b0c1-af5e36bf45cc";
-// Livepeer asset ID (not playback ID) — from integrity_hash of existing media_asset
-const LIVEPEER_ASSET_ID = "5a115b88-a4d0-444b-974d-e9721e37f37d";
+// NOTE: Media binding is performed via the authority media API after Mux ingest.
+// The original Livepeer asset (5a115b88) has been retired.
 
 function getServiceClient() {
   return createClient(
@@ -56,11 +55,7 @@ async function run() {
   const { projection_id } = projResult.data;
   console.log("projection_id:", projection_id);
 
-  // 5. Bind existing Livepeer asset to Mural projection
-  const bindResult = await attachMediaBinding(GOLDEN_SHOVEL, projection_id, master_id, LIVEPEER_ASSET_ID);
-  if ("error" in bindResult) throw new Error(`attachMediaBinding: ${bindResult.error}`);
-  const { binding_id, asset_id } = bindResult.data;
-  console.log("binding_id:", binding_id, "asset_id:", asset_id);
+  // 5. Bind media via /api/authority/media after Mux ingest (Livepeer retired)
 
   // 6. Create work_presentation
   const supabase = getServiceClient();
@@ -73,7 +68,7 @@ async function run() {
   console.log("presentation_id:", pres.presentation_id);
 
   console.log("\n--- Build 06 complete ---");
-  console.log({ master_id, entry_id, canonical_state_id, projection_id, binding_id, asset_id, presentation_id: pres.presentation_id });
+  console.log({ master_id, entry_id, canonical_state_id, projection_id, presentation_id: pres.presentation_id });
 }
 
 run().catch((e) => { console.error(e); process.exit(1); });

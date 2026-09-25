@@ -234,7 +234,6 @@ export function MetadataStatusPanel({ assetId, initialMeta, initialReport, intak
           <p className="text-[10px] text-muted-foreground/50">
             Each recording realization carries its own ISRC. ISRC is never shared across distinct recordings.
             Native embedding: MP3 (ID3v2) and raster images (XMP) supported on upload.
-            Video assets hosted on Livepeer: original bytes are provider-managed — portable canonical representation stored as sidecar only.
             Embedded metadata is evidence only and is never automatically promoted to canonical state.
           </p>
         </div>

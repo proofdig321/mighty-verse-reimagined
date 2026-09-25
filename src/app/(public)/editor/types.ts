@@ -7,9 +7,9 @@ export type LibraryScene = {
   title: string | null;
   muralTitle: string | null;
   playbackId: string | null;
-  /** Provider name: "mux" | "livepeer" | null */
+  /** Provider name: "mux" | null */
   provider: string | null;
-  /** Full HLS endpoint URL (for Mux). Null for Livepeer. */
+  /** Full HLS endpoint URL. */
   hlsUrl: string | null;
   startMs: number | null;
   endMs: number | null;

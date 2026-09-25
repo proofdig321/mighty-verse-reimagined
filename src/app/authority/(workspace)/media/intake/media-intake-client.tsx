@@ -284,7 +284,6 @@ export default function MediaIntakeClient({ participants }: { participants: Part
           <select value={sourceType} onChange={(e) => setSourceType(e.target.value)} disabled={busy} className={selectCls}>
             <option value="external-url">YouTube / HTTPS URL (Mux ingest)</option>
             <option value="upload">Local file</option>
-            <option value="livepeer-asset">Existing Livepeer asset</option>
           </select>
           {sourceType === "external-url" && (
             <input value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=…" disabled={busy} className={inputCls} />

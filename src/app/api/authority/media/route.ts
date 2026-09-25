@@ -16,10 +16,10 @@ import { loadUniverseAssociationTarget } from "@/lib/assemble/load-studio";
  *
  * Direct path: { asset_id, projection_id, master_id } binds an already-ingested asset.
  *
+ * Session path: { session_id, projection_id, master_id } binds via completed upload session.
+ *
  * For Mux: the media_asset already exists (created by the webhook handler).
  * This route creates only the projection_media_binding.
- *
- * For Livepeer (historical): delegates to the existing ingestLivepeerAsset path.
  *
  * Authority: requires authorise-projection capability on the master.
  * The webhook cannot call this route — canonical binding is an authority operation.
@@ -37,13 +37,9 @@ export async function POST(request: Request) {
     master_id,
     session_id,
     universe_id,
-    // Direct asset binding — for already-ingested assets (e.g. Mux)
     asset_id,
-    // Optional timing override — if omitted, existing binding timings are preserved
     start_ms,
     end_ms,
-    // Legacy Livepeer field — kept for backward compatibility
-    livepeer_asset_id,
     rights_holder_ref,
     rights_basis,
     realization_id,
@@ -53,7 +49,7 @@ export async function POST(request: Request) {
   const svc = getServiceClient();
 
   // ── Universe association: resolve existing Mural projection, then bind ──
-  if (universe_id && asset_id && !session_id && !livepeer_asset_id) {
+  if (universe_id && asset_id && !session_id) {
     const auth = await validateAuthority(participantId, "authorise-projection", universe_id);
     if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
 
@@ -67,9 +63,10 @@ export async function POST(request: Request) {
     }
 
     const placeholder = existingAsset.storage_ref?.startsWith("seed:placeholder:");
+    const discarded = existingAsset.storage_ref?.startsWith("operator:discarded:");
     const eligibility = mediaAssociationEligibility({
-      readiness_overall: existingAsset.storage_ref && !placeholder ? "playable" : "processing",
-      readiness_blockers: placeholder || !existingAsset.storage_ref ? ["Media not yet ingested"] : [],
+      readiness_overall: existingAsset.storage_ref && !placeholder && !discarded ? "playable" : "processing",
+      readiness_blockers: placeholder || discarded || !existingAsset.storage_ref ? ["Media not yet ingested"] : [],
     });
 
     const target = await loadUniverseAssociationTarget(universe_id);
@@ -160,8 +157,8 @@ export async function POST(request: Request) {
   const auth = await validateAuthority(participantId, "authorise-projection", master_id);
   if ("error" in auth) return NextResponse.json({ error: auth.error }, { status: 403 });
 
-  // ── Direct asset_id path: bind an already-ingested asset (e.g. Mux) ──────
-  if (asset_id && !session_id && !livepeer_asset_id) {
+  // ── Direct asset_id path: bind an already-ingested Mux asset ─────────────
+  if (asset_id && !session_id) {
     const { data: existingAsset } = await svc
       .from("media_asset")
       .select("asset_id")
@@ -180,7 +177,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "That presentation does not belong to the selected work.", code: "wrong_work" }, { status: 409 });
     }
 
-    // Validate caller-supplied timings if provided
     const hasStart = start_ms !== undefined && start_ms !== null;
     const hasEnd = end_ms !== undefined && end_ms !== null;
     if ((hasStart || hasEnd) && !(hasStart && hasEnd)) {
@@ -190,7 +186,6 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "end_ms must be greater than start_ms" }, { status: 400 });
     }
 
-    // Read existing binding to preserve timings and realization_id
     const { data: existingBinding } = await svc
       .from("projection_media_binding")
       .select("binding_id, asset_id, start_ms, end_ms, realization_id, access_level")
@@ -211,7 +206,7 @@ export async function POST(request: Request) {
     const preservedRealizationId = realization_id ?? existingBinding?.realization_id ?? null;
     const preservedAccessLevel = existingBinding?.access_level ?? "public";
 
-    // Delete existing primary binding then insert replacement
+    // Delete existing primary binding then insert replacement.
     // NOTE: these two operations are not atomic. If the insert fails, the projection
     // will temporarily have no primary binding. A future migration to upsert-by-unique
     // constraint on (projection_id, binding_type='primary') would eliminate this window.
@@ -242,8 +237,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ binding_id: binding.binding_id, asset_id }, { status: 201 });
   }
 
-  // ── Mux path: asset was created by webhook; find it via session ──────────
-  if (session_id && !livepeer_asset_id) {
+  // ── Mux session path: asset was created by webhook; find it via session ───
+  if (session_id) {
     const { data: session } = await svc
       .from("media_upload_session")
       .select("session_id, phase, asset_id, provider")
@@ -259,7 +254,6 @@ export async function POST(request: Request) {
       }, { status: 409 });
     }
 
-    // Update rights on the asset if provided
     if (rights_holder_ref) {
       await svc
         .from("media_asset")
@@ -271,7 +265,6 @@ export async function POST(request: Request) {
         .is("rights_holder_ref", null);
     }
 
-    // Update intake linkage if provided
     if (intake_id) {
       await svc
         .from("media_asset")
@@ -280,7 +273,6 @@ export async function POST(request: Request) {
         .is("intake_id", null);
     }
 
-    // Idempotency: check if binding already exists
     const { data: existingBinding } = await svc
       .from("projection_media_binding")
       .select("binding_id, asset_id")
@@ -328,32 +320,5 @@ export async function POST(request: Request) {
     }, { status: 201 });
   }
 
-  // ── Livepeer path: historical ingest via livepeer_asset_id ───────────────
-  if (livepeer_asset_id) {
-    const { attachMediaBinding } = await import("@/lib/authority/operations");
-    const result = await attachMediaBinding(
-      participantId,
-      projection_id,
-      master_id,
-      livepeer_asset_id,
-      rights_holder_ref ?? null,
-      rights_basis ?? null,
-      realization_id ?? null,
-      intake_id ?? null
-    );
-
-    if ("error" in result) return NextResponse.json({ error: result.error }, { status: 403 });
-
-    // Mark session as ingested if session_id provided
-    if (session_id) {
-      await svc
-        .from("media_upload_session")
-        .update({ phase: "ingested", asset_id: result.data.asset_id, updated_at: new Date().toISOString() })
-        .eq("session_id", session_id);
-    }
-
-    return NextResponse.json(result.data, { status: 201 });
-  }
-
-  return NextResponse.json({ error: "session_id, asset_id, or livepeer_asset_id required" }, { status: 400 });
+  return NextResponse.json({ error: "session_id or asset_id required" }, { status: 400 });
 }

@@ -19,10 +19,8 @@ function isNextPerformanceMeasureNoise(message: string): boolean {
  * Runtime health for the smoke suite.
  *
  * Fails on uncaught page errors, unexpected console errors, Mux assets routed
- * through Livepeer, and obvious application request failures.
+ * through the retired Livepeer path, and obvious application request failures.
  *
- * Does not treat mixed-provider Livepeer traffic as a defect on pages that
- * also render the legacy Universe.
  * Next.js 16 can throw Performance.measure negative-timestamp errors during
  * RSC redirects; that is dev-runtime noise, not a product defect.
  */

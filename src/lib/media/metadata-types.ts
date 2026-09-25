@@ -18,7 +18,7 @@ export const METADATA_VERSION = 1;
 export type MediaClass =
   | "audio-mp3"       // MP3 — ID3v2 embedding via node-id3
   | "audio-other"     // FLAC, WAV, M4A, AIFF — sidecar only (no native embedding without ffmpeg)
-  | "video"           // MP4/MOV — sidecar only (Livepeer holds bytes; no direct embedding)
+  | "video"           // MP4/MOV — sidecar only (provider holds bytes; no direct embedding)
   | "image-raster"    // JPEG/PNG/WEBP/TIFF — EXIF/XMP via sharp
   | "image-other"     // SVG, GIF, etc. — sidecar only
   | "unknown";        // Unrecognised — sidecar only

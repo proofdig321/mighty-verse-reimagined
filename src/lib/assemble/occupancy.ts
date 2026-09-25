@@ -2,7 +2,7 @@
  * Clinical occupancy of a Universe.
  *
  * Audience Discover only lists curated work: a Universe whose Mural has
- * playable (non-placeholder) media. Create Work shells, untitled Livepeer
+ * playable (non-placeholder) media. Create Work shells, untitled
  * containers, and retry duplicates are orphans — they are not Experience.
  *
  * MEDIA ≠ CREATIVE WORK. A Universe-level distributional projection is not
