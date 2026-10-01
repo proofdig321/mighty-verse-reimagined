@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { formatTimelineMs } from "@/lib/media/timing";
@@ -35,36 +36,39 @@ export function StudioContextSidebar({
   onSelect: (id: string) => void;
   onCreatePanel: () => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const showScenes = persistedPanels.length === 0 && sentinelPanels.length === 0;
 
   return (
-    <aside className="studio-context-sidebar flex flex-col gap-4">
-      {/* Identity */}
-      <div className="px-1">
-        {universeTitle && <p className="suite-kicker mb-0.5">Universe</p>}
-        {universeTitle && (
-          <p className="text-xs font-medium text-foreground leading-snug truncate">{universeTitle}</p>
-        )}
-        <p className="suite-kicker normal-case tracking-normal font-normal mt-1 truncate">
-          {workTitle || "Untitled storyboard"}
-        </p>
-      </div>
+    <aside className={cn("studio-context-sidebar flex flex-col gap-3", expanded && "studio-context-sidebar-expanded")}>
+      {/* Toggle */}
+      <button
+        type="button"
+        onClick={() => setExpanded((v) => !v)}
+        className="w-full flex items-center justify-center h-6 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        title={expanded ? "Collapse panel list" : "Expand panel list"}
+      >
+        <span className="text-[9px] font-mono">{expanded ? "\u2190" : "\u2192"}</span>
+      </button>
 
       {/* Panel list */}
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between gap-2 px-1">
-          <p className="suite-kicker">Panels</p>
-          <Button type="button" size="sm" variant="ghost"
-            className="h-5 suite-kicker normal-case tracking-normal font-normal px-1.5"
-            onClick={onCreatePanel}>
-            + Add
-          </Button>
-        </div>
-
-        {persistedPanels.length === 0 && sentinelPanels.length === 0 && scenes.length === 0 && (
-          <p className="px-1 suite-kicker normal-case tracking-normal font-normal">
-            No panels yet. Write a directive and generate.
-          </p>
+      <div className="flex flex-col gap-1.5">
+        {expanded && (
+          <div className="flex items-center justify-between gap-1 px-1">
+            <p className="suite-kicker">Panels</p>
+            <Button type="button" size="sm" variant="ghost"
+              className="h-5 suite-kicker normal-case tracking-normal font-normal px-1"
+              onClick={onCreatePanel}>
+              +
+            </Button>
+          </div>
+        )}
+        {!expanded && (
+          <button type="button" onClick={onCreatePanel}
+            className="w-full flex items-center justify-center h-6 text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+            title="Add panel">
+            <span className="text-base leading-none">+</span>
+          </button>
         )}
 
         <ol className="flex flex-col gap-2">
@@ -99,7 +103,7 @@ export function StudioContextSidebar({
                     {(isPending || activeJob) && (
                       <div className="absolute inset-0 flex items-center justify-center bg-background/60">
                         <span className="text-[9px] text-muted-foreground animate-pulse">
-                          {activeJob ? "Generating…" : "…"}
+                          {activeJob ? "…" : "…"}
                         </span>
                       </div>
                     )}
@@ -110,14 +114,16 @@ export function StudioContextSidebar({
                       <span className="absolute top-1 right-1.5 text-[9px] text-white/60">▶</span>
                     )}
                   </div>
-                  <div className="px-1.5 py-1">
-                    <p className="text-xs truncate leading-snug text-foreground">
-                      {panel.title || "Untitled panel"}
-                    </p>
-                    {panel.user_locked && (
-                      <p className="suite-kicker">Authored</p>
-                    )}
-                  </div>
+                  {expanded && (
+                    <div className="px-1.5 py-1">
+                      <p className="text-xs truncate leading-snug text-foreground">
+                        {panel.title || "Untitled panel"}
+                      </p>
+                      {panel.user_locked && (
+                        <p className="suite-kicker">Authored</p>
+                      )}
+                    </div>
+                  )}
                 </button>
               </li>
             );
@@ -145,10 +151,12 @@ export function StudioContextSidebar({
                       {String(persistedPanels.length + i + 1).padStart(2, "0")}
                     </span>
                   </div>
-                  <div className="px-1.5 py-1">
-                    <p className="text-xs truncate leading-snug text-foreground">{panel.title}</p>
-                    <p className="suite-kicker">{panel.kind === "scene" ? "Scene" : "Evidence"}</p>
-                  </div>
+                  {expanded && (
+                    <div className="px-1.5 py-1">
+                      <p className="text-xs truncate leading-snug text-foreground">{panel.title}</p>
+                      <p className="suite-kicker">{panel.kind === "scene" ? "Scene" : "Evidence"}</p>
+                    </div>
+                  )}
                 </button>
               </li>
             );
@@ -165,15 +173,23 @@ export function StudioContextSidebar({
                   className={cn("studio-panel-card", isSelected && "studio-panel-card-selected")}
                 >
                   <div className="px-1.5 py-2">
-                    <p className="text-xs truncate leading-snug text-foreground">
-                      {sceneShortTitle(scene.title) ?? scene.title ?? "Untitled scene"}
-                    </p>
-                    <p className="suite-kicker">
-                      {String(i + 1).padStart(2, "0")}
-                      {scene.start_ms != null && scene.end_ms != null && (
-                        <> · {formatTimelineMs(scene.start_ms)}–{formatTimelineMs(scene.end_ms)}</>
-                      )}
-                    </p>
+                    {expanded ? (
+                      <>
+                        <p className="text-xs truncate leading-snug text-foreground">
+                          {sceneShortTitle(scene.title) ?? scene.title ?? "Untitled scene"}
+                        </p>
+                        <p className="suite-kicker">
+                          {String(i + 1).padStart(2, "0")}
+                          {scene.start_ms != null && scene.end_ms != null && (
+                            <> · {formatTimelineMs(scene.start_ms)}–{formatTimelineMs(scene.end_ms)}</>
+                          )}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="font-mono text-[9px] text-muted-foreground text-center">
+                        {String(i + 1).padStart(2, "0")}
+                      </p>
+                    )}
                   </div>
                 </button>
               </li>

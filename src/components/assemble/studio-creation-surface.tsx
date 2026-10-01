@@ -224,14 +224,28 @@ export function StudioCreationSurface({
   return (
     <div className="studio-creation-surface">
 
-      {/* View tabs */}
-      <div className="studio-view-tabs">
-        {VIEWS.map(({ id, label, icon: Icon }) => (
-          <button key={id} type="button" onClick={() => onSurfaceView(id)}
-            className={cn("studio-view-tab", surfaceView === id && "studio-view-tab-active")}>
-            <Icon size={12} />{label}
-          </button>
-        ))}
+      {/* Generation type tabs — top level, matches image pill pattern */}
+      <div className="studio-gen-tabs">
+        <button type="button"
+          onClick={() => { setIntent("still"); onSurfaceView("create"); }}
+          className={cn("studio-gen-tab", surfaceView === "create" && intent === "still" && "studio-gen-tab-active")}>
+          <ImagePlus size={12} /> Image Generation
+        </button>
+        <button type="button"
+          onClick={() => { setIntent("clip"); onSurfaceView("create"); }}
+          className={cn("studio-gen-tab", surfaceView === "create" && intent !== "still" && intent !== "gif" && intent !== "reel" && "studio-gen-tab-active")}>
+          <Film size={12} /> Video Generation
+        </button>
+        <button type="button"
+          onClick={() => onSurfaceView("source")}
+          className={cn("studio-gen-tab", surfaceView === "source" && "studio-gen-tab-active")}>
+          <Clapperboard size={12} /> Source
+        </button>
+        <button type="button"
+          onClick={() => onSurfaceView("preview")}
+          className={cn("studio-gen-tab", surfaceView === "preview" && "studio-gen-tab-active")}>
+          <Layers size={12} /> 2.5D
+        </button>
         {universeTitle && (
           <span className="suite-kicker ml-auto normal-case tracking-normal font-normal truncate max-w-[12rem]">{universeTitle}</span>
         )}
@@ -425,37 +439,30 @@ export function StudioCreationSurface({
             {/* Composer box */}
             <div className="studio-composer">
 
-              {/* Intent + workflow label */}
-              <div className="flex items-center justify-between gap-2 flex-wrap">
-                <CreativeIntentPicker selected={intent} onSelect={setIntent} capability={capability} />
-                <div className="flex items-center gap-2">
-                  <span className="suite-kicker normal-case tracking-normal font-normal opacity-60">{workflow}</span>
-                  {capability && <span className="suite-kicker normal-case tracking-normal font-normal">{(capability as { provider?: string }).provider}</span>}
-                </div>
-              </div>
+              {/* Reference card — prominent, at top (matches image) */}
+              {(() => {
+                const refUrl = effectiveFirstFrame || selected?.still || activeReferenceUrls[0] || null;
+                const isVideo = intent !== "still" && intent !== "gif" && intent !== "reel";
+                const label = isVideo ? "Reference Video" : "Reference Image";
+                const sub = refUrl ? null : isVideo ? "Optional: provides motion and camera" : "Optional: provides style and composition";
+                return (
+                  <button type="button" className="studio-ref-card" onClick={() => onSurfaceView("source")}>
+                    <div className="studio-ref-card-icon">
+                      {refUrl
+                        ? <img src={refUrl} alt="" className="w-full h-full object-cover" />
+                        : isVideo ? <Film size={14} className="text-muted-foreground" /> : <ImagePlus size={14} className="text-muted-foreground" />}
+                    </div>
+                    <div className="studio-ref-card-body">
+                      <p className="studio-ref-card-label">{refUrl ? (selected?.title ?? label) : label}</p>
+                      {sub && <p className="studio-ref-card-sub studio-ref-card-sub-ok">{sub}</p>}
+                      {refUrl && <p className="studio-ref-card-sub studio-ref-card-sub-ok">Attached — tap to change</p>}
+                    </div>
+                    <span className="studio-ref-card-badge">{isVideo ? "Video" : "Image"}</span>
+                  </button>
+                );
+              })()}
 
-              {/* Presets */}
-              {capability?.configured && (
-                <div className="flex flex-wrap gap-1">
-                  {PRESETS.filter((p) => intentAvailable(p.intent, capability)).map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => applyPreset(preset)}
-                      className={cn(
-                        "px-2.5 py-0.5 rounded-full border text-[10px] font-medium transition-all",
-                        activePreset === preset.id
-                          ? "border-primary/60 bg-primary/10 text-foreground"
-                          : "border-border/50 text-muted-foreground hover:text-foreground hover:border-foreground/30",
-                      )}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Directive */}
+              {/* Directive — dominant textarea */}
               <Textarea
                 className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/40"
                 value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
@@ -466,7 +473,7 @@ export function StudioCreationSurface({
                     generation_metadata: { ...selectedPersisted.generation_metadata, ...draftPanel.generation_metadata, transformation_instruction: e.target.value },
                   });
                 }}
-                placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe what you want to create…"}
+                placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe the video you want to generate, the more detailed the better…"}
               />
 
               {/* Reference chips */}
@@ -554,7 +561,18 @@ export function StudioCreationSurface({
                 </div>
               )}
 
-              {/* Controls bar */}
+              {/* Char count + optimize row */}
+              <div className="studio-char-row">
+                <span className="text-xs text-muted-foreground/50">
+                  {workflow}
+                  {capability && <span className="ml-2 opacity-60">{(capability as { provider?: string }).provider}</span>}
+                </span>
+                <span className="text-xs text-muted-foreground/40">
+                  {(editorPanel.generation_metadata?.transformation_instruction ?? "").length}/10000
+                </span>
+              </div>
+
+              {/* Controls bar — single compact row */}
               <div className="studio-composer-bar">
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <select aria-label="Aspect ratio" className="studio-control-pill"
@@ -573,11 +591,10 @@ export function StudioCreationSurface({
                   )}
                   {isVideoIntent && canAudio && (
                     <button type="button"
-                      title={generateAudio ? "Generated audio on" : "Generated audio off"}
+                      title={generateAudio ? "Audio on" : "Audio off"}
                       onClick={() => setGenerateAudio((v) => !v)}
                       className={cn("studio-control-pill gap-1", generateAudio && "border-primary/50 text-primary")}>
                       {generateAudio ? <Volume2 size={11} /> : <VolumeX size={11} />}
-                      <span className="text-xs">Audio</span>
                     </button>
                   )}
                   {isVideoIntent && (
@@ -588,14 +605,6 @@ export function StudioCreationSurface({
                     </button>
                   )}
                 </div>
-                <Button type="button" size="sm"
-                  disabled={!generateReady.available}
-                  title={generateReady.reason ?? `Generate ${intent}`}
-                  onClick={handleGenerate}
-                  className="studio-generate-btn">
-                  <Sparkles size={13} />
-                  {generateLabel}
-                </Button>
               </div>
 
               {/* Advanced controls */}
@@ -663,10 +672,25 @@ export function StudioCreationSurface({
                   <p className="text-xs text-muted-foreground animate-pulse" data-generation-status={mediaState.status}>{mediaState.message}</p>
                 )
               )}
-            </div>
-          </div>
+            </div>{/* end studio-composer */}
+          </div>{/* end studio-composer-wrap */}
 
-          {/* RESULT */}
+          {/* Generate row — always visible at bottom of composer, matches image */}
+          <div className="studio-generate-btn-row">
+            <span className="text-xs text-muted-foreground flex-1 truncate">
+              {capability?.configured
+                ? <>{(capability as { provider?: string; label?: string }).label ?? "AI"}<span className="opacity-50 ml-1">· {intent === "still" ? "Image" : "Video"}</span></>
+                : <span className="text-muted-foreground/50">Provider not configured</span>}
+            </span>
+            <Button type="button" size="sm"
+              disabled={!generateReady.available}
+              title={generateReady.reason ?? `Generate ${generateLabel}`}
+              onClick={handleGenerate}
+              className="studio-generate-btn">
+              <Sparkles size={13} />
+              Generate
+            </Button>
+          </div>
           <div className="studio-result-area">
             {hasMotion && selected?.endpoint ? (
               <div className="studio-result-card">

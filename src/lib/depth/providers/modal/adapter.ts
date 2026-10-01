@@ -29,8 +29,9 @@
  *
  * AUTHENTICATION:
  *   Requires MODAL_WEBHOOK_URL — the deployed Modal function endpoint.
- *   Requires MODAL_WEBHOOK_SECRET — shared secret for callback authentication.
- *   Neither is ever exposed to the browser.
+ *   Requires MODAL_API_TOKEN — Modal API token sent as Authorization: Token <token>.
+ *   Requires MODAL_WEBHOOK_SECRET — shared secret for callback HMAC verification.
+ *   None of these are ever exposed to the browser.
  *
  * SENTINEL BOUNDARY:
  *   This adapter does not interact with Sentinel.
@@ -80,6 +81,10 @@ function modalWebhookUrl(): string | null {
   return process.env.MODAL_WEBHOOK_URL?.trim() || null;
 }
 
+function modalApiToken(): string | null {
+  return process.env.MODAL_API_TOKEN?.trim() || null;
+}
+
 function modalWebhookSecret(): string | null {
   return process.env.MODAL_WEBHOOK_SECRET?.trim() || null;
 }
@@ -97,7 +102,7 @@ export class ModalVDAProvider implements DepthProvider {
   readonly modelId = MODAL_MODEL_ID;
 
   isConfigured(): boolean {
-    return Boolean(modalWebhookUrl() && modalWebhookSecret());
+    return Boolean(modalWebhookUrl() && modalApiToken() && modalWebhookSecret());
   }
 
   /**
@@ -117,7 +122,6 @@ export class ModalVDAProvider implements DepthProvider {
     }
 
     const webhookUrl = modalWebhookUrl()!;
-    const secret = modalWebhookSecret()!;
 
     // Extract Mux playback ID and duration from the request.
     // The Modal adapter receives these via the videoRef fields on the request.
@@ -141,10 +145,15 @@ export class ModalVDAProvider implements DepthProvider {
       callback_url: `${appBaseUrl()}/api/authority/depth/callback`,
     };
 
+    const apiToken = modalApiToken()!;
+
     try {
       const response = await fetch(webhookUrl, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Token ${apiToken}`,
+        },
         body: JSON.stringify(payload),
       });
 
