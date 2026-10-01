@@ -52,8 +52,6 @@ SET realization_id = 'e297c2aa-880c-4d79-9245-58f934e7149d'
 WHERE binding_id = '374f27cd-25b7-4379-b7d2-b0d324bdd14b'
   AND realization_id IS NULL;
 
--- ISRC assignment is blocked until an isrc_registrant row is configured.
--- The isrc_registrant table is empty. Required external configuration:
---   INSERT INTO isrc_registrant (registrant_name, prefix_code, active)
---   VALUES ('<registrant_name>', '<XX-XXX>', true);
--- Once configured, POST /api/authority/isrc/assign with realization_id above.
+-- ISRC assignment path: registrant ZA80G (Golden Shovel) configured in
+-- migration 20261101000000_isrc_registrant_and_assignment.sql.
+-- ISRCs assigned: ZA80G2600001 (SHE music-video), ZA80G2600002 (Father Raymond animated-video).
