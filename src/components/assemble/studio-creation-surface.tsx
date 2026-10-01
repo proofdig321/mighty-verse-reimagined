@@ -630,13 +630,13 @@ export function StudioCreationSurface({
                   </select>
                   {isVideoIntent && (
                     <select
-                      aria-label="Requested duration in seconds (provider may vary)"
-                      title="Requested duration — provider output may differ"
+                      aria-label="Requested duration — provider may output a different length"
+                      title="Requested duration — Veo may output a different length. This is your preference, not a guarantee."
                       className="studio-control-pill"
                       value={veoDuration}
                       onChange={(e) => onSetDuration(clampVeoDuration(Number(e.target.value)))}>
                       {VEO_DURATIONS.map((d) => (
-                        <option key={d} value={d}>{d}s</option>
+                        <option key={d} value={d}>{d}s requested</option>
                       ))}
                     </select>
                   )}

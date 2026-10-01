@@ -58,6 +58,8 @@ export function SpatialPresentation({
   const [seekNonce, setSeekNonce] = useState(0);
   const [seekToMs, setSeekToMs] = useState<number | null>(initialSeekMs ?? null);
   const [muted, setMuted] = useState(true);
+  // Track whether the pointer is over the cinema for the depth indicator
+  const [pointerActive, setPointerActive] = useState(false);
 
   const durationMs = clock.duration_ms ?? 0;
   const progress = durationMs > 0 ? Math.min(1, timeMs / durationMs) : 0;
@@ -67,11 +69,13 @@ export function SpatialPresentation({
     const rect = event.currentTarget.getBoundingClientRect();
     controllerRef.current.onPointerMove(event.clientX, event.clientY, rect);
     poseRef.current = controllerRef.current.getPose();
+    setPointerActive(true);
   }
 
   function onLeave() {
     controllerRef.current.onPointerLeave();
     poseRef.current = NEUTRAL_VIEWER_POSE;
+    setPointerActive(false);
   }
 
   function toggle() {
@@ -133,6 +137,17 @@ export function SpatialPresentation({
           // When VDA-Small depth is available, pass the DepthController ref here.
           // No renderer changes required — HolographicTheater already supports it.
         />
+
+        {/* Depth indicator — communicates that parallax is active */}
+        <div
+          className="spatial-depth-indicator"
+          aria-hidden="true"
+          data-active={pointerActive ? "true" : "false"}
+        >
+          <span className="spatial-depth-label">
+            {pointerActive ? "Depth active" : "Move pointer to shift perspective"}
+          </span>
+        </div>
 
         {!ready && !failed ? (
           <p className="holographic-media-status">Loading…</p>

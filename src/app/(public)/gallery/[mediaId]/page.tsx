@@ -163,19 +163,20 @@ export default async function GalleryMediaPage({
               className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
             >
               <ScanSearch size={14} />
-              Inspect &amp; Sentinel
+              Sentinel
             </Link>
             {universeId && (
               <Link
                 href={`/authority/curate/${universeId}/sentinel`}
                 className={cn(buttonVariants({ variant: "outline", size: "sm" }))}
               >
-                Open Sentinel
+                Universe Sentinel
               </Link>
             )}
           </div>
           <p className="text-xs text-muted-foreground/60">
-            Selecting this source does not create a Scene or change canonical state.
+            Sentinel is observational evidence. It does not create Scenes or change canonical state.
+            {!universeId && " This media is not yet bound to a Universe."}
           </p>
         </div>
 

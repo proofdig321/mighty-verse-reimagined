@@ -2945,6 +2945,43 @@ html[data-theme="paper"] {
     --cinema-tint: color-mix(in oklch, var(--accent-mv) 8%, transparent);
   }
 
+  /* Depth indicator — communicates parallax is active in 2.5D */
+  .spatial-depth-indicator {
+    position: absolute;
+    bottom: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10;
+    pointer-events: none;
+    transition: opacity 300ms ease;
+  }
+
+  .spatial-depth-indicator[data-active="false"] {
+    opacity: 0.45;
+  }
+
+  .spatial-depth-indicator[data-active="true"] {
+    opacity: 1;
+  }
+
+  .spatial-depth-label {
+    display: inline-block;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 40%, transparent);
+    background: color-mix(in oklch, var(--background) 70%, transparent);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in oklch, var(--accent-mv) 80%, var(--foreground));
+    backdrop-filter: blur(4px);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .spatial-depth-indicator { display: none; }
+  }
+
   /* 2.5D experience mode — depth indicator border */
   [data-experience-mode="2.5d"] {
     border-left: 3px solid color-mix(in oklch, var(--accent-mv) 60%, transparent);
