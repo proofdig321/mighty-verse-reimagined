@@ -5,6 +5,7 @@ import {
   Clapperboard,
   Film,
   Globe,
+  Hash,
   LayoutDashboard,
   Layers,
   MonitorPlay,
@@ -55,6 +56,7 @@ export default function AuthorityShell({ children }: { children: ReactNode }) {
           items: [
             { href: "/authority/participants", label: "Participants", icon: Users },
             { href: "/authority/proof-of-rights", label: "Proof of Rights", icon: ShieldCheck },
+            { href: "/authority/isrc", label: "ISRC", icon: Hash },
           ],
         },
       ]}
