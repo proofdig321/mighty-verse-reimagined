@@ -16,10 +16,12 @@ export function StoryboardWorkList({
   universes,
   initialWorks = [],
   standaloneOnly = false,
+  sourceAssetId = null,
 }: {
   universes: { master_id: string; title: string }[];
   initialWorks?: StoryboardWorkSummary[];
   standaloneOnly?: boolean;
+  sourceAssetId?: string | null;
 }) {
   const router = useRouter();
   const [works, setWorks] = useState<StoryboardWorkSummary[]>(initialWorks);
@@ -53,7 +55,12 @@ export function StoryboardWorkList({
       setError(payload.error ?? "Could not create a storyboard work.");
       return;
     }
-    router.push(`/studio/work/${payload.work.work_id}`);
+    // If a source asset was passed from Gallery, navigate with it so the work
+    // can pre-attach it in the source tab.
+    const dest = sourceAssetId
+      ? `/studio/work/${payload.work.work_id}?source=${sourceAssetId}`
+      : `/studio/work/${payload.work.work_id}`;
+    router.push(dest);
     router.refresh();
   }
 
@@ -107,11 +114,13 @@ export function StoryboardWorkList({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Standalone Storyboard Works stay independent until you attach a Universe. Creating work does not create Scenes.
+          {sourceAssetId
+            ? "Create a new work to use this source, or open an existing one."
+            : "Standalone Storyboard Works stay independent until you attach a Universe. Creating work does not create Scenes."}
         </p>
         <Button type="button" onClick={() => void createWork()} disabled={busy}>
           <Plus size={14} />
-          New storyboard
+          {sourceAssetId ? "New work with this source" : "New storyboard"}
         </Button>
       </div>
       {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}

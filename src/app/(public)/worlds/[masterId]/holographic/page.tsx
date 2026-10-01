@@ -81,11 +81,11 @@ export default async function HolographicWorldPage({
         </div>
       </div>
 
-      <div className="mv-hero-gradient border-b border-border">
+      <div className="mv-hero-gradient border-b border-border" data-experience-mode="holographic">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-1 min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Holographic Experience</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Holographic · Composed Spatial Experience</p>
               <h1
                 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl"
                 style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -98,9 +98,13 @@ export default async function HolographicWorldPage({
                 </p>
               ) : (
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
-                  Play the mural. Scenes, Creative Moments, and approved production sit in their own regions beneath the cinema.
+                  The full composed spatial experience. Scenes, Creative Moments, and approved production
+                  sit in their own regions beneath the cinema. Spatial audio active.
                 </p>
               )}
+              <p className="text-[10px] text-muted-foreground/50 mt-1">
+                Cinema + Scenes + Moments + Production · Spatial audio · Scene-seek transport
+              </p>
             </div>
             <ExperienceToggle
               universeHref={`/worlds/${assembly.master_id}`}

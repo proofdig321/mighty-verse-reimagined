@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Music, FileText, Film } from "lucide-react";
 import MediaVisual from "@/components/media-visual";
 import { PublicHero } from "@/components/public-hero";
@@ -58,7 +59,7 @@ function AssetCard({ item }: { item: MediaItem }) {
   );
 
   return (
-    <div className="group space-y-2">
+    <Link href={`/gallery/${item.asset_id}`} className="group space-y-2 block">
       <div className="overflow-hidden rounded-lg ring-1 ring-foreground/10 transition-shadow group-hover:ring-foreground/20">
         {visual}
       </div>
@@ -75,7 +76,7 @@ function AssetCard({ item }: { item: MediaItem }) {
           )}
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
 

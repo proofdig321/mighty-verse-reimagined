@@ -2941,6 +2941,18 @@ html[data-theme="paper"] {
 
   .spatial-cinema {
     cursor: crosshair;
+    /* 2.5D: cooler, depth-focused tint — distinct from holographic warm gold */
+    --cinema-tint: color-mix(in oklch, var(--accent-mv) 8%, transparent);
+  }
+
+  /* 2.5D experience mode — depth indicator border */
+  [data-experience-mode="2.5d"] {
+    border-left: 3px solid color-mix(in oklch, var(--accent-mv) 60%, transparent);
+  }
+
+  /* Holographic experience mode — warm gold accent */
+  [data-experience-mode="holographic"] {
+    border-left: 3px solid color-mix(in oklch, var(--accent-mv-gold) 60%, transparent);
   }
 
   .spatial-transport {

@@ -99,11 +99,11 @@ export default async function SpatialWorldPage({
         </div>
       </div>
 
-      <div className="mv-hero-gradient border-b border-border">
+      <div className="mv-hero-gradient border-b border-border" data-experience-mode="2.5d">
         <div className="mx-auto max-w-7xl px-6 py-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="space-y-1 min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">2.5D</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">2.5D · Spatial Cinema</p>
               <h1
                 className="text-3xl font-semibold leading-tight tracking-tight text-foreground md:text-5xl"
                 style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -116,10 +116,13 @@ export default async function SpatialWorldPage({
                 </p>
               ) : (
                 <p className="mt-2 max-w-xl text-sm text-muted-foreground leading-relaxed">
-                  Spatial presentation. Move your pointer to shift the viewer perspective.
-                  Depth is synthetic until a genuine depth asset is available.
+                  Depth-aware spatial cinema. Move your pointer to shift perspective.
+                  One screen. One source. Depth drives the parallax.
                 </p>
               )}
+              <p className="text-[10px] text-muted-foreground/50 mt-1">
+                Cinema only · No layers · No spatial audio · Pointer-driven parallax
+              </p>
             </div>
             <ExperienceToggle
               universeHref={publicWorldHref(masterId)}

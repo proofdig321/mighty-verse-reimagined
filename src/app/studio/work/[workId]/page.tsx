@@ -11,10 +11,13 @@ import { playableGallerySources } from "@/lib/assemble/gallery-source";
 
 export default async function StudioWorkEditorPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ workId: string }>;
+  searchParams: Promise<{ source?: string }>;
 }) {
   const { workId } = await params;
+  const { source } = await searchParams;
   const { participantId } = await requireStudioUser(`/studio/work/${workId}`);
   const [materials, projects, work, studioMedia] = await Promise.all([
     loadStoryboardMaterials(null, participantId),
@@ -53,6 +56,7 @@ export default async function StudioWorkEditorPage({
         universes={projects.map((project) => ({ master_id: project.master_id, title: project.title }))}
         workId={workId}
         backHref="/studio/work"
+        initialSourceAssetId={source ?? null}
       />
     </div>
   );

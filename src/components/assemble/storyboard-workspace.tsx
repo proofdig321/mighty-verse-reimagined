@@ -107,6 +107,7 @@ export function StoryboardWorkspace({
   universes = [],
   workId = null,
   backHref = "/studio/work",
+  initialSourceAssetId = null,
 }: {
   universeId: string | null;
   universeTitle?: string | null;
@@ -125,6 +126,7 @@ export function StoryboardWorkspace({
   universes?: { master_id: string; title: string }[];
   workId?: string | null;
   backHref?: string;
+  initialSourceAssetId?: string | null;
 }) {
   const router = useRouter();
   // tab kept for API compat (importSentinel, addCinematicReferences use setTab)
@@ -169,7 +171,7 @@ export function StoryboardWorkspace({
   const [analysing, setAnalysing] = useState(false);
   const [sentinelMessage, setSentinelMessage] = useState<string | null>(null);
   const [sentinelError, setSentinelError] = useState<string | null>(null);
-  const [surfaceView, setSurfaceView] = useState<SurfaceView>("create");
+  const [surfaceView, setSurfaceView] = useState<SurfaceView>(initialSourceAssetId ? "source" : "create");
   const savedSnapshot = useRef<AuthoringSnapshot | null>(null);
   const autosaveTimer = useRef<number | null>(null);
 

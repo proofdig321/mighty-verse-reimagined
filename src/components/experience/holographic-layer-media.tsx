@@ -97,7 +97,13 @@ export function HolographicLayerMedia({
       const { default: Hls } = await import("hls.js");
       if (cancelled || !media) return;
       if (Hls.isSupported()) {
-        const instance = new Hls({ enableWorker: false });
+        const instance = new Hls({
+          enableWorker: false,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          startLevel: -1,
+          abrEwmaDefaultEstimate: 1_000_000,
+        });
         hls = instance;
         instance.loadSource(clock.endpoint_ref);
         instance.attachMedia(media);
