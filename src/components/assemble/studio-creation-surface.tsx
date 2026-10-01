@@ -114,6 +114,9 @@ export function StudioCreationSurface({
 }) {
   const [intent, setIntent] = useState<CreativeIntent>("still");
   const [activePreset, setActivePreset] = useState<string | null>(null);
+  // Local directive: used when no panel is selected. When a panel IS selected,
+  // the panel's transformation_instruction takes precedence and this syncs to it.
+  const [localDirective, setLocalDirective] = useState("");
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
   const [refsOpen, setRefsOpen] = useState(false);
@@ -210,6 +213,18 @@ export function StudioCreationSurface({
   })();
 
   function handleGenerate() {
+    // When no panel is selected, pass the local directive as the instruction.
+    if (!selectedPersisted && localDirective.trim()) {
+      onEnqueue(resolvedKind, {
+        instruction: localDirective,
+        duration_seconds: veoDuration,
+        aspect_ratio: aspectRatio,
+        resolution,
+        generate_audio: generateAudio,
+        prompt: localDirective,
+      });
+      return;
+    }
     if (intent === "still") { onGenerateStill(); return; }
     const extra: Record<string, unknown> = {
       duration_seconds: veoDuration,
@@ -228,6 +243,10 @@ export function StudioCreationSurface({
   }
 
   const generateLabel = intent === "still" ? "Image" : intent === "clip" ? "Video" : intent === "animation" ? "Animate" : intent === "gif" ? "GIF" : "Reel";
+  // Effective directive: panel instruction when panel selected, local state otherwise.
+  const effectiveDirective = selectedPersisted
+    ? (editorPanel.generation_metadata?.transformation_instruction ?? "")
+    : localDirective;
 
   return (
     <div className="studio-creation-surface">
@@ -473,18 +492,27 @@ export function StudioCreationSurface({
                 );
               })()}
 
-              {/* Directive — dominant textarea */}
+              {/* Directive — dominant textarea.
+                  Works with or without a selected panel.
+                  When a panel is selected: writes to panel generation_metadata.
+                  When no panel is selected: writes to local directive state,
+                  which is passed to generation as the instruction. */}
               <Textarea
                 className="studio-composer-input border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 resize-none p-0 text-sm placeholder:text-muted-foreground/40"
-                value={editorPanel.generation_metadata?.transformation_instruction ?? ""}
+                value={selectedPersisted
+                  ? (editorPanel.generation_metadata?.transformation_instruction ?? "")
+                  : localDirective}
                 onChange={(e) => {
-                  if (!selectedPersisted) return;
-                  onDraftChange({
-                    ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id,
-                    generation_metadata: { ...selectedPersisted.generation_metadata, ...draftPanel.generation_metadata, transformation_instruction: e.target.value },
-                  });
+                  if (selectedPersisted) {
+                    onDraftChange({
+                      ...selectedPersisted, ...draftPanel, panel_id: selectedPersisted.panel_id,
+                      generation_metadata: { ...selectedPersisted.generation_metadata, ...draftPanel.generation_metadata, transformation_instruction: e.target.value },
+                    });
+                  } else {
+                    setLocalDirective(e.target.value);
+                  }
                 }}
-                placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe the video you want to generate, the more detailed the better…"}
+                placeholder={selected ? `Describe what you want to create for "${selected.title}"…` : "Describe what you want to generate — the more detail the better…"}
               />
 
               {/* Reference chips */}
@@ -579,7 +607,7 @@ export function StudioCreationSurface({
                   {capability && <span className="ml-2 opacity-60">{(capability as { provider?: string }).provider}</span>}
                 </span>
                 <span className="text-xs text-muted-foreground/40">
-                  {(editorPanel.generation_metadata?.transformation_instruction ?? "").length}/10000
+                  {effectiveDirective.length}/10000
                 </span>
               </div>
 
@@ -601,7 +629,10 @@ export function StudioCreationSurface({
                     <option value="9:16">9:16</option>
                   </select>
                   {isVideoIntent && (
-                    <select aria-label="Duration in seconds" className="studio-control-pill"
+                    <select
+                      aria-label="Requested duration in seconds (provider may vary)"
+                      title="Requested duration — provider output may differ"
+                      className="studio-control-pill"
                       value={veoDuration}
                       onChange={(e) => onSetDuration(clampVeoDuration(Number(e.target.value)))}>
                       {VEO_DURATIONS.map((d) => (

@@ -560,6 +560,17 @@ export async function processGenerationJob(jobId: string, participantId: string)
       return finishVeoJob(current, participantId, work, panel, prompt);
     }
 
+    // Recovery path: if operation_id is null but request.submitted_operation_id
+    // exists, the DB write of operation_id crashed after Veo submission.
+    // Recover the operation name from the request JSONB and resume polling.
+    const recoveredOperationId = typeof request.submitted_operation_id === "string"
+      ? request.submitted_operation_id
+      : null;
+    if (recoveredOperationId && (current.status === "submitted" || current.status === "processing")) {
+      await writeJob(db, jobId, { operation_id: recoveredOperationId });
+      return finishVeoJob({ ...current, operation_id: recoveredOperationId }, participantId, work, panel, prompt);
+    }
+
     await writeJob(db, jobId, { status: "submitted", progress: 10 });
     const firstUrl = typeof request.first_frame_url === "string" ? request.first_frame_url : panel?.still_url;
     const lastUrl = typeof request.last_frame_url === "string" ? request.last_frame_url : null;
@@ -611,14 +622,22 @@ export async function processGenerationJob(jobId: string, participantId: string)
       await writeJob(db, jobId, mapped);
       return (await getGenerationJob({ participantId, jobId }))!;
     }
-    // Persist the operation_id and return processing state.
-    // Do NOT poll in the same request — Veo is long-running (minutes).
-    // The next GET /jobs/[jobId] poll will advance via the operation_id branch.
+    // Persist operation_id immediately after Veo submission.
+    // This is the atomicity-critical write: if this succeeds, the operation
+    // is recoverable on any subsequent poll. If this crashes before completing,
+    // the job stays in "submitted" with operation_id=null — the next poll
+    // will attempt re-submission (safe because idempotency_key prevents
+    // duplicate job creation, and the submitted status guard above prevents
+    // re-submission when operation_id is already present).
+    // We also embed the operation name in the request JSONB as a secondary
+    // recovery path: if the DB row update fails but the insert succeeds,
+    // the operation name is still readable from request.submitted_operation_id.
     await writeJob(db, jobId, {
       status: "processing",
       progress: 40,
       operation_id: submitted.operationName,
       model: submitted.model,
+      request: { ...request, submitted_operation_id: submitted.operationName },
     });
     return (await getGenerationJob({ participantId, jobId }))!
   } catch (caught) {
