@@ -258,6 +258,8 @@ export function StudioCreationSurface({
             <StoryboardSourceMedia
               workId={work?.work_id ?? null} sources={work?.sources ?? []}
               frames={work?.frames ?? []} selectedPanelId={selectedPersisted?.panel_id ?? null}
+              references={references}
+              sentinelShots={cinematicShots}
               onWork={(w) => onWorkUpdate(w as StoryboardWorkRecord)}
             />
           </div>

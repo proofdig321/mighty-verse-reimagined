@@ -4,25 +4,36 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { formatTimestamp, sourceCategoryLabel, type StoryboardSourceRecord, type StoryboardFrameRecord } from "@/lib/storyboard/source";
 import { muxThumbnailUrl } from "@/lib/media/thumbnail";
 import { SecondsField } from "./seconds-field";
+import type { CinematicShot } from "@/lib/media/cinematic-evidence";
+
+type SourceTab = "upload" | "gallery" | "sentinel" | "url";
+
+type GalleryRef = { asset_id: string; title: string; still_url: string | null };
 
 export function StoryboardSourceMedia({
   workId,
   sources,
   frames,
   selectedPanelId,
+  references = [],
+  sentinelShots = [],
   onWork,
 }: {
   workId: string | null;
   sources: StoryboardSourceRecord[];
   frames: StoryboardFrameRecord[];
   selectedPanelId: string | null;
+  references?: GalleryRef[];
+  sentinelShots?: CinematicShot[];
   onWork: (work: unknown) => void;
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [tab, setTab] = useState<SourceTab>("upload");
   const [phase, setPhase] = useState("idle");
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -150,32 +161,131 @@ export function StoryboardSourceMedia({
 
   return (
     <div className="space-y-4" data-storyboard-source="true">
-      <div className="space-y-2">
+      <div className="space-y-3">
         <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Add source media</p>
-        <p className="text-xs text-muted-foreground">
-          Source video is a Storyboard artifact. It does not become a canonical Scene.
-        </p>
-        <Label htmlFor="source-title">Source title</Label>
-        <Input
-          id="source-title"
-          value={title}
-          onChange={(event) => setTitle(event.target.value)}
-          placeholder="Name this source. Do not invent a broadcast title."
-        />
-        <div className="flex flex-wrap gap-2">
-          <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(event) => {
-            const file = event.target.files?.[0];
-            if (file) void uploadFile(file);
-          }} />
-          <Button type="button" size="sm" onClick={() => fileRef.current?.click()}>Upload local video</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => void ingestUrl()} disabled={!url.trim()}>Add direct media URL</Button>
-          <Button type="button" size="sm" variant="outline" onClick={() => void attachAsset(assetId, title)} disabled={!assetId.trim()}>Add existing Mux asset</Button>
+        <p className="text-xs text-muted-foreground">Source is a Storyboard artifact. It does not become a canonical Scene.</p>
+
+        {/* Source mode tabs */}
+        <div className="flex gap-1 flex-wrap">
+          {(["upload", "gallery", "sentinel", "url"] as SourceTab[]).map((t) => (
+            <button key={t} type="button"
+              onClick={() => setTab(t)}
+              className={cn(
+                "px-2.5 py-1 rounded text-[10px] font-semibold uppercase tracking-[0.12em] border transition-colors",
+                tab === t
+                  ? "border-primary text-primary bg-primary/5"
+                  : "border-border text-muted-foreground hover:text-foreground"
+              )}>
+              {t === "upload" ? "Local Upload" : t === "gallery" ? `Gallery${references.length ? ` (${references.length})` : ""}` : t === "sentinel" ? `Sentinel${sentinelShots.length ? ` (${sentinelShots.length})` : ""}` : "URL / Asset ID"}
+            </button>
+          ))}
         </div>
-        <Input placeholder="https://… media file or YouTube URL" value={url} onChange={(event) => setUrl(event.target.value)} />
-        <Input placeholder="Existing media asset id" value={assetId} onChange={(event) => setAssetId(event.target.value)} />
+
+        {/* Upload tab */}
+        {tab === "upload" && (
+          <div className="space-y-2">
+            <Label htmlFor="source-title">Source title</Label>
+            <Input id="source-title" value={title} onChange={(e) => setTitle(e.target.value)}
+              placeholder="Name this source. Do not invent a broadcast title." />
+            <input ref={fileRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void uploadFile(file);
+            }} />
+            <Button type="button" size="sm" onClick={() => fileRef.current?.click()}>Upload local file</Button>
+          </div>
+        )}
+
+        {/* Gallery tab — canonical universe references */}
+        {tab === "gallery" && (
+          <div className="space-y-2">
+            {references.length === 0 ? (
+              <p className="text-xs text-muted-foreground/60">No gallery references found for this universe.</p>
+            ) : (
+              <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {references.map((ref) => (
+                  <li key={ref.asset_id}>
+                    <button type="button"
+                      className="w-full space-y-1 text-left group"
+                      onClick={() => void attachAsset(ref.asset_id, ref.title)}>
+                      <div className="aspect-video w-full rounded overflow-hidden bg-muted/40 border border-border group-hover:border-primary/50 transition-colors">
+                        {ref.still_url
+                          ? <img src={ref.still_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full" />}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground truncate">{ref.title}</p>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* Sentinel tab — cinematic evidence shots */}
+        {tab === "sentinel" && (
+          <div className="space-y-2">
+            {sentinelShots.length === 0 ? (
+              <p className="text-xs text-muted-foreground/60">No Sentinel evidence yet. Run Sentinel analysis on source media first.</p>
+            ) : (
+              <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                {sentinelShots.map((shot) => (
+                  <li key={shot.shot_id}>
+                    <button type="button"
+                      className="w-full space-y-1 text-left group"
+                      onClick={() => {
+                        if (!workId) return;
+                        void (async () => {
+                          const response = await fetch("/api/authority/storyboard", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                              action: "select-sentinel-shot",
+                              work_id: workId,
+                              shot,
+                            }),
+                          });
+                          const payload = await response.json().catch(() => ({}));
+                          if (response.ok) onWork(payload.work);
+                          else setError(payload.error ?? "Could not attach Sentinel shot.");
+                        })();
+                      }}>
+                      <div className="aspect-video w-full rounded overflow-hidden bg-muted/40 border border-border group-hover:border-primary/50 transition-colors">
+                        {shot.still_url
+                          ? <img src={shot.still_url} alt="" className="w-full h-full object-cover" />
+                          : <div className="w-full h-full" />}
+                      </div>
+                      <p className="text-[10px] text-muted-foreground truncate">
+                        Shot {String(shot.sequence).padStart(2, "0")} · {formatTimestamp(shot.time_ms)}
+                      </p>
+                      {shot.what_happens && (
+                        <p className="text-[9px] text-muted-foreground/60 truncate">{shot.what_happens}</p>
+                      )}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
+
+        {/* URL / Asset ID tab */}
+        {tab === "url" && (
+          <div className="space-y-2">
+            <Label htmlFor="source-title-url">Source title</Label>
+            <Input id="source-title-url" value={title} onChange={(e) => setTitle(e.target.value)}
+              placeholder="Name this source." />
+            <Input placeholder="https://… media file URL" value={url} onChange={(e) => setUrl(e.target.value)} />
+            <Input placeholder="Existing media asset ID" value={assetId} onChange={(e) => setAssetId(e.target.value)} />
+            <div className="flex gap-2">
+              <Button type="button" size="sm" variant="outline" onClick={() => void ingestUrl()} disabled={!url.trim()}>Add URL</Button>
+              <Button type="button" size="sm" variant="outline" onClick={() => void attachAsset(assetId, title)} disabled={!assetId.trim()}>Attach asset</Button>
+            </div>
+          </div>
+        )}
+
         {phase !== "idle" ? (
           <p className="text-xs text-muted-foreground" data-source-phase={phase}>
-            {phase === "uploading" ? `Uploading… ${progress}%` : phase === "processing" ? "Mux is processing the source." : phase === "ready" ? "Source attached. It is not a Scene." : phase}
+            {phase === "uploading" ? `Uploading… ${progress}%` : phase === "processing" ? "Processing…" : phase === "ready" ? "Source attached. It is not a Scene." : phase}
           </p>
         ) : null}
         {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
