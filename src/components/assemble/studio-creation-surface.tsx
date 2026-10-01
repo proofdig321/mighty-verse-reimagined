@@ -12,12 +12,14 @@ import { formatTimelineMs } from "@/lib/media/timing";
 import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
+import { StudioAdvisor } from "./studio-advisor";
 import { StoryboardSourceMedia } from "./storyboard-source-media";
 import {
   CreativeIntentPicker, resolveKind, intentAvailable,
   describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS, PRESETS,
+  PROVIDER_RESOLUTIONS,
 } from "./creative-operation";
-import type { CreativeIntent, Capability, VeoDuration, CreativePreset } from "./creative-operation";
+import type { CreativeIntent, Capability, VeoDuration, CreativePreset, ResolutionOption } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
@@ -72,11 +74,11 @@ export function StudioCreationSurface({
   universeTitle, universeId, scenes, selected, selectedPersisted,
   editorPanel, draftPanel, selectedObservation, selectedFrame,
   mediaState, stillJob, motionJob, selectedJob, stillReady, motionReady,
-  motionKind, firstFrame, lastFrame, durationSeconds, aspectRatio,
+  motionKind, firstFrame, lastFrame, durationSeconds, aspectRatio, resolution,
   activeReferenceUrls, references, workFrames, capability,
   cinematicShots,
   onDraftChange, onSavePanel, onGenerateStill, onEnqueue,
-  onSetFirstFrame, onSetLastFrame, onSetDuration, onSetAspect,
+  onSetFirstFrame, onSetLastFrame, onSetDuration, onSetAspect, onSetResolution,
   onRetryJob, onCancelJob, onWorkUpdate, onSaveArtifactToPanel,
 }: {
   surfaceView: SurfaceView; onSurfaceView: (v: SurfaceView) => void;
@@ -102,6 +104,8 @@ export function StudioCreationSurface({
   onGenerateStill: () => void; onEnqueue: (kind: GenerationJobKind, extra?: Record<string, unknown>) => void;
   onSetFirstFrame: (url: string) => void; onSetLastFrame: (url: string) => void;
   onSetDuration: (v: VeoDuration) => void; onSetAspect: (v: "16:9" | "9:16") => void;
+  onSetResolution: (v: ResolutionOption) => void;
+  resolution: ResolutionOption;
   onRetryJob: (jobId: string) => void; onCancelJob: (jobId: string) => void;
   onWorkUpdate: (work: StoryboardWorkRecord) => void;
   onSaveArtifactToPanel: (panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) => void;
@@ -127,6 +131,7 @@ export function StudioCreationSurface({
     setIntent(preset.intent);
     if (preset.defaults.durationSeconds) onSetDuration(preset.defaults.durationSeconds);
     if (preset.defaults.aspectRatio) onSetAspect(preset.defaults.aspectRatio);
+    if (preset.defaults.resolution) onSetResolution(preset.defaults.resolution);
     if (preset.defaults.generateAudio !== undefined) setGenerateAudio(preset.defaults.generateAudio);
   }
 
@@ -207,6 +212,7 @@ export function StudioCreationSurface({
     const extra: Record<string, unknown> = {
       duration_seconds: veoDuration,
       aspect_ratio: aspectRatio,
+      resolution,
       generate_audio: generateAudio,
     };
     if (resolvedKind === "animate-still") { extra.still_url = selected?.still; extra.first_frame_url = selected?.still; }
@@ -574,6 +580,15 @@ export function StudioCreationSurface({
                 </span>
               </div>
 
+              {/* Advisor */}
+              <StudioAdvisor
+                workId={work?.work_id ?? null}
+                panelId={selectedPersisted?.panel_id ?? null}
+                directive={editorPanel.generation_metadata?.transformation_instruction ?? null}
+                generationSettings={{ aspect_ratio: aspectRatio, duration_seconds: durationSeconds, resolution, generate_audio: generateAudio }}
+                configured={Boolean(capability?.configured)}
+              />
+
               {/* Controls bar — single compact row */}
               <div className="studio-composer-bar">
                 <div className="flex items-center gap-1.5 flex-wrap">
@@ -612,6 +627,22 @@ export function StudioCreationSurface({
               {/* Advanced controls */}
               {advancedOpen && isVideoIntent && (
                 <div className="studio-advanced-controls">
+                  {/* Resolution */}
+                  <div>
+                    <p className="suite-kicker mb-1">Resolution</p>
+                    <div className="flex gap-1.5">
+                      {PROVIDER_RESOLUTIONS.map((opt) => (
+                        <button key={opt.value} type="button"
+                          onClick={() => onSetResolution(opt.value)}
+                          className={cn(
+                            "studio-control-pill text-xs",
+                            resolution === opt.value && "border-primary/50 text-primary"
+                          )}>
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                   {canFirstLast && (
                     <div className="flex items-center gap-3">
                       <div className="flex-1">

@@ -12,6 +12,14 @@ import type { GenerationJobKind } from "@/lib/ai/jobs";
 
 export type CreativeIntent = "still" | "clip" | "animation" | "gif" | "reel";
 
+export type ResolutionOption = "720p" | "1080p";
+
+/** Provider-supported resolutions. Only expose what the provider actually accepts. */
+export const PROVIDER_RESOLUTIONS: { value: ResolutionOption; label: string }[] = [
+  { value: "720p", label: "720p" },
+  { value: "1080p", label: "1080p" },
+];
+
 export type CreativePreset = {
   id: string;
   label: string;
@@ -19,19 +27,20 @@ export type CreativePreset = {
   defaults: {
     aspectRatio?: "16:9" | "9:16";
     durationSeconds?: 4 | 6 | 8;
+    resolution?: ResolutionOption;
     promptPrefix?: string;
     generateAudio?: boolean;
   };
 };
 
 export const PRESETS: CreativePreset[] = [
-  { id: "cinematic",   label: "Cinematic",   intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
-  { id: "performance", label: "Performance", intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 6, generateAudio: true } },
-  { id: "music-video", label: "Music Video", intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: true } },
-  { id: "social",      label: "Social/Reel", intent: "reel",      defaults: { aspectRatio: "9:16", durationSeconds: 6, generateAudio: false } },
-  { id: "visualizer",  label: "Visualizer",  intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
-  { id: "transform",   label: "Transform",   intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
-  { id: "extend",      label: "Extend",      intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, generateAudio: false } },
+  { id: "cinematic",   label: "Cinematic",   intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, resolution: "1080p", generateAudio: false } },
+  { id: "performance", label: "Performance", intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 6, resolution: "1080p", generateAudio: true } },
+  { id: "music-video", label: "Music Video", intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8, resolution: "1080p", generateAudio: true } },
+  { id: "social",      label: "Social/Reel", intent: "reel",      defaults: { aspectRatio: "9:16", durationSeconds: 6, resolution: "720p",  generateAudio: false } },
+  { id: "visualizer",  label: "Visualizer",  intent: "animation", defaults: { aspectRatio: "16:9", durationSeconds: 8, resolution: "720p",  generateAudio: false } },
+  { id: "transform",   label: "Transform",   intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, resolution: "720p",  generateAudio: false } },
+  { id: "extend",      label: "Extend",      intent: "clip",      defaults: { aspectRatio: "16:9", durationSeconds: 8, resolution: "720p",  generateAudio: false } },
 ];
 
 /** Veo only accepts these durations. */

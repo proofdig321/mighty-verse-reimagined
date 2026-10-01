@@ -147,6 +147,7 @@ export function StoryboardWorkspace({
   const [lastFrame, setLastFrame] = useState<string>("");
   const [durationSeconds, setDurationSeconds] = useState<import("./creative-operation").VeoDuration>(8);
   const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
+  const [resolution, setResolution] = useState<import("./creative-operation").ResolutionOption>("720p");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [generationPage, setGenerationPage] = useState(0);
@@ -555,6 +556,7 @@ export function StoryboardWorkspace({
         ...extra,
         duration_seconds: typeof extra.duration_seconds === "number" ? extra.duration_seconds : durationSeconds,
         aspect_ratio: extra.aspect_ratio === "9:16" || extra.aspect_ratio === "16:9" ? extra.aspect_ratio : aspectRatio,
+        resolution: typeof extra.resolution === "string" ? extra.resolution : resolution,
       }),
     });
     const payload = await response.json().catch(() => ({}));
@@ -1100,6 +1102,7 @@ export function StoryboardWorkspace({
           lastFrame={lastFrame}
           durationSeconds={durationSeconds}
           aspectRatio={aspectRatio}
+          resolution={resolution}
           activeReferenceUrls={activeReferenceUrls}
           references={references}
           workFrames={work?.frames ?? []}
@@ -1112,6 +1115,7 @@ export function StoryboardWorkspace({
           onSetLastFrame={setLastFrame}
           onSetDuration={(v: VeoDuration) => setDurationSeconds(v)}
           onSetAspect={setAspectRatio}
+          onSetResolution={setResolution}
           onRetryJob={(jobId) => void retryJob(jobId)}
           onCancelJob={(jobId) => void cancelJob(jobId)}
           onWorkUpdate={(w) => applyWork(w)}

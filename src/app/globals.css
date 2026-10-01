@@ -1349,6 +1349,18 @@ html[data-theme="paper"] {
     border-top: 1px solid color-mix(in oklch, var(--border) 40%, transparent);
   }
 
+  /* Advisor */
+  .studio-advisor {
+    padding-top: 0.25rem;
+  }
+
+  .studio-advisor-card {
+    border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.625rem;
+    background: color-mix(in oklch, var(--muted) 30%, transparent);
+  }
+
   /* Generate button — full-width at bottom, prominent */
   .studio-generate-btn {
     height: 2.5rem;

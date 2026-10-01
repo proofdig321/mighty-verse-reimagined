@@ -15,6 +15,7 @@ import { parseStructuredStoryboard } from "@/lib/ai/structured-storyboard";
 import { composeAssistPrompt } from "@/lib/ai/prompt-composer";
 import { assistAction } from "@/lib/storyboard/assist";
 import { STRUCTURED_STORYBOARD_SYSTEM } from "@/lib/storyboard/document";
+import { assembleCreativeContext } from "@/lib/storyboard/creative-context";
 import {
   applySentinelEvidenceToPanels,
   ensureStoryboardWork,
@@ -556,6 +557,63 @@ export async function POST(request: Request) {
       panels: next.panels,
       provider: "gemini",
       model: structured.model,
+      status: "ready",
+      creates_scene: false,
+      creates_canonical: false,
+    });
+  }
+
+  if (action === "advise") {
+    const panel = work.panels.find((p) => p.panel_id === (typeof body.panel_id === "string" ? body.panel_id : null)) ?? work.panels[0] ?? null;
+    const directive = typeof body.directive === "string" ? body.directive : null;
+    const generationSettings = body.generation_settings as Record<string, unknown> | null ?? null;
+    const hasReferences = Boolean(panel?.references?.length || (work.frames?.length ?? 0));
+    const hasSentinel = Boolean(panel?.generation_metadata?.sentinel_observation);
+    const hasDirective = Boolean(directive || panel?.generation_metadata?.transformation_instruction);
+    const hasSource = Boolean(work.sources?.length);
+
+    const ctxResult = panel ? await assembleCreativeContext(work, panel, directive) : null;
+    const contextSummary = ctxResult?.ok
+      ? [
+          ctxResult.context.universe ? `Universe: ${ctxResult.context.universe.title}` : "",
+          ctxResult.context.work.premise ? `Premise: ${ctxResult.context.work.premise}` : "",
+          ctxResult.context.work.tone ? `Tone: ${ctxResult.context.work.tone}` : "",
+          panel ? `Panel: ${panel.title} — ${panel.description}` : "",
+          panel?.camera ? `Camera: ${panel.camera}` : "",
+          panel?.environment ? `Environment: ${panel.environment}` : "",
+          panel?.characters ? `Characters: ${panel.characters}` : "",
+          hasSentinel ? `Sentinel evidence: ${ctxResult.context.sentinelEvidence?.what_happens ?? "present"}` : "No Sentinel evidence bound.",
+          hasReferences ? `References attached: ${panel?.references?.length ?? 0}` : "No references attached.",
+          hasSource ? `Source media: ${work.sources?.[0]?.title ?? "present"}` : "No source media.",
+          hasDirective ? `Creator directive: ${directive || panel?.generation_metadata?.transformation_instruction}` : "No creator directive.",
+          generationSettings ? `Generation settings: ${JSON.stringify(generationSettings)}` : "",
+        ].filter(Boolean).join("\n")
+      : `Panel: ${panel?.title ?? "none"}. No full context available.`;
+
+    const advisePrompt = [
+      "You are a creative advisor inside Mighty Verse Storyboard.",
+      "Review the current creative context and generation settings.",
+      "Provide 2–4 short, specific, actionable observations.",
+      "Each observation must be one sentence. Be direct. Do not be generic.",
+      "Do not invent canonical Scenes, Universes, or database identifiers.",
+      "Do not change generation settings. Do not make decisions for the creator.",
+      "Format: one observation per line, no bullet points, no headers.",
+      "",
+      "CONTEXT:",
+      contextSummary,
+    ].join("\n");
+
+    const result = await promptWithGemini({ system: STORYBOARD_SYSTEM, prompt: advisePrompt });
+    if (!result.ok) {
+      return NextResponse.json({
+        status: result.status,
+        advice: null,
+        error: result.message,
+        creates_scene: false,
+      }, { status: result.status === "unavailable" ? 409 : 502 });
+    }
+    return NextResponse.json({
+      advice: result.text,
       status: "ready",
       creates_scene: false,
       creates_canonical: false,

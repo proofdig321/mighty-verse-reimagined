@@ -442,6 +442,8 @@ export async function processGenerationJob(jobId: string, participantId: string)
     aspectRatio: request.aspect_ratio === "9:16" ? "9:16" : "16:9",
     audioIntention: typeof request.audio_intention === "string" ? request.audio_intention : null,
   };
+  const resolution: "720p" | "1080p" | "4k" =
+    request.resolution === "1080p" ? "1080p" : request.resolution === "4k" ? "4k" : "720p";
 
   try {
     if (current.kind === "still") {
@@ -589,6 +591,7 @@ export async function processGenerationJob(jobId: string, participantId: string)
     const submitted = await submitVeoGeneration({
       prompt,
       aspectRatio: motion.aspectRatio ?? "16:9",
+      resolution,
       durationSeconds: motion.durationSeconds === 4 || motion.durationSeconds === 6 ? motion.durationSeconds : 8,
       generateAudio: request.generate_audio !== false,
       firstFrame: current.kind === "animate-still" || current.kind === "first-last-frame"
