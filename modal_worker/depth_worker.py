@@ -76,6 +76,7 @@ vda_image = (
         "opencv-python-headless==4.10.0.84",
         "supabase==2.7.4",
         "requests==2.32.3",
+        "fastapi[standard]==0.115.0",
     )
     .run_commands(
         # Clone VDA repo at a pinned commit for reproducibility
