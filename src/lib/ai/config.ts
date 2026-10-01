@@ -17,6 +17,45 @@ export type AiMode =
   | "reference-images"
   | "video-extension";
 
+/** Resolutions the Veo API actually accepts. */
+export type VeoResolution = "480p" | "720p" | "1080p" | "4k";
+
+export type VeoResolutionOption = {
+  value: VeoResolution;
+  label: string;
+  /** false = provider does not support this; null = unknown/unconfigured */
+  available: boolean | null;
+};
+
+/**
+ * Per-model resolution capability map.
+ * Only list resolutions the model actually accepts — do not invent options.
+ * Veo 3.x documented resolutions: 480p, 720p, 1080p.
+ * 4k is retained in the type for backward-compat with stored job records but
+ * is not exposed as a selectable option until confirmed by the provider.
+ */
+const VEO_MODEL_RESOLUTIONS: Record<string, VeoResolution[]> = {
+  // Veo 3.x family — all confirmed to accept 480p / 720p / 1080p
+  "veo-3.1-generate-preview":      ["480p", "720p", "1080p"],
+  "veo-3.1-lite-generate-preview": ["480p", "720p", "1080p"],
+  "veo-3.1-fast-generate-preview": ["480p", "720p", "1080p"],
+};
+
+const VEO_DEFAULT_RESOLUTIONS: VeoResolution[] = ["480p", "720p", "1080p"];
+
+/**
+ * Return the resolution options for the active video model.
+ * When the provider is not configured, available is null (unknown).
+ */
+export function veoResolutionOptions(configured: boolean, videoModel: string): VeoResolutionOption[] {
+  const supported = VEO_MODEL_RESOLUTIONS[videoModel] ?? VEO_DEFAULT_RESOLUTIONS;
+  return supported.map((value) => ({
+    value,
+    label: value,
+    available: configured ? true : null,
+  }));
+}
+
 export type AiModelConfig = {
   textModel: string;
   imageModel: string;

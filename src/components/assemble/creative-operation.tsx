@@ -9,13 +9,56 @@
 
 import { cn } from "@/lib/utils";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
+import type { VeoResolution, VeoResolutionOption } from "@/lib/ai/config";
 
 export type CreativeIntent = "still" | "clip" | "animation" | "gif" | "reel";
 
-export type ResolutionOption = "720p" | "1080p";
+export type Capability = {
+  configured: boolean;
+  text?: boolean;
+  image?: boolean;
+  video?: boolean;
+  models?: { text: string; image: string; video: string };
+  modes?: Record<string, { available: boolean; reason: string | null }>;
+} | null;
 
-/** Provider-supported resolutions. Only expose what the provider actually accepts. */
+/** Resolution type — matches the provider capability set. */
+export type ResolutionOption = VeoResolution;
+
+/**
+ * Per-model resolution capability map (client-safe static data).
+ * Only list resolutions the model actually accepts — do not invent options.
+ * Veo 3.x documented resolutions: 480p, 720p, 1080p.
+ */
+const VEO_MODEL_RESOLUTIONS: Record<string, VeoResolution[]> = {
+  "veo-3.1-generate-preview":      ["480p", "720p", "1080p"],
+  "veo-3.1-lite-generate-preview": ["480p", "720p", "1080p"],
+  "veo-3.1-fast-generate-preview": ["480p", "720p", "1080p"],
+};
+
+const VEO_DEFAULT_RESOLUTIONS: VeoResolution[] = ["480p", "720p", "1080p"];
+
+/**
+ * Derive the selectable resolution options from the active capability.
+ * Distinguishes unavailable-because-unconfigured (null) from unsupported (false).
+ */
+export function resolutionOptionsFromCapability(
+  capability: Capability,
+  videoModel?: string,
+): VeoResolutionOption[] {
+  const model = videoModel ?? (capability as { models?: { video?: string } } | null)?.models?.video ?? "veo-3.1-generate-preview";
+  const supported = VEO_MODEL_RESOLUTIONS[model] ?? VEO_DEFAULT_RESOLUTIONS;
+  const configured = Boolean(capability?.configured);
+  return supported.map((value) => ({
+    value,
+    label: value,
+    available: configured ? true : null,
+  }));
+}
+
+/** @deprecated Use resolutionOptionsFromCapability instead. */
 export const PROVIDER_RESOLUTIONS: { value: ResolutionOption; label: string }[] = [
+  { value: "480p", label: "480p" },
   { value: "720p", label: "720p" },
   { value: "1080p", label: "1080p" },
 ];
@@ -60,14 +103,6 @@ const INTENTS: { id: CreativeIntent; label: string; description: string }[] = [
   { id: "gif",       label: "GIF",     description: "Looping GIF" },
   { id: "reel",      label: "Reel",    description: "Short-form reel" },
 ];
-
-export type Capability = {
-  configured: boolean;
-  text?: boolean;
-  image?: boolean;
-  video?: boolean;
-  modes?: Record<string, { available: boolean; reason: string | null }>;
-} | null;
 
 export function intentAvailable(intent: CreativeIntent, capability: Capability): boolean {
   if (!capability?.configured) return false;

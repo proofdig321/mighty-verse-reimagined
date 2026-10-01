@@ -350,7 +350,7 @@ export type VeoImageRef = { mime: string; bytes: Buffer };
 export type VeoSubmitInput = {
   prompt: string;
   aspectRatio?: "16:9" | "9:16";
-  resolution?: "720p" | "1080p" | "4k";
+  resolution?: "480p" | "720p" | "1080p" | "4k";
   durationSeconds?: 4 | 6 | 8;
   generateAudio?: boolean;
   includeAudioParameter?: boolean;

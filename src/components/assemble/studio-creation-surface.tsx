@@ -17,7 +17,7 @@ import { StoryboardSourceMedia } from "./storyboard-source-media";
 import {
   CreativeIntentPicker, resolveKind, intentAvailable,
   describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS, PRESETS,
-  PROVIDER_RESOLUTIONS,
+  resolutionOptionsFromCapability,
 } from "./creative-operation";
 import type { CreativeIntent, Capability, VeoDuration, CreativePreset, ResolutionOption } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
@@ -631,12 +631,16 @@ export function StudioCreationSurface({
                   <div>
                     <p className="suite-kicker mb-1">Resolution</p>
                     <div className="flex gap-1.5">
-                      {PROVIDER_RESOLUTIONS.map((opt) => (
+                      {resolutionOptionsFromCapability(capability, capability?.models?.video).map((opt) => (
                         <button key={opt.value} type="button"
-                          onClick={() => onSetResolution(opt.value)}
+                          disabled={opt.available === false}
+                          title={opt.available === null ? "Provider not configured" : opt.available === false ? "Not supported by this model" : opt.label}
+                          onClick={() => opt.available !== false && onSetResolution(opt.value)}
                           className={cn(
                             "studio-control-pill text-xs",
-                            resolution === opt.value && "border-primary/50 text-primary"
+                            resolution === opt.value && "border-primary/50 text-primary",
+                            opt.available === null && "opacity-50",
+                            opt.available === false && "opacity-25 cursor-not-allowed",
                           )}>
                           {opt.label}
                         </button>

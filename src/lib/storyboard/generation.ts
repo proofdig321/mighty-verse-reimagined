@@ -442,8 +442,8 @@ export async function processGenerationJob(jobId: string, participantId: string)
     aspectRatio: request.aspect_ratio === "9:16" ? "9:16" : "16:9",
     audioIntention: typeof request.audio_intention === "string" ? request.audio_intention : null,
   };
-  const resolution: "720p" | "1080p" | "4k" =
-    request.resolution === "1080p" ? "1080p" : request.resolution === "4k" ? "4k" : "720p";
+  const resolution: "480p" | "720p" | "1080p" | "4k" =
+    request.resolution === "480p" ? "480p" : request.resolution === "1080p" ? "1080p" : request.resolution === "4k" ? "4k" : "720p";
 
   try {
     if (current.kind === "still") {
