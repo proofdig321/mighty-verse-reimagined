@@ -6,6 +6,8 @@ import { serverAiCapability } from "@/lib/ai/provider";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { loadStoryboardWorkById } from "@/lib/storyboard/work";
+import { loadCurateStudioMedia } from "@/lib/assemble/load-studio";
+import { playableGallerySources } from "@/lib/assemble/gallery-source";
 
 export default async function StudioWorkEditorPage({
   params,
@@ -14,12 +16,14 @@ export default async function StudioWorkEditorPage({
 }) {
   const { workId } = await params;
   const { participantId } = await requireStudioUser(`/studio/work/${workId}`);
-  const [materials, projects, work] = await Promise.all([
+  const [materials, projects, work, studioMedia] = await Promise.all([
     loadStoryboardMaterials(null, participantId),
     loadUniverseProjectCards(),
     loadStoryboardWorkById({ workId, participantId }),
+    loadCurateStudioMedia(),
   ]);
   const ai = serverAiCapability();
+  const gallerySources = playableGallerySources(studioMedia.media);
 
   return (
     <div className="space-y-6">
@@ -45,6 +49,7 @@ export default async function StudioWorkEditorPage({
           status: artifact.playback_id || artifact.still_url ? "ready" : "failed",
         }))}
         assistConfigured={ai.text}
+        gallerySources={gallerySources}
         universes={projects.map((project) => ({ master_id: project.master_id, title: project.title }))}
         workId={workId}
         backHref="/studio/work"

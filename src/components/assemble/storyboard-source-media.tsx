@@ -10,6 +10,8 @@ import { formatTimestamp, sourceCategoryLabel, type StoryboardSourceRecord, type
 import { muxThumbnailUrl } from "@/lib/media/thumbnail";
 import { SecondsField } from "./seconds-field";
 import type { CinematicShot } from "@/lib/media/cinematic-evidence";
+import type { GallerySource } from "@/lib/assemble/gallery-source";
+import { GallerySourcePicker } from "./gallery-source-picker";
 
 type SourceTab = "upload" | "gallery" | "sentinel" | "url";
 
@@ -21,6 +23,7 @@ export function StoryboardSourceMedia({
   frames,
   selectedPanelId,
   references = [],
+  gallerySources = [],
   sentinelShots = [],
   onWork,
 }: {
@@ -29,6 +32,7 @@ export function StoryboardSourceMedia({
   frames: StoryboardFrameRecord[];
   selectedPanelId: string | null;
   references?: GalleryRef[];
+  gallerySources?: GallerySource[];
   sentinelShots?: CinematicShot[];
   onWork: (work: unknown) => void;
 }) {
@@ -176,7 +180,7 @@ export function StoryboardSourceMedia({
                   ? "border-primary text-primary bg-primary/5"
                   : "border-border text-muted-foreground hover:text-foreground"
               )}>
-              {t === "upload" ? "Local Upload" : t === "gallery" ? `Gallery${references.length ? ` (${references.length})` : ""}` : t === "sentinel" ? `Sentinel${sentinelShots.length ? ` (${sentinelShots.length})` : ""}` : "URL / Asset ID"}
+              {t === "upload" ? "Local Upload" : t === "gallery" ? `Gallery${gallerySources.length ? ` (${gallerySources.length})` : references.length ? ` (${references.length})` : ""}` : t === "sentinel" ? `Sentinel${sentinelShots.length ? ` (${sentinelShots.length})` : ""}` : "URL / Asset ID"}
             </button>
           ))}
         </div>
@@ -195,12 +199,20 @@ export function StoryboardSourceMedia({
           </div>
         )}
 
-        {/* Gallery tab — canonical universe references */}
+        {/* Gallery tab — global media catalogue or universe references */}
         {tab === "gallery" && (
           <div className="space-y-2">
-            {references.length === 0 ? (
-              <p className="text-xs text-muted-foreground/60">No gallery references found for this universe.</p>
-            ) : (
+            {gallerySources.length > 0 ? (
+              <GallerySourcePicker
+                sources={gallerySources}
+                selectedId={null}
+                onSelect={(id) => {
+                  const source = gallerySources.find((s) => s.asset_id === id);
+                  if (source) void attachAsset(source.asset_id, source.title ?? "Gallery media");
+                }}
+                label="Select from gallery"
+              />
+            ) : references.length > 0 ? (
               <ul className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {references.map((ref) => (
                   <li key={ref.asset_id}>
@@ -217,6 +229,8 @@ export function StoryboardSourceMedia({
                   </li>
                 ))}
               </ul>
+            ) : (
+              <p className="text-xs text-muted-foreground/60">No media in the gallery yet. Upload or ingest media first.</p>
             )}
           </div>
         )}

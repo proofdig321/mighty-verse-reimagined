@@ -76,6 +76,7 @@ export function StudioCreationSurface({
   mediaState, stillJob, motionJob, selectedJob, stillReady, motionReady,
   motionKind, firstFrame, lastFrame, durationSeconds, aspectRatio, resolution,
   activeReferenceUrls, references, workFrames, capability,
+  gallerySources = [],
   cinematicShots,
   onDraftChange, onSavePanel, onGenerateStill, onEnqueue,
   onSetFirstFrame, onSetLastFrame, onSetDuration, onSetAspect, onSetResolution,
@@ -97,6 +98,7 @@ export function StudioCreationSurface({
   durationSeconds: number; aspectRatio: "16:9" | "9:16";
   activeReferenceUrls: string[];
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
+  gallerySources?: import("@/lib/assemble/gallery-source").GallerySource[];
   workFrames: { source_title: string; timestamp_ms: number; still_url: string; panel_id: string | null }[];
   capability: Capability & { provider?: string; label?: string; models?: { text: string; image: string; video: string } } | null;
   cinematicShots: CinematicShot[];
@@ -265,6 +267,7 @@ export function StudioCreationSurface({
               workId={work?.work_id ?? null} sources={work?.sources ?? []}
               frames={work?.frames ?? []} selectedPanelId={selectedPersisted?.panel_id ?? null}
               references={references}
+              gallerySources={gallerySources}
               sentinelShots={cinematicShots}
               onWork={(w) => onWorkUpdate(w as StoryboardWorkRecord)}
             />

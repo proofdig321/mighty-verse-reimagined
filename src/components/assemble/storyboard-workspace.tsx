@@ -99,6 +99,7 @@ export function StoryboardWorkspace({
   previewHref,
   establishHref,
   references,
+  gallerySources = [],
   initialTab = "script",
   initialBody = "",
   artifacts = [],
@@ -116,6 +117,7 @@ export function StoryboardWorkspace({
   previewHref: string;
   establishHref?: string | null;
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
+  gallerySources?: import("@/lib/assemble/gallery-source").GallerySource[];
   initialTab?: MaterialTab;
   initialBody?: string;
   artifacts?: StoryboardArtifactCard[];
@@ -1105,6 +1107,7 @@ export function StoryboardWorkspace({
           resolution={resolution}
           activeReferenceUrls={activeReferenceUrls}
           references={references}
+          gallerySources={gallerySources}
           workFrames={work?.frames ?? []}
           capability={capability}
           onDraftChange={(patch) => setDraftPanel(patch)}
