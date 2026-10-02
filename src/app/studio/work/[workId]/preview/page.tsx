@@ -3,9 +3,12 @@ export const dynamic = "force-dynamic";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
-import { requireStudioUser } from "@/lib/assemble/studio-session";
-import { loadStoryboardWorkById } from "@/lib/storyboard/work";
+import { AssociateStoryboard } from "@/components/assemble/associate-storyboard";
 import { StoryboardHlsPreview } from "@/components/assemble/storyboard-hls-preview";
+import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
+import { requireStudioUser } from "@/lib/assemble/studio-session";
+import { storyboardAssociationStatus } from "@/lib/storyboard/association";
+import { loadStoryboardWorkById } from "@/lib/storyboard/work";
 
 export default async function StoryboardWorkPreviewPage({
   params,
@@ -14,10 +17,14 @@ export default async function StoryboardWorkPreviewPage({
 }) {
   const { workId } = await params;
   const { participantId } = await requireStudioUser(`/studio/work/${workId}/preview`);
-  const work = await loadStoryboardWorkById({ workId, participantId });
+  const [work, universes] = await Promise.all([
+    loadStoryboardWorkById({ workId, participantId }),
+    loadUniverseProjectCards(),
+  ]);
   if (!work) notFound();
 
   const panelsWithResults = work.panels.filter((panel) => panel.motion_endpoint || panel.motion_playback_id || panel.still_url);
+  const associationState = storyboardAssociationStatus(work.universe_id);
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
@@ -36,6 +43,20 @@ export default async function StoryboardWorkPreviewPage({
           Review storyboard panels and their generated media. This preview does not publish Scenes or change Universe timing.
         </p>
       </header>
+
+      <section className="rounded-xl border border-border/60 bg-card/60 p-4">
+        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <p className="text-xs font-medium uppercase text-muted-foreground">Association</p>
+            <p className="text-base font-medium">{associationState.label}</p>
+          </div>
+          {associationState.required && universes.length > 0 ? (
+            <div className="w-full max-w-md">
+              <AssociateStoryboard universes={universes} workId={work.work_id} />
+            </div>
+          ) : null}
+        </div>
+      </section>
 
       {work.body.trim() ? (
         <section className="max-w-3xl space-y-2" aria-labelledby="preview-story-heading">
