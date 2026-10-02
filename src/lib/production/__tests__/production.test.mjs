@@ -345,5 +345,17 @@ const attachedWithoutStill = productionLayersFromResults([
 ]);
 assert(attachedWithoutStill[0].still_url?.includes("image.mux.com/J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE/thumbnail.jpg"), "production still falls back to Mux poster when still_url is missing");
 assert(attachedWithoutStill[0].playback_endpoint?.includes("stream.mux.com"), "production playback stays Mux HLS");
+assert(
+  productionLayersFromResults([
+    {
+      asset_id: "22222222-2222-4222-8222-222222222222",
+      scene_master_id: POWERHOUSE,
+      playback_id: "operator:discarded:J01AIUNsiJzqQ5TK3QOYIU7ny025fHMn11vMrfiR4xLRE",
+      approval: "approved",
+      attached: true,
+    },
+  ]).length === 0,
+  "discarded production media does not become a playback layer",
+);
 
 console.log("Production orchestration tests: all passed");

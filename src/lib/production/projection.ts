@@ -8,6 +8,7 @@
  */
 
 import type { HolographicLayer } from "../media/sentinel-intelligence";
+import { isPlayableStorageRef } from "../assemble/protected-work";
 import { muxStillFromPlayback } from "../media/thumbnail";
 
 export type ApprovedProductionLayer = {
@@ -36,7 +37,12 @@ export function productionLayersFromResults(
     attached: boolean;
   }>,
 ): ApprovedProductionLayer[] {
-  return results.map((result) => ({
+  return results
+    .filter((result) => {
+      const playbackRef = result.playback_id || result.playback_endpoint;
+      return !playbackRef || isPlayableStorageRef(playbackRef);
+    })
+    .map((result) => ({
     layer_id: `production-${result.asset_id}`,
     scene_master_id: result.scene_master_id,
     title: (result.title ?? "Production").replace(/ production · .*$/i, " production"),
@@ -50,7 +56,7 @@ export function productionLayersFromResults(
     end_ms: result.canonical_end_ms ?? null,
     approved: result.approval === "approved",
     attached: result.attached,
-  }));
+    }));
 }
 
 /**
