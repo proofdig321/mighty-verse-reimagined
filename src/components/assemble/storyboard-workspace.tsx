@@ -30,6 +30,15 @@ import { StoryboardWorkspaceLayout } from "./storyboard-workspace-layout";
 import { StoryboardWorkspaceDialogs } from "./storyboard-workspace-dialogs";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
+import {
+  buildStoryboardShotIds,
+  deriveStoryboardSequenceState,
+  resolveStoryboardEditorPanel,
+} from "@/lib/storyboard/workspace-state";
+import {
+  buildStoryboardReferenceAttachmentBody,
+  resolveStoryboardAttachmentTarget,
+} from "@/lib/storyboard/attachments";
 import type { VeoDuration } from "./creative-operation";
 import { useStoryboardJobLifecycle } from "./use-storyboard-job-lifecycle";
 import { useStoryboardSentinelActions, type StoryboardMaterialTab } from "./use-storyboard-sentinel-actions";
@@ -316,20 +325,22 @@ export function StoryboardWorkspace({
       applyWork(payload.work);
       current = payload.work as StoryboardWorkRecord;
     }
-    const persistedId = current.panels.some((panel) => panel.panel_id === selectedId) ? selectedId : null;
+    const { persistedId } = resolveStoryboardAttachmentTarget({
+      work: current,
+      selectedId,
+    });
     const response = await fetch("/api/authority/storyboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        universe_id: universeId,
-        action: "use-still",
-        work_id: current.work_id,
-        panel_id: persistedId,
-        asset_id: reference.asset_id,
-        still_url: reference.still_url,
+      body: JSON.stringify(buildStoryboardReferenceAttachmentBody({
+        universeId,
+        workId: current.work_id,
+        panelId: persistedId,
+        assetId: reference.asset_id,
+        stillUrl: reference.still_url,
         title: reference.title,
-        time_ms: reference.time_ms,
-      }),
+        timeMs: reference.time_ms,
+      })),
     });
     const payload = await response.json().catch(() => ({}));
     if (payload.work) {
@@ -344,8 +355,12 @@ export function StoryboardWorkspace({
   }
 
 
-  const creativeCount = persistedPanels.length || scriptPanels.length;
-  const sequenceEmpty = creativeCount === 0 && sentinelPanels.length === 0 && scenes.length === 0;
+  const { creativeCount, sequenceEmpty } = deriveStoryboardSequenceState({
+    persistedPanels,
+    scriptPanels,
+    sentinelPanels,
+    scenes,
+  });
   const progress = deriveStoryboardProgress({
     script,
     panelCount: creativeCount || (script ? 0 : scenes.length),
@@ -361,12 +376,12 @@ export function StoryboardWorkspace({
     ].filter(Boolean),
     assemblyItemCount: assemblyItems.length,
   });
-  const shotIds = [
-    ...persistedPanels.map((panel) => panel.panel_id),
-    ...scriptPanels.map((panel) => panel.panel_id),
-    ...sentinelPanels.map((panel) => panel.panel_id),
-    ...(persistedPanels.length === 0 && scriptPanels.length === 0 && sentinelPanels.length === 0 ? scenes.map((scene) => scene.master_id) : []),
-  ];
+  const shotIds = buildStoryboardShotIds({
+    persistedPanels,
+    scriptPanels,
+    sentinelPanels,
+    scenes,
+  });
 
   useStoryboardWorkspaceAutomation({
     dirty,
@@ -386,7 +401,10 @@ export function StoryboardWorkspace({
     setSelectedId,
   });
 
-  const editorPanel = draftPanel.panel_id === selectedPersisted?.panel_id ? draftPanel : selectedPersisted ?? draftPanel;
+  const editorPanel = resolveStoryboardEditorPanel({
+    draftPanel,
+    selectedPersisted,
+  });
   const saveLabel = saveStatusLabel({
     dirty,
     saving: saveState.status === "generating",
