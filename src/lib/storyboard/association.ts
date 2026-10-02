@@ -21,6 +21,31 @@ export function storyboardAssociationStatus(universeId: string | null): {
   };
 }
 
+export function storyboardModeLabel(attached: boolean): string {
+  return attached ? "Attached" : "Standalone";
+}
+
+export function storyboardAttachmentHint(universeId: string | null): string {
+  return universeId
+    ? "This work is attached to a canonical universe."
+    : "attach this storyboard to a universe to publish it into the canonical flow.";
+}
+
+export function storyboardStatusTone(value?: string | null): "default" | "warning" | "success" | "muted" {
+  switch (value) {
+    case "ready":
+      return "success";
+    case "generating":
+    case "queued":
+      return "default";
+    case "blocked":
+    case "failed":
+      return "warning";
+    default:
+      return "muted";
+  }
+}
+
 export function storyboardGenerationStatusLabel(value?: string | null): string {
   switch (value) {
     case "generating":

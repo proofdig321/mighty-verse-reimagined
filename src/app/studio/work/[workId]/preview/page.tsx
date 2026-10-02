@@ -9,6 +9,9 @@ import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
 import {
   storyboardAssociationStatus,
+  storyboardAttachmentHint,
+  storyboardModeLabel,
+  storyboardStatusTone,
   storyboardUpdatedLabel,
   storyboardWorkSummary,
 } from "@/lib/storyboard/association";
@@ -60,6 +63,7 @@ export default async function StoryboardWorkPreviewPage({
             <p className="text-xs font-medium uppercase text-muted-foreground">Association</p>
             <p className="text-base font-medium">{associationState.label}</p>
             <p className="text-xs text-muted-foreground">{summary.line}</p>
+            <p className="text-xs text-muted-foreground">{storyboardModeLabel(associationState.attached)} · {storyboardStatusTone(work.status)} · {storyboardAttachmentHint(work.universe_id)}</p>
           </div>
           {associationState.required && universes.length > 0 ? (
             <div className="w-full max-w-md">

@@ -1,6 +1,9 @@
 import {
   storyboardAssociationStatus,
+  storyboardAttachmentHint,
   storyboardGenerationStatusLabel,
+  storyboardModeLabel,
+  storyboardStatusTone,
   storyboardUpdatedLabel,
   storyboardWorkSummary,
 } from "../association";
@@ -18,6 +21,15 @@ assert(generation === "Generating", "running generation should show a readable s
 
 const updated = storyboardUpdatedLabel("2026-10-02T00:00:00.000Z");
 assert(updated.includes("Updated") || updated.includes("just now"), "updated label should be readable");
+
+const mode = storyboardModeLabel(false);
+assert(mode === "Standalone", "standalone mode label is user-readable");
+
+const tone = storyboardStatusTone("blocked");
+assert(tone === "warning", "blocked generation should reflect caution status");
+
+const hint = storyboardAttachmentHint(null);
+assert(hint.includes("attach"), "standalone work should recommend attachment");
 
 const summary = storyboardWorkSummary({
   universeId: null,

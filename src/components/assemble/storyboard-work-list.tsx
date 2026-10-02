@@ -10,6 +10,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import {
   storyboardAssociationStatus,
+  storyboardAttachmentHint,
+  storyboardModeLabel,
+  storyboardStatusTone,
   storyboardUpdatedLabel,
   storyboardWorkSummary,
 } from "@/lib/storyboard/association";
@@ -165,6 +168,9 @@ export function StoryboardWorkList({
                     {summary.line}
                     {work.selected_still ? " · still selected" : ""}
                     {work.selected_motion ? " · motion selected" : ""}
+                  </p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {storyboardModeLabel(association.attached)} · {storyboardStatusTone(work.generation_status)} · {storyboardAttachmentHint(work.universe_id)}
                   </p>
                   {renaming === work.work_id ? (
                     <div className="flex gap-2">
