@@ -207,3 +207,22 @@ The feature batch passed the same verification gates as the previous milestone:
 - production build passed
 
 This is the recommended rhythm for the rest of the monolith reduction: keep the session batch constrained to four bounded features, validate all wiring, and only then push to the main branch.
+
+## Final completion status (2026-10-02)
+
+The Storyboard architecture recovery has reached the end of its targeted plan: the monolithic shell was reduced into modular, reusable boundaries without a risky rewrite. The key functional domains now sit behind dedicated hooks and pure logic modules, and the lifecycle stays stable across persistence, generation, selection, and attachment flows.
+
+### Completed in the final plan
+
+- Storyboard shell orchestration preserved while moving responsibilities into dedicated modules
+- persistence, authoring, generation, and job lifecycle logic split out from the main screen
+- status semantics standardized across preview and work-list surfaces
+- standalone attachment guidance and association state made explicit and reusable
+- workspace state helpers extracted into pure modules to reduce further logic drift
+- targeted Storyboard regression checks added to protect the extracted boundaries
+- full TypeScript and production build validation completed after each bounded batch
+- final batch pushed to the repository main branch after verification
+
+### Result
+
+The architecture is now in a safer, more maintainable state without sacrificing product behavior. The project remains green, and the repo reflects the completed Storyboard modularization plan rather than a partially extracted prototype.
