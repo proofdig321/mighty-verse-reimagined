@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { storyboardAssociationStatus } from "@/lib/storyboard/association";
 import type { StoryboardWorkSummary } from "@/lib/storyboard/document";
 import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
 import { PaginatedItems } from "./collection-pager";
@@ -135,7 +136,9 @@ export function StoryboardWorkList({
         <PaginatedItems items={works} label="Storyboard works">
           {(page) => (
         <ul className="grid gap-3 md:grid-cols-2">
-          {page.map((work) => (
+          {page.map((work) => {
+            const association = storyboardAssociationStatus(work.universe_id);
+            return (
             <li key={work.work_id}>
               <Card className="h-full bg-card/70">
                 <CardHeader>
@@ -144,7 +147,7 @@ export function StoryboardWorkList({
                       <CardTitle className="truncate text-base">{work.title}</CardTitle>
                       <CardDescription className="line-clamp-2">{work.premise || "No description yet."}</CardDescription>
                     </div>
-                    <Badge variant="outline">{work.attached ? "Attached" : "Unattached"}</Badge>
+                    <Badge variant={association.attached ? "default" : "outline"}>{association.label}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
@@ -190,7 +193,8 @@ export function StoryboardWorkList({
                 </CardContent>
               </Card>
             </li>
-          ))}
+          );
+          })}
         </ul>
           )}
         </PaginatedItems>

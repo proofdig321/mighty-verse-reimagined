@@ -127,3 +127,25 @@ This strategy preserves product stability while steadily reducing the monolith f
 The current work was committed and pushed to the repository main branch after the Storyboard modularization pass.
 
 Repository status after the final push was clean for the implemented refactor branch, and the remote was updated successfully.
+
+## Latest feature update (2026-10-02)
+
+The next incremental feature was the standalone association flow for storyboard preview and work listing. The aim was to standardize the user-facing status so unattached works are explicitly clear, while keeping the implementation small and non-invasive.
+
+### Added
+
+- preview-level association state and attach CTA for standalone works
+- shared domain helper for the association state, so status semantics are consistent across screens
+- work list label standardization using the same association helper
+
+### Why this matters
+
+This reduces the gap between preview state and the work list and keeps the app’s “standalone vs attached” semantics consistent without rewriting the dashboard structure. It is the right kind of small feature boundary: it reinforces the product model while staying within the refactor-safe path.
+
+### Verification
+
+- `node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/storyboard/__tests__/association.test.mjs` passed
+- `npx tsc --noEmit --pretty false` passed
+- `npm run build` passed
+
+This is the second stage of the feature-by-feature cleanup: integration is still narrow, but the product semantics are becoming more consistent and the dashboard can continue to evolve without the earlier crash pattern.
