@@ -8,7 +8,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { storyboardAssociationStatus, storyboardUpdatedLabel } from "@/lib/storyboard/association";
+import {
+  storyboardAssociationStatus,
+  storyboardUpdatedLabel,
+  storyboardWorkSummary,
+} from "@/lib/storyboard/association";
 import type { StoryboardWorkSummary } from "@/lib/storyboard/document";
 import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
 import { PaginatedItems } from "./collection-pager";
@@ -138,6 +142,12 @@ export function StoryboardWorkList({
         <ul className="grid gap-3 md:grid-cols-2">
           {page.map((work) => {
             const association = storyboardAssociationStatus(work.universe_id);
+            const summary = storyboardWorkSummary({
+              universeId: work.universe_id,
+              generationStatus: work.generation_status,
+              updatedAt: work.updated_at,
+              panelCount: work.panel_count,
+            });
             return (
             <li key={work.work_id}>
               <Card className="h-full bg-card/70">
@@ -152,7 +162,7 @@ export function StoryboardWorkList({
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-xs text-muted-foreground">
-                    {work.panel_count} panels · {work.generation_status} · {storyboardUpdatedLabel(work.updated_at)}
+                    {summary.line}
                     {work.selected_still ? " · still selected" : ""}
                     {work.selected_motion ? " · motion selected" : ""}
                   </p>

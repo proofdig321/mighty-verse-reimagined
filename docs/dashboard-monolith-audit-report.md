@@ -177,3 +177,33 @@ The next low-risk pass focused on consistent status semantics and safe display m
 - `npm run build` passed
 
 This is the correct pace for the architecture recovery: keep multiple small feature moves in one session, but always validate the wiring and keep the domain boundary intact.
+
+## Four-feature session update (2026-10-02)
+
+This session intentionally used a tighter batch of four feature-level improvements while keeping the scope within the Storyboard status architecture:
+
+1. shared association state semantics for standalone vs attached works
+2. generation-state labeling in a readable, domain-safe format
+3. updated-time formatting that falls back gracefully when timestamps are missing
+4. a composed work summary string used across the preview and work-list surfaces
+
+### Why this stays safe
+
+These features all share the same domain boundary: they improve status semantics without changing canonical data or heavy workflow behavior. Each change was wired through the same helper surface, reducing the chance of drift between screens and avoiding the earlier crash pattern from large, entangled refactors.
+
+### Files in this session
+
+- [src/lib/storyboard/association.ts](src/lib/storyboard/association.ts)
+- [src/components/assemble/storyboard-work-list.tsx](src/components/assemble/storyboard-work-list.tsx)
+- [src/app/studio/work/[workId]/preview/page.tsx](src/app/studio/work/[workId]/preview/page.tsx)
+- [src/lib/storyboard/__tests__/status-semantics.test.mjs](src/lib/storyboard/__tests__/status-semantics.test.mjs)
+
+### Confidence
+
+The feature batch passed the same verification gates as the previous milestone:
+
+- targeted status-semantics test passed
+- TypeScript compile passed
+- production build passed
+
+This is the recommended rhythm for the rest of the monolith reduction: keep the session batch constrained to four bounded features, validate all wiring, and only then push to the main branch.

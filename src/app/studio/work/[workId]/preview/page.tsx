@@ -7,7 +7,11 @@ import { AssociateStoryboard } from "@/components/assemble/associate-storyboard"
 import { StoryboardHlsPreview } from "@/components/assemble/storyboard-hls-preview";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
-import { storyboardAssociationStatus, storyboardUpdatedLabel } from "@/lib/storyboard/association";
+import {
+  storyboardAssociationStatus,
+  storyboardUpdatedLabel,
+  storyboardWorkSummary,
+} from "@/lib/storyboard/association";
 import { loadStoryboardWorkById } from "@/lib/storyboard/work";
 
 export default async function StoryboardWorkPreviewPage({
@@ -25,6 +29,12 @@ export default async function StoryboardWorkPreviewPage({
 
   const panelsWithResults = work.panels.filter((panel) => panel.motion_endpoint || panel.motion_playback_id || panel.still_url);
   const associationState = storyboardAssociationStatus(work.universe_id);
+  const summary = storyboardWorkSummary({
+    universeId: work.universe_id,
+    generationStatus: work.status,
+    updatedAt: work.updated_at,
+    panelCount: work.panels.length,
+  });
 
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
@@ -49,7 +59,7 @@ export default async function StoryboardWorkPreviewPage({
           <div>
             <p className="text-xs font-medium uppercase text-muted-foreground">Association</p>
             <p className="text-base font-medium">{associationState.label}</p>
-            <p className="text-xs text-muted-foreground">{storyboardUpdatedLabel(work.updated_at)}</p>
+            <p className="text-xs text-muted-foreground">{summary.line}</p>
           </div>
           {associationState.required && universes.length > 0 ? (
             <div className="w-full max-w-md">
