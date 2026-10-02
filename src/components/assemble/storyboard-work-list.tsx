@@ -55,10 +55,10 @@ export function StoryboardWorkList({
       setError(payload.error ?? "Could not create a storyboard work.");
       return;
     }
-    // If a source asset was passed from Gallery, navigate with it so the work
-    // can pre-attach it in the source tab.
+    // If a source asset was passed from Gallery, navigate to the dedicated
+    // source workflow route so the user enters a proper workflow, not a tab.
     const dest = sourceAssetId
-      ? `/studio/work/${payload.work.work_id}?source=${sourceAssetId}`
+      ? `/studio/work/${payload.work.work_id}/source?from=/gallery/${sourceAssetId}`
       : `/studio/work/${payload.work.work_id}`;
     router.push(dest);
     router.refresh();

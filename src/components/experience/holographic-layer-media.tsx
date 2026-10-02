@@ -180,7 +180,17 @@ export function HolographicLayerMedia({
     if (!media) return;
     if (playing) {
       media.muted = muted;
-      media.play().catch(() => null);
+      // Guard: only call play() when the media has enough data.
+      // readyState < 2 means HLS hasn't loaded yet — wait for canplay.
+      if (media.readyState >= 2) {
+        media.play().catch(() => null);
+      } else {
+        const onCanPlay = () => {
+          if (playingRef.current) media.play().catch(() => null);
+        };
+        media.addEventListener("canplay", onCanPlay, { once: true });
+        return () => media.removeEventListener("canplay", onCanPlay);
+      }
     } else {
       media.pause();
     }

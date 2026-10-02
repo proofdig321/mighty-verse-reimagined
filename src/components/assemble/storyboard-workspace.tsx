@@ -46,13 +46,11 @@ import { HierarchyBreadcrumb } from "./breadcrumb";
 import { StudioContextSidebar } from "./studio-context-sidebar";
 import { StudioCreationSurface } from "./studio-creation-surface";
 import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
-import { StoryboardSourceMedia } from "./storyboard-source-media";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 import type { VeoDuration } from "./creative-operation";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
-type SurfaceView = "create" | "source" | "preview";
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
   message: string;
@@ -99,7 +97,6 @@ export function StoryboardWorkspace({
   previewHref,
   establishHref,
   references,
-  gallerySources = [],
   initialTab = "script",
   initialBody = "",
   artifacts = [],
@@ -107,7 +104,6 @@ export function StoryboardWorkspace({
   universes = [],
   workId = null,
   backHref = "/studio/work",
-  initialSourceAssetId = null,
 }: {
   universeId: string | null;
   universeTitle?: string | null;
@@ -118,7 +114,6 @@ export function StoryboardWorkspace({
   previewHref: string;
   establishHref?: string | null;
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
-  gallerySources?: import("@/lib/assemble/gallery-source").GallerySource[];
   initialTab?: MaterialTab;
   initialBody?: string;
   artifacts?: StoryboardArtifactCard[];
@@ -126,7 +121,6 @@ export function StoryboardWorkspace({
   universes?: { master_id: string; title: string }[];
   workId?: string | null;
   backHref?: string;
-  initialSourceAssetId?: string | null;
 }) {
   const router = useRouter();
   // tab kept for API compat (importSentinel, addCinematicReferences use setTab)
@@ -171,7 +165,6 @@ export function StoryboardWorkspace({
   const [analysing, setAnalysing] = useState(false);
   const [sentinelMessage, setSentinelMessage] = useState<string | null>(null);
   const [sentinelError, setSentinelError] = useState<string | null>(null);
-  const [surfaceView, setSurfaceView] = useState<SurfaceView>(initialSourceAssetId ? "source" : "create");
   const savedSnapshot = useRef<AuthoringSnapshot | null>(null);
   const autosaveTimer = useRef<number | null>(null);
 
@@ -1081,11 +1074,10 @@ export function StoryboardWorkspace({
 
         {/* MAIN — Creation surface */}
         <StudioCreationSurface
-          surfaceView={surfaceView}
-          onSurfaceView={setSurfaceView}
           work={work}
           intelligence={intelligence}
           previewHref={previewHref}
+          sourceHref={workId ? `/studio/work/${workId}/source` : "/studio/work"}
           universeTitle={universeTitle}
           universeId={universeId}
           scenes={scenes}
@@ -1109,7 +1101,6 @@ export function StoryboardWorkspace({
           resolution={resolution}
           activeReferenceUrls={activeReferenceUrls}
           references={references}
-          gallerySources={gallerySources}
           workFrames={work?.frames ?? []}
           capability={capability}
           onDraftChange={(patch) => setDraftPanel(patch)}
@@ -1123,7 +1114,6 @@ export function StoryboardWorkspace({
           onSetResolution={setResolution}
           onRetryJob={(jobId) => void retryJob(jobId)}
           onCancelJob={(jobId) => void cancelJob(jobId)}
-          onWorkUpdate={(w) => applyWork(w)}
           cinematicShots={cinematicShots}
           onSaveArtifactToPanel={(panelId, patch) => void saveArtifactToPanel(panelId, patch)}
         />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -13,10 +14,9 @@ import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StudioAdvisor } from "./studio-advisor";
-import { StoryboardSourceMedia } from "./storyboard-source-media";
 import {
-  CreativeIntentPicker, resolveKind, intentAvailable,
-  describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS, PRESETS,
+  resolveKind, intentAvailable,
+  describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS,
   resolutionOptionsFromCapability,
 } from "./creative-operation";
 import type { CreativeIntent, Capability, VeoDuration, CreativePreset, ResolutionOption } from "./creative-operation";
@@ -25,8 +25,6 @@ import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import type { CinematicShot } from "@/lib/media/cinematic-evidence";
-
-type SurfaceView = "create" | "source" | "preview";
 
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
@@ -63,28 +61,23 @@ type SelectedPanel = {
   endpoint: string | null;
 };
 
-const VIEWS: { id: SurfaceView; label: string; icon: typeof Film }[] = [
-  { id: "create", label: "Create", icon: Clapperboard },
-  { id: "source", label: "Source", icon: Film },
-  { id: "preview", label: "2.5D", icon: Layers },
-];
-
 export function StudioCreationSurface({
-  surfaceView, onSurfaceView, work, intelligence, previewHref,
+  work, intelligence, previewHref, sourceHref,
   universeTitle, universeId, scenes, selected, selectedPersisted,
   editorPanel, draftPanel, selectedObservation, selectedFrame,
   mediaState, stillJob, motionJob, selectedJob, stillReady, motionReady,
   motionKind, firstFrame, lastFrame, durationSeconds, aspectRatio, resolution,
   activeReferenceUrls, references, workFrames, capability,
-  gallerySources = [],
   cinematicShots,
   onDraftChange, onSavePanel, onGenerateStill, onEnqueue,
   onSetFirstFrame, onSetLastFrame, onSetDuration, onSetAspect, onSetResolution,
-  onRetryJob, onCancelJob, onWorkUpdate, onSaveArtifactToPanel,
+  onRetryJob, onCancelJob, onSaveArtifactToPanel,
 }: {
-  surfaceView: SurfaceView; onSurfaceView: (v: SurfaceView) => void;
   work: StoryboardWorkRecord | null; intelligence: SentinelIntelligence | null;
-  previewHref: string; universeTitle?: string | null; universeId: string | null;
+  previewHref: string;
+  /** Route to the dedicated source workflow for this work. */
+  sourceHref: string;
+  universeTitle?: string | null; universeId: string | null;
   scenes: SuiteScene[]; selected: SelectedPanel | null;
   selectedPersisted: StoryboardPanelRecord | null;
   editorPanel: Partial<StoryboardPanelRecord>; draftPanel: Partial<StoryboardPanelRecord>;
@@ -98,7 +91,6 @@ export function StudioCreationSurface({
   durationSeconds: number; aspectRatio: "16:9" | "9:16";
   activeReferenceUrls: string[];
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
-  gallerySources?: import("@/lib/assemble/gallery-source").GallerySource[];
   workFrames: { source_title: string; timestamp_ms: number; still_url: string; panel_id: string | null }[];
   capability: Capability & { provider?: string; label?: string; models?: { text: string; image: string; video: string } } | null;
   cinematicShots: CinematicShot[];
@@ -109,13 +101,9 @@ export function StudioCreationSurface({
   onSetResolution: (v: ResolutionOption) => void;
   resolution: ResolutionOption;
   onRetryJob: (jobId: string) => void; onCancelJob: (jobId: string) => void;
-  onWorkUpdate: (work: StoryboardWorkRecord) => void;
   onSaveArtifactToPanel: (panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) => void;
 }) {
   const [intent, setIntent] = useState<CreativeIntent>("still");
-  const [activePreset, setActivePreset] = useState<string | null>(null);
-  // Local directive: used when no panel is selected. When a panel IS selected,
-  // the panel's transformation_instruction takes precedence and this syncs to it.
   const [localDirective, setLocalDirective] = useState("");
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
@@ -126,19 +114,6 @@ export function StudioCreationSurface({
   const [localLastFrame, setLocalLastFrame] = useState("");
   const [editVideoUri, setEditVideoUri] = useState("");
   const [selectedRefUrls, setSelectedRefUrls] = useState<Set<string>>(new Set());
-
-  function applyPreset(preset: CreativePreset) {
-    if (activePreset === preset.id) {
-      setActivePreset(null);
-      return;
-    }
-    setActivePreset(preset.id);
-    setIntent(preset.intent);
-    if (preset.defaults.durationSeconds) onSetDuration(preset.defaults.durationSeconds);
-    if (preset.defaults.aspectRatio) onSetAspect(preset.defaults.aspectRatio);
-    if (preset.defaults.resolution) onSetResolution(preset.defaults.resolution);
-    if (preset.defaults.generateAudio !== undefined) setGenerateAudio(preset.defaults.generateAudio);
-  }
 
   function toggleRef(url: string) {
     setSelectedRefUrls((prev) => {
@@ -251,85 +226,35 @@ export function StudioCreationSurface({
   return (
     <div className="studio-creation-surface">
 
-      {/* Generation type tabs — top level, matches image pill pattern */}
+      {/* Generation type tabs */}
       <div className="studio-gen-tabs">
         <button type="button"
-          onClick={() => { setIntent("still"); onSurfaceView("create"); }}
-          className={cn("studio-gen-tab", surfaceView === "create" && intent === "still" && "studio-gen-tab-active")}>
+          onClick={() => setIntent("still")}
+          className={cn("studio-gen-tab", intent === "still" && "studio-gen-tab-active")}>
           <ImagePlus size={12} /> Image Generation
         </button>
         <button type="button"
-          onClick={() => { setIntent("clip"); onSurfaceView("create"); }}
-          className={cn("studio-gen-tab", surfaceView === "create" && intent !== "still" && intent !== "gif" && intent !== "reel" && "studio-gen-tab-active")}>
+          onClick={() => setIntent("clip")}
+          className={cn("studio-gen-tab", intent !== "still" && intent !== "gif" && intent !== "reel" && "studio-gen-tab-active")}>
           <Film size={12} /> Video Generation
         </button>
-        <button type="button"
-          onClick={() => onSurfaceView("source")}
-          className={cn("studio-gen-tab", surfaceView === "source" && "studio-gen-tab-active")}>
+        <Link
+          href={sourceHref}
+          className={cn("studio-gen-tab")}>
           <Clapperboard size={12} /> Source
-        </button>
-        <button type="button"
-          onClick={() => onSurfaceView("preview")}
-          className={cn("studio-gen-tab", surfaceView === "preview" && "studio-gen-tab-active")}>
+        </Link>
+        <a
+          href={previewHref}
+          className={cn("studio-gen-tab")}>
           <Layers size={12} /> 2.5D
-        </button>
+        </a>
         {universeTitle && (
           <span className="suite-kicker ml-auto normal-case tracking-normal font-normal truncate max-w-[12rem]">{universeTitle}</span>
         )}
       </div>
 
-      {/* Source view */}
-      {surfaceView === "source" && (
-        <div className="studio-result-area">
-          <div className="w-full max-w-2xl">
-            <StoryboardSourceMedia
-              workId={work?.work_id ?? null} sources={work?.sources ?? []}
-              frames={work?.frames ?? []} selectedPanelId={selectedPersisted?.panel_id ?? null}
-              references={references}
-              gallerySources={gallerySources}
-              sentinelShots={cinematicShots}
-              onWork={(w) => onWorkUpdate(w as StoryboardWorkRecord)}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* 2.5D Preview view */}
-      {surfaceView === "preview" && (
-        <div className="studio-result-area">
-          <div className="w-full max-w-4xl space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="suite-kicker">2.5D Preview</p>
-              <a href={previewHref} className="text-xs text-primary hover:underline">Full Experience →</a>
-            </div>
-            {intelligence?.holographic && intelligence.holographic.length > 0 ? (
-              <ol className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-                {intelligence.holographic.map((layer, i) => (
-                  <li key={i} className="space-y-1">
-                    {layer.still_url
-                      ? <img src={layer.still_url} alt="" className="aspect-video w-full rounded-lg object-cover border border-border/40" />
-                      : <div className="aspect-video w-full rounded-lg bg-card/40 border border-border/30" />}
-                    <p className="suite-kicker normal-case tracking-normal font-normal truncate">{layer.title ?? `Layer ${i + 1}`}</p>
-                  </li>
-                ))}
-              </ol>
-            ) : (
-              <div className="rounded-xl border border-dashed border-border/30 p-8 flex flex-col items-center gap-3 text-center">
-                <Layers size={24} className="text-muted-foreground/40" />
-                <p className="text-sm text-muted-foreground/60">Add source media and run Sentinel to generate 2.5D layers</p>
-                <Button type="button" size="sm" variant="outline" onClick={() => onSurfaceView("source")}>Add source media</Button>
-              </div>
-            )}
-            <p className="suite-kicker normal-case tracking-normal font-normal">
-              Sentinel evidence informs layers — it does not create Scenes.{" "}
-              <a href={previewHref} className="text-primary hover:underline">Full Experience →</a>
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Create view */}
-      {surfaceView === "create" && (
+      {/* Create view — always shown (source and 2.5D are now routes) */}
+      {(
         <>
           {/* COMPOSER */}
           <div className="studio-composer-wrap">
@@ -469,14 +394,14 @@ export function StudioCreationSurface({
             {/* Composer box */}
             <div className="studio-composer">
 
-              {/* Reference card — prominent, at top (matches image) */}
+              {/* Reference card — navigates to source route */}
               {(() => {
                 const refUrl = effectiveFirstFrame || selected?.still || activeReferenceUrls[0] || null;
                 const isVideo = intent !== "still" && intent !== "gif" && intent !== "reel";
                 const label = isVideo ? "Reference Video" : "Reference Image";
                 const sub = refUrl ? null : isVideo ? "Optional: provides motion and camera" : "Optional: provides style and composition";
                 return (
-                  <button type="button" className="studio-ref-card" onClick={() => onSurfaceView("source")}>
+                  <Link href={sourceHref} className="studio-ref-card">
                     <div className="studio-ref-card-icon">
                       {refUrl
                         ? <img src={refUrl} alt="" className="w-full h-full object-cover" />
@@ -488,7 +413,7 @@ export function StudioCreationSurface({
                       {refUrl && <p className="studio-ref-card-sub studio-ref-card-sub-ok">Attached — tap to change</p>}
                     </div>
                     <span className="studio-ref-card-badge">{isVideo ? "Video" : "Image"}</span>
-                  </button>
+                  </Link>
                 );
               })()}
 
@@ -555,14 +480,15 @@ export function StudioCreationSurface({
                 </div>
               )}
 
-              {/* Add reference */}
+              {/* Add reference — navigates to source route */}
               {allRefThumbs.length === 0 && (
-                <button type="button"
+                <Link
+                  href={sourceHref}
                   className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                  onClick={() => onSurfaceView("source")}>
+                >
                   <ImagePlus size={13} />
                   Add reference from source media
-                </button>
+                </Link>
               )}
 
               {/* Contextual: use panel still as start frame */}
@@ -881,3 +807,4 @@ export function StudioCreationSurface({
     </div>
   );
 }
+

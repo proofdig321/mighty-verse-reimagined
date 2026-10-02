@@ -25,7 +25,13 @@ export function StoryboardHlsPreview({
       const { default: Hls } = await import("hls.js");
       if (cancelled || !media) return;
       if (Hls.isSupported()) {
-        const instance = new Hls({ enableWorker: false });
+        const instance = new Hls({
+          enableWorker: false,
+          maxBufferLength: 30,
+          maxMaxBufferLength: 60,
+          startLevel: -1,
+          abrEwmaDefaultEstimate: 1_000_000,
+        });
         hls = instance;
         instance.loadSource(endpoint);
         instance.attachMedia(media);
@@ -52,6 +58,8 @@ export function StoryboardHlsPreview({
     return () => {
       cancelled = true;
       hls?.destroy();
+      // Clear src to prevent the browser continuing to load after unmount
+      if (media && !hls) media.src = "";
     };
   }, [endpoint]);
 

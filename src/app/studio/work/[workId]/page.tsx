@@ -1,13 +1,12 @@
 export const dynamic = "force-dynamic";
 
+import { redirect } from "next/navigation";
 import { StoryboardWorkspace } from "@/components/assemble/storyboard-workspace";
 import { loadStoryboardMaterials } from "@/lib/storyboard/load";
 import { serverAiCapability } from "@/lib/ai/provider";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { loadStoryboardWorkById } from "@/lib/storyboard/work";
-import { loadCurateStudioMedia } from "@/lib/assemble/load-studio";
-import { playableGallerySources } from "@/lib/assemble/gallery-source";
 
 export default async function StudioWorkEditorPage({
   params,
@@ -19,14 +18,19 @@ export default async function StudioWorkEditorPage({
   const { workId } = await params;
   const { source } = await searchParams;
   const { participantId } = await requireStudioUser(`/studio/work/${workId}`);
-  const [materials, projects, work, studioMedia] = await Promise.all([
+
+  // When arriving from Gallery with a source asset, redirect to the dedicated
+  // source workflow route so the user enters a proper workflow, not a tab.
+  if (source) {
+    redirect(`/studio/work/${workId}/source?from=/gallery/${source}`);
+  }
+
+  const [materials, projects, work] = await Promise.all([
     loadStoryboardMaterials(null, participantId),
     loadUniverseProjectCards(),
     loadStoryboardWorkById({ workId, participantId }),
-    loadCurateStudioMedia(),
   ]);
   const ai = serverAiCapability();
-  const gallerySources = playableGallerySources(studioMedia.media);
 
   return (
     <div className="space-y-6">
@@ -52,11 +56,9 @@ export default async function StudioWorkEditorPage({
           status: artifact.playback_id || artifact.still_url ? "ready" : "failed",
         }))}
         assistConfigured={ai.text}
-        gallerySources={gallerySources}
         universes={projects.map((project) => ({ master_id: project.master_id, title: project.title }))}
         workId={workId}
         backHref="/studio/work"
-        initialSourceAssetId={source ?? null}
       />
     </div>
   );
