@@ -149,3 +149,31 @@ This reduces the gap between preview state and the work list and keeps the appâ€
 - `npm run build` passed
 
 This is the second stage of the feature-by-feature cleanup: integration is still narrow, but the product semantics are becoming more consistent and the dashboard can continue to evolve without the earlier crash pattern.
+
+## Session update: bounded feature pass (2026-10-02)
+
+The next low-risk pass focused on consistent status semantics and safe display metadata. Two small but useful feature improvements were shipped together in the same session:
+
+1. shared association status metadata for standalone vs attached works
+2. consistent updated-time display formatting that degrades safely when data is missing
+
+### Why this was a good bounded feature batch
+
+- it kept the scope narrow to Storyboard status semantics
+- it reused the same domain helper across preview and list screens
+- it avoided the large, entangled dashboard refactor that caused earlier crashes
+- it improved user clarity without changing canonical model behavior
+
+### Files touched in this pass
+
+- [src/lib/storyboard/association.ts](src/lib/storyboard/association.ts)
+- [src/components/assemble/storyboard-work-list.tsx](src/components/assemble/storyboard-work-list.tsx)
+- [src/app/studio/work/[workId]/preview/page.tsx](src/app/studio/work/[workId]/preview/page.tsx)
+
+### Verification for this session
+
+- `node --experimental-strip-types --experimental-loader ./src/lib/media/__tests__/ts-loader.mjs src/lib/storyboard/__tests__/association.test.mjs` passed
+- `npx tsc --noEmit --pretty false` passed
+- `npm run build` passed
+
+This is the correct pace for the architecture recovery: keep multiple small feature moves in one session, but always validate the wiring and keep the domain boundary intact.

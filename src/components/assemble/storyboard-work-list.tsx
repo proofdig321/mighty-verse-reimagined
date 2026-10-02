@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { storyboardAssociationStatus } from "@/lib/storyboard/association";
+import { storyboardAssociationStatus, storyboardUpdatedLabel } from "@/lib/storyboard/association";
 import type { StoryboardWorkSummary } from "@/lib/storyboard/document";
 import { StoryboardDeleteDialog } from "./storyboard-delete-dialog";
 import { PaginatedItems } from "./collection-pager";
@@ -147,12 +147,12 @@ export function StoryboardWorkList({
                       <CardTitle className="truncate text-base">{work.title}</CardTitle>
                       <CardDescription className="line-clamp-2">{work.premise || "No description yet."}</CardDescription>
                     </div>
-                    <Badge variant={association.attached ? "default" : "outline"}>{association.label}</Badge>
+                    <Badge variant={association.badgeVariant}>{association.label}</Badge>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <p className="text-xs text-muted-foreground">
-                    {work.panel_count} panels · {work.generation_status} · updated {new Date(work.updated_at).toLocaleString()}
+                    {work.panel_count} panels · {work.generation_status} · {storyboardUpdatedLabel(work.updated_at)}
                     {work.selected_still ? " · still selected" : ""}
                     {work.selected_motion ? " · motion selected" : ""}
                   </p>

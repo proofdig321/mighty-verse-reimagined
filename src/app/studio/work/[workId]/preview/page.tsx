@@ -7,7 +7,7 @@ import { AssociateStoryboard } from "@/components/assemble/associate-storyboard"
 import { StoryboardHlsPreview } from "@/components/assemble/storyboard-hls-preview";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
-import { storyboardAssociationStatus } from "@/lib/storyboard/association";
+import { storyboardAssociationStatus, storyboardUpdatedLabel } from "@/lib/storyboard/association";
 import { loadStoryboardWorkById } from "@/lib/storyboard/work";
 
 export default async function StoryboardWorkPreviewPage({
@@ -49,6 +49,7 @@ export default async function StoryboardWorkPreviewPage({
           <div>
             <p className="text-xs font-medium uppercase text-muted-foreground">Association</p>
             <p className="text-base font-medium">{associationState.label}</p>
+            <p className="text-xs text-muted-foreground">{storyboardUpdatedLabel(work.updated_at)}</p>
           </div>
           {associationState.required && universes.length > 0 ? (
             <div className="w-full max-w-md">
