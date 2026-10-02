@@ -41,6 +41,7 @@ import {
   type HistoryState,
 } from "@/lib/storyboard/history";
 import { motionGenerationReady, primaryMotionKind, stillGenerationReady } from "@/lib/storyboard/panel-state";
+import { collectActiveReferenceUrls, resolveStoryboardSelection } from "@/lib/storyboard/selection";
 import type { ResetScope } from "@/lib/storyboard/mutations";
 import { HierarchyBreadcrumb } from "./breadcrumb";
 import { StudioContextSidebar } from "./studio-context-sidebar";
@@ -49,6 +50,7 @@ import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 import type { VeoDuration } from "./creative-operation";
+import { useStoryboardJobLifecycle } from "./use-storyboard-job-lifecycle";
 
 type MaterialTab = "script" | "assist" | "sentinel" | "references" | "panels" | "stills" | "motion" | "assembly";
 type GenerationState = {
@@ -167,6 +169,7 @@ export function StoryboardWorkspace({
   const [sentinelError, setSentinelError] = useState<string | null>(null);
   const savedSnapshot = useRef<AuthoringSnapshot | null>(null);
   const autosaveTimer = useRef<number | null>(null);
+  const { retryJob, cancelJob } = useStoryboardJobLifecycle({ jobs, setJobs, setMediaState, setPanelStills });
 
   const persistedPanels = work?.panels ?? [];
   const sentinelPanels = intelligence?.storyboard ?? [];
@@ -176,67 +179,16 @@ export function StoryboardWorkspace({
   const selectedScene = scenes.find((scene) => scene.master_id === selectedId) ?? null;
   const selectedJob = jobs.find((job) => job.panel_id === selectedId && (job.status === "queued" || job.status === "submitted" || job.status === "processing")) ?? jobs.find((job) => job.panel_id === selectedId) ?? null;
 
-  const selected = useMemo(() => {
-    if (selectedPersisted) {
-      return {
-        title: selectedPersisted.title,
-        description: selectedPersisted.description,
-        time: selectedPersisted.duration_ms ? `${Math.round(selectedPersisted.duration_ms / 1000)}s` : null,
-        kind: "Storyboard panel",
-        still: panelStills[selectedPersisted.panel_id] ?? selectedPersisted.still_url,
-        camera: selectedPersisted.camera,
-        movement: selectedPersisted.camera_movement,
-        transition: selectedPersisted.transition,
-        endpoint: selectedPersisted.motion_endpoint,
-      };
-    }
-    if (selectedScript) {
-      return {
-        title: selectedScript.title,
-        description: selectedScript.description,
-        time: null as string | null,
-        kind: "Script beat",
-        still: panelStills[selectedScript.panel_id] ?? null,
-        camera: selectedScript.camera,
-        movement: selectedScript.movement,
-        transition: selectedScript.transition,
-        endpoint: null as string | null,
-      };
-    }
-    if (selectedSentinel) {
-      return {
-        title: selectedSentinel.title,
-        description:
-          selectedSentinel.kind === "scene"
-            ? "Canonical Scene. Sentinel observed this window; it did not create the Scene."
-            : "Sentinel evidence. A storyboard beat is not a Scene.",
-        time: formatTimelineMs(selectedSentinel.time_ms),
-        kind: selectedSentinel.kind === "scene" ? "Canonical Scene" : "Sentinel beat",
-        still: panelStills[selectedSentinel.panel_id] ?? selectedSentinel.still_url,
-        camera: null,
-        movement: null,
-        transition: null,
-        endpoint: null as string | null,
-      };
-    }
-    if (selectedScene) {
-      return {
-        title: sceneShortTitle(selectedScene.title) ?? selectedScene.title ?? "Untitled scene",
-        description: selectedScene.description ?? "Canonical Scene window.",
-        time:
-          selectedScene.start_ms != null && selectedScene.end_ms != null
-            ? `${formatTimelineMs(selectedScene.start_ms)} → ${formatTimelineMs(selectedScene.end_ms)}`
-            : null,
-        kind: "Canonical Scene",
-        still: panelStills[selectedScene.master_id] ?? null,
-        camera: null,
-        movement: null,
-        transition: null,
-        endpoint: null as string | null,
-      };
-    }
-    return null;
-  }, [selectedPersisted, selectedScript, selectedSentinel, selectedScene, panelStills]);
+  const selected = useMemo(
+    () => resolveStoryboardSelection({
+      selectedPersisted,
+      selectedScript,
+      selectedSentinel,
+      selectedScene,
+      panelStills,
+    }),
+    [selectedPersisted, selectedScript, selectedSentinel, selectedScene, panelStills],
+  );
 
   useEffect(() => {
     void (async () => {
@@ -255,29 +207,6 @@ export function StoryboardWorkspace({
       if (payload.capability) setCapability(payload.capability);
     })();
   }, [universeId, workId]);
-
-  const pendingJob = jobs.find((job) => job.status === "queued" || job.status === "submitted" || job.status === "processing");
-  useEffect(() => {
-    if (!pendingJob) return;
-    const timer = window.setInterval(async () => {
-      const response = await fetch(`/api/authority/storyboard/jobs/${pendingJob.job_id}`);
-      const payload = await response.json().catch(() => ({}));
-      if (!payload.job_id) return;
-      setJobs((current) => current.map((job) => (job.job_id === payload.job_id ? payload : job)));
-      if (payload.status === "completed" && payload.result?.still_url && payload.panel_id) {
-        setPanelStills((current) => ({ ...current, [payload.panel_id]: payload.result.still_url }));
-      }
-      if (payload.status === "completed" || payload.status === "failed" || payload.status === "unavailable" || payload.status === "blocked") {
-        setMediaState({
-          status: payload.status === "completed" ? "ready" : payload.status,
-          message: payload.status === "completed"
-            ? "Generation completed. The artifact is not a Scene."
-            : operatorGenerationMessage(payload.error?.message ?? "Generation did not complete.").operator,
-        });
-      }
-    }, 4000);
-    return () => window.clearInterval(timer);
-  }, [pendingJob?.job_id]);
 
   function snapshotOf(next: StoryboardWorkRecord, nextScript = script, nextAssembly = assemblyItems): AuthoringSnapshot {
     return workToSnapshot({
@@ -905,11 +834,14 @@ export function StoryboardWorkspace({
     hasReference: Boolean(references.some((item) => item.still_url) || (work?.frames?.length ?? 0)),
   });
   const motionKind = primaryMotionKind({ stillUrl: selected?.still });
-  const activeReferenceUrls = [
-    ...references.map((item) => item.still_url).filter(Boolean),
-    ...(work?.frames ?? []).map((frame) => frame.still_url),
-    ...persistedPanels.flatMap((panel) => panel.references.map((ref) => ref.url).filter(Boolean)),
-  ] as string[];
+  const activeReferenceUrls = useMemo(
+    () => collectActiveReferenceUrls({
+      references,
+      workFrames: work?.frames ?? [],
+      persistedPanels,
+    }),
+    [references, work?.frames, persistedPanels],
+  );
 
   async function confirmDeleteWorkspace() {
     if (!work?.work_id) return;
@@ -929,24 +861,6 @@ export function StoryboardWorkspace({
     setDeleteOpen(false);
     router.push(backHref);
     router.refresh();
-  }
-
-  async function retryJob(jobId: string) {
-    const response = await fetch(`/api/authority/storyboard/jobs/${jobId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "retry" }),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (payload.job_id) setJobs((current) => [payload, ...current.filter((job) => job.job_id !== payload.job_id)]);
-  }
-
-  async function cancelJob(jobId: string) {
-    await fetch(`/api/authority/storyboard/jobs/${jobId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "cancel" }),
-    });
   }
 
   async function saveArtifactToPanel(panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) {

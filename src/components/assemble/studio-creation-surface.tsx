@@ -19,6 +19,7 @@ import {
   describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS,
   resolutionOptionsFromCapability,
 } from "./creative-operation";
+import { deriveGenerationReadiness } from "@/lib/storyboard/generation-readiness";
 import type { CreativeIntent, Capability, VeoDuration, CreativePreset, ResolutionOption } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
@@ -172,20 +173,20 @@ export function StudioCreationSurface({
   const veoDuration = clampVeoDuration(durationSeconds);
   const isVideoIntent = intent === "clip" || intent === "animation";
 
-  const generateReady = (() => {
-    if (intent === "still") return stillReady;
-    if (resolvedKind === "animate-still") return { available: hasStill, reason: hasStill ? null : "Generate or select a still first" };
-    if (resolvedKind === "first-last-frame") {
-      const ok = Boolean(effectiveFirstFrame && effectiveLastFrame);
-      return { available: ok, reason: ok ? null : "Select a first and last frame" };
-    }
-    if (resolvedKind === "reference-motion") return { available: referenceStillUrls.length > 0, reason: referenceStillUrls.length > 0 ? null : "Add at least one reference" };
-    if (resolvedKind === "extend") return { available: Boolean(extensionVideoUri), reason: extensionVideoUri ? null : "Generate a clip first" };
-    if (resolvedKind === "edit") return { available: Boolean(effectiveEditUri), reason: effectiveEditUri ? null : "Paste a video URI to edit" };
-    if (intent === "gif") return { available: hasStill || hasMotion, reason: (hasStill || hasMotion) ? null : "Generate a still or clip first" };
-    if (intent === "reel") return { available: workFrames.length > 0 || hasStill, reason: (workFrames.length > 0 || hasStill) ? null : "Add source frames first" };
-    return motionReady;
-  })();
+  const generateReady = deriveGenerationReadiness({
+    intent,
+    resolvedKind,
+    hasStill,
+    hasMotion,
+    stillReady,
+    motionReady,
+    effectiveFirstFrame,
+    effectiveLastFrame,
+    referenceUrls: referenceStillUrls,
+    extensionVideoUri,
+    effectiveEditUri,
+    workFramesLength: workFrames.length,
+  });
 
   function handleGenerate() {
     // When no panel is selected, pass the local directive as the instruction.
