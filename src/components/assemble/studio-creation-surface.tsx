@@ -247,7 +247,7 @@ export function StudioCreationSurface({
         <a
           href={previewHref}
           className={cn("studio-gen-tab")}>
-          <Layers size={12} /> 2.5D
+          <Layers size={12} /> {universeId ? "2.5D" : "Preview"}
         </a>
         {universeTitle && (
           <span className="suite-kicker ml-auto normal-case tracking-normal font-normal truncate max-w-[12rem]">{universeTitle}</span>

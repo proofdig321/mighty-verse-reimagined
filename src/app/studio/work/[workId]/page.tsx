@@ -40,7 +40,7 @@ export default async function StudioWorkEditorPage({
         scenes={[]}
         intelligence={null}
         canAuthoriseSentinel={false}
-        previewHref="/studio"
+        previewHref={`/studio/work/${workId}/preview`}
         references={(work?.frames ?? []).map((frame) => ({
           asset_id: `${frame.playback_id}:${frame.timestamp_ms}`,
           title: frame.source_title,
