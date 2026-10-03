@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { isStudioCanvasPath } from "@/lib/assemble/studio-path";
 import { cn } from "@/lib/utils";
 
 export type AppNavItem = {
@@ -74,8 +75,7 @@ export function AppShell({
   const [query, setQuery] = useState("");
   const fullBleed = pathname.includes("/holographic");
   const flush = pathname.startsWith("/editor");
-  const studioCanvas =
-    /^\/authority\/universes\/[^/]+/.test(pathname) || /^\/studio\/work\/[^/]+/.test(pathname);
+  const studioCanvas = isStudioCanvasPath(pathname);
   const navItems = useMemo(() => groups.flatMap((group) => group.items), [groups]);
 
   function toggleCollapsed() {

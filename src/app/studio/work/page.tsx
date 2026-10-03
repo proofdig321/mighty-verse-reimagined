@@ -32,7 +32,7 @@ export default async function StudioWorkPage({
         )}
         <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Standalone work</p>
         <h1 className="text-3xl font-semibold tracking-tight" style={{ fontFamily: "var(--font-display, inherit)" }}>
-          Storyboard Workspace
+          My Storyboard
         </h1>
         <p className="max-w-2xl text-sm text-muted-foreground">
           Open or create a Storyboard Work. Work stays independent until you attach it. Attachment does not create Scenes.
