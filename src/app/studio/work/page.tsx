@@ -8,6 +8,7 @@ import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { listStoryboardWorks } from "@/lib/storyboard/commands";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { StudioWorkbenchNav } from "@/components/assemble/studio-workbench-nav";
 
 export default async function StudioWorkPage({
   searchParams,
@@ -22,7 +23,9 @@ export default async function StudioWorkPage({
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="studio-workbench-page">
+      <StudioWorkbenchNav workId={null} active="work" />
+      <div className="studio-workbench-page-main space-y-6">
       <div className="space-y-2">
         {source && (
           <Link href={`/gallery/${source}`} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "mb-2 -ml-2")}>
@@ -43,6 +46,7 @@ export default async function StudioWorkPage({
         universes={projects.map((project) => ({ master_id: project.master_id, title: project.title }))}
         sourceAssetId={source ?? null}
       />
+      </div>
     </div>
   );
 }

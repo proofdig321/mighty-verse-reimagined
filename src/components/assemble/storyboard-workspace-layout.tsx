@@ -5,9 +5,9 @@ type StoryboardWorkspaceLayoutProps = {
 
 export function StoryboardWorkspaceLayout({ left, main }: StoryboardWorkspaceLayoutProps) {
   return (
-    <div className="studio-unified-workspace">
-      {left}
-      {main}
+    <div className="studio-workbench">
+      <div className="studio-workbench-rail">{left}</div>
+      <div className="studio-workbench-main">{main}</div>
     </div>
   );
 }

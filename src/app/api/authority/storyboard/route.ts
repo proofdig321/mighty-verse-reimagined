@@ -149,6 +149,7 @@ export async function POST(request: Request) {
   const universeId = typeof body.universe_id === "string" ? body.universe_id.trim() : "";
   const action = typeof body.action === "string" ? body.action : "save";
   const script = typeof body.body === "string" ? body.body : null;
+  const creativeIntent = typeof body.creative_intent === "string" ? body.creative_intent : undefined;
   const instruction = typeof body.instruction === "string" ? body.instruction : "";
   const selectedText = typeof body.selected_text === "string" ? body.selected_text : "";
 
@@ -687,6 +688,7 @@ export async function POST(request: Request) {
     workId: work.work_id,
     body: composed.body,
     title: typeof body.title === "string" ? body.title : work.title,
+    creative_intent: creativeIntent,
   });
   await persistStoryboardBody({
     svc: getServiceClient(),

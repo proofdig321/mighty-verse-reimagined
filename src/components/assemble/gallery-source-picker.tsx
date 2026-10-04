@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { GallerySource } from "@/lib/assemble/gallery-source";
+import { studioInspectionLabel, studioReadinessLabel } from "@/lib/assemble/studio";
 import { formatDuration } from "@/lib/media/timing";
 
 export function GallerySourcePicker({
@@ -66,7 +67,13 @@ export function GallerySourcePicker({
                 <span className="block min-w-0">
                   <span className="block text-sm font-medium">{source.title ?? "Untitled media"}</span>
                   <span className="mt-1 block text-[11px] text-muted-foreground">
-                    {[source.provider, duration, source.associated_title ? `Bound to ${source.associated_title}` : "Unbound"]
+                    {[
+                      source.provider,
+                      duration,
+                      source.associated_title ? `Bound to ${source.associated_title}` : "Unbound",
+                      studioReadinessLabel(source.readiness_overall),
+                      `Sentinel: ${studioInspectionLabel(source.inspection)}`,
+                    ]
                       .filter(Boolean)
                       .join(" · ")}
                   </span>

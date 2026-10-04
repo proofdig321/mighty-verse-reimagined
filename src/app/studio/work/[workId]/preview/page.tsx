@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
 import { AssociateStoryboard } from "@/components/assemble/associate-storyboard";
 import { StoryboardHlsPreview } from "@/components/assemble/storyboard-hls-preview";
+import { StudioWorkbenchNav } from "@/components/assemble/studio-workbench-nav";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
 import {
@@ -40,7 +41,9 @@ export default async function StoryboardWorkPreviewPage({
   });
 
   return (
-    <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6">
+    <div className="studio-workbench-page studio-workbench-preview-page">
+      <StudioWorkbenchNav workId={workId} active="preview" />
+      <main className="studio-workbench-page-main mx-auto w-full max-w-6xl space-y-8 px-4 py-8 sm:px-6">
       <Link
         href={`/studio/work/${workId}`}
         className="inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"
@@ -73,6 +76,7 @@ export default async function StoryboardWorkPreviewPage({
         </div>
       </section>
 
+      <div className="storyboard-preview-viewport">
       {work.body.trim() ? (
         <section className="max-w-3xl space-y-2" aria-labelledby="preview-story-heading">
           <h2 id="preview-story-heading" className="text-sm font-semibold">Story</h2>
@@ -119,6 +123,8 @@ export default async function StoryboardWorkPreviewPage({
           <p className="text-sm text-muted-foreground">Panels are ready for creative review; generated media has not been attached yet.</p>
         ) : null}
       </section>
-    </main>
+      </div>
+      </main>
+    </div>
   );
 }

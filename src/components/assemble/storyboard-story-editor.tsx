@@ -39,11 +39,11 @@ export function StoryboardStoryEditor({
   const [expanded, setExpanded] = useState(!hasPanels);
 
   return (
-    <section className="space-y-3 border-b border-border/60 pb-4" aria-labelledby="storyboard-story-heading">
+    <section className="storyboard-work-card space-y-3 border-b border-border/60 pb-4" aria-labelledby="storyboard-story-heading">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h2 id="storyboard-story-heading" className="text-sm font-semibold">Story</h2>
-          <p className="text-xs text-muted-foreground">Authored story and creative direction for the storyboard work.</p>
+          <h2 id="storyboard-story-heading" className="text-sm font-semibold">Creative Direction</h2>
+          <p className="text-xs text-muted-foreground">Describe the story, scene intent, and emotional movement for this work.</p>
         </div>
         {hasPanels ? (
           <Button type="button" size="sm" variant="ghost" onClick={() => setExpanded((open) => !open)}>

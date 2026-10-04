@@ -7,16 +7,17 @@ import { serverAiCapability } from "@/lib/ai/provider";
 import { requireStudioUser } from "@/lib/assemble/studio-session";
 import { loadUniverseProjectCards } from "@/lib/assemble/load-universe";
 import { loadStoryboardWorkById } from "@/lib/storyboard/work";
+import type { WorkbenchPanel } from "@/components/assemble/studio-workbench-nav";
 
 export default async function StudioWorkEditorPage({
   params,
   searchParams,
 }: {
   params: Promise<{ workId: string }>;
-  searchParams: Promise<{ source?: string }>;
+  searchParams: Promise<{ source?: string; panel?: string; viewport?: string }>;
 }) {
   const { workId } = await params;
-  const { source } = await searchParams;
+  const { source, panel, viewport } = await searchParams;
   const { participantId } = await requireStudioUser(`/studio/work/${workId}`);
 
   // When arriving from Gallery with a source asset, redirect to the dedicated
@@ -24,6 +25,13 @@ export default async function StudioWorkEditorPage({
   if (source) {
     redirect(`/studio/work/${workId}/source?from=/gallery/${source}`);
   }
+
+  const validPanels: WorkbenchPanel[] = ["work", "create", "results"];
+  const activePanel = validPanels.includes(panel as WorkbenchPanel)
+    ? (panel as WorkbenchPanel)
+    : viewport === "mobile"
+      ? "mobile"
+      : "work";
 
   const [materials, projects, work] = await Promise.all([
     loadStoryboardMaterials(null, participantId),
@@ -49,6 +57,7 @@ export default async function StudioWorkEditorPage({
           still_url: frame.still_url,
         }))}
         initialBody={work?.body ?? materials.body?.body ?? ""}
+        initialCreativeIntent={work?.creative_intent ?? ""}
         artifacts={materials.artifacts.map((artifact) => ({
           title: artifact.title,
           output_type: artifact.output_type,
@@ -59,6 +68,8 @@ export default async function StudioWorkEditorPage({
         universes={projects.map((project) => ({ master_id: project.master_id, title: project.title }))}
         workId={workId}
         backHref="/studio/work"
+        activePanel={activePanel}
+        mobileView={viewport === "mobile"}
       />
     </div>
   );

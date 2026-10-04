@@ -85,7 +85,7 @@ export function useStoryboardGenerationOperations({
   setSelectedId: (id: string | null) => void;
 }) {
   async function enqueue(kind: GenerationJobKind, extra: Record<string, unknown> = {}) {
-    const saved = work?.work_id ? work : await saveBody();
+    const saved = await saveBody();
     const workId = saved?.work_id;
     if (!workId) {
       setMediaState({ status: "failed", message: "Save the story before generating media." });

@@ -11,6 +11,7 @@ import { cn } from "@/lib/utils";
 import { HierarchyBreadcrumb } from "./breadcrumb";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { GallerySourcePicker } from "./gallery-source-picker";
+import { StudioWorkbenchNav } from "./studio-workbench-nav";
 import { SecondsField } from "./seconds-field";
 import {
   formatTimestamp,
@@ -19,6 +20,7 @@ import {
   type StoryboardFrameRecord,
 } from "@/lib/storyboard/source";
 import { muxThumbnailUrl } from "@/lib/media/thumbnail";
+import { mediaInspectHref, mediaRecordHref, studioInspectionLabel, studioReadinessLabel } from "@/lib/assemble/studio";
 import type { GallerySource } from "@/lib/assemble/gallery-source";
 
 type SourceTab = "upload" | "gallery" | "url";
@@ -41,6 +43,7 @@ export function WorkSourceWorkflow({
   gallerySources = [],
   returnHref,
   fromHref,
+  mobileView = false,
 }: {
   workId: string;
   workTitle: string;
@@ -51,6 +54,7 @@ export function WorkSourceWorkflow({
   returnHref: string;
   /** Where the user came from (e.g. gallery mediaId). */
   fromHref?: string | null;
+  mobileView?: boolean;
 }) {
   const router = useRouter();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -66,6 +70,9 @@ export function WorkSourceWorkflow({
   const [localFrames, setLocalFrames] = useState<StoryboardFrameRecord[]>(frames);
 
   const active = localSources[0] ?? null;
+  const activeGallerySource = active?.asset_id
+    ? gallerySources.find((source) => source.asset_id === active.asset_id) ?? null
+    : null;
 
   function onWork(work: unknown) {
     const w = work as { sources?: StoryboardSourceRecord[]; frames?: StoryboardFrameRecord[] };
@@ -184,7 +191,9 @@ export function WorkSourceWorkflow({
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("studio-workbench-page min-h-screen bg-background", mobileView && "studio-workbench-page-mobile-sim")}>
+      <StudioWorkbenchNav workId={workId} active="source" mobileView={mobileView} />
+      <div className="studio-workbench-page-main min-w-0">
       {/* Nav */}
       <div className="border-b border-border/50 bg-card/20">
         <div className="mx-auto max-w-4xl px-6 py-3 flex items-center gap-3">
@@ -240,16 +249,39 @@ export function WorkSourceWorkflow({
                   {sourceCategoryLabel(active.category)} · Active source
                 </p>
                 <p className="text-base font-medium text-foreground mt-0.5">{active.title}</p>
+                {activeGallerySource ? (
+                  <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                    <p>
+                      Readiness: {studioReadinessLabel(activeGallerySource.readiness_overall)}
+                      {` · Sentinel: ${studioInspectionLabel(activeGallerySource.inspection)}`}
+                    </p>
+                    {activeGallerySource.readiness_blockers.length > 0 ? (
+                      <p>{activeGallerySource.readiness_blockers.join(" · ")}</p>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
-              <Link
-                href={returnHref}
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium",
-                  "bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-                )}
-              >
-                Use this source →
-              </Link>
+              <div className="flex flex-wrap items-center gap-3">
+                {active.asset_id ? (
+                  <>
+                    <Link href={mediaInspectHref(active.asset_id)} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                      Inspect source
+                    </Link>
+                    <Link href={mediaRecordHref(active.asset_id)} className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline">
+                      Media record
+                    </Link>
+                  </>
+                ) : null}
+                <Link
+                  href={returnHref}
+                  className={cn(
+                    "inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium",
+                    "bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+                  )}
+                >
+                  Use this source →
+                </Link>
+              </div>
             </div>
 
             {(active.endpoint_ref || active.playback_id) && (
@@ -465,6 +497,7 @@ export function WorkSourceWorkflow({
             Cancel
           </Link>
         </div>
+      </div>
       </div>
     </div>
   );

@@ -12,10 +12,10 @@ export default async function WorkSourcePage({
   searchParams,
 }: {
   params: Promise<{ workId: string }>;
-  searchParams: Promise<{ from?: string }>;
+  searchParams: Promise<{ from?: string; viewport?: string }>;
 }) {
   const { workId } = await params;
-  const { from } = await searchParams;
+  const { from, viewport } = await searchParams;
   const { participantId } = await requireStudioUser(`/studio/work/${workId}/source`);
 
   const [work, studioMedia] = await Promise.all([
@@ -36,6 +36,7 @@ export default async function WorkSourcePage({
       gallerySources={gallerySources}
       returnHref={`/studio/work/${workId}`}
       fromHref={from ?? null}
+      mobileView={viewport === "mobile"}
     />
   );
 }

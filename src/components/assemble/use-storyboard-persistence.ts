@@ -24,6 +24,7 @@ export function useStoryboardPersistence({
   universeId,
   work,
   script,
+  creativeIntent,
   workTitle,
   assemblyItems,
   history,
@@ -56,6 +57,7 @@ export function useStoryboardPersistence({
   universeId: string | null;
   work: StoryboardWorkRecord | null;
   script: string;
+  creativeIntent: string;
   workTitle: string;
   assemblyItems: AssemblyItems;
   history: HistoryState;
@@ -215,7 +217,14 @@ export function useStoryboardPersistence({
     const response = await fetch("/api/authority/storyboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ universe_id: universeId, action: "save", body: nextBody, work_id: work?.work_id, title: workTitle }),
+      body: JSON.stringify({
+        universe_id: universeId,
+        action: "save",
+        body: nextBody,
+        creative_intent: creativeIntent,
+        work_id: work?.work_id,
+        title: workTitle,
+      }),
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok) {

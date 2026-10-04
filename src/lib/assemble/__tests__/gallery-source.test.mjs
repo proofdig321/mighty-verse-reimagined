@@ -6,6 +6,7 @@ function assert(condition, message) {
 
 const SHE = "795c057e-2967-4e93-8f5e-06297c674cb0";
 const FR = "5f85a6f1-1f2a-4da7-af9b-8467e58d3b9c";
+const inspection = { status: "complete", candidate_count: 3, started_at: "2026-10-03T00:00:00.000Z" };
 
 function mediaRow(overrides) {
   return {
@@ -31,7 +32,7 @@ function mediaRow(overrides) {
 }
 
 const gallery = playableGallerySources([
-  mediaRow({}),
+  mediaRow({ inspection }),
   mediaRow({
     asset_id: FR,
     title: "Father Raymond",
@@ -56,6 +57,8 @@ const gallery = playableGallerySources([
 assert(gallery.length === 2, "placeholder processing media is not offered as a gallery pick");
 assert(gallery[0].asset_id === SHE && gallery[1].asset_id === FR, "playable Mux sources stay selectable");
 assert(gallery[0].associated_title === "Super Hero Ego", "already-bound media still appears so it can be reused on another empty Mural");
+assert(gallery[0].readiness_overall === "playable", "source readiness is preserved for Studio context");
+assert(gallery[0].inspection?.status === inspection.status, "Sentinel inspection status is preserved for Studio context");
 
 const untitledMux = playableGallerySources([
   mediaRow({

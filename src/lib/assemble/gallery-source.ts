@@ -14,6 +14,8 @@ export type GallerySource = {
   storage_ref: string;
   duration_ms: number | null;
   readiness_overall: CurateStudioMedia["readiness_overall"];
+  readiness_blockers: string[];
+  inspection: CurateStudioMedia["inspection"];
   associated_title: string | null;
 };
 
@@ -54,6 +56,8 @@ export function playableGallerySources(media: CurateStudioMedia[]): GallerySourc
       storage_ref: item.storage_ref,
       duration_ms: item.duration_ms,
       readiness_overall: item.readiness_overall,
+      readiness_blockers: item.readiness_blockers,
+      inspection: item.inspection,
       associated_title: item.association.universe_title,
     }));
 }

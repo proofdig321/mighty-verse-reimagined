@@ -48,6 +48,7 @@ import { useStoryboardWorkspaceAutomation } from "./use-storyboard-workspace-aut
 import { useStoryboardPersistence } from "./use-storyboard-persistence";
 import { useStoryboardAuthoringOperations } from "./use-storyboard-authoring-operations";
 import { StoryboardStoryEditor } from "./storyboard-story-editor";
+import type { WorkbenchPanel } from "./studio-workbench-nav";
 
 type GenerationState = {
   status: "idle" | "generating" | "ready" | "failed" | "unavailable" | "queued" | "blocked" | "needs_configuration";
@@ -88,11 +89,14 @@ export function StoryboardWorkspace({
   references,
   initialTab = "script",
   initialBody = "",
+  initialCreativeIntent = "",
   artifacts = [],
   assistConfigured = false,
   universes = [],
   workId = null,
   backHref = "/studio/work",
+  activePanel = "work",
+  mobileView = false,
 }: {
   universeId: string | null;
   universeTitle?: string | null;
@@ -105,11 +109,14 @@ export function StoryboardWorkspace({
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
   initialTab?: StoryboardMaterialTab;
   initialBody?: string;
+  initialCreativeIntent?: string;
   artifacts?: StoryboardArtifactCard[];
   assistConfigured?: boolean;
   universes?: { master_id: string; title: string }[];
   workId?: string | null;
   backHref?: string;
+  activePanel?: WorkbenchPanel;
+  mobileView?: boolean;
 }) {
   const router = useRouter();
   // tab kept for API compat (importSentinel, addCinematicReferences use setTab)
@@ -120,7 +127,7 @@ export function StoryboardWorkspace({
     initialBody ? composeStoryboardBody(initialBody).panels : [],
   );
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [instruction, setInstruction] = useState("");
+  const [instruction, setInstruction] = useState(initialCreativeIntent);
   const [saveState, setSaveState] = useState<GenerationState>({ status: "idle", message: "" });
   const [mediaState, setMediaState] = useState<GenerationState>({ status: "idle", message: "" });
   const [generated, setGenerated] = useState<StoryboardArtifactCard[]>(artifacts);
@@ -162,6 +169,7 @@ export function StoryboardWorkspace({
     universeId,
     work,
     script,
+    creativeIntent: instruction,
     workTitle,
     assemblyItems,
     history,
@@ -441,7 +449,7 @@ export function StoryboardWorkspace({
   );
 
   return (
-    <div className="storyboard-workspace multiverse-page" data-storyboard-layout="workstation">
+    <div className={cn("storyboard-workspace multiverse-page", mobileView && "studio-workbench-mobile-sim")} data-storyboard-layout="workstation">
       {/* ── Top bar ── */}
       <StoryboardWorkspaceHeader
         universeId={universeId}
@@ -505,6 +513,9 @@ export function StoryboardWorkspace({
         left={
           <StudioContextSidebar
             universeTitle={universeTitle}
+            workId={workId}
+            activePanel={activePanel}
+            mobileView={mobileView}
             workTitle={workTitle}
             persistedPanels={persistedPanels}
             sentinelPanels={sentinelPanels}
@@ -522,7 +533,7 @@ export function StoryboardWorkspace({
           />
         }
         main={
-          <div className="flex min-w-0 flex-col gap-4">
+          <div id="create" className="flex min-w-0 flex-col gap-4">
           <StoryboardStoryEditor
             script={script}
             instruction={instruction}
@@ -534,7 +545,10 @@ export function StoryboardWorkspace({
               setScript(value);
               setDirty(true);
             }}
-            onInstructionChange={setInstruction}
+            onInstructionChange={(value) => {
+              setInstruction(value);
+              setDirty(true);
+            }}
             onSave={() => void saveBody()}
             onGenerate={() => void authoring.generateStoryboard()}
             onAssist={(actionId) => void authoring.assist(actionId)}

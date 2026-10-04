@@ -17,10 +17,10 @@ import { StudioAdvisor } from "./studio-advisor";
 import {
   resolveKind, intentAvailable,
   describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS,
-  resolutionOptionsFromCapability,
+  resolutionOptionsFromCapability, PRESETS,
 } from "./creative-operation";
 import { deriveGenerationReadiness } from "@/lib/storyboard/generation-readiness";
-import type { CreativeIntent, Capability, VeoDuration, CreativePreset, ResolutionOption } from "./creative-operation";
+import type { CreativeIntent, Capability, VeoDuration, ResolutionOption } from "./creative-operation";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
@@ -105,6 +105,7 @@ export function StudioCreationSurface({
   onSaveArtifactToPanel: (panelId: string, patch: { still_url?: string; asset_id?: string; endpoint_ref?: string; playback_id?: string }) => void;
 }) {
   const [intent, setIntent] = useState<CreativeIntent>("still");
+  const [selectedPresetId, setSelectedPresetId] = useState("custom");
   const [localDirective, setLocalDirective] = useState("");
   const [sentinelOpen, setSentinelOpen] = useState(false);
   const [panelDetailsOpen, setPanelDetailsOpen] = useState(false);
@@ -128,6 +129,7 @@ export function StudioCreationSurface({
 
   const hasStill = Boolean(selected?.still);
   const hasMotion = Boolean(selected?.endpoint);
+  const activeSource = work?.sources?.[0] ?? null;
   const hasSentinel = Boolean(selectedObservation || selectedFrame);
   const referenceStillUrls = Array.from(selectedRefUrls);
   const extensionVideoUri = selectedJob?.result?.provider_video_uri ?? null;
@@ -172,6 +174,17 @@ export function StudioCreationSurface({
 
   const veoDuration = clampVeoDuration(durationSeconds);
   const isVideoIntent = intent === "clip" || intent === "animation";
+
+  function applyPreset(presetId: string) {
+    setSelectedPresetId(presetId);
+    const preset = PRESETS.find((item) => item.id === presetId);
+    if (!preset) return;
+    setIntent(preset.intent);
+    if (preset.defaults.aspectRatio) onSetAspect(preset.defaults.aspectRatio);
+    if (preset.defaults.durationSeconds) onSetDuration(clampVeoDuration(preset.defaults.durationSeconds));
+    if (preset.defaults.resolution) onSetResolution(preset.defaults.resolution);
+    if (typeof preset.defaults.generateAudio === "boolean") setGenerateAudio(preset.defaults.generateAudio);
+  }
 
   const generateReady = deriveGenerationReadiness({
     intent,
@@ -230,12 +243,12 @@ export function StudioCreationSurface({
       {/* Generation type tabs */}
       <div className="studio-gen-tabs">
         <button type="button"
-          onClick={() => setIntent("still")}
+          onClick={() => { setSelectedPresetId("custom"); setIntent("still"); }}
           className={cn("studio-gen-tab", intent === "still" && "studio-gen-tab-active")}>
           <ImagePlus size={12} /> Image Generation
         </button>
         <button type="button"
-          onClick={() => setIntent("clip")}
+          onClick={() => { setSelectedPresetId("custom"); setIntent("clip"); }}
           className={cn("studio-gen-tab", intent !== "still" && intent !== "gif" && intent !== "reel" && "studio-gen-tab-active")}>
           <Film size={12} /> Video Generation
         </button>
@@ -397,7 +410,7 @@ export function StudioCreationSurface({
 
               {/* Reference card — navigates to source route */}
               {(() => {
-                const refUrl = effectiveFirstFrame || selected?.still || activeReferenceUrls[0] || null;
+                const refUrl = activeSource?.still_url || effectiveFirstFrame || selected?.still || activeReferenceUrls[0] || null;
                 const isVideo = intent !== "still" && intent !== "gif" && intent !== "reel";
                 const label = isVideo ? "Reference Video" : "Reference Image";
                 const sub = refUrl ? null : isVideo ? "Optional: provides motion and camera" : "Optional: provides style and composition";
@@ -409,9 +422,13 @@ export function StudioCreationSurface({
                         : isVideo ? <Film size={14} className="text-muted-foreground" /> : <ImagePlus size={14} className="text-muted-foreground" />}
                     </div>
                     <div className="studio-ref-card-body">
-                      <p className="studio-ref-card-label">{refUrl ? (selected?.title ?? label) : label}</p>
-                      {sub && <p className="studio-ref-card-sub studio-ref-card-sub-ok">{sub}</p>}
-                      {refUrl && <p className="studio-ref-card-sub studio-ref-card-sub-ok">Attached — tap to change</p>}
+                      <p className="studio-ref-card-label">{refUrl ? (activeSource?.title ?? selected?.title ?? label) : label}</p>
+                      {activeSource ? (
+                        <p className="studio-ref-card-sub studio-ref-card-sub-ok">Source attached · {activeSource.category}</p>
+                      ) : sub ? (
+                        <p className="studio-ref-card-sub studio-ref-card-sub-ok">{sub}</p>
+                      ) : null}
+                      {refUrl && !activeSource && <p className="studio-ref-card-sub studio-ref-card-sub-ok">Attached — tap to change</p>}
                     </div>
                     <span className="studio-ref-card-badge">{isVideo ? "Video" : "Image"}</span>
                   </Link>
@@ -550,8 +567,25 @@ export function StudioCreationSurface({
               {/* Controls bar — single compact row */}
               <div className="studio-composer-bar">
                 <div className="flex items-center gap-1.5 flex-wrap">
+                  <select
+                    aria-label="Creative preset"
+                    className="studio-control-pill"
+                    value={selectedPresetId}
+                    onChange={(event) => applyPreset(event.target.value)}
+                  >
+                    <option value="custom">Custom</option>
+                    {PRESETS.map((preset) => (
+                      <option
+                        key={preset.id}
+                        value={preset.id}
+                        disabled={preset.id === "extend" && (!extensionVideoUri || !canExtend)}
+                      >
+                        {preset.label}{preset.id === "extend" && !extensionVideoUri ? " · select a generated clip" : ""}
+                      </option>
+                    ))}
+                  </select>
                   <select aria-label="Aspect ratio" className="studio-control-pill"
-                    value={aspectRatio} onChange={(e) => onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9")}>
+                    value={aspectRatio} onChange={(e) => { setSelectedPresetId("custom"); onSetAspect(e.target.value === "9:16" ? "9:16" : "16:9"); }}>
                     <option value="16:9">16:9</option>
                     <option value="9:16">9:16</option>
                   </select>
@@ -561,7 +595,7 @@ export function StudioCreationSurface({
                       title="Requested duration — Veo may output a different length. This is your preference, not a guarantee."
                       className="studio-control-pill"
                       value={veoDuration}
-                      onChange={(e) => onSetDuration(clampVeoDuration(Number(e.target.value)))}>
+                      onChange={(e) => { setSelectedPresetId("custom"); onSetDuration(clampVeoDuration(Number(e.target.value))); }}>
                       {VEO_DURATIONS.map((d) => (
                         <option key={d} value={d}>{d}s requested</option>
                       ))}
@@ -570,7 +604,7 @@ export function StudioCreationSurface({
                   {isVideoIntent && canAudio && (
                     <button type="button"
                       title={generateAudio ? "Audio on" : "Audio off"}
-                      onClick={() => setGenerateAudio((v) => !v)}
+                      onClick={() => { setSelectedPresetId("custom"); setGenerateAudio((v) => !v); }}
                       className={cn("studio-control-pill gap-1", generateAudio && "border-primary/50 text-primary")}>
                       {generateAudio ? <Volume2 size={11} /> : <VolumeX size={11} />}
                     </button>
@@ -596,7 +630,7 @@ export function StudioCreationSurface({
                         <button key={opt.value} type="button"
                           disabled={opt.available === false}
                           title={opt.available === null ? "Provider not configured" : opt.available === false ? "Not supported by this model" : opt.label}
-                          onClick={() => opt.available !== false && onSetResolution(opt.value)}
+                          onClick={() => { if (opt.available !== false) { setSelectedPresetId("custom"); onSetResolution(opt.value); } }}
                           className={cn(
                             "studio-control-pill text-xs",
                             resolution === opt.value && "border-primary/50 text-primary",
@@ -689,7 +723,8 @@ export function StudioCreationSurface({
               Generate
             </Button>
           </div>
-          <div className="studio-result-area">
+          <div id="results" className="studio-result-area" aria-labelledby="studio-results-heading">
+            <h2 id="studio-results-heading" className="suite-kicker">Results</h2>
             {hasMotion && selected?.endpoint ? (
               <div className="studio-result-card">
                 <StoryboardHlsPreview endpoint={selected.endpoint} poster={selected.still} label={`${selected.title} preview`} />

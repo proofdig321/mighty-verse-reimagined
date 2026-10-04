@@ -45,28 +45,33 @@ export function StoryboardWorkspaceHeader({
   onSave,
 }: StoryboardWorkspaceHeaderProps) {
   return (
-    <div className="storyboard-header px-4 py-2 border-b border-border/60 bg-card/60 backdrop-blur-sm">
+    <div id={workId ? "work" : undefined} className="storyboard-header px-4 py-2 border-b border-border/60 bg-card/60 backdrop-blur-sm">
       <div className="min-w-0 flex flex-wrap items-center gap-2">
-        {universeId ? null : (
-          <HierarchyBreadcrumb
-            items={[
-              { label: "Studio", href: "/studio" },
-              { label: "Storyboard", href: backHref },
-              { label: workTitle || "Untitled storyboard" },
-            ]}
+        <div className="storyboard-header-identity">
+          {universeId ? null : (
+            <HierarchyBreadcrumb
+              items={[
+                { label: "Studio", href: "/studio" },
+                { label: "Storyboard", href: backHref },
+                { label: workTitle || "Untitled storyboard" },
+              ]}
+            />
+          )}
+          {universeId ? null : (
+            <Link href={backHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
+              Back
+            </Link>
+          )}
+        </div>
+        <div className="storyboard-header-title-wrap">
+          <span className="storyboard-header-kicker">Work</span>
+          <Input
+            aria-label="Work title"
+            className="storyboard-header-title h-8 max-w-xs"
+            value={workTitle}
+            onChange={(event) => onTitleChange(event.target.value)}
           />
-        )}
-        {universeId ? null : (
-          <Link href={backHref} className={cn(buttonVariants({ size: "sm", variant: "outline" }))}>
-            Back
-          </Link>
-        )}
-        <Input
-          aria-label="Work title"
-          className="h-8 max-w-xs"
-          value={workTitle}
-          onChange={(event) => onTitleChange(event.target.value)}
-        />
+        </div>
         <p className="text-xs text-muted-foreground" data-save-state={saveLabel}>{saveLabel}</p>
         <p className="text-[11px] text-muted-foreground">
           {workAttached ? "Attached · non-canonical" : "Unattached · non-canonical"}

@@ -69,6 +69,7 @@ export function useStoryboardAuthoringOperations({
           universe_id: universeId,
           action: "generate-storyboard",
           body: script,
+          creative_intent: instruction,
           work_id: work?.work_id,
           instruction,
         }),

@@ -8,11 +8,15 @@ import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { StoryboardPanelRecord } from "@/lib/storyboard/document";
 import type { StoryboardPanel } from "@/lib/media/sentinel-intelligence";
 import type { SuiteScene } from "@/lib/assemble/suite";
+import { StudioWorkbenchNav, type WorkbenchPanel } from "./studio-workbench-nav";
 
 type JobLike = { panel_id: string | null; status: string; kind?: string };
 
 export function StudioContextSidebar({
   universeTitle,
+  workId,
+  activePanel,
+  mobileView,
   workTitle,
   persistedPanels,
   sentinelPanels,
@@ -25,6 +29,9 @@ export function StudioContextSidebar({
   onCreatePanel,
 }: {
   universeTitle?: string | null;
+  workId: string | null;
+  activePanel: WorkbenchPanel;
+  mobileView: boolean;
   workTitle: string;
   persistedPanels: StoryboardPanelRecord[];
   sentinelPanels: StoryboardPanel[];
@@ -41,7 +48,8 @@ export function StudioContextSidebar({
 
   return (
     <aside className={cn("studio-context-sidebar flex flex-col gap-3", expanded && "studio-context-sidebar-expanded")}>
-      {/* Toggle */}
+      {workId ? <StudioWorkbenchNav workId={workId} active={activePanel} mobileView={mobileView} /> : null}
+
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
