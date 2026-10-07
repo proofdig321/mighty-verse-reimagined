@@ -63,7 +63,7 @@ type SelectedPanel = {
 };
 
 export function StudioCreationSurface({
-  work, intelligence, previewHref, sourceHref,
+  work, intelligence, previewHref, sourceHref, onSourceOpen,
   universeTitle, universeId, scenes, selected, selectedPersisted,
   editorPanel, draftPanel, selectedObservation, selectedFrame,
   mediaState, stillJob, motionJob, selectedJob, stillReady, motionReady,
@@ -79,6 +79,8 @@ export function StudioCreationSurface({
   previewHref: string;
   /** Route to the dedicated source workflow for this work. */
   sourceHref: string;
+  /** When provided, opens source inline (Sheet) instead of navigating. */
+  onSourceOpen?: () => void;
   universeTitle?: string | null; universeId: string | null;
   scenes: SuiteScene[]; selected: SelectedPanel | null;
   selectedPersisted: StoryboardPanelRecord | null;
@@ -258,11 +260,15 @@ export function StudioCreationSurface({
           className={cn("studio-gen-tab", intent !== "still" && intent !== "gif" && intent !== "reel" && "studio-gen-tab-active")}>
           <Film size={12} /> Video Generation
         </button>
-        <Link
-          href={sourceHref}
-          className={cn("studio-gen-tab")}>
-          <Clapperboard size={12} /> Source
-        </Link>
+        {onSourceOpen ? (
+          <button type="button" onClick={onSourceOpen} className={cn("studio-gen-tab")}>
+            <Clapperboard size={12} /> Source
+          </button>
+        ) : (
+          <Link href={sourceHref} className={cn("studio-gen-tab")}>
+            <Clapperboard size={12} /> Source
+          </Link>
+        )}
         <a
           href={previewHref}
           className={cn("studio-gen-tab")}>
@@ -423,7 +429,7 @@ export function StudioCreationSurface({
                 const label = isVideo ? "Reference Video" : "Reference Image";
                 const sub = refUrl ? null : isVideo ? "Optional: provides motion and camera" : "Optional: provides style and composition";
                 return (
-                  <Link href={sourceHref} className="studio-ref-card">
+                  <Link href={onSourceOpen ? "#" : sourceHref} onClick={onSourceOpen ? (e) => { e.preventDefault(); onSourceOpen(); } : undefined} className="studio-ref-card">
                     <div className="studio-ref-card-icon">
                       {refUrl
                         ? <img src={refUrl} alt="" className="w-full h-full object-cover" />
@@ -508,13 +514,19 @@ export function StudioCreationSurface({
 
               {/* Add reference — navigates to source route */}
               {allRefThumbs.length === 0 && (
-                <Link
-                  href={sourceHref}
-                  className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors"
-                >
-                  <ImagePlus size={13} />
-                  Add reference from source media
-                </Link>
+                onSourceOpen ? (
+                  <button type="button" onClick={onSourceOpen}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                    <ImagePlus size={13} />
+                    Add reference from source media
+                  </button>
+                ) : (
+                  <Link href={sourceHref}
+                    className="flex items-center gap-1.5 text-xs text-muted-foreground/60 hover:text-muted-foreground transition-colors">
+                    <ImagePlus size={13} />
+                    Add reference from source media
+                  </Link>
+                )
               )}
 
               {/* Contextual: use panel still as start frame */}

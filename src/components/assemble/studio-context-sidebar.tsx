@@ -9,6 +9,7 @@ import type { StoryboardPanelRecord } from "@/lib/storyboard/document";
 import type { StoryboardPanel } from "@/lib/media/sentinel-intelligence";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import { StudioWorkbenchNav, type WorkbenchPanel } from "./studio-workbench-nav";
+import { StoryboardPanelReorder } from "./storyboard-panel-reorder";
 
 type JobLike = { panel_id: string | null; status: string; kind?: string };
 
@@ -27,6 +28,7 @@ export function StudioContextSidebar({
   jobs,
   onSelect,
   onCreatePanel,
+  onReorder,
 }: {
   universeTitle?: string | null;
   workId: string | null;
@@ -42,6 +44,7 @@ export function StudioContextSidebar({
   jobs: JobLike[];
   onSelect: (id: string) => void;
   onCreatePanel: () => void;
+  onReorder?: (orderedIds: string[]) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showScenes = persistedPanels.length === 0 && sentinelPanels.length === 0;
@@ -129,9 +132,18 @@ export function StudioContextSidebar({
                   </div>
                   {expanded && (
                     <div className="px-1.5 py-1">
-                      <p className="text-xs truncate leading-snug text-foreground">
-                        {panel.title || "Untitled panel"}
-                      </p>
+                      <div className="flex items-center gap-1 min-w-0">
+                        <p className="text-xs truncate leading-snug text-foreground flex-1 min-w-0">
+                          {panel.title || "Untitled panel"}
+                        </p>
+                        {onReorder && (
+                          <StoryboardPanelReorder
+                            panels={persistedPanels}
+                            panelId={panel.panel_id}
+                            onReorder={onReorder}
+                          />
+                        )}
+                      </div>
                       {panel.user_locked && (
                         <p className="suite-kicker">Authored</p>
                       )}

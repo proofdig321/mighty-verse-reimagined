@@ -28,6 +28,9 @@ import { StoryboardAssemblyBar } from "./storyboard-assembly-bar";
 import { StoryboardWorkspaceHeader } from "./storyboard-workspace-header";
 import { StoryboardWorkspaceLayout } from "./storyboard-workspace-layout";
 import { StoryboardWorkspaceDialogs } from "./storyboard-workspace-dialogs";
+import { StoryboardPanelSlideshow } from "./storyboard-panel-slideshow";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { WorkSourceWorkflow } from "./work-source-workflow";
 import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
 import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
 import {
@@ -143,6 +146,8 @@ export function StoryboardWorkspace({
   const [resolution, setResolution] = useState<import("./creative-operation").ResolutionOption>("720p");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [slideshowOpen, setSlideshowOpen] = useState(false);
+  const [sourceSheetOpen, setSourceSheetOpen] = useState(false);
   const [generationPage, setGenerationPage] = useState(0);
   const [workTitle, setWorkTitle] = useState(universeTitle ?? "Untitled storyboard");
   const [history, setHistory] = useState<HistoryState>(emptyHistory);
@@ -530,6 +535,7 @@ export function StoryboardWorkspace({
               if (panel) { setDraftPanel(panel); setFirstFrame(panel.still_url ?? ""); }
             }}
             onCreatePanel={() => void mutate("Create panel", "create-panel", {})}
+            onReorder={(orderedIds) => void mutate("Reorder", "reorder-panels", { panel_ids: orderedIds })}
           />
         }
         main={
@@ -593,17 +599,32 @@ export function StoryboardWorkspace({
             onRetryJob={(jobId) => void retryJob(jobId)}
             onCancelJob={(jobId) => void cancelJob(jobId)}
             onSaveArtifactToPanel={(panelId, patch) => void saveArtifactToPanel(panelId, patch)}
+            onSourceOpen={workId ? () => setSourceSheetOpen(true) : undefined}
           />
         }
       />
 
       {/* ASSEMBLY — footer status bar */}
       <div className="flex-shrink-0">
+        {slideshowOpen && persistedPanels.length > 0 && (
+          <StoryboardPanelSlideshow
+            panels={persistedPanels}
+            panelStills={panelStills}
+            selectedId={selectedId}
+            onSelect={(id) => {
+              setSelectedId(id);
+              const panel = persistedPanels.find((p) => p.panel_id === id);
+              if (panel) { setDraftPanel(panel); setFirstFrame(panel.still_url ?? ""); }
+            }}
+            onClose={() => setSlideshowOpen(false)}
+          />
+        )}
         <StoryboardAssemblyBar
           assemblyItems={assemblyItems}
           panelCount={persistedPanels.length}
           universeId={universeId}
           canAddSelected={Boolean(selected)}
+          onPreview={persistedPanels.length > 0 ? () => setSlideshowOpen((v) => !v) : undefined}
           onAddSelected={() => {
             if (!selected) return;
             const next = [...assemblyItems, {
@@ -620,6 +641,26 @@ export function StoryboardWorkspace({
           }}
         />
       </div>
+
+      {/* Source sheet — Gap 4: inline source workflow instead of full navigation */}
+      {workId && (
+        <Sheet open={sourceSheetOpen} onOpenChange={setSourceSheetOpen}>
+          <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
+            <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/40">
+              <SheetTitle>Source Media</SheetTitle>
+            </SheetHeader>
+            <div className="px-5 py-4">
+              <WorkSourceWorkflow
+                workId={workId}
+                workTitle={workTitle}
+                sources={work?.sources ?? []}
+                frames={work?.frames ?? []}
+                returnHref={`/studio/work/${workId}`}
+              />
+            </div>
+          </SheetContent>
+        </Sheet>
+      )}
     </div>
   );
 }

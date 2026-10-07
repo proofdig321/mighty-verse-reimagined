@@ -12,12 +12,14 @@ export function StoryboardAssemblyBar({
   universeId,
   onAddSelected,
   canAddSelected,
+  onPreview,
 }: {
   assemblyItems: AuthoringSnapshot["assembly"];
   panelCount: number;
   universeId: string | null;
   onAddSelected: () => void;
   canAddSelected: boolean;
+  onPreview?: () => void;
 }) {
   const ready = assemblyItems.length;
   const pending = Math.max(0, panelCount - ready);
@@ -79,6 +81,11 @@ export function StoryboardAssemblyBar({
           {canAddSelected && (
             <Button type="button" size="sm" variant="outline" onClick={onAddSelected}>
               Add to assembly
+            </Button>
+          )}
+          {onPreview && panelCount > 0 && (
+            <Button type="button" size="sm" variant="ghost" onClick={onPreview}>
+              Preview
             </Button>
           )}
           {universeId ? (

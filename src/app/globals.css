@@ -1862,6 +1862,43 @@ html[data-theme="paper"] {
     color: var(--muted-foreground);
   }
 
+  /* ── Storyboard panel slideshow (Gap 12) ── */
+  .storyboard-slideshow {
+    position: relative;
+    background: var(--background);
+    border-top: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+  }
+
+  .storyboard-slideshow-frame {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: var(--muted);
+    overflow: hidden;
+  }
+
+  .storyboard-slideshow-strip {
+    display: flex;
+    gap: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .storyboard-slideshow-strip::-webkit-scrollbar { display: none; }
+
+  .storyboard-slideshow-thumb {
+    position: relative;
+    flex-shrink: 0;
+    width: 4rem;
+    aspect-ratio: 16 / 9;
+    border-radius: calc(var(--radius) - 2px);
+    overflow: hidden;
+    border: 1.5px solid transparent;
+    transition: border-color 0.15s;
+  }
+  .storyboard-slideshow-thumb:hover { border-color: color-mix(in oklch, var(--foreground) 30%, transparent); }
+  .storyboard-slideshow-thumb-active { border-color: var(--primary) !important; }
+
   .storyboard-assembly-meta {
     display: flex;
     flex-wrap: wrap;
