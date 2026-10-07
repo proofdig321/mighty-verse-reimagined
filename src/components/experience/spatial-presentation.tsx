@@ -108,8 +108,10 @@ export function SpatialPresentation({
         onPointerMove={onMove}
         onPointerLeave={onLeave}
       >
-        {/* Video source — HolographicLayerMedia owns the <video> element */}
-        <div data-holographic-kind="mural">
+        {/* Video source — HolographicLayerMedia owns the <video> element.
+             .holographic-layer-mural is required so the CSS hide rule fires
+             when the WebGL canvas reports data-holographic-warp="live". */}
+        <div data-holographic-kind="mural" className="holographic-layer holographic-layer-mural">
           <HolographicLayerMedia
             clock={clock}
             posterUrl={posterUrl}
