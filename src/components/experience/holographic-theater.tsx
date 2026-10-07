@@ -285,27 +285,21 @@ export function HolographicTheater({
   audioRef,
   depthControllerRef,
   depthIndexRef,
+  xrSessionRef,
 }: {
   layers: HolographicLayer[];
   timeMs: number;
-  /** ViewerPose ref from the input controller. Renderer reads this each frame. */
   poseRef: { current: ViewerPose };
   videoRef?: { current: HTMLVideoElement | null };
   audioRef?: { current: HolographicAudioGraph | null };
-  /**
-   * Optional depth controller ref. When present, the renderer uses the
-   * DepthController to look up and bind depth frames to texture unit 1.
-   * React never holds a WebGLTexture — GPU state lives in the controller.
-   * Pass null/undefined to use the runtime_synthetic fallback.
-   */
   depthControllerRef?: { current: DepthController | null };
-  /**
-   * Optional DepthIndex ref. When present and depthControllerRef is absent,
-   * the theater constructs a DepthController from the index once WebGL is
-   * ready. The theater owns the controller lifecycle in this case.
-   * Ignored when depthControllerRef is provided.
-   */
   depthIndexRef?: { current: DepthIndex | null };
+  /**
+   * Optional XRSession ref. When set, the theater binds an XRWebGLLayer
+   * and drives the render loop from XRSession.requestAnimationFrame.
+   * The caller is responsible for session lifecycle (start/end).
+   */
+  xrSessionRef?: { current: XRSession | null };
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signature = layers.map((layer) => `${layer.layer_id}:${layer.still_url ?? ""}`).join("|");
@@ -318,7 +312,8 @@ export function HolographicTheater({
       antialias: true,
       premultipliedAlpha: true,
       preserveDrawingBuffer: true,
-    });
+      xrCompatible: true,
+    }) as WebGLRenderingContext | null;
     if (!glContext) {
       canvas.dataset.holographicTheater = "unavailable";
       return;
@@ -370,12 +365,14 @@ export function HolographicTheater({
     // depthControllerRef was provided, construct the controller here.
     // The theater owns this controller's lifecycle — dispose in cleanup.
     let ownedDepthController: DepthControllerClass | null = null;
+    // A local mutable container for the owned controller ref — not derived
+    // from any prop, so the linter allows writing .current.
+    const ownedControllerContainer: { current: DepthController | null } = { current: null };
     const resolvedDepthControllerRef: { current: DepthController | null } | undefined =
-      depthControllerRef ??
-      (depthIndexRef ? { current: null } : undefined);
+      depthControllerRef ?? (depthIndexRef ? ownedControllerContainer : undefined);
     if (!depthControllerRef && depthIndexRef) {
       ownedDepthController = new DepthControllerClass(gl, depthIndexRef.current);
-      if (resolvedDepthControllerRef) resolvedDepthControllerRef.current = ownedDepthController;
+      ownedControllerContainer.current = ownedDepthController;
     }
 
     // Track the last DepthIndex reference seen so setIndex() is called exactly
@@ -390,6 +387,17 @@ export function HolographicTheater({
       window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let cancelled = false;
+    // XR layer binding — done once when an XRSession is present.
+    let xrLayerBound = false;
+    async function bindXRLayer(session: XRSession) {
+      if (xrLayerBound) return;
+      try {
+        await (gl as unknown as { makeXRCompatible?: () => Promise<void> }).makeXRCompatible?.();
+        const xrLayer = new XRWebGLLayer(session, gl);
+        await session.updateRenderState({ baseLayer: xrLayer });
+        xrLayerBound = true;
+      } catch { /* XR unavailable — continue with rAF */ }
+    }
     // Smoothed viewer position — lerped toward the current pose each frame.
     const smoothed = { x: 0, y: 0 };
     const started = performance.now();
@@ -431,13 +439,34 @@ export function HolographicTheater({
 
     function draw() {
       if (cancelled) return;
-      // Pause the render loop entirely when reduced motion is active.
-      // Re-schedule so the loop can resume if the preference changes
-      // (the effect would need to remount for that — acceptable).
       if (reducedMotion) {
         frame = window.requestAnimationFrame(draw);
         return;
       }
+
+      // Bind XR layer on first frame when a session is active.
+      const xrSession = xrSessionRef?.current ?? null;
+      if (xrSession && !xrLayerBound) {
+        void bindXRLayer(xrSession).then(() => {
+          // Switch to XR rAF once layer is bound.
+          if (!cancelled && xrSession) {
+            window.cancelAnimationFrame(frame);
+            const xrLoop = (_t: number, xrFrame: XRFrame) => {
+              if (cancelled || xrSessionRef?.current !== xrSession) return;
+              drawFrame(xrFrame);
+              xrSession.requestAnimationFrame(xrLoop);
+            };
+            xrSession.requestAnimationFrame(xrLoop);
+          }
+        });
+        return; // pause rAF while binding
+      }
+
+      drawFrame(null);
+      frame = window.requestAnimationFrame(draw);
+    }
+
+    function drawFrame(_xrFrame: XRFrame | null) {
       // If the depth index arrived asynchronously after construction, call
       // setIndex() exactly once — gated on reference identity, not hasDepth.
       // Gating on hasDepth caused setIndex() to fire every frame until the
@@ -581,7 +610,6 @@ export function HolographicTheater({
       surface.dataset.holographicDraws = String(draws);
       surface.dataset.holographicTexUploads = String(texUploads);
       surface.dataset.holographicTexSkips = String(texSkips);
-      frame = window.requestAnimationFrame(draw);
     }
 
     frame = window.requestAnimationFrame(draw);

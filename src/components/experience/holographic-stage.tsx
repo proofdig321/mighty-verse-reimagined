@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { attachHolographicAudio, type HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
 import { MouseViewController, OrientationViewController } from "@/lib/experience/viewer-pose";
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
+import { useXRSession } from "@/lib/experience/use-xr-session";
 import { HolographicLayerMedia } from "./holographic-layer-media";
 import { HolographicTheater } from "./holographic-theater";
 import { CreativeMomentCard } from "./creative-moment-card";
@@ -124,6 +125,7 @@ export function HolographicStage({
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HolographicAudioGraph | null>(null);
   const depthIndexRef = useRef<DepthIndex | null>(null);
+  const { xrSessionRef, xrSupported, xrActive, enterXR, exitXR } = useXRSession(poseRef);
   const [gyroActive, setGyroActive] = useState(false);
 
   // Streaming depth decode — same pattern as SpatialPresentation.
@@ -410,6 +412,7 @@ export function HolographicStage({
                 videoRef={videoRef}
                 audioRef={audioRef}
                 depthIndexRef={depthIndexRef}
+                xrSessionRef={xrSessionRef}
               />
             ) : null}
 
@@ -425,6 +428,17 @@ export function HolographicStage({
                 onClick={() => void enableGyro()}
               >
                 Tilt
+              </button>
+            ) : null}
+
+            {xrSupported ? (
+              <button
+                type="button"
+                className="spatial-xr-btn"
+                aria-label={xrActive ? "Exit VR" : "Enter VR"}
+                onClick={xrActive ? exitXR : () => void enterXR()}
+              >
+                {xrActive ? "Exit VR" : "Enter VR"}
               </button>
             ) : null}
           </div>

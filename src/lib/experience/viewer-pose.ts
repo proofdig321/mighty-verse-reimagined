@@ -20,9 +20,7 @@
  * Currently implemented:
  *   MouseViewController        — pointer + touch events on the cinema element
  *   OrientationViewController  — DeviceOrientationEvent (gyroscope / tilt)
- *
- * Future controllers (not implemented here):
- *   XRViewController           — XRFrame / XRViewerPose
+ *   XRViewController           — XRFrame / XRViewerPose (WebXR immersive-vr)
  */
 
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "./spatial-types";
@@ -162,7 +160,6 @@ export class OrientationViewController {
    */
   async requestPermission(): Promise<boolean> {
     if (typeof window === "undefined") return false;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const DOE = DeviceOrientationEvent as any;
     if (typeof DOE.requestPermission === "function") {
       try {
@@ -230,4 +227,46 @@ export class OrientationViewController {
       rotation: { x: 0, y: 0, z: 0 },
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// XRViewController — WebXR immersive-vr
+// ---------------------------------------------------------------------------
+
+/**
+ * XRViewController
+ *
+ * Converts an XRFrame + XRReferenceSpace into a ViewerPose.
+ * The renderer receives the same ViewerPose contract regardless of input source.
+ *
+ * Usage (inside XR rAF callback):
+ *   controller.onXRFrame(frame, referenceSpace);
+ *   poseRef.current = controller.getPose();
+ */
+export class XRViewController {
+  private _pose: ViewerPose = {
+    position: { ...NEUTRAL_VIEWER_POSE.position },
+    rotation: { ...NEUTRAL_VIEWER_POSE.rotation },
+  };
+
+  onXRFrame(frame: XRFrame, referenceSpace: XRReferenceSpace): void {
+    const viewerPose = frame.getViewerPose(referenceSpace);
+    if (!viewerPose) return;
+    const t = viewerPose.transform.position;
+    const q = viewerPose.transform.orientation;
+    this._pose = {
+      position: {
+        x: Math.max(-MOUSE_POSE_LATERAL_MAX, Math.min(MOUSE_POSE_LATERAL_MAX, t.x * MOUSE_POSE_LATERAL_MAX)),
+        y: Math.max(-MOUSE_POSE_VERTICAL_MAX, Math.min(MOUSE_POSE_VERTICAL_MAX, t.y * MOUSE_POSE_VERTICAL_MAX)),
+        z: t.z,
+      },
+      rotation: {
+        x: Math.atan2(2 * (q.w * q.x + q.y * q.z), 1 - 2 * (q.x * q.x + q.y * q.y)),
+        y: Math.asin(Math.max(-1, Math.min(1, 2 * (q.w * q.y - q.z * q.x)))),
+        z: 0,
+      },
+    };
+  }
+
+  getPose(): ViewerPose { return this._pose; }
 }

@@ -95,8 +95,8 @@ app = modal.App("mighty-verse-depth-worker", image=vda_image)
 # ---------------------------------------------------------------------------
 
 MVDP_MAGIC = b"MVDP"
-MVDP_VERSION = 1
-MVDP_ENCODING_LINEAR = 0
+MVDP_VERSION = 2          # v2 = uint16 LE frames
+MVDP_ENCODING_UINT16_LE = 1
 MVDP_HEADER_SIZE = 64
 
 # DepthSource enum values (must match TypeScript)
@@ -107,7 +107,7 @@ MVDP_CONVENTION_MV = 0
 
 
 def encode_mvdp(
-    frames_data: list[bytes],  # list of width*height uint8 arrays, MV convention
+    frames_data: list[bytes],  # list of width*height uint16 LE arrays, MV convention
     timestamps_ms: list[int],
     width: int,
     height: int,
@@ -116,12 +116,12 @@ def encode_mvdp(
     confidence: float,
 ) -> bytes:
     """
-    Encode depth frames into MVDP v1 binary format.
+    Encode depth frames into MVDP v2 binary format (uint16 LE).
 
     Header (64 bytes):
       0-3:   magic "MVDP"
-      4:     version (1)
-      5:     encoding (0 = linear)
+      4:     version (2)
+      5:     encoding (1 = uint16 LE)
       6-7:   reserved
       8-11:  width (uint32 LE)
       12-15: height (uint32 LE)
@@ -134,7 +134,7 @@ def encode_mvdp(
       34-63: reserved (zeros)
 
     Timestamp index: frameCount * uint32 LE (milliseconds)
-    Frame payloads: frameCount * (width * height) bytes
+    Frame payloads: frameCount * (width * height * 2) bytes (uint16 LE)
     """
     frame_count = len(frames_data)
     assert frame_count > 0, "at least one frame required"
@@ -148,7 +148,7 @@ def encode_mvdp(
     header = bytearray(MVDP_HEADER_SIZE)
     header[0:4] = MVDP_MAGIC
     header[4] = MVDP_VERSION
-    header[5] = MVDP_ENCODING_LINEAR
+    header[5] = MVDP_ENCODING_UINT16_LE
     struct.pack_into("<I", header, 8, width)
     struct.pack_into("<I", header, 12, height)
     struct.pack_into("<I", header, 16, frame_count)
@@ -163,7 +163,7 @@ def encode_mvdp(
     for i, ts in enumerate(timestamps_ms):
         struct.pack_into("<I", ts_index, i * 4, ts)
 
-    # Frame payloads
+    # Frame payloads (uint16 LE bytes already)
     payload = bytes(header) + bytes(ts_index)
     for frame in frames_data:
         payload += frame
@@ -276,7 +276,7 @@ def persist_depth_association(
             "depth_frame_rate": frame_rate,
             "frame_count": frame_count,
             "duration_ms": duration_ms,
-            "format_version": 1,
+            "format_version": 2,
             "created_by": participant_id,
         })
         .execute()
@@ -396,12 +396,12 @@ def run_vda_inference(
             else:
                 depth_norm = np.zeros_like(depth)
 
-            # Invert to MV convention: near=1.0 (white=255), far=0.0 (black=0)
+            # Invert to MV convention: near=1.0 (white=65535), far=0.0 (black=0)
             depth_mv = 1.0 - depth_norm
 
-            # Convert to uint8
-            depth_uint8 = (depth_mv * 255).clip(0, 255).astype(np.uint8)
-            depth_frames.append(depth_uint8.tobytes())
+            # Convert to uint16 LE — 256× more precision than uint8.
+            depth_uint16 = (depth_mv * 65535).clip(0, 65535).astype(np.uint16)
+            depth_frames.append(depth_uint16.tobytes())
 
     return depth_frames
 

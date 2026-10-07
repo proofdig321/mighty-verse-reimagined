@@ -195,11 +195,12 @@ export type DepthFrame = {
   height: number;
 
   /**
-   * 8-bit normalized depth data. Length = width × height.
-   * 0 = far (background). 255 = near (foreground).
-   * Mighty Verse convention — already inverted from any external source.
+   * Depth pixel data. Length = width × height.
+   * Uint8Array  → 8-bit  (format v1, encoding 0)
+   * Uint16Array → 16-bit (format v2, encoding 1, uint16 LE, range 0–65535)
+   * 0 = far (background). max = near (foreground). MV convention.
    */
-  data: Uint8Array;
+  data: Uint8Array | Uint16Array;
 
   /**
    * Optional per-frame confidence [0, 1].

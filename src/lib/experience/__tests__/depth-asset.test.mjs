@@ -230,7 +230,7 @@ assert(payload.byteLength === 124, `encode: correct size (got ${payload.byteLeng
 
 // Decode metadata
 const meta = decodeDepthMeta(payload);
-assert(meta.version === DEPTH_FORMAT_VERSION, "decode meta: version");
+assert(meta.version === 1, "decode meta: version (uint8 frames encode as v1)");
 assert(meta.width === 4,  "decode meta: width");
 assert(meta.height === 4, "decode meta: height");
 assert(meta.frameCount === 3, "decode meta: frameCount");
@@ -316,7 +316,7 @@ assertThrows(() => decodeDepthMeta(badVersion), "unsupported format version", "i
 
 // Invalid encoding
 const badEncoding = encodeDepthPayload(encAsset, encFrames).slice(0);
-new Uint8Array(badEncoding)[5] = 1;
+new Uint8Array(badEncoding)[5] = 99;
 assertThrows(() => decodeDepthMeta(badEncoding), "unsupported encoding", "invalid encoding");
 
 // Wrong payload size (truncated after header)

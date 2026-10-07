@@ -3254,6 +3254,32 @@ html[data-theme="paper"] {
     border-color: var(--accent-mv);
   }
 
+  /* VR entry button — same visual language as gyro btn, offset left of it */
+  .spatial-xr-btn {
+    position: absolute;
+    top: 0.75rem;
+    right: 4rem;
+    z-index: 10;
+    pointer-events: auto;
+    padding: 0.25rem 0.65rem;
+    border-radius: 999px;
+    border: 1px solid color-mix(in oklch, var(--accent-mv) 50%, transparent);
+    background: color-mix(in oklch, var(--background) 70%, transparent);
+    font-size: 0.6rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: color-mix(in oklch, var(--accent-mv) 80%, var(--foreground));
+    backdrop-filter: blur(4px);
+    cursor: pointer;
+  }
+
+  .spatial-xr-btn:hover,
+  .spatial-xr-btn:focus-visible {
+    background: color-mix(in oklch, var(--accent-mv) 15%, var(--background));
+    border-color: var(--accent-mv);
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .spatial-depth-indicator { display: none; }
   }

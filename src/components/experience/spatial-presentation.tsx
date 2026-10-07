@@ -6,6 +6,7 @@ import { HolographicTheater } from "@/components/experience/holographic-theater"
 import { HolographicLayerMedia, type HolographicMediaClock } from "@/components/experience/holographic-layer-media";
 import { MouseViewController, OrientationViewController } from "@/lib/experience/viewer-pose";
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
+import { useXRSession } from "@/lib/experience/use-xr-session";
 import { formatDuration } from "@/lib/media/timing";
 import { DepthIndex } from "@/lib/experience/depth-asset";
 import { decodeDepthMeta, decodeDepthFrame, depthAssetFromMeta } from "@/lib/experience/depth-format";
@@ -57,7 +58,10 @@ export function SpatialPresentation({
   const poseRef = useRef<ViewerPose>(NEUTRAL_VIEWER_POSE);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const depthIndexRef = useRef<DepthIndex | null>(null);
-  const [gyroAvailable, setGyroAvailable] = useState(false);
+  const { xrSessionRef, xrSupported, xrActive, enterXR, exitXR } = useXRSession(poseRef);
+  const [gyroAvailable, setGyroAvailable] = useState(
+    () => typeof window !== "undefined" && typeof DeviceOrientationEvent !== "undefined",
+  );
   const [gyroActive, setGyroActive] = useState(false);
 
   // Streaming depth decode: fetch buffer once, decode meta + timestamp index,
@@ -85,12 +89,6 @@ export function SpatialPresentation({
       .catch(() => { /* synthetic fallback remains active */ });
     return () => { cancelled = true; };
   }, [depthSignedUrl]);
-
-  // Detect gyroscope availability on mount (passive — no permission yet).
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (typeof DeviceOrientationEvent !== "undefined") setGyroAvailable(true);
-  }, []);
 
   // Attach / detach OrientationViewController when gyro is active.
   useEffect(() => {
@@ -221,6 +219,7 @@ export function SpatialPresentation({
           poseRef={poseRef}
           videoRef={videoRef}
           depthIndexRef={depthIndexRef}
+          xrSessionRef={xrSessionRef}
         />
 
         {/* Depth indicator — communicates that parallax is active */}
@@ -243,6 +242,17 @@ export function SpatialPresentation({
             onClick={() => void enableGyro()}
           >
             Tilt
+          </button>
+        ) : null}
+
+        {xrSupported ? (
+          <button
+            type="button"
+            className="spatial-xr-btn"
+            aria-label={xrActive ? "Exit VR" : "Enter VR"}
+            onClick={xrActive ? exitXR : () => void enterXR()}
+          >
+            {xrActive ? "Exit VR" : "Enter VR"}
           </button>
         ) : null}
 

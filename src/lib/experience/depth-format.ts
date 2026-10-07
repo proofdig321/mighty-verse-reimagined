@@ -4,12 +4,12 @@
  * Defines the binary layout for depth assets stored in Supabase Storage (or any CDN).
  * The format supports random frame lookup without loading the entire payload.
  *
- * FORMAT LAYOUT (version 1):
+ * FORMAT LAYOUT (version 1 / version 2):
  * ─────────────────────────────────────────────────────────────────────────────
  * HEADER  (fixed 64 bytes)
  *   [0..3]   magic        4 bytes  ASCII "MVDP" (Mighty Verse Depth Payload)
- *   [4]      version      1 byte   format version (currently 1)
- *   [5]      encoding     1 byte   0 = uint8 linear (only supported value)
+ *   [4]      version      1 byte   1 = uint8 frames, 2 = uint16 LE frames
+ *   [5]      encoding     1 byte   0 = uint8 linear, 1 = uint16 LE linear
  *   [6..7]   reserved     2 bytes  zero-padded
  *   [8..11]  width        4 bytes  uint32 LE — frame width in pixels
  *   [12..15] height       4 bytes  uint32 LE — frame height in pixels
@@ -26,18 +26,19 @@
  *   Each entry: uint32 LE — timeMs for frame[i]
  *   Frames are stored in ascending timeMs order.
  *
- * FRAME PAYLOADS  (frameCount × width × height bytes)
- *   Each frame: width × height bytes of uint8 depth data.
- *   0 = far (background). 255 = near (foreground). Mighty Verse convention.
+ * FRAME PAYLOADS  (frameCount × width × height × bytesPerPixel bytes)
+ *   v1: 1 byte/pixel uint8.  0 = far, 255 = near.
+ *   v2: 2 bytes/pixel uint16 LE.  0 = far, 65535 = near.
  *   Frames are stored in the same order as the timestamp index.
  *
- * TOTAL SIZE = 64 + (frameCount × 4) + (frameCount × width × height)
+ * TOTAL SIZE (v1) = 64 + (frameCount × 4) + (frameCount × width × height)
+ * TOTAL SIZE (v2) = 64 + (frameCount × 4) + (frameCount × width × height × 2)
  * ─────────────────────────────────────────────────────────────────────────────
  *
  * VALIDATION:
  *   - Magic bytes must be "MVDP".
- *   - Version must be 1.
- *   - Encoding must be 0 (uint8 linear).
+ *   - Version must be 1 or 2.
+ *   - Encoding must be 0 (uint8) or 1 (uint16 LE).
  *   - Convention must be 0 (MV canonical).
  *   - width, height, frameCount must be > 0.
  *   - Payload must be exactly the expected size.
@@ -52,9 +53,11 @@ import { MIGHTY_VERSE_DEPTH_CONVENTION, type DepthSource } from "./depth-asset";
 // ---------------------------------------------------------------------------
 
 export const DEPTH_FORMAT_MAGIC = "MVDP";
-export const DEPTH_FORMAT_VERSION = 1;
+export const DEPTH_FORMAT_VERSION = 2;
+const DEPTH_FORMAT_VERSION_MIN = 1;
 const HEADER_SIZE = 64;
 const ENCODING_UINT8_LINEAR = 0;
+const ENCODING_UINT16_LE = 1;
 const CONVENTION_MV_CANONICAL = 0;
 
 /** Maps DepthSource to a 4-byte ASCII tag stored in the header. */
@@ -102,7 +105,12 @@ export function encodeDepthPayload(asset: DepthAsset, frames: DepthFrame[]): Arr
 
   const sorted = [...frames].sort((a, b) => a.timeMs - b.timeMs);
   const framePixels = asset.width * asset.height;
-  const totalSize = HEADER_SIZE + sorted.length * 4 + sorted.length * framePixels;
+  // Detect encoding from first frame's data type.
+  const isUint16 = sorted[0].data instanceof Uint16Array;
+  const bytesPerPixel = isUint16 ? 2 : 1;
+  const encoding = isUint16 ? ENCODING_UINT16_LE : ENCODING_UINT8_LINEAR;
+  const version = isUint16 ? 2 : 1;
+  const totalSize = HEADER_SIZE + sorted.length * 4 + sorted.length * framePixels * bytesPerPixel;
   const buffer = new ArrayBuffer(totalSize);
   const view = new DataView(buffer);
   const bytes = new Uint8Array(buffer);
@@ -111,9 +119,9 @@ export function encodeDepthPayload(asset: DepthAsset, frames: DepthFrame[]): Arr
   // Magic
   for (let i = 0; i < 4; i++) bytes[i] = DEPTH_FORMAT_MAGIC.charCodeAt(i);
   // Version
-  bytes[4] = DEPTH_FORMAT_VERSION;
+  bytes[4] = version;
   // Encoding
-  bytes[5] = ENCODING_UINT8_LINEAR;
+  bytes[5] = encoding;
   // Reserved [6..7] = 0
   // Width, height, frameCount
   view.setUint32(8,  asset.width,       true);
@@ -148,7 +156,15 @@ export function encodeDepthPayload(asset: DepthAsset, frames: DepthFrame[]): Arr
         `frame[${i}] data length ${frame.data.length} !== expected ${framePixels} (${asset.width}×${asset.height})`,
       );
     }
-    bytes.set(frame.data, payloadOffset + i * framePixels);
+    if (isUint16) {
+      // Write uint16 LE values into the byte buffer.
+      const frameByteOffset = payloadOffset + i * framePixels * 2;
+      for (let p = 0; p < framePixels; p++) {
+        view.setUint16(frameByteOffset + p * 2, (frame.data as Uint16Array)[p], true);
+      }
+    } else {
+      bytes.set(frame.data as Uint8Array, payloadOffset + i * framePixels);
+    }
   }
 
   return buffer;
@@ -191,7 +207,9 @@ export function decodeDepthMeta(buffer: ArrayBuffer): DepthPayloadMeta {
   const source     = TAG_TO_SOURCE[sourceTag] ?? "generated";
   const confidence = view.getFloat32(36, true);
 
-  const expectedSize = HEADER_SIZE + frameCount * 4 + frameCount * width * height;
+  const encoding = bytes[5];
+  const bytesPerPixel = encoding === ENCODING_UINT16_LE ? 2 : 1;
+  const expectedSize = HEADER_SIZE + frameCount * 4 + frameCount * width * height * bytesPerPixel;
   if (buffer.byteLength !== expectedSize) {
     throw new DepthFormatError(
       `payload size ${buffer.byteLength} !== expected ${expectedSize}`,
@@ -203,7 +221,8 @@ export function decodeDepthMeta(buffer: ArrayBuffer): DepthPayloadMeta {
     timestamps.push(view.getUint32(HEADER_SIZE + i * 4, true));
   }
 
-  return { version: DEPTH_FORMAT_VERSION, width, height, frameCount, frameRate, durationMs, source, confidence, timestamps };
+  const version = bytes[4];
+  return { version, width, height, frameCount, frameRate, durationMs, source, confidence, timestamps };
 }
 
 /**
@@ -224,9 +243,22 @@ export function decodeDepthFrame(
     throw new DepthFormatError(`frame index ${index} out of range [0, ${meta.frameCount - 1}]`);
   }
   const framePixels = meta.width * meta.height;
+  const isUint16 = meta.version >= 2;
+  const bytesPerPixel = isUint16 ? 2 : 1;
   const payloadOffset = HEADER_SIZE + meta.frameCount * 4;
-  const frameOffset = payloadOffset + index * framePixels;
-  const data = new Uint8Array(buffer, frameOffset, framePixels).slice(); // copy — don't hold buffer ref
+  const frameByteOffset = payloadOffset + index * framePixels * bytesPerPixel;
+  let data: Uint8Array | Uint16Array;
+  if (isUint16) {
+    // Copy uint16 LE values — DataView handles alignment safely.
+    const view = new DataView(buffer);
+    const arr = new Uint16Array(framePixels);
+    for (let p = 0; p < framePixels; p++) {
+      arr[p] = view.getUint16(frameByteOffset + p * 2, true);
+    }
+    data = arr;
+  } else {
+    data = new Uint8Array(buffer, frameByteOffset, framePixels).slice();
+  }
   return {
     timeMs: meta.timestamps[index],
     width: meta.width,
@@ -284,12 +316,12 @@ function validateHeader(buffer: ArrayBuffer): void {
     throw new DepthFormatError(`invalid magic "${magic}" (expected "${DEPTH_FORMAT_MAGIC}")`);
   }
   // Version
-  if (bytes[4] !== DEPTH_FORMAT_VERSION) {
-    throw new DepthFormatError(`unsupported format version ${bytes[4]} (expected ${DEPTH_FORMAT_VERSION})`);
+  if (bytes[4] < DEPTH_FORMAT_VERSION_MIN || bytes[4] > DEPTH_FORMAT_VERSION) {
+    throw new DepthFormatError(`unsupported format version ${bytes[4]} (supported: ${DEPTH_FORMAT_VERSION_MIN}–${DEPTH_FORMAT_VERSION})`);
   }
   // Encoding
-  if (bytes[5] !== ENCODING_UINT8_LINEAR) {
-    throw new DepthFormatError(`unsupported encoding ${bytes[5]} (expected ${ENCODING_UINT8_LINEAR} = uint8 linear)`);
+  if (bytes[5] !== ENCODING_UINT8_LINEAR && bytes[5] !== ENCODING_UINT16_LE) {
+    throw new DepthFormatError(`unsupported encoding ${bytes[5]} (supported: 0=uint8, 1=uint16LE)`);
   }
   // Convention
   if (bytes[28] !== CONVENTION_MV_CANONICAL) {

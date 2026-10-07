@@ -152,7 +152,7 @@ assert(encoded.byteLength === expectedSize,
 
 // Decode metadata
 const meta = decodeDepthMeta(encoded);
-assert(meta.version === DEPTH_FORMAT_VERSION, "decode meta: version=1");
+assert(meta.version === 1, "decode meta: version=1 (uint8 frames encode as v1)");
 assert(meta.width === FIXTURE_WIDTH, `decode meta: width=${meta.width}`);
 assert(meta.height === FIXTURE_HEIGHT, `decode meta: height=${meta.height}`);
 assert(meta.frameCount === 5, `decode meta: frameCount=${meta.frameCount}`);

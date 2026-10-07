@@ -95,10 +95,13 @@ export class DepthController {
   private _index: DepthIndex | null;
   private _current: RuntimeDepthTexture | null = null;
   private _lastTimeMs: number | null = null;
+  /** OES_texture_half_float extension — null if unsupported. */
+  private _halfFloat: OES_texture_half_float | null;
 
   constructor(gl: WebGLRenderingContext, index: DepthIndex | null) {
     this._gl = gl;
     this._index = index;
+    this._halfFloat = gl.getExtension("OES_texture_half_float");
   }
 
   /**
@@ -172,6 +175,20 @@ export class DepthController {
 
   private _uploadFrame(frame: DepthFrame): void {
     const gl = this._gl;
+    const isUint16 = frame.data instanceof Uint16Array;
+    // Use HALF_FLOAT_OES for 16-bit data when the extension is available.
+    // Fall back to UNSIGNED_BYTE (with data truncated to uint8) if not.
+    const type = isUint16 && this._halfFloat
+      ? this._halfFloat.HALF_FLOAT_OES
+      : gl.UNSIGNED_BYTE;
+    // For HALF_FLOAT_OES the data must be Uint16Array (raw half-float bits).
+    // Our uint16 depth values are linear [0, 65535] — not IEEE half-float.
+    // We reinterpret the Uint16Array directly; the shader samples .r which
+    // gives a normalized [0, 1] value on LUMINANCE textures with HALF_FLOAT.
+    // If extension unavailable, downscale to uint8 for the fallback path.
+    const uploadData: Uint8Array | Uint16Array = isUint16 && !this._halfFloat
+      ? new Uint8Array((frame.data as Uint16Array).map((v) => v >> 8))
+      : frame.data;
 
     // Reuse existing texture if dimensions match, otherwise allocate.
     if (
@@ -184,18 +201,12 @@ export class DepthController {
       gl.texSubImage2D(
         gl.TEXTURE_2D, 0, 0, 0,
         frame.width, frame.height,
-        gl.LUMINANCE, gl.UNSIGNED_BYTE,
-        frame.data,
+        gl.LUMINANCE, type,
+        uploadData,
       );
-      this._current = {
-        ...this._current,
-        uploadedAtMs: performance.now(),
-      };
+      this._current = { ...this._current, uploadedAtMs: performance.now() };
     } else {
-      // Allocate new texture (first frame or dimension change).
-      if (this._current) {
-        gl.deleteTexture(this._current.texture);
-      }
+      if (this._current) gl.deleteTexture(this._current.texture);
       const texture = gl.createTexture();
       if (!texture) return;
       gl.activeTexture(gl.TEXTURE1);
@@ -203,8 +214,8 @@ export class DepthController {
       gl.texImage2D(
         gl.TEXTURE_2D, 0, gl.LUMINANCE,
         frame.width, frame.height, 0,
-        gl.LUMINANCE, gl.UNSIGNED_BYTE,
-        frame.data,
+        gl.LUMINANCE, type,
+        uploadData,
       );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);

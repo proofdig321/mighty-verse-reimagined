@@ -40,8 +40,11 @@ export function useStoryboardWorkspaceAutomation({
   const saveBodyRef = useRef(saveBody);
   const restoreFromSnapshotRef = useRef(restoreFromSnapshot);
   const mutateRef = useRef(mutate);
+  // eslint-disable-next-line react-hooks/refs
   saveBodyRef.current = saveBody;
+  // eslint-disable-next-line react-hooks/refs
   restoreFromSnapshotRef.current = restoreFromSnapshot;
+  // eslint-disable-next-line react-hooks/refs
   mutateRef.current = mutate;
 
   useEffect(() => {
