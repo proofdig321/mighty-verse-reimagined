@@ -36,7 +36,7 @@ export function StoryboardStoryEditor({
   onApplyProposal: () => void;
   onDismissProposal: () => void;
 }) {
-  const [expanded, setExpanded] = useState(!hasPanels);
+  const [expanded, setExpanded] = useState(true);
 
   return (
     <section className="storyboard-work-card space-y-3 border-b border-border/60 pb-4" aria-labelledby="storyboard-story-heading">

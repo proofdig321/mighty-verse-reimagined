@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -70,6 +70,7 @@ export function StudioCreationSurface({
   motionKind, firstFrame, lastFrame, durationSeconds, aspectRatio, resolution,
   activeReferenceUrls, references, workFrames, capability,
   cinematicShots,
+  composerHeader,
   onDraftChange, onSavePanel, onGenerateStill, onEnqueue,
   onSetFirstFrame, onSetLastFrame, onSetDuration, onSetAspect, onSetResolution,
   onRetryJob, onCancelJob, onSaveArtifactToPanel,
@@ -95,6 +96,8 @@ export function StudioCreationSurface({
   workFrames: { source_title: string; timestamp_ms: number; still_url: string; panel_id: string | null }[];
   capability: Capability & { provider?: string; label?: string; models?: { text: string; image: string; video: string } } | null;
   cinematicShots: CinematicShot[];
+  /** Optional slot rendered at the top of the composer half (e.g. StoryboardStoryEditor). */
+  composerHeader?: React.ReactNode;
   onDraftChange: (patch: Partial<StoryboardPanelRecord>) => void; onSavePanel: () => void;
   onGenerateStill: () => void; onEnqueue: (kind: GenerationJobKind, extra?: Record<string, unknown>) => void;
   onSetFirstFrame: (url: string) => void; onSetLastFrame: (url: string) => void;
@@ -239,6 +242,9 @@ export function StudioCreationSurface({
 
   return (
     <div className="studio-creation-surface">
+      {/* ── COMPOSER HALF — tabs + directive + controls ── */}
+      <div className="studio-composer-half">
+        {composerHeader}
 
       {/* Generation type tabs */}
       <div className="studio-gen-tabs">
@@ -267,11 +273,8 @@ export function StudioCreationSurface({
         )}
       </div>
 
-      {/* Create view — always shown (source and 2.5D are now routes) */}
-      {(
-        <>
-          {/* COMPOSER */}
-          <div className="studio-composer-wrap">
+      {/* COMPOSER */}
+      <div className="studio-composer-wrap">
 
             {/* Context header */}
             <div className="studio-context-header">
@@ -354,8 +357,8 @@ export function StudioCreationSurface({
                 {cinematicShots.length > 0 && (
                   <div className="mb-3">
                     <p className="suite-kicker mb-1.5">Frames — select to use as reference</p>
-                    <div className="flex flex-wrap gap-1.5">
-                      {cinematicShots.filter((s) => s.still_url).slice(0, 12).map((shot) => {
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {cinematicShots.filter((s) => s.still_url).slice(0, 9).map((shot) => {
                         const isFirst = effectiveFirstFrame === shot.still_url;
                         const isLast = effectiveLastFrame === shot.still_url;
                         const isRef = selectedRefUrls.has(shot.still_url!);
@@ -370,13 +373,18 @@ export function StudioCreationSurface({
                               else { setLocalLastFrame(""); onSetLastFrame(""); }
                             }}
                             className={cn(
-                              "relative w-12 aspect-video rounded overflow-hidden border-2 transition-all",
+                              "relative w-full aspect-video rounded-lg overflow-hidden border-2 transition-all",
                               isFirst ? "border-primary" : isLast ? "border-accent-mv" : isRef ? "border-amber-400" : "border-border hover:border-foreground/40"
                             )}>
                             <img src={shot.still_url!} alt="" className="w-full h-full object-cover" />
-                            <span className="absolute bottom-0 inset-x-0 text-center text-[8px] bg-black/60 text-white leading-tight">
-                              {isFirst ? "start" : isLast ? "end" : isRef ? "ref" : String(shot.sequence).padStart(2,"0")}
-                            </span>
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 to-transparent px-1.5 py-1">
+                              <span className="text-[9px] text-white/90 font-mono">
+                                {isFirst ? "start" : isLast ? "end" : isRef ? "ref" : `${String(shot.sequence).padStart(2,"0")}`}
+                              </span>
+                              {shot.what_happens && (
+                                <p className="text-[8px] text-white/60 truncate leading-tight">{shot.what_happens}</p>
+                              )}
+                            </div>
                           </button>
                         );
                       })}
@@ -707,12 +715,18 @@ export function StudioCreationSurface({
             </div>{/* end studio-composer */}
           </div>{/* end studio-composer-wrap */}
 
-          {/* Generate row — always visible at bottom of composer, matches image */}
+          {/* Generate row — pinned to bottom of composer half */}
           <div className="studio-generate-btn-row">
             <span className="text-xs text-muted-foreground flex-1 truncate">
               {capability?.configured
                 ? <>{(capability as { provider?: string; label?: string }).label ?? "AI"}<span className="opacity-50 ml-1">· {intent === "still" ? "Image" : "Video"}</span></>
-                : <span className="text-muted-foreground/50">Provider not configured</span>}
+                : (
+                  <span className="flex items-center gap-1.5">
+                    <AlertCircle size={11} className="text-amber-500 shrink-0" />
+                    <span className="text-amber-500/80">Gemini API key not configured</span>
+                    <a href="/authority/settings" className="text-xs text-primary underline underline-offset-2 hover:no-underline ml-1">Add key →</a>
+                  </span>
+                )}
             </span>
             <Button type="button" size="sm"
               disabled={!generateReady.available}
@@ -723,6 +737,11 @@ export function StudioCreationSurface({
               Generate
             </Button>
           </div>
+
+      </div>{/* end studio-composer-half */}
+
+      {/* ── RESULTS HALF — always visible, never below fold ── */}
+      <div className="studio-results-half">
           <div id="results" className="studio-result-area" aria-labelledby="studio-results-heading">
             <h2 id="studio-results-heading" className="suite-kicker">Results</h2>
             {hasMotion && selected?.endpoint ? (
@@ -807,11 +826,29 @@ export function StudioCreationSurface({
                 </div>
               </div>
             ) : selected ? (
-              <div className="studio-result-empty">
-                <p className="suite-kicker mb-1">{selected.kind}</p>
-                <p className="text-base font-semibold text-foreground">{selected.title}</p>
-                {selected.description && <p className="mt-2 text-sm text-muted-foreground/70 line-clamp-3">{selected.description}</p>}
-                {selected.time && <p className="mt-2 font-mono suite-kicker normal-case tracking-normal font-normal">{selected.time}</p>}
+              <div className="studio-result-panel-preview">
+                <div className="studio-result-panel-preview-bg">
+                  {/* Show first available Sentinel frame as background if no still */}
+                  {cinematicShots.find(s => s.still_url) && (
+                    <img
+                      src={cinematicShots.find(s => s.still_url)!.still_url!}
+                      alt=""
+                      className="absolute inset-0 w-full h-full object-cover opacity-20"
+                    />
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
+                </div>
+                <div className="studio-result-panel-preview-body">
+                  <p className="suite-kicker mb-1">{selected.kind}</p>
+                  <p className="studio-result-panel-preview-title">{selected.title}</p>
+                  {selected.description && (
+                    <p className="mt-2 text-sm text-muted-foreground/60 line-clamp-2">{selected.description}</p>
+                  )}
+                  {selected.time && (
+                    <p className="mt-2 font-mono suite-kicker normal-case tracking-normal font-normal opacity-60">{selected.time}</p>
+                  )}
+                  <p className="mt-4 text-xs text-muted-foreground/40">Write a directive above and generate →</p>
+                </div>
               </div>
             ) : (
               <div className="studio-result-empty">
@@ -837,10 +874,8 @@ export function StudioCreationSurface({
                 )}
               </div>
             )}
-          </div>
-        </>
-      )}
+          </div>{/* end studio-result-area */}
+      </div>{/* end studio-results-half */}
     </div>
   );
 }
-

@@ -81,7 +81,7 @@ export function StudioWorkbenchNav({
             {content}
           </Link>
         ) : (
-          <span key={id} className={className} aria-disabled="true" title="Open a storyboard to use this panel">
+          <span key={id} className={className} aria-disabled="true" title="Save your storyboard first to unlock this panel">
             {content}
           </span>
         );

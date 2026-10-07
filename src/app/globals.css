@@ -1051,8 +1051,9 @@ html[data-theme="paper"] {
     display: grid;
     grid-template-columns: 12.5rem minmax(0, 1fr);
     gap: 1rem;
-    align-items: flex-start;
-    min-height: calc(100vh - 3.5rem - 2.75rem - 2.5rem);
+    align-items: stretch;
+    height: calc(100vh - 3.5rem - 2.75rem - 2.5rem);
+    overflow: hidden;
   }
 
   .studio-workbench-page {
@@ -1140,10 +1141,20 @@ html[data-theme="paper"] {
 
   .studio-workbench-rail {
     min-width: 0;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--border) 60%, transparent) transparent;
   }
 
   .studio-workbench-main {
     min-width: 0;
+    height: 100%;
+    display: grid;
+    /* Composer (input) top half, results (output) bottom half — always both visible */
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    overflow: hidden;
   }
 
   .storyboard-work-card {
@@ -1270,10 +1281,50 @@ html[data-theme="paper"] {
     background: color-mix(in oklch, var(--primary) 8%, var(--card));
   }
 
-  /* Studio creation surface — grows naturally, no overflow hidden */
+  /* Panel card placeholder — animated gradient when no still */
+  .studio-panel-card-placeholder {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--muted) 60%, transparent) 0%,
+      color-mix(in oklch, var(--muted) 30%, transparent) 50%,
+      color-mix(in oklch, var(--muted) 60%, transparent) 100%
+    );
+    background-size: 200% 200%;
+    animation: panel-shimmer 2.4s ease-in-out infinite;
+  }
+
+  @keyframes panel-shimmer {
+    0%   { background-position: 0% 50%; }
+    50%  { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+
+  /* Studio creation surface — fills its grid row, scrolls internally */
   .studio-creation-surface {
-    flex: 1;
-    min-width: 0;
+    display: contents; /* children become direct grid children of .studio-workbench-main */
+  }
+
+  /* Main inner — two-row grid: composer top, results bottom */
+  .studio-workbench-main-inner {
+    display: contents; /* passes grid rows up to .studio-workbench-main */
+  }
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--border) 50%, transparent) transparent;
+    display: flex;
+    flex-direction: column;
+    border-bottom: 2px solid color-mix(in oklch, var(--border) 70%, transparent);
+  }
+
+  /* Results half — bottom row, scrollable */
+  .studio-results-half {
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--border) 50%, transparent) transparent;
     display: flex;
     flex-direction: column;
   }
@@ -1309,10 +1360,11 @@ html[data-theme="paper"] {
 
   /* Result area — natural height, no forced centering */
   .studio-result-area {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: 1.5rem;
+    padding: 1.25rem 1.5rem;
     background:
       radial-gradient(circle at 65% 35%, color-mix(in oklch, var(--primary) 6%, transparent), transparent 55%),
       radial-gradient(circle at 20% 75%, color-mix(in oklch, var(--accent-mv) 5%, transparent), transparent 45%);
@@ -1345,6 +1397,40 @@ html[data-theme="paper"] {
     justify-content: center;
     text-align: center;
     min-height: 8rem;
+  }
+
+  /* Panel preview — shown when panel selected but no still/motion yet */
+  .studio-result-panel-preview {
+    position: relative;
+    width: 100%;
+    max-width: 52rem;
+    aspect-ratio: 16 / 9;
+    border-radius: calc(var(--radius) + 4px);
+    overflow: hidden;
+    border: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+    background: color-mix(in oklch, var(--card) 60%, transparent);
+  }
+
+  .studio-result-panel-preview-bg {
+    position: absolute;
+    inset: 0;
+  }
+
+  .studio-result-panel-preview-body {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 1.5rem;
+  }
+
+  .studio-result-panel-preview-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--foreground);
+    letter-spacing: -0.02em;
   }
 
   /* Composer wrap — primary element, sits at top */
@@ -1727,7 +1813,70 @@ html[data-theme="paper"] {
     }
   }
 
+  /* Assembly bar */
+  .storyboard-assembly-bar {
+    border-top: 1px solid var(--border);
+    background: color-mix(in oklch, var(--background) 92%, transparent);
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+  }
+
+  .storyboard-assembly-strip {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.5rem 1rem 0.375rem;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 40%, transparent);
+  }
+
+  .storyboard-assembly-strip::-webkit-scrollbar { display: none; }
+
+  .storyboard-assembly-thumb {
+    position: relative;
+    flex-shrink: 0;
+    width: 3.5rem;
+    aspect-ratio: 16 / 9;
+    border-radius: calc(var(--radius) - 2px);
+    overflow: hidden;
+    border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+    background: color-mix(in oklch, var(--muted) 40%, transparent);
+  }
+
+  .storyboard-assembly-thumb-pending {
+    border-style: dashed;
+    opacity: 0.5;
+  }
+
+  .storyboard-assembly-thumb-more {
+    flex-shrink: 0;
+    width: 3.5rem;
+    aspect-ratio: 16 / 9;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px dashed color-mix(in oklch, var(--border) 60%, transparent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.625rem;
+    color: var(--muted-foreground);
+  }
+
+  .storyboard-assembly-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.375rem 1rem 0.5rem;
+  }
+
   .storyboard-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: space-between;
+  }
     display: flex;
     flex-wrap: wrap;
     align-items: center;

@@ -106,18 +106,23 @@ export function StudioContextSidebar({
                       // eslint-disable-next-line @next/next/no-img-element
                       <img src={still} alt="" className="absolute inset-0 w-full h-full object-cover" />
                     ) : (
-                      <div className="absolute inset-0 suite-still-placeholder" />
+                      <div className="absolute inset-0 studio-panel-card-placeholder" />
                     )}
                     {(isPending || activeJob) && (
                       <div className="absolute inset-0 flex items-center justify-center bg-background/60">
-                        <span className="text-[9px] text-muted-foreground animate-pulse">
-                          {activeJob ? "…" : "…"}
-                        </span>
+                        <span className="text-[9px] text-muted-foreground animate-pulse">gen</span>
                       </div>
                     )}
-                    <span className="absolute bottom-1 left-1.5 font-mono text-[9px] text-white/70 leading-none">
-                      {String(panel.sequence).padStart(2, "0")}
-                    </span>
+                    {/* Sequence number — large and centered when no still, small corner when still present */}
+                    {still ? (
+                      <span className="absolute bottom-1 left-1.5 font-mono text-[9px] text-white/70 leading-none">
+                        {String(panel.sequence).padStart(2, "0")}
+                      </span>
+                    ) : (
+                      <span className="absolute inset-0 flex items-center justify-center font-mono text-lg font-bold text-muted-foreground/30">
+                        {String(panel.sequence).padStart(2, "0")}
+                      </span>
+                    )}
                     {hasMotion && (
                       <span className="absolute top-1 right-1.5 text-[9px] text-white/60">▶</span>
                     )}

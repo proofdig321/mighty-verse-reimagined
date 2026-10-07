@@ -314,6 +314,7 @@ export function StoryboardSourceMedia({
             endpoint={active.endpoint_ref ?? `https://stream.mux.com/${active.playback_id}.m3u8`}
             poster={active.still_url}
             label={active.title}
+            onTimeUpdate={setTimeMs}
           />
           <div className="grid gap-2 sm:grid-cols-2">
             <SecondsField label="Source window" valueMs={timeMs} onChange={setTimeMs} />

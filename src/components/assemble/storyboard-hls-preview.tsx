@@ -7,13 +7,24 @@ export function StoryboardHlsPreview({
   endpoint,
   poster,
   label,
+  onTimeUpdate,
 }: {
   endpoint: string;
   poster?: string | null;
   label: string;
+  /** Called with current media time in ms whenever the video time updates. */
+  onTimeUpdate?: (ms: number) => void;
 }) {
   const mediaRef = useRef<HTMLVideoElement>(null);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+
+  useEffect(() => {
+    const media = mediaRef.current;
+    if (!media || !onTimeUpdate) return;
+    const handler = () => onTimeUpdate(Math.round(media.currentTime * 1000));
+    media.addEventListener("timeupdate", handler);
+    return () => media.removeEventListener("timeupdate", handler);
+  }, [onTimeUpdate]);
 
   useEffect(() => {
     const media = mediaRef.current;

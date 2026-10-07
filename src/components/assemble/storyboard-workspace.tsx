@@ -533,28 +533,6 @@ export function StoryboardWorkspace({
           />
         }
         main={
-          <div id="create" className="flex min-w-0 flex-col gap-4">
-          <StoryboardStoryEditor
-            script={script}
-            instruction={instruction}
-            hasPanels={persistedPanels.length > 0 || scriptPanels.length > 0}
-            saveState={saveState}
-            assistState={authoring.assistState}
-            assistProposal={authoring.assistProposal}
-            onScriptChange={(value) => {
-              setScript(value);
-              setDirty(true);
-            }}
-            onInstructionChange={(value) => {
-              setInstruction(value);
-              setDirty(true);
-            }}
-            onSave={() => void saveBody()}
-            onGenerate={() => void authoring.generateStoryboard()}
-            onAssist={(actionId) => void authoring.assist(actionId)}
-            onApplyProposal={authoring.applyAssistProposal}
-            onDismissProposal={authoring.dismissAssistProposal}
-          />
           <StudioCreationSurface
             work={work}
             intelligence={intelligence}
@@ -585,6 +563,24 @@ export function StoryboardWorkspace({
             references={references}
             workFrames={work?.frames ?? []}
             capability={capability}
+            cinematicShots={cinematicShots}
+            composerHeader={
+              <StoryboardStoryEditor
+                script={script}
+                instruction={instruction}
+                hasPanels={persistedPanels.length > 0 || scriptPanels.length > 0}
+                saveState={saveState}
+                assistState={authoring.assistState}
+                assistProposal={authoring.assistProposal}
+                onScriptChange={(value) => { setScript(value); setDirty(true); }}
+                onInstructionChange={(value) => { setInstruction(value); setDirty(true); }}
+                onSave={() => void saveBody()}
+                onGenerate={() => void authoring.generateStoryboard()}
+                onAssist={(actionId) => void authoring.assist(actionId)}
+                onApplyProposal={authoring.applyAssistProposal}
+                onDismissProposal={authoring.dismissAssistProposal}
+              />
+            }
             onDraftChange={(patch) => setDraftPanel(patch)}
             onSavePanel={() => void savePanelEdits()}
             onGenerateStill={() => void generation.generateMedia("still")}
@@ -596,10 +592,8 @@ export function StoryboardWorkspace({
             onSetResolution={setResolution}
             onRetryJob={(jobId) => void retryJob(jobId)}
             onCancelJob={(jobId) => void cancelJob(jobId)}
-            cinematicShots={cinematicShots}
             onSaveArtifactToPanel={(panelId, patch) => void saveArtifactToPanel(panelId, patch)}
           />
-          </div>
         }
       />
 
