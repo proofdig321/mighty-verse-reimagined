@@ -2,14 +2,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { sceneShortTitle } from "@/lib/assemble/composition";
 import type { SuiteScene } from "@/lib/assemble/suite";
 import type { SentinelIntelligence } from "@/lib/media/sentinel-intelligence";
 import { composeStoryboardBody, type StoryboardScriptPanel } from "@/lib/storyboard/script";
 import type { CinematicAnalysis } from "@/lib/media/cinematic-evidence";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
 import { type GenerationJobKind } from "@/lib/ai/jobs";
-import { curateHubHref } from "@/lib/assemble/studio";
 import { cn } from "@/lib/utils";
 import {
   emptyHistory,
@@ -31,17 +29,7 @@ import { StoryboardWorkspaceDialogs } from "./storyboard-workspace-dialogs";
 import { StoryboardPanelSlideshow } from "./storyboard-panel-slideshow";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { WorkSourceWorkflow } from "./work-source-workflow";
-import { deriveStoryboardProgress } from "@/lib/assemble/storyboard-progress";
-import { studioPhaseForTab } from "@/lib/assemble/studio-interaction";
-import {
-  buildStoryboardShotIds,
-  deriveStoryboardSequenceState,
-  resolveStoryboardEditorPanel,
-} from "@/lib/storyboard/workspace-state";
-import {
-  buildStoryboardReferenceAttachmentBody,
-  resolveStoryboardAttachmentTarget,
-} from "@/lib/storyboard/attachments";
+import { buildStoryboardShotIds, resolveStoryboardEditorPanel } from "@/lib/storyboard/workspace-state";
 import type { VeoDuration } from "./creative-operation";
 import { useStoryboardJobLifecycle } from "./use-storyboard-job-lifecycle";
 import { useStoryboardSentinelActions, type StoryboardMaterialTab } from "./use-storyboard-sentinel-actions";
@@ -139,24 +127,16 @@ export function StoryboardWorkspace({
   const [pendingPanels, setPendingPanels] = useState<Record<string, boolean>>({});
   const [playing, setPlaying] = useState(false);
   const [draftPanel, setDraftPanel] = useState<Partial<StoryboardPanelRecord>>({});
-  const [firstFrame, setFirstFrame] = useState<string>("");
-  const [lastFrame, setLastFrame] = useState<string>("");
-  const [durationSeconds, setDurationSeconds] = useState<import("./creative-operation").VeoDuration>(8);
-  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">("16:9");
-  const [resolution, setResolution] = useState<import("./creative-operation").ResolutionOption>("720p");
+  const [firstFrame, setFirstFrame] = useState("");
   const [capability, setCapability] = useState<CapabilityCard | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
   const [slideshowOpen, setSlideshowOpen] = useState(false);
   const [sourceSheetOpen, setSourceSheetOpen] = useState(false);
-  const [generationPage, setGenerationPage] = useState(0);
   const [workTitle, setWorkTitle] = useState(universeTitle ?? "Untitled storyboard");
   const [history, setHistory] = useState<HistoryState>(emptyHistory);
   const [dirty, setDirty] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteBusy, setDeleteBusy] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [assemblyItems, setAssemblyItems] = useState<AuthoringSnapshot["assembly"]>([]);
   const [cinematic, setCinematic] = useState<CinematicAnalysis | null>(null);
   const [cinematicShotId, setCinematicShotId] = useState<string | null>(null);
@@ -170,52 +150,33 @@ export function StoryboardWorkspace({
   const selectedScript = scriptPanels.find((panel) => panel.panel_id === selectedId) ?? null;
   const selectedScene = scenes.find((scene) => scene.master_id === selectedId) ?? null;
   const selectedJob = jobs.find((job) => job.panel_id === selectedId && (job.status === "queued" || job.status === "submitted" || job.status === "processing")) ?? jobs.find((job) => job.panel_id === selectedId) ?? null;
+
   const persistence = useStoryboardPersistence({
-    universeId,
-    work,
-    script,
-    creativeIntent: instruction,
-    workTitle,
-    assemblyItems,
-    history,
-    selectedId,
-    selectedPersisted,
-    draftPanel,
-    backHref,
-    setWork,
-    setWorkTitle,
-    setScript,
-    setAssemblyItems,
-    setHistory,
-    setSelectedId,
-    setScriptPanels,
-    setDraftPanel,
+    universeId, work, script, creativeIntent: instruction, workTitle,
+    assemblyItems, history, selectedId, selectedPersisted,
+    draftPanel, backHref,
+    setWork, setWorkTitle, setScript, setAssemblyItems, setHistory,
+    setSelectedId, setScriptPanels, setDraftPanel,
     setFirstFrame,
-    setPanelStills,
-    setCinematic,
-    setCinematicShotId,
-    setDirty,
-    setSaveFailed,
-    setSaveState,
-    setMediaState,
-    setDeleteOpen,
-    setDeleteBusy,
-    setDeleteError,
+    setPanelStills, setCinematic, setCinematicShotId,
+    setDirty, setSaveFailed, setSaveState, setMediaState,
     onSnapshot: (snapshot) => { savedSnapshot.current = snapshot; },
-    onDeleted: (href) => {
-      router.push(href);
-      router.refresh();
-    },
+    onDeleted: (href) => { router.push(href); router.refresh(); },
   });
   const {
-    applyWork,
-    mutate,
-    restoreFromSnapshot,
-    saveBody,
-    savePanelEdits,
-    saveArtifactToPanel,
-    confirmDeleteWorkspace,
+    applyWork, mutate, restoreFromSnapshot, saveBody,
+    savePanelEdits, saveArtifactToPanel, confirmDeleteWorkspace,
+    deleteOpen, setDeleteOpen, deleteBusy, deleteError,
   } = persistence;
+
+  const generation = useStoryboardGenerationOperations({
+    universeId, work, script, selectedId, selected: null,
+    selectedPersisted, selectedJob, draftPanel, instruction,
+    references, generated, workFrames: work?.frames ?? [],
+    persistedPanels, scriptPanels, sentinelPanels, scenes, panelStills,
+    saveBody,
+    setJobs, setMediaState, setPanelStills, setPendingPanels, setSelectedId,
+  });
   const authoring = useStoryboardAuthoringOperations({
     universeId,
     universeTitle,
@@ -236,17 +197,9 @@ export function StoryboardWorkspace({
     setSaveState,
   });
   const sentinel = useStoryboardSentinelActions({
-    universeId,
-    work,
-    sentinelPanels,
-    selectedPersisted,
-    cinematic,
-    cinematicShotId,
-    setCinematic,
-    setCinematicShotId,
-    mutate,
-    applyWork,
-    setSelectedId,
+    universeId, work, sentinelPanels, selectedPersisted,
+    cinematic, cinematicShotId, setCinematic, setCinematicShotId,
+    mutate, applyWork, setSelectedId,
     setDraftPanel,
     setFirstFrame,
     setTab,
@@ -254,11 +207,7 @@ export function StoryboardWorkspace({
 
   const selected = useMemo(
     () => resolveStoryboardSelection({
-      selectedPersisted,
-      selectedScript,
-      selectedSentinel,
-      selectedScene,
-      panelStills,
+      selectedPersisted, selectedScript, selectedSentinel, selectedScene, panelStills,
     }),
     [selectedPersisted, selectedScript, selectedSentinel, selectedScene, panelStills],
   );
@@ -270,9 +219,7 @@ export function StoryboardWorkspace({
       if (workId) query.set("work_id", workId);
       const response = await fetch(`/api/authority/storyboard?${query.toString()}`);
       const payload = await response.json().catch(() => ({}));
-      if (payload.work) {
-        applyWork(payload.work, typeof payload.selected_panel_id === "string" ? payload.selected_panel_id : null);
-      }
+      if (payload.work) applyWork(payload.work, typeof payload.selected_panel_id === "string" ? payload.selected_panel_id : null);
       if (payload.cinematic) setCinematic(payload.cinematic);
       if (typeof payload.selected_shot_id === "string") setCinematicShotId(payload.selected_shot_id);
       if (Array.isArray(payload.jobs)) setJobs(payload.jobs);
@@ -281,114 +228,11 @@ export function StoryboardWorkspace({
     })();
   }, [universeId, workId]);
 
-  const generation = useStoryboardGenerationOperations({
-    universeId,
-    work,
-    script,
-    selectedId,
-    selected,
-    selectedPersisted,
-    selectedJob,
-    draftPanel,
-    instruction,
-    firstFrame,
-    lastFrame,
-    durationSeconds,
-    aspectRatio,
-    resolution,
-    references,
-    generated,
-    workFrames: work?.frames ?? [],
-    persistedPanels,
-    scriptPanels,
-    sentinelPanels,
-    scenes,
-    panelStills,
-    saveBody,
-    setJobs,
-    setMediaState,
-    setPanelStills,
-    setPendingPanels,
-    setSelectedId,
-  });
-
   const cinematicShots = sentinel.cinematic?.shots ?? [];
   const selectedObservation = selectedPersisted?.generation_metadata?.sentinel_observation ?? null;
   const selectedFrame = (work?.frames ?? []).find((frame) => frame.panel_id === selectedId) ?? work?.frames?.[0] ?? null;
   const transformationInstruction = selectedPersisted?.generation_metadata?.transformation_instruction
     ?? (draftPanel.generation_metadata?.transformation_instruction ?? null);
-
-  async function attachReferenceStill(reference: { asset_id: string; title: string; still_url: string | null; time_ms: number }) {
-    if (!reference.still_url) {
-      setMediaState({ status: "failed", message: "That reference has no still yet." });
-      return;
-    }
-    let current = work;
-    if (!current) {
-      const created = await fetch("/api/authority/storyboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ universe_id: universeId, action: "create-work", title: workTitle }),
-      });
-      const payload = await created.json().catch(() => ({}));
-      if (!payload.work) {
-        setMediaState({ status: "failed", message: "Create the storyboard work before attaching a still." });
-        return;
-      }
-      applyWork(payload.work);
-      current = payload.work as StoryboardWorkRecord;
-    }
-    const { persistedId } = resolveStoryboardAttachmentTarget({
-      work: current,
-      selectedId,
-    });
-    const response = await fetch("/api/authority/storyboard", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(buildStoryboardReferenceAttachmentBody({
-        universeId,
-        workId: current.work_id,
-        panelId: persistedId,
-        assetId: reference.asset_id,
-        stillUrl: reference.still_url,
-        title: reference.title,
-        timeMs: reference.time_ms,
-      })),
-    });
-    const payload = await response.json().catch(() => ({}));
-    if (payload.work) {
-      applyWork(payload.work);
-      const attached = persistedId
-        ? payload.work.panels.find((panel: StoryboardWorkRecord["panels"][number]) => panel.panel_id === persistedId)
-        : payload.work.panels[payload.work.panels.length - 1];
-      if (attached?.panel_id) setSelectedId(attached.panel_id);
-      setMediaState({ status: "ready", message: "Still attached to a storyboard panel. Sentinel evidence is not a Scene." });
-      setTab("panels");
-    }
-  }
-
-
-  const { creativeCount, sequenceEmpty } = deriveStoryboardSequenceState({
-    persistedPanels,
-    scriptPanels,
-    sentinelPanels,
-    scenes,
-  });
-  const progress = deriveStoryboardProgress({
-    script,
-    panelCount: creativeCount || (script ? 0 : scenes.length),
-    referenceStillCount:
-      references.filter((reference) => Boolean(reference.still_url)).length
-      + persistedPanels.reduce((sum, panel) => sum + panel.references.length, 0)
-      + (work?.frames?.length ?? 0),
-    artifactStillCount: generated.filter((artifact) => Boolean(artifact.still_url)).length + persistedPanels.filter((panel) => panel.still_url).length,
-    artifactTypes: [
-      ...generated.map((artifact) => artifact.output_type),
-      ...jobs.filter((job) => job.status === "completed").map((job) => job.kind),
-      ...persistedPanels.flatMap((panel) => [panel.still_url ? "still" : "", panel.motion_playback_id ? "motion" : ""]),
-    ].filter(Boolean),
-    assemblyItemCount: assemblyItems.length,
-  });
   const shotIds = buildStoryboardShotIds({
     persistedPanels,
     scriptPanels,
@@ -415,7 +259,7 @@ export function StoryboardWorkspace({
   });
 
   const editorPanel = resolveStoryboardEditorPanel({
-    draftPanel,
+    draftPanel: draftPanel,
     selectedPersisted,
   });
   const saveLabel = saveStatusLabel({
@@ -431,7 +275,6 @@ export function StoryboardWorkspace({
     job.panel_id === selectedId &&
     (job.kind === "motion" || job.kind === "clip" || job.kind === "animation" || job.kind === "animate-still"),
   );
-  const interactionPhase = studioPhaseForTab(tab);
   const stillReady = stillGenerationReady({
     panelSelected: Boolean(selectedPersisted),
     hasObservation: Boolean(selectedObservation),
@@ -480,10 +323,7 @@ export function StoryboardWorkspace({
           if (next) void restoreFromSnapshot(next.entry.after, next.state);
         }}
         onReset={() => setResetOpen(true)}
-        onDelete={() => {
-          setDeleteError(null);
-          setDeleteOpen(true);
-        }}
+        onDelete={() => setDeleteOpen(true)}
         onSave={() => void saveBody()}
       />
       <StoryboardWorkspaceDialogs
@@ -560,11 +400,11 @@ export function StoryboardWorkspace({
             stillReady={stillReady}
             motionReady={motionReady}
             motionKind={motionKind}
-            firstFrame={firstFrame}
-            lastFrame={lastFrame}
-            durationSeconds={durationSeconds}
-            aspectRatio={aspectRatio}
-            resolution={resolution}
+            firstFrame={generation.firstFrame}
+            lastFrame={generation.lastFrame}
+            durationSeconds={generation.durationSeconds}
+            aspectRatio={generation.aspectRatio}
+            resolution={generation.resolution}
             activeReferenceUrls={activeReferenceUrls}
             references={references}
             workFrames={work?.frames ?? []}
@@ -592,10 +432,10 @@ export function StoryboardWorkspace({
             onGenerateStill={() => void generation.generateMedia("still")}
             onEnqueue={(kind, extra) => void generation.enqueue(kind, extra)}
             onSetFirstFrame={setFirstFrame}
-            onSetLastFrame={setLastFrame}
-            onSetDuration={(v: VeoDuration) => setDurationSeconds(v)}
-            onSetAspect={setAspectRatio}
-            onSetResolution={setResolution}
+            onSetLastFrame={generation.setLastFrame}
+            onSetDuration={(v: VeoDuration) => generation.setDurationSeconds(v)}
+            onSetAspect={generation.setAspectRatio}
+            onSetResolution={generation.setResolution}
             onRetryJob={(jobId) => void retryJob(jobId)}
             onCancelJob={(jobId) => void cancelJob(jobId)}
             onSaveArtifactToPanel={(panelId, patch) => void saveArtifactToPanel(panelId, patch)}

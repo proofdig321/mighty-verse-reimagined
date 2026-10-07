@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { chromePromptAvailability, promptWithChrome } from "@/lib/ai/chrome";
 import type { GenerationJobKind } from "@/lib/ai/jobs";
@@ -33,13 +34,13 @@ export function useStoryboardGenerationOperations({
   selected,
   selectedPersisted,
   selectedJob,
-  draftPanel,
+  draftPanel: draftPanelProp,
   instruction,
-  firstFrame,
-  lastFrame,
-  durationSeconds,
-  aspectRatio,
-  resolution,
+  firstFrame: firstFrameProp,
+  lastFrame: lastFrameProp,
+  durationSeconds: durationSecondsProp,
+  aspectRatio: aspectRatioProp,
+  resolution: resolutionProp,
   references,
   generated,
   workFrames,
@@ -62,13 +63,13 @@ export function useStoryboardGenerationOperations({
   selected: StoryboardSelectionPresentation | null;
   selectedPersisted: StoryboardPanelRecord | null;
   selectedJob: StoryboardJobCard | null;
-  draftPanel: Partial<StoryboardPanelRecord>;
+  draftPanel?: Partial<StoryboardPanelRecord>;
   instruction: string;
-  firstFrame: string;
-  lastFrame: string;
-  durationSeconds: number;
-  aspectRatio: "16:9" | "9:16";
-  resolution: string;
+  firstFrame?: string;
+  lastFrame?: string;
+  durationSeconds?: number;
+  aspectRatio?: "16:9" | "9:16";
+  resolution?: string;
   references: { asset_id: string; title: string; role: string; time_ms: number; still_url: string | null }[];
   generated: StoryboardArtifact[];
   workFrames: { still_url: string }[];
@@ -84,6 +85,13 @@ export function useStoryboardGenerationOperations({
   setPendingPanels: Dispatch<SetStateAction<Record<string, boolean>>>;
   setSelectedId: (id: string | null) => void;
 }) {
+  const [firstFrame, setFirstFrame] = useState(firstFrameProp ?? "");
+  const [lastFrame, setLastFrame] = useState(lastFrameProp ?? "");
+  const [durationSeconds, setDurationSeconds] = useState<import("./creative-operation").VeoDuration>((durationSecondsProp ?? 8) as import("./creative-operation").VeoDuration);
+  const [aspectRatio, setAspectRatio] = useState<"16:9" | "9:16">(aspectRatioProp ?? "16:9");
+  const [resolution, setResolution] = useState<import("./creative-operation").ResolutionOption>((resolutionProp ?? "720p") as import("./creative-operation").ResolutionOption);
+  const [draftPanel, setDraftPanel] = useState<Partial<StoryboardPanelRecord>>(draftPanelProp ?? {});
+
   async function enqueue(kind: GenerationJobKind, extra: Record<string, unknown> = {}) {
     const saved = await saveBody();
     const workId = saved?.work_id;
@@ -178,5 +186,13 @@ export function useStoryboardGenerationOperations({
     setPendingPanels((current) => ({ ...current, [panelId]: false }));
   }
 
-  return { enqueue, generateMedia, generateShot };
+  return {
+    enqueue, generateMedia, generateShot,
+    firstFrame, setFirstFrame,
+    lastFrame, setLastFrame,
+    durationSeconds, setDurationSeconds,
+    aspectRatio, setAspectRatio,
+    resolution, setResolution,
+    draftPanel, setDraftPanel,
+  };
 }

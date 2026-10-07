@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import type { CinematicAnalysis } from "@/lib/media/cinematic-evidence";
 import type { StoryboardPanelRecord, StoryboardWorkRecord } from "@/lib/storyboard/document";
@@ -48,9 +49,6 @@ export function useStoryboardPersistence({
   setSaveFailed,
   setSaveState,
   setMediaState,
-  setDeleteOpen,
-  setDeleteBusy,
-  setDeleteError,
   onSnapshot,
   onDeleted,
 }: {
@@ -81,12 +79,13 @@ export function useStoryboardPersistence({
   setSaveFailed: Dispatch<SetStateAction<boolean>>;
   setSaveState: Dispatch<SetStateAction<GenerationState>>;
   setMediaState: Dispatch<SetStateAction<GenerationState>>;
-  setDeleteOpen: Dispatch<SetStateAction<boolean>>;
-  setDeleteBusy: Dispatch<SetStateAction<boolean>>;
-  setDeleteError: Dispatch<SetStateAction<string | null>>;
   onSnapshot: (snapshot: AuthoringSnapshot) => void;
   onDeleted: (backHref: string) => void;
 }) {
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   function snapshotOf(next: StoryboardWorkRecord, nextScript = script, nextAssembly = assemblyItems): AuthoringSnapshot {
     return workToSnapshot({
       title: next.title,
@@ -339,5 +338,9 @@ export function useStoryboardPersistence({
     savePanelEdits,
     saveArtifactToPanel,
     confirmDeleteWorkspace,
+    deleteOpen,
+    setDeleteOpen,
+    deleteBusy,
+    deleteError,
   };
 }
