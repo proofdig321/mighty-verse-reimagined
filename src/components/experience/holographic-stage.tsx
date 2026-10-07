@@ -19,13 +19,13 @@ import {
 } from "@/lib/experience/holographic-program";
 import { cn } from "@/lib/utils";
 import { attachHolographicAudio, type HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
-import { MouseViewController } from "@/lib/experience/viewer-pose";
+import { MouseViewController, OrientationViewController } from "@/lib/experience/viewer-pose";
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
 import { HolographicLayerMedia } from "./holographic-layer-media";
 import { HolographicTheater } from "./holographic-theater";
 import { CreativeMomentCard } from "./creative-moment-card";
 import { DepthIndex } from "@/lib/experience/depth-asset";
-import { decodeAllDepthFrames } from "@/lib/experience/depth-format";
+import { decodeDepthMeta, decodeDepthFrame, depthAssetFromMeta } from "@/lib/experience/depth-format";
 
 function LayerCard({
   layer,
@@ -119,12 +119,14 @@ export function HolographicStage({
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MouseViewController>(new MouseViewController());
+  const orientationRef = useRef<OrientationViewController>(new OrientationViewController());
   const poseRef = useRef<ViewerPose>(NEUTRAL_VIEWER_POSE);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HolographicAudioGraph | null>(null);
   const depthIndexRef = useRef<DepthIndex | null>(null);
+  const [gyroActive, setGyroActive] = useState(false);
 
-  // Fetch and decode the MVDP depth asset when a signed URL is available.
+  // Streaming depth decode — same pattern as SpatialPresentation.
   useEffect(() => {
     if (!depthSignedUrl) return;
     let cancelled = false;
@@ -135,26 +137,43 @@ export function HolographicStage({
       })
       .then((buf) => {
         if (cancelled) return;
-        const { meta, frames } = decodeAllDepthFrames(buf);
-        depthIndexRef.current = new DepthIndex(
-          {
-            assetId: depthSignedUrl,
-            source: meta.source,
-            confidence: meta.confidence,
-            width: meta.width,
-            height: meta.height,
-            frameRate: meta.frameRate > 0 ? meta.frameRate : undefined,
-            convention: { near: 1.0, far: 0.0, encoding: "linear", gamma: "none" },
-            formatVersion: meta.version,
-            frameCount: meta.frameCount,
-            durationMs: meta.durationMs > 0 ? meta.durationMs : undefined,
-          },
-          frames,
+        const meta = decodeDepthMeta(buf);
+        const frames = Array.from({ length: meta.frameCount }, (_, i) =>
+          decodeDepthFrame(buf, meta, i),
         );
+        depthIndexRef.current = new DepthIndex(depthAssetFromMeta(depthSignedUrl, meta), frames);
       })
       .catch(() => { /* synthetic fallback remains active */ });
     return () => { cancelled = true; };
   }, [depthSignedUrl]);
+
+  // Gyroscope — attach/detach OrientationViewController.
+  useEffect(() => {
+    const ctrl = orientationRef.current;
+    if (gyroActive) {
+      ctrl.attach();
+    } else {
+      ctrl.detach();
+    }
+    return () => ctrl.detach();
+  }, [gyroActive]);
+
+  // Merge gyro pose into poseRef each rAF when active.
+  useEffect(() => {
+    if (!gyroActive) return;
+    let raf = 0;
+    const tick = () => {
+      poseRef.current = orientationRef.current.getPose();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [gyroActive]);
+
+  async function enableGyro() {
+    const granted = await orientationRef.current.requestPermission();
+    if (granted) setGyroActive(true);
+  }
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(!program.clock);
   const [failed, setFailed] = useState(false);
@@ -188,6 +207,7 @@ export function HolographicStage({
   }, [playing, program.clock, durationMs, seekNonce]);
 
   function onMove(event: PointerEvent<HTMLDivElement>) {
+    if (gyroActive) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       return;
     }
@@ -197,6 +217,7 @@ export function HolographicStage({
   }
 
   function onTouchMove(event: TouchEvent<HTMLDivElement>) {
+    if (gyroActive) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const touch = event.touches[0];
     if (!touch) return;
@@ -206,6 +227,7 @@ export function HolographicStage({
   }
 
   function onLeave() {
+    if (gyroActive) return;
     controllerRef.current.onPointerLeave();
     poseRef.current = NEUTRAL_VIEWER_POSE;
   }
@@ -393,6 +415,18 @@ export function HolographicStage({
 
             {!ready && !failed ? <p className="holographic-media-status">Loading mural…</p> : null}
             {failed ? <p className="holographic-media-status holographic-media-error">This mural cannot play right now.</p> : null}
+
+            {/* Gyro enable button — shown on devices with orientation support */}
+            {typeof DeviceOrientationEvent !== "undefined" && !gyroActive ? (
+              <button
+                type="button"
+                className="spatial-gyro-btn"
+                aria-label="Enable gyroscope parallax"
+                onClick={() => void enableGyro()}
+              >
+                Tilt
+              </button>
+            ) : null}
           </div>
 
           <div className="holographic-transport-bar">

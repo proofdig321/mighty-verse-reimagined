@@ -18,11 +18,11 @@
  *       SpatialRenderer
  *
  * Currently implemented:
- *   MouseViewController — pointer events on the cinema element
+ *   MouseViewController        — pointer + touch events on the cinema element
+ *   OrientationViewController  — DeviceOrientationEvent (gyroscope / tilt)
  *
  * Future controllers (not implemented here):
- *   OrientationViewController — DeviceOrientationEvent
- *   XRViewController          — XRFrame / XRViewerPose
+ *   XRViewController           — XRFrame / XRViewerPose
  */
 
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "./spatial-types";
@@ -78,15 +78,6 @@ export function neutralPose(): ViewerPose {
  * Manages the current ViewerPose driven by pointer events on the cinema element.
  * Stores pose in a ref-compatible object so React does not re-render on every
  * pointer move (preserving the existing pointerRef pattern).
- *
- * Usage:
- *   const controller = new MouseViewController();
- *   // on pointer move:
- *   controller.onPointerMove(event, element);
- *   // on pointer leave:
- *   controller.onPointerLeave();
- *   // in render loop:
- *   const pose = controller.getPose();
  */
 export class MouseViewController {
   private _pointer: { x: number; y: number } = { x: 0, y: 0 };
@@ -110,5 +101,133 @@ export class MouseViewController {
   /** Current ViewerPose derived from pointer position. */
   getPose(): ViewerPose {
     return poseFromPointer(this._pointer);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// OrientationViewController — DeviceOrientationEvent (gyroscope / tilt)
+// ---------------------------------------------------------------------------
+
+/**
+ * Maximum lateral viewer offset driven by device tilt.
+ * Matches MOUSE_POSE_LATERAL_MAX so the parallax feel is consistent
+ * regardless of input source.
+ */
+const ORIENTATION_LATERAL_MAX = MOUSE_POSE_LATERAL_MAX;
+const ORIENTATION_VERTICAL_MAX = MOUSE_POSE_VERTICAL_MAX;
+
+/**
+ * Dead-zone in degrees — small involuntary tilts below this threshold
+ * are ignored to prevent jitter when the device is held still.
+ */
+const ORIENTATION_DEAD_ZONE_DEG = 2.5;
+
+/**
+ * Full-scale tilt in degrees — tilt beyond this maps to ±1 in pose space.
+ * 20° is a comfortable deliberate tilt without being fatiguing.
+ */
+const ORIENTATION_FULL_SCALE_DEG = 20;
+
+/**
+ * OrientationViewController
+ *
+ * Converts DeviceOrientationEvent (gamma = left/right tilt, beta = fwd/back
+ * tilt) into a ViewerPose. Designed for mobile — tilting the device shifts
+ * the parallax perspective without any touch interaction.
+ *
+ * iOS 13+ requires a user-gesture permission request before
+ * DeviceOrientationEvent fires. Call requestPermission() inside a click
+ * handler. On Android and desktop the event fires without permission.
+ *
+ * Usage:
+ *   const controller = new OrientationViewController();
+ *   await controller.requestPermission();   // iOS only — call from a button
+ *   controller.attach();                    // start listening
+ *   // in render loop:
+ *   const pose = controller.getPose();
+ *   // on unmount:
+ *   controller.detach();
+ */
+export class OrientationViewController {
+  private _pose: ViewerPose = { ...NEUTRAL_VIEWER_POSE, position: { ...NEUTRAL_VIEWER_POSE.position }, rotation: { ...NEUTRAL_VIEWER_POSE.rotation } };
+  private _attached = false;
+  private _baseline: { gamma: number; beta: number } | null = null;
+  private _handler: ((e: DeviceOrientationEvent) => void) | null = null;
+
+  /**
+   * Request DeviceOrientation permission on iOS 13+.
+   * Must be called from a user gesture (button click).
+   * Returns true if permission was granted or not required.
+   * Returns false if denied or API unavailable.
+   */
+  async requestPermission(): Promise<boolean> {
+    if (typeof window === "undefined") return false;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const DOE = DeviceOrientationEvent as any;
+    if (typeof DOE.requestPermission === "function") {
+      try {
+        const result: string = await DOE.requestPermission();
+        return result === "granted";
+      } catch {
+        return false;
+      }
+    }
+    // Android / desktop — no permission required.
+    return true;
+  }
+
+  /** Start listening to DeviceOrientationEvent. */
+  attach(): void {
+    if (this._attached || typeof window === "undefined") return;
+    this._handler = (e: DeviceOrientationEvent) => this._onOrientation(e);
+    window.addEventListener("deviceorientation", this._handler);
+    this._attached = true;
+  }
+
+  /** Stop listening and reset pose to neutral. */
+  detach(): void {
+    if (!this._attached || !this._handler) return;
+    window.removeEventListener("deviceorientation", this._handler);
+    this._handler = null;
+    this._attached = false;
+    this._baseline = null;
+    this._pose = { ...NEUTRAL_VIEWER_POSE, position: { ...NEUTRAL_VIEWER_POSE.position }, rotation: { ...NEUTRAL_VIEWER_POSE.rotation } };
+  }
+
+  /** Whether the controller is currently attached. */
+  get isAttached(): boolean { return this._attached; }
+
+  /** Current ViewerPose derived from device orientation. */
+  getPose(): ViewerPose { return this._pose; }
+
+  private _onOrientation(e: DeviceOrientationEvent): void {
+    const gamma = e.gamma ?? 0; // left/right tilt: negative = left, positive = right
+    const beta  = e.beta  ?? 0; // fwd/back tilt:   negative = forward, positive = back
+
+    // Calibrate on first event — treat the initial orientation as neutral.
+    if (!this._baseline) {
+      this._baseline = { gamma, beta };
+      return;
+    }
+
+    const dGamma = gamma - this._baseline.gamma;
+    const dBeta  = beta  - this._baseline.beta;
+
+    // Apply dead-zone.
+    const ax = Math.abs(dGamma) < ORIENTATION_DEAD_ZONE_DEG ? 0 : dGamma;
+    const ay = Math.abs(dBeta)  < ORIENTATION_DEAD_ZONE_DEG ? 0 : dBeta;
+
+    // Map to [-1, +1] over ORIENTATION_FULL_SCALE_DEG.
+    const nx = Math.max(-1, Math.min(1, ax / ORIENTATION_FULL_SCALE_DEG));
+    const ny = Math.max(-1, Math.min(1, ay / ORIENTATION_FULL_SCALE_DEG));
+
+    this._pose = {
+      position: {
+        x:  nx * ORIENTATION_LATERAL_MAX,
+        y: -ny * ORIENTATION_VERTICAL_MAX, // tilt forward → viewer up
+        z: 0,
+      },
+      rotation: { x: 0, y: 0, z: 0 },
+    };
   }
 }

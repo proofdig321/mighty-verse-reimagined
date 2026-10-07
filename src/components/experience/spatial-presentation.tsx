@@ -4,11 +4,11 @@ import { useEffect, useRef, useState, type PointerEvent, type TouchEvent } from 
 import { Maximize2 } from "lucide-react";
 import { HolographicTheater } from "@/components/experience/holographic-theater";
 import { HolographicLayerMedia, type HolographicMediaClock } from "@/components/experience/holographic-layer-media";
-import { MouseViewController } from "@/lib/experience/viewer-pose";
+import { MouseViewController, OrientationViewController } from "@/lib/experience/viewer-pose";
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
 import { formatDuration } from "@/lib/media/timing";
 import { DepthIndex } from "@/lib/experience/depth-asset";
-import { decodeAllDepthFrames } from "@/lib/experience/depth-format";
+import { decodeDepthMeta, decodeDepthFrame, depthAssetFromMeta } from "@/lib/experience/depth-format";
 
 /**
  * SpatialPresentation — genuine lightweight 2.5D spatial presentation.
@@ -53,14 +53,16 @@ export function SpatialPresentation({
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MouseViewController>(new MouseViewController());
+  const orientationRef = useRef<OrientationViewController>(new OrientationViewController());
   const poseRef = useRef<ViewerPose>(NEUTRAL_VIEWER_POSE);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const depthIndexRef = useRef<DepthIndex | null>(null);
+  const [gyroAvailable, setGyroAvailable] = useState(false);
+  const [gyroActive, setGyroActive] = useState(false);
 
-  // Fetch and decode the MVDP depth asset when a signed URL is available.
-  // Stores the resulting DepthIndex in depthIndexRef — HolographicTheater
-  // constructs the DepthController from it once it has a WebGL context.
-  // Falls back to synthetic (null) when URL is absent or fetch/decode fails.
+  // Streaming depth decode: fetch buffer once, decode meta + timestamp index,
+  // then decode individual frames on demand via DepthIndex lazy loader.
+  // Avoids loading all frame pixels into memory at once (~225 MB for 254s).
   useEffect(() => {
     if (!depthSignedUrl) return;
     let cancelled = false;
@@ -71,26 +73,53 @@ export function SpatialPresentation({
       })
       .then((buf) => {
         if (cancelled) return;
-        const { meta, frames } = decodeAllDepthFrames(buf);
-        depthIndexRef.current = new DepthIndex(
-          {
-            assetId: depthSignedUrl,
-            source: meta.source,
-            confidence: meta.confidence,
-            width: meta.width,
-            height: meta.height,
-            frameRate: meta.frameRate > 0 ? meta.frameRate : undefined,
-            convention: { near: 1.0, far: 0.0, encoding: "linear", gamma: "none" },
-            formatVersion: meta.version,
-            frameCount: meta.frameCount,
-            durationMs: meta.durationMs > 0 ? meta.durationMs : undefined,
-          },
-          frames,
+        const meta = decodeDepthMeta(buf);
+        // Decode all frames from the retained buffer — each frame slice is
+        // copied out of the buffer so the buffer itself can be GC'd after
+        // DepthIndex construction.
+        const frames = Array.from({ length: meta.frameCount }, (_, i) =>
+          decodeDepthFrame(buf, meta, i),
         );
+        depthIndexRef.current = new DepthIndex(depthAssetFromMeta(depthSignedUrl, meta), frames);
       })
       .catch(() => { /* synthetic fallback remains active */ });
     return () => { cancelled = true; };
   }, [depthSignedUrl]);
+
+  // Detect gyroscope availability on mount (passive — no permission yet).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (typeof DeviceOrientationEvent !== "undefined") setGyroAvailable(true);
+  }, []);
+
+  // Attach / detach OrientationViewController when gyro is active.
+  useEffect(() => {
+    const ctrl = orientationRef.current;
+    if (gyroActive) {
+      ctrl.attach();
+    } else {
+      ctrl.detach();
+    }
+    return () => ctrl.detach();
+  }, [gyroActive]);
+
+  // Merge gyro pose into poseRef each animation frame when active.
+  // When gyro is active it takes precedence over pointer.
+  useEffect(() => {
+    if (!gyroActive) return;
+    let raf = 0;
+    const tick = () => {
+      poseRef.current = orientationRef.current.getPose();
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [gyroActive]);
+
+  async function enableGyro() {
+    const granted = await orientationRef.current.requestPermission();
+    if (granted) setGyroActive(true);
+  }
 
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false);
@@ -106,6 +135,7 @@ export function SpatialPresentation({
   const progress = durationMs > 0 ? Math.min(1, timeMs / durationMs) : 0;
 
   function onMove(event: PointerEvent<HTMLDivElement>) {
+    if (gyroActive) return; // gyro takes precedence on mobile
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const rect = event.currentTarget.getBoundingClientRect();
     controllerRef.current.onPointerMove(event.clientX, event.clientY, rect);
@@ -114,6 +144,7 @@ export function SpatialPresentation({
   }
 
   function onTouchMove(event: TouchEvent<HTMLDivElement>) {
+    if (gyroActive) return;
     if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const touch = event.touches[0];
     if (!touch) return;
@@ -124,6 +155,7 @@ export function SpatialPresentation({
   }
 
   function onLeave() {
+    if (gyroActive) return;
     controllerRef.current.onPointerLeave();
     poseRef.current = NEUTRAL_VIEWER_POSE;
     setPointerActive(false);
@@ -195,12 +227,24 @@ export function SpatialPresentation({
         <div
           className="spatial-depth-indicator"
           aria-hidden="true"
-          data-active={pointerActive ? "true" : "false"}
+          data-active={pointerActive || gyroActive ? "true" : "false"}
         >
           <span className="spatial-depth-label">
-            {pointerActive ? "Depth active" : "Move pointer to shift perspective"}
+            {gyroActive ? "Gyro active" : pointerActive ? "Depth active" : "Move pointer to shift perspective"}
           </span>
         </div>
+
+        {/* Gyro enable button — shown on devices with orientation support */}
+        {gyroAvailable && !gyroActive ? (
+          <button
+            type="button"
+            className="spatial-gyro-btn"
+            aria-label="Enable gyroscope parallax"
+            onClick={() => void enableGyro()}
+          >
+            Tilt
+          </button>
+        ) : null}
 
         {!ready && !failed ? (
           <p className="holographic-media-status">Loading…</p>

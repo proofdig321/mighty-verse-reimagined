@@ -61,6 +61,7 @@ uniform float u_viewer_x;
 uniform float u_viewer_y;
 uniform float u_parallax;
 uniform float u_has_depth;
+uniform float u_focal_depth;
 uniform sampler2D u_depth;
 varying vec2 v_uv;
 void main() {
@@ -69,26 +70,19 @@ void main() {
 
   float wave;
   if (u_has_depth > 0.5) {
-    // Real depth path: sample depth texture.
-    // White = near (1.0), Black = far (0.0).
-    // Near content displaces more than far content.
     wave = clamp(texture2D(u_depth, a_uv).r, 0.0, 1.0);
   } else {
-    // Runtime synthetic fallback: sine-wave envelope.
-    // Content-blind — peaks at UV center regardless of what is in the frame.
-    // Explicitly NOT a depth map. Used only when no real depth is available.
     wave = sin(a_uv.x * 3.1415926) * sin(a_uv.y * 3.1415926);
   }
 
-  // CORRECTED sign: viewer right (u_viewer_x > 0) → content shifts right.
-  // += is the correct parallax direction (look-around effect).
-  pos.x += u_viewer_x * wave * u_parallax;
-  pos.y += u_viewer_y * wave * u_parallax * 0.6;
-  // Z-displacement: proportional to depth value only — independent of viewer
-  // lateral position. Coupling z to u_viewer_x produced a wobble artefact
-  // rather than true depth separation. Near content (wave ≈ 1) sits closer
-  // to the camera; far content (wave ≈ 0) recedes. Scale 0.3 keeps the
-  // displacement within the frustum at cameraZ = 6.35.
+  // Focal-plane parallax: content at u_focal_depth has zero displacement.
+  // Foreground (wave > focal) shifts in the look-around direction.
+  // Background (wave < focal) shifts in the opposite direction.
+  // This produces true bidirectional parallax rather than a uniform push.
+  float relativeDepth = wave - u_focal_depth;
+  pos.x += u_viewer_x * relativeDepth * u_parallax;
+  pos.y += u_viewer_y * relativeDepth * u_parallax * 0.6;
+  // Z-displacement: depth-proportional, viewer-independent.
   pos.z += wave * 0.3;
 
   gl_Position = u_mvp * vec4(pos, 1.0);
@@ -361,6 +355,12 @@ export function HolographicTheater({
     const uHasDepth = gl.getUniformLocation(warpProgram, "u_has_depth");
     const uDepth = gl.getUniformLocation(warpProgram, "u_depth");
     const uReducedMotion = gl.getUniformLocation(warpProgram, "u_reduced_motion");
+    const uFocalDepth = gl.getUniformLocation(warpProgram, "u_focal_depth");
+    // Focal depth: 0.5 = mid-depth is stationary. Content nearer than 0.5
+    // shifts in the look-around direction; content farther shifts opposite.
+    // With the synthetic sine-wave fallback the peak is ~1.0 so focal=0.5
+    // keeps the centre of the frame anchored and edges shift bidirectionally.
+    const FOCAL_DEPTH = 0.5;
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -564,6 +564,7 @@ export function HolographicTheater({
         const hasDepth = (depthControllerRef ?? resolvedDepthControllerRef)?.current?.bindDepthTexture(gl) ?? false;
         gl.uniform1f(uHasDepth, hasDepth ? 1.0 : 0.0);
         gl.uniform1f(uReducedMotion, reducedMotion ? 1.0 : 0.0);
+        gl.uniform1f(uFocalDepth, FOCAL_DEPTH);
         if (hasDepth) {
           surface.dataset.holographicDepth = (depthControllerRef ?? resolvedDepthControllerRef)?.current?.current?.source ?? "unknown";
         } else {
