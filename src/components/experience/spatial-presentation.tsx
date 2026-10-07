@@ -1,12 +1,14 @@
 "use client";
 
-import { useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { Maximize2 } from "lucide-react";
 import { HolographicTheater } from "@/components/experience/holographic-theater";
 import { HolographicLayerMedia, type HolographicMediaClock } from "@/components/experience/holographic-layer-media";
 import { MouseViewController } from "@/lib/experience/viewer-pose";
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
 import { formatDuration } from "@/lib/media/timing";
+import { DepthIndex } from "@/lib/experience/depth-asset";
+import { decodeAllDepthFrames } from "@/lib/experience/depth-format";
 
 /**
  * SpatialPresentation — genuine lightweight 2.5D spatial presentation.
@@ -39,17 +41,56 @@ export function SpatialPresentation({
   posterUrl,
   title,
   initialSeekMs,
+  depthSignedUrl,
 }: {
   clock: SpatialPresentationClock;
   posterUrl?: string | null;
   title: string;
   /** Optional: seek to this timestamp on first play (e.g. from ?scene= param). */
   initialSeekMs?: number | null;
+  /** Signed URL for the MVDP depth asset. Null = synthetic fallback. */
+  depthSignedUrl?: string | null;
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MouseViewController>(new MouseViewController());
   const poseRef = useRef<ViewerPose>(NEUTRAL_VIEWER_POSE);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const depthIndexRef = useRef<DepthIndex | null>(null);
+
+  // Fetch and decode the MVDP depth asset when a signed URL is available.
+  // Stores the resulting DepthIndex in depthIndexRef — HolographicTheater
+  // constructs the DepthController from it once it has a WebGL context.
+  // Falls back to synthetic (null) when URL is absent or fetch/decode fails.
+  useEffect(() => {
+    if (!depthSignedUrl) return;
+    let cancelled = false;
+    fetch(depthSignedUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error(`depth fetch ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => {
+        if (cancelled) return;
+        const { meta, frames } = decodeAllDepthFrames(buf);
+        depthIndexRef.current = new DepthIndex(
+          {
+            assetId: depthSignedUrl,
+            source: meta.source,
+            confidence: meta.confidence,
+            width: meta.width,
+            height: meta.height,
+            frameRate: meta.frameRate > 0 ? meta.frameRate : undefined,
+            convention: { near: 1.0, far: 0.0, encoding: "linear", gamma: "none" },
+            formatVersion: meta.version,
+            frameCount: meta.frameCount,
+            durationMs: meta.durationMs > 0 ? meta.durationMs : undefined,
+          },
+          frames,
+        );
+      })
+      .catch(() => { /* synthetic fallback remains active */ });
+    return () => { cancelled = true; };
+  }, [depthSignedUrl]);
 
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(false);
@@ -135,9 +176,7 @@ export function SpatialPresentation({
           timeMs={timeMs}
           poseRef={poseRef}
           videoRef={videoRef}
-          // depthControllerRef: not wired yet — synthetic fallback active.
-          // When VDA-Small depth is available, pass the DepthController ref here.
-          // No renderer changes required — HolographicTheater already supports it.
+          depthIndexRef={depthIndexRef}
         />
 
         {/* Depth indicator — communicates that parallax is active */}

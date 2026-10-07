@@ -23,6 +23,12 @@ export type SuiteSourcePreview = {
   mural_projection_id: string;
   mural_canonical_state_id: string | null;
   windows: SuiteSourceWindow[];
+  /**
+   * Signed URL for the MVDP depth asset associated with this source, or null
+   * when no completed depth generation exists. Valid for 7 days.
+   * Used by SpatialPresentation and HolographicStage to wire DepthController.
+   */
+  depth_signed_url: string | null;
 };
 
 /**
@@ -88,6 +94,31 @@ export async function loadSuiteSourcePreview(
       end_ms: scene.end_ms as number,
     }));
 
+  // Resolve the most recent completed depth asset for this source.
+  // Queries media_asset_depth → media_asset.storage_ref → signed URL.
+  // Returns null when no depth exists — both components fall back to synthetic.
+  let depthSignedUrl: string | null = null;
+  const { data: depthAssoc } = await svc
+    .from("media_asset_depth")
+    .select("depth_asset_id")
+    .eq("source_asset_id", assetId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (depthAssoc?.depth_asset_id) {
+    const { data: depthAsset } = await svc
+      .from("media_asset")
+      .select("storage_ref")
+      .eq("asset_id", depthAssoc.depth_asset_id)
+      .maybeSingle();
+    if (depthAsset?.storage_ref) {
+      const { data: signed } = await svc.storage
+        .from("creative-artifacts")
+        .createSignedUrl(depthAsset.storage_ref, 60 * 60 * 24 * 7);
+      depthSignedUrl = signed?.signedUrl ?? null;
+    }
+  }
+
   return {
     asset_id: asset.asset_id,
     title: intake?.title ?? mural.title,
@@ -100,5 +131,6 @@ export async function loadSuiteSourcePreview(
     mural_projection_id: muralProjection?.projection_id ?? mural.master_id,
     mural_canonical_state_id: muralMaster?.current_state_id ?? null,
     windows,
+    depth_signed_url: depthSignedUrl,
   };
 }

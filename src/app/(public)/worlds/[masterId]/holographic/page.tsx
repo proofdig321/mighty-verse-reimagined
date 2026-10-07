@@ -117,7 +117,7 @@ export default async function HolographicWorldPage({
       </div>
 
       {program.clock || program.layers.length > 0 ? (
-        <HolographicStage program={program} mode="public" links={links} />
+        <HolographicStage program={program} mode="public" links={links} depthSignedUrl={source?.depth_signed_url ?? null} />
       ) : (
         <div className="mx-auto max-w-7xl px-6 py-10">
           <Alert>

@@ -24,6 +24,8 @@ import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-t
 import { HolographicLayerMedia } from "./holographic-layer-media";
 import { HolographicTheater } from "./holographic-theater";
 import { CreativeMomentCard } from "./creative-moment-card";
+import { DepthIndex } from "@/lib/experience/depth-asset";
+import { decodeAllDepthFrames } from "@/lib/experience/depth-format";
 
 function LayerCard({
   layer,
@@ -100,6 +102,7 @@ export function HolographicStage({
   showComposition = true,
   links,
   onSelectScene,
+  depthSignedUrl,
 }: {
   program: HolographicProgram;
   compact?: boolean;
@@ -108,15 +111,47 @@ export function HolographicStage({
   showComposition?: boolean;
   links?: ExperienceSurfaceLinks | null;
   onSelectScene?: (sceneMasterId: string, startMs: number) => void;
+  /** Signed URL for the MVDP depth asset. Null = synthetic fallback. */
+  depthSignedUrl?: string | null;
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
-  // Input controller: converts pointer events to ViewerPose.
-  // Stored as a ref so React does not re-render on every pointer move.
   const controllerRef = useRef<MouseViewController>(new MouseViewController());
-  // poseRef: the current ViewerPose read by the renderer each frame.
   const poseRef = useRef<ViewerPose>(NEUTRAL_VIEWER_POSE);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioRef = useRef<HolographicAudioGraph | null>(null);
+  const depthIndexRef = useRef<DepthIndex | null>(null);
+
+  // Fetch and decode the MVDP depth asset when a signed URL is available.
+  useEffect(() => {
+    if (!depthSignedUrl) return;
+    let cancelled = false;
+    fetch(depthSignedUrl)
+      .then((res) => {
+        if (!res.ok) throw new Error(`depth fetch ${res.status}`);
+        return res.arrayBuffer();
+      })
+      .then((buf) => {
+        if (cancelled) return;
+        const { meta, frames } = decodeAllDepthFrames(buf);
+        depthIndexRef.current = new DepthIndex(
+          {
+            assetId: depthSignedUrl,
+            source: meta.source,
+            confidence: meta.confidence,
+            width: meta.width,
+            height: meta.height,
+            frameRate: meta.frameRate > 0 ? meta.frameRate : undefined,
+            convention: { near: 1.0, far: 0.0, encoding: "linear", gamma: "none" },
+            formatVersion: meta.version,
+            frameCount: meta.frameCount,
+            durationMs: meta.durationMs > 0 ? meta.durationMs : undefined,
+          },
+          frames,
+        );
+      })
+      .catch(() => { /* synthetic fallback remains active */ });
+    return () => { cancelled = true; };
+  }, [depthSignedUrl]);
   const [playing, setPlaying] = useState(false);
   const [ready, setReady] = useState(!program.clock);
   const [failed, setFailed] = useState(false);
@@ -349,6 +384,7 @@ export function HolographicStage({
                 poseRef={poseRef}
                 videoRef={videoRef}
                 audioRef={audioRef}
+                depthIndexRef={depthIndexRef}
               />
             ) : null}
 

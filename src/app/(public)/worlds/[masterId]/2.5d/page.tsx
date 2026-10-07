@@ -139,6 +139,7 @@ export default async function SpatialWorldPage({
         posterUrl={posterUrl}
         title={title}
         initialSeekMs={initialSeekMs}
+        depthSignedUrl={source.depth_signed_url}
       />
 
       <div className="mx-auto max-w-7xl px-6 py-8">

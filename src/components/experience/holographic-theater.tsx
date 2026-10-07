@@ -5,6 +5,8 @@ import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import type { HolographicAudioGraph } from "@/lib/experience/holographic-spatial-audio";
 import type { ViewerPose } from "@/lib/experience/spatial-types";
 import type { DepthController } from "@/lib/experience/depth-runtime";
+import { DepthController as DepthControllerClass } from "@/lib/experience/depth-runtime";
+import type { DepthIndex } from "@/lib/experience/depth-asset";
 import {
   HOLOGRAPHIC_CINEMA_FILL,
   HOLOGRAPHIC_MESH_SEGMENTS,
@@ -278,6 +280,7 @@ export function HolographicTheater({
   videoRef,
   audioRef,
   depthControllerRef,
+  depthIndexRef,
 }: {
   layers: HolographicLayer[];
   timeMs: number;
@@ -292,6 +295,13 @@ export function HolographicTheater({
    * Pass null/undefined to use the runtime_synthetic fallback.
    */
   depthControllerRef?: { current: DepthController | null };
+  /**
+   * Optional DepthIndex ref. When present and depthControllerRef is absent,
+   * the theater constructs a DepthController from the index once WebGL is
+   * ready. The theater owns the controller lifecycle in this case.
+   * Ignored when depthControllerRef is provided.
+   */
+  depthIndexRef?: { current: DepthIndex | null };
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const signature = layers.map((layer) => `${layer.layer_id}:${layer.still_url ?? ""}`).join("|");
@@ -345,6 +355,18 @@ export function HolographicTheater({
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     gl.disable(gl.DEPTH_TEST);
 
+    // If a DepthIndex is available via depthIndexRef and no external
+    // depthControllerRef was provided, construct the controller here.
+    // The theater owns this controller's lifecycle — dispose in cleanup.
+    let ownedDepthController: DepthControllerClass | null = null;
+    const resolvedDepthControllerRef: { current: DepthController | null } | undefined =
+      depthControllerRef ??
+      (depthIndexRef ? { current: null } : undefined);
+    if (!depthControllerRef && depthIndexRef) {
+      ownedDepthController = new DepthControllerClass(gl, depthIndexRef.current);
+      if (resolvedDepthControllerRef) resolvedDepthControllerRef.current = ownedDepthController;
+    }
+
     let cancelled = false;
     // Smoothed viewer position — lerped toward the current pose each frame.
     const smoothed = { x: 0, y: 0 };
@@ -367,6 +389,7 @@ export function HolographicTheater({
       const onFrame = (_now: DOMHighResTimeStamp, meta: { mediaTime: number }) => {
         if (cancelled) return;
         depthControllerRef?.current?.onVideoFrame(meta.mediaTime);
+        if (!depthControllerRef) resolvedDepthControllerRef?.current?.onVideoFrame(meta.mediaTime);
         rVfcHandle = video.requestVideoFrameCallback(onFrame);
       };
       rVfcHandle = video.requestVideoFrameCallback(onFrame);
@@ -386,6 +409,10 @@ export function HolographicTheater({
 
     function draw() {
       if (cancelled) return;
+      // If the depth index arrived asynchronously after construction, update the controller.
+      if (ownedDepthController && depthIndexRef?.current && !ownedDepthController.hasDepth) {
+        ownedDepthController.setIndex(depthIndexRef.current);
+      }
       resize();
       gl.clearColor(0, 0, 0, 0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -434,6 +461,7 @@ export function HolographicTheater({
       // When rVFC is active, this is a no-op (controller skips duplicate timestamps).
       if (video && typeof video.requestVideoFrameCallback !== "function") {
         depthControllerRef?.current?.onVideoFrame(video.currentTime);
+        if (!depthControllerRef) resolvedDepthControllerRef?.current?.onVideoFrame(video.currentTime);
       }
 
       if (!video) {
@@ -497,10 +525,10 @@ export function HolographicTheater({
         // DepthController.bindDepthTexture() binds to texture unit 1 and
         // returns true when a valid depth frame is loaded.
         // When false, u_has_depth = 0.0 → shader uses sine-wave fallback.
-        const hasDepth = depthControllerRef?.current?.bindDepthTexture(gl) ?? false;
+        const hasDepth = (depthControllerRef ?? resolvedDepthControllerRef)?.current?.bindDepthTexture(gl) ?? false;
         gl.uniform1f(uHasDepth, hasDepth ? 1.0 : 0.0);
         if (hasDepth) {
-          surface.dataset.holographicDepth = depthControllerRef?.current?.current?.source ?? "unknown";
+          surface.dataset.holographicDepth = (depthControllerRef ?? resolvedDepthControllerRef)?.current?.current?.source ?? "unknown";
         } else {
           surface.dataset.holographicDepth = "runtime_synthetic";
         }
@@ -528,8 +556,10 @@ export function HolographicTheater({
         videoRef.current.cancelVideoFrameCallback(rVfcHandle);
       }
       gl.deleteTexture(videoTexture);
-      // Note: DepthController.dispose() is called by the parent (holographic-stage)
-      // which owns the controller lifecycle. The theater does not own the controller.
+      // Dispose the owned controller (constructed from depthIndexRef).
+      // External depthControllerRef is disposed by its owner (e.g. HolographicStage).
+      ownedDepthController?.dispose();
+      ownedDepthController = null;
     };
   }, [signature, poseRef, videoRef, audioRef]);
 
