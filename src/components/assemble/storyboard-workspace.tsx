@@ -376,6 +376,7 @@ export function StoryboardWorkspace({
             }}
             onCreatePanel={() => void mutate("Create panel", "create-panel", {})}
             onReorder={(orderedIds) => void mutate("Reorder", "reorder-panels", { panel_ids: orderedIds })}
+            onSourceOpen={workId ? () => setSourceSheetOpen(true) : undefined}
           />
         }
         main={

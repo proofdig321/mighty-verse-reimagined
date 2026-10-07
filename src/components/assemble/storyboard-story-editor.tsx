@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ASSIST_ACTIONS } from "@/lib/storyboard/assist";
+import { cn } from "@/lib/utils";
 import type { StoryboardActionState } from "./use-storyboard-authoring-operations";
 
 export function StoryboardStoryEditor({
@@ -37,6 +38,41 @@ export function StoryboardStoryEditor({
   onDismissProposal: () => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [activeAssistId, setActiveAssistId] = useState<string | null>(null);
+
+  const isAssisting = assistState.status === "generating";
+
+  function handleAssist(actionId: string) {
+    setActiveAssistId(actionId);
+    onAssist(actionId);
+  }
+
+  // Clear active pill when assist finishes
+  if (!isAssisting && activeAssistId !== null) {
+    setActiveAssistId(null);
+  }
+
+  const assistPills = ASSIST_ACTIONS.slice(0, 3).map((action) => {
+    const isActive = activeAssistId === action.id && isAssisting;
+    return (
+      <button
+        key={action.id}
+        type="button"
+        onClick={() => handleAssist(action.id)}
+        disabled={isAssisting}
+        aria-pressed={isActive}
+        className={cn(
+          "inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-xs font-medium transition-all",
+          isActive
+            ? "border-primary/60 bg-primary/10 text-primary animate-pulse"
+            : "border-border/60 bg-transparent text-muted-foreground hover:text-foreground hover:border-foreground/30",
+          isAssisting && !isActive && "opacity-40 cursor-not-allowed",
+        )}
+      >
+        {isActive ? "…" : null}{action.label}
+      </button>
+    );
+  });
 
   return (
     <section className="storyboard-work-card space-y-3 border-b border-border/60 pb-4" aria-labelledby="storyboard-story-heading">
@@ -45,11 +81,14 @@ export function StoryboardStoryEditor({
           <h2 id="storyboard-story-heading" className="text-sm font-semibold">Creative Direction</h2>
           <p className="text-xs text-muted-foreground">Describe the story, scene intent, and emotional movement for this work.</p>
         </div>
-        {hasPanels ? (
-          <Button type="button" size="sm" variant="ghost" onClick={() => setExpanded((open) => !open)}>
-            {expanded ? "Collapse" : "Edit story"}
-          </Button>
-        ) : null}
+        <div className="flex items-center gap-1.5 shrink-0">
+          {hasPanels && !expanded ? assistPills : null}
+          {hasPanels ? (
+            <Button type="button" size="sm" variant="ghost" onClick={() => setExpanded((open) => !open)}>
+              {expanded ? "Collapse" : "Edit story"}
+            </Button>
+          ) : null}
+        </div>
       </div>
 
       {expanded ? (
@@ -75,18 +114,7 @@ export function StoryboardStoryEditor({
             <Button type="button" size="sm" variant="outline" onClick={onSave}>
               Save story
             </Button>
-            {ASSIST_ACTIONS.slice(0, 3).map((action) => (
-              <Button
-                key={action.id}
-                type="button"
-                size="sm"
-                variant="ghost"
-                onClick={() => onAssist(action.id)}
-                disabled={assistState.status === "generating"}
-              >
-                {action.label}
-              </Button>
-            ))}
+            {assistPills}
           </div>
 
           {assistProposal !== null ? (

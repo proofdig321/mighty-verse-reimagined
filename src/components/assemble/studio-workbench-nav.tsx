@@ -36,10 +36,12 @@ export function StudioWorkbenchNav({
   workId,
   active,
   mobileView = false,
+  onSourceOpen,
 }: {
   workId: string | null;
   active: WorkbenchPanel;
   mobileView?: boolean;
+  onSourceOpen?: () => void;
 }) {
 
   const editorHref = workId ? `/studio/work/${workId}` : null;
@@ -71,7 +73,7 @@ export function StudioWorkbenchNav({
           </>
         );
 
-        return href ? (
+        return href && !(id === "source" && onSourceOpen) ? (
           <Link
             key={id}
             href={href}
@@ -80,6 +82,10 @@ export function StudioWorkbenchNav({
           >
             {content}
           </Link>
+        ) : id === "source" && onSourceOpen ? (
+          <button key={id} type="button" onClick={onSourceOpen} className={className}>
+            {content}
+          </button>
         ) : (
           <span key={id} className={className} aria-disabled="true" title="Save your storyboard first to unlock this panel">
             {content}

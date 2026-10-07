@@ -29,6 +29,7 @@ export function StudioContextSidebar({
   onSelect,
   onCreatePanel,
   onReorder,
+  onSourceOpen,
 }: {
   universeTitle?: string | null;
   workId: string | null;
@@ -45,13 +46,14 @@ export function StudioContextSidebar({
   onSelect: (id: string) => void;
   onCreatePanel: () => void;
   onReorder?: (orderedIds: string[]) => void;
+  onSourceOpen?: () => void;
 }) {
   const [expanded, setExpanded] = useState(false);
   const showScenes = persistedPanels.length === 0 && sentinelPanels.length === 0;
 
   return (
     <aside className={cn("studio-context-sidebar flex flex-col gap-3", expanded && "studio-context-sidebar-expanded")}>
-      {workId ? <StudioWorkbenchNav workId={workId} active={activePanel} mobileView={mobileView} /> : null}
+      {workId ? <StudioWorkbenchNav workId={workId} active={activePanel} mobileView={mobileView} onSourceOpen={onSourceOpen} /> : null}
 
       <button
         type="button"
