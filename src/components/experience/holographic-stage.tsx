@@ -103,6 +103,7 @@ export function HolographicStage({
   links,
   onSelectScene,
   depthSignedUrl,
+  initialSeekMs,
 }: {
   program: HolographicProgram;
   compact?: boolean;
@@ -113,6 +114,8 @@ export function HolographicStage({
   onSelectScene?: (sceneMasterId: string, startMs: number) => void;
   /** Signed URL for the MVDP depth asset. Null = synthetic fallback. */
   depthSignedUrl?: string | null;
+  /** Optional: seek to this timestamp on first play (e.g. from ?scene= param). */
+  initialSeekMs?: number | null;
 }) {
   const cinemaRef = useRef<HTMLDivElement>(null);
   const controllerRef = useRef<MouseViewController>(new MouseViewController());
@@ -157,7 +160,7 @@ export function HolographicStage({
   const [failed, setFailed] = useState(false);
   const [timeMs, setTimeMs] = useState(0);
   const [seekNonce, setSeekNonce] = useState(0);
-  const [seekToMs, setSeekToMs] = useState<number | null>(null);
+  const [seekToMs, setSeekToMs] = useState<number | null>(initialSeekMs ?? null);
   const [muted, setMuted] = useState(true);
   const [volume, setVolume] = useState(1);
   const durationMs = program.duration_ms || 1;

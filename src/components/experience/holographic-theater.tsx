@@ -84,7 +84,12 @@ void main() {
   // += is the correct parallax direction (look-around effect).
   pos.x += u_viewer_x * wave * u_parallax;
   pos.y += u_viewer_y * wave * u_parallax * 0.6;
-  pos.z += wave * u_viewer_x * 0.4;
+  // Z-displacement: proportional to depth value only — independent of viewer
+  // lateral position. Coupling z to u_viewer_x produced a wobble artefact
+  // rather than true depth separation. Near content (wave ≈ 1) sits closer
+  // to the camera; far content (wave ≈ 0) recedes. Scale 0.3 keeps the
+  // displacement within the frustum at cameraZ = 6.35.
+  pos.z += wave * 0.3;
 
   gl_Position = u_mvp * vec4(pos, 1.0);
 }
@@ -106,14 +111,19 @@ uniform sampler2D u_tex;
 uniform float u_viewer_x;
 uniform float u_viewer_y;
 uniform float u_time;
+uniform float u_reduced_motion;
 void main() {
   vec2 viewerOffset = vec2(u_viewer_x, u_viewer_y);
-  vec2 rOffset = viewerOffset * 0.025;
-  vec2 bOffset = -viewerOffset * 0.025;
+  // Chromatic aberration: 0.008 UV units — safe for continuous motion / VR.
+  // 0.025 caused eye strain at moderate viewer velocities.
+  vec2 rOffset = viewerOffset * 0.008;
+  vec2 bOffset = -viewerOffset * 0.008;
   float r = texture2D(u_tex, clamp(v_uv + rOffset, 0.0, 1.0)).r;
   float g = texture2D(u_tex, v_uv).g;
   float b = texture2D(u_tex, clamp(v_uv + bOffset, 0.0, 1.0)).b;
-  float scanline = sin(v_uv.y * 600.0 + u_time * 8.0) * 0.06;
+  // Scanline: gated by u_reduced_motion. 8 Hz flicker is in the photosensitive
+  // seizure range (3–50 Hz) — must be suppressed when reduced motion is active.
+  float scanline = (1.0 - u_reduced_motion) * sin(v_uv.y * 600.0 + u_time * 8.0) * 0.06;
   float edgeGlow = smoothstep(0.0, 0.5, abs(v_uv.x - 0.5)) * 0.05;
   vec3 color = vec3(r, g, b) + scanline + vec3(edgeGlow, 0.0, edgeGlow * 2.0);
   gl_FragColor = vec4(color, 1.0);
@@ -350,6 +360,7 @@ export function HolographicTheater({
     const videoTime = gl.getUniformLocation(warpProgram, "u_time");
     const uHasDepth = gl.getUniformLocation(warpProgram, "u_has_depth");
     const uDepth = gl.getUniformLocation(warpProgram, "u_depth");
+    const uReducedMotion = gl.getUniformLocation(warpProgram, "u_reduced_motion");
 
     gl.enable(gl.BLEND);
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
@@ -366,6 +377,17 @@ export function HolographicTheater({
       ownedDepthController = new DepthControllerClass(gl, depthIndexRef.current);
       if (resolvedDepthControllerRef) resolvedDepthControllerRef.current = ownedDepthController;
     }
+
+    // Track the last DepthIndex reference seen so setIndex() is called exactly
+    // once per new index arrival — not every draw frame.
+    let lastDepthIndex = depthIndexRef?.current ?? null;
+
+    // Cache prefers-reduced-motion at mount. Re-read each frame would be
+    // expensive; a MQL listener would require cleanup. Mount-time read is
+    // sufficient — the effect re-runs if the component remounts.
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     let cancelled = false;
     // Smoothed viewer position — lerped toward the current pose each frame.
@@ -409,9 +431,23 @@ export function HolographicTheater({
 
     function draw() {
       if (cancelled) return;
-      // If the depth index arrived asynchronously after construction, update the controller.
-      if (ownedDepthController && depthIndexRef?.current && !ownedDepthController.hasDepth) {
-        ownedDepthController.setIndex(depthIndexRef.current);
+      // Pause the render loop entirely when reduced motion is active.
+      // Re-schedule so the loop can resume if the preference changes
+      // (the effect would need to remount for that — acceptable).
+      if (reducedMotion) {
+        frame = window.requestAnimationFrame(draw);
+        return;
+      }
+      // If the depth index arrived asynchronously after construction, call
+      // setIndex() exactly once — gated on reference identity, not hasDepth.
+      // Gating on hasDepth caused setIndex() to fire every frame until the
+      // first onVideoFrame() upload, clearing _lastTimeMs each time.
+      if (ownedDepthController && depthIndexRef) {
+        const currentIndex = depthIndexRef.current;
+        if (currentIndex !== lastDepthIndex) {
+          ownedDepthController.setIndex(currentIndex);
+          lastDepthIndex = currentIndex;
+        }
       }
       resize();
       gl.clearColor(0, 0, 0, 0);
@@ -527,6 +563,7 @@ export function HolographicTheater({
         // When false, u_has_depth = 0.0 → shader uses sine-wave fallback.
         const hasDepth = (depthControllerRef ?? resolvedDepthControllerRef)?.current?.bindDepthTexture(gl) ?? false;
         gl.uniform1f(uHasDepth, hasDepth ? 1.0 : 0.0);
+        gl.uniform1f(uReducedMotion, reducedMotion ? 1.0 : 0.0);
         if (hasDepth) {
           surface.dataset.holographicDepth = (depthControllerRef ?? resolvedDepthControllerRef)?.current?.current?.source ?? "unknown";
         } else {

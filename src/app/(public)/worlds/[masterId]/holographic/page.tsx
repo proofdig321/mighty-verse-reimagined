@@ -29,10 +29,13 @@ export async function generateMetadata({
 
 export default async function HolographicWorldPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ masterId: string }>;
+  searchParams: Promise<{ scene?: string }>;
 }) {
   const { masterId } = await params;
+  const { scene: sceneId } = await searchParams;
   const data = await loadUniverseAssembly(masterId);
   if (!data) notFound();
   const assembly = data!;
@@ -49,6 +52,13 @@ export default async function HolographicWorldPage({
     source,
     moments: assembly.creative_moments,
   });
+
+  // If a scene param is present, seek to that scene's start_ms on load.
+  let initialSeekMs: number | null = null;
+  if (sceneId && source) {
+    const window = source.windows.find((w) => w.scene_master_id === sceneId);
+    if (window) initialSeekMs = window.start_ms;
+  }
   const mural = assembly.murals[0] ?? null;
   const scenes = mural?.scenes ?? [];
   const links: ExperienceSurfaceLinks = {
@@ -117,7 +127,7 @@ export default async function HolographicWorldPage({
       </div>
 
       {program.clock || program.layers.length > 0 ? (
-        <HolographicStage program={program} mode="public" links={links} depthSignedUrl={source?.depth_signed_url ?? null} />
+        <HolographicStage program={program} mode="public" links={links} depthSignedUrl={source?.depth_signed_url ?? null} initialSeekMs={initialSeekMs} />
       ) : (
         <div className="mx-auto max-w-7xl px-6 py-10">
           <Alert>

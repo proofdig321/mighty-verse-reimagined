@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, type PointerEvent } from "react";
+import { useEffect, useRef, useState, type PointerEvent, type TouchEvent } from "react";
 import { Maximize2 } from "lucide-react";
 import { HolographicTheater } from "@/components/experience/holographic-theater";
 import { HolographicLayerMedia, type HolographicMediaClock } from "@/components/experience/holographic-layer-media";
@@ -113,6 +113,16 @@ export function SpatialPresentation({
     setPointerActive(true);
   }
 
+  function onTouchMove(event: TouchEvent<HTMLDivElement>) {
+    if (typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    controllerRef.current.onPointerMove(touch.clientX, touch.clientY, rect);
+    poseRef.current = controllerRef.current.getPose();
+    setPointerActive(true);
+  }
+
   function onLeave() {
     controllerRef.current.onPointerLeave();
     poseRef.current = NEUTRAL_VIEWER_POSE;
@@ -148,6 +158,8 @@ export function SpatialPresentation({
         ref={cinemaRef}
         onPointerMove={onMove}
         onPointerLeave={onLeave}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onLeave}
       >
         {/* Video source — HolographicLayerMedia owns the <video> element.
              .holographic-layer-mural is required so the CSS hide rule fires
