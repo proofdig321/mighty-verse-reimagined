@@ -358,7 +358,7 @@ export function StoryboardWorkspace({
         left={
           <StudioContextSidebar
             universeTitle={universeTitle}
-            workId={workId}
+            workId={work?.work_id ?? workId}
             activePanel={activePanel}
             mobileView={mobileView}
             workTitle={workTitle}
@@ -376,7 +376,7 @@ export function StoryboardWorkspace({
             }}
             onCreatePanel={() => void mutate("Create panel", "create-panel", {})}
             onReorder={(orderedIds) => void mutate("Reorder", "reorder-panels", { panel_ids: orderedIds })}
-            onSourceOpen={workId ? () => setSourceSheetOpen(true) : undefined}
+            onSourceOpen={work?.work_id ?? workId ? () => setSourceSheetOpen(true) : undefined}
           />
         }
         main={
@@ -384,7 +384,7 @@ export function StoryboardWorkspace({
             work={work}
             intelligence={intelligence}
             previewHref={previewHref}
-            sourceHref={workId ? `/studio/work/${workId}/source` : "/studio/work"}
+            sourceHref={work?.work_id ?? workId ? `/studio/work/${work?.work_id ?? workId}/source` : "/studio/work"}
             universeTitle={universeTitle}
             universeId={universeId}
             scenes={scenes}
@@ -440,7 +440,7 @@ export function StoryboardWorkspace({
             onRetryJob={(jobId) => void retryJob(jobId)}
             onCancelJob={(jobId) => void cancelJob(jobId)}
             onSaveArtifactToPanel={(panelId, patch) => void saveArtifactToPanel(panelId, patch)}
-            onSourceOpen={workId ? () => setSourceSheetOpen(true) : undefined}
+            onSourceOpen={work?.work_id ?? workId ? () => setSourceSheetOpen(true) : undefined}
           />
         }
       />
@@ -484,7 +484,7 @@ export function StoryboardWorkspace({
       </div>
 
       {/* Source sheet — Gap 4: inline source workflow instead of full navigation */}
-      {workId && (
+      {(work?.work_id ?? workId) && (
         <Sheet open={sourceSheetOpen} onOpenChange={setSourceSheetOpen}>
           <SheetContent side="right" className="w-full sm:max-w-xl overflow-y-auto p-0">
             <SheetHeader className="px-5 pt-5 pb-3 border-b border-border/40">
@@ -492,11 +492,11 @@ export function StoryboardWorkspace({
             </SheetHeader>
             <div className="px-5 py-4">
               <WorkSourceWorkflow
-                workId={workId}
+                workId={(work?.work_id ?? workId)!}
                 workTitle={workTitle}
                 sources={work?.sources ?? []}
                 frames={work?.frames ?? []}
-                returnHref={`/studio/work/${workId}`}
+                returnHref={`/studio/work/${work?.work_id ?? workId}`}
               />
             </div>
           </SheetContent>
