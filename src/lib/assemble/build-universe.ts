@@ -86,6 +86,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
     const sceneMedia = scenes.find((scene) => scene.storage_ref) ?? null;
     const provider = muralMedia.provider ?? sceneMedia?.provider ?? null;
     const storage_ref = muralMedia.storage_ref ?? sceneMedia?.storage_ref ?? null;
+    const muralArtwork = rows.presentations.find((row) => row.master_id === mural.master_id)?.artwork_storage_ref ?? null;
     return {
       master_id: mural.master_id,
       title: titleFor(mural.master_id),
@@ -94,6 +95,7 @@ export function buildUniverseAssembly(rows: UniverseAssemblyRows): UniverseAssem
       asset_id: muralBinding?.asset_id ?? sceneMedia?.asset_id ?? null,
       provider,
       storage_ref,
+      artwork_storage_ref: muralArtwork && !muralArtwork.startsWith("seed:placeholder:") ? muralArtwork : null,
     };
   });
 

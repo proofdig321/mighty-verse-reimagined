@@ -36,6 +36,7 @@ export type UniverseAssemblyMural = {
   asset_id: string | null;
   provider: string | null;
   storage_ref: string | null;
+  artwork_storage_ref: string | null;
 };
 
 export type UniverseAssemblyMoment = {

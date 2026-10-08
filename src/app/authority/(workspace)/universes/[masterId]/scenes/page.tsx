@@ -25,6 +25,8 @@ export default async function UniverseScenesPage({
         canAuthorTiming
         canAuthorOrder
         fromCurate={fromCurate}
+        muxPlaybackId={workspace.source?.provider === "mux" ? workspace.source.playback_id : null}
+        durationMs={workspace.source?.duration_ms}
       />
     </StudioWorkspaceShell>
   );

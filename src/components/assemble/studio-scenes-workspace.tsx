@@ -20,6 +20,8 @@ export function StudioScenesWorkspace({
   canAuthorOrder = false,
   focusSceneId,
   fromCurate = false,
+  muxPlaybackId,
+  durationMs,
 }: {
   data: UniverseAssembly;
   canAuthorPresence?: boolean;
@@ -28,6 +30,8 @@ export function StudioScenesWorkspace({
   canAuthorOrder?: boolean;
   focusSceneId?: string;
   fromCurate?: boolean;
+  muxPlaybackId?: string | null;
+  durationMs?: number | null;
 }) {
   const scenes = suiteScenes(data);
   const sharedIds = [...sharedCreativeMomentIds(scenes)];
@@ -90,6 +94,8 @@ export function StudioScenesWorkspace({
                       openLabel="Open record"
                       workspaceHref={focusSceneId ? null : creativeSuiteScenesHref(data.master_id, from, scene.master_id)}
                       compact={compact}
+                      muxPlaybackId={muxPlaybackId}
+                      durationMs={durationMs}
                     />
                   </li>
                 );

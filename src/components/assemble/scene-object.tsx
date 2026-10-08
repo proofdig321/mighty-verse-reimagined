@@ -35,6 +35,8 @@ export function SceneObject({
   openLabel,
   workspaceHref,
   compact = false,
+  muxPlaybackId,
+  durationMs,
 }: {
   scene: SuiteScene;
   index: number;
@@ -50,6 +52,8 @@ export function SceneObject({
   openLabel: string;
   workspaceHref?: string | null;
   compact?: boolean;
+  muxPlaybackId?: string | null;
+  durationMs?: number | null;
 }) {
   const router = useRouter();
   const [panel, setPanel] = useState<ScenePanel>(null);
@@ -153,6 +157,8 @@ export function SceneObject({
           storageRef={scene.storage_ref}
           startMs={scene.start_ms}
           artworkStorageRef={scene.artwork_storage_ref}
+          muxPlaybackId={muxPlaybackId}
+          durationMs={durationMs}
           canAuthor={canAuthorIdentity}
           startOpen
           hideTrigger
@@ -318,6 +324,8 @@ export function SceneObject({
           storageRef={scene.storage_ref}
           startMs={scene.start_ms}
           artworkStorageRef={scene.artwork_storage_ref}
+          muxPlaybackId={muxPlaybackId}
+          durationMs={durationMs}
           canAuthor={canAuthorIdentity}
         />
         <SceneTiming

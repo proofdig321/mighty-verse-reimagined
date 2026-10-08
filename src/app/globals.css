@@ -4365,3 +4365,73 @@ html[data-theme="paper"] {
     }
   }
 }
+
+
+/* ── ThumbnailPicker ─────────────────────────────────────────────────────── */
+.thumbnail-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.thumbnail-picker-tabs {
+  display: flex;
+  gap: 0.25rem;
+  border-bottom: 1px solid hsl(var(--border));
+  padding-bottom: 0.5rem;
+}
+
+.thumbnail-picker-tab {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  color: hsl(var(--muted-foreground));
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.thumbnail-picker-tab:hover {
+  background: hsl(var(--muted));
+  color: hsl(var(--foreground));
+}
+
+.thumbnail-picker-tab.is-active {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  border-color: hsl(var(--primary));
+}
+
+.thumbnail-picker-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.thumbnail-picker-preview {
+  width: 100%;
+  max-height: 160px;
+  object-fit: cover;
+  border-radius: 0.375rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+}
+
+.thumbnail-picker-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── PanelThumbnailPicker ────────────────────────────────────────────────── */
+.panel-thumbnail-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  background: hsl(var(--card));
+}

@@ -10,6 +10,23 @@ import type { StudioWorkspace } from "@/lib/assemble/load-studio-workspace";
 import { mediaInspectHref, creativeSuiteWorkspaceHref } from "@/lib/assemble/studio";
 import { Badge } from "@/components/ui/badge";
 
+type StatItem = { label: string; value: string; href: string };
+
+function StudioStatGrid({ stats }: { stats: StatItem[] }) {
+  return (
+    <dl className="studio-command-grid">
+      {stats.map((stat) => (
+        <div key={stat.label} className="studio-command-card">
+          <Link href={stat.href}>
+            <dt className="suite-kicker">{stat.label}</dt>
+            <dd className="text-lg font-medium text-foreground">{stat.value}</dd>
+          </Link>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 export function StudioOverview({
   workspace,
   muralEmptyAction,
@@ -26,7 +43,7 @@ export function StudioOverview({
   const from = fromCurate ? "curate" : null;
   const mural = data.murals[0] ?? null;
 
-  const stats = [
+  const stats: StatItem[] = [
     {
       label: "Source",
       value: durationLabel ?? (source ? "Bound" : "None"),
@@ -61,16 +78,7 @@ export function StudioOverview({
 
   return (
     <div className="suite-stack">
-      <dl className="studio-command-grid">
-        {stats.map((stat) => (
-          <div key={stat.label} className="studio-command-card">
-            <Link href={stat.href}>
-              <dt className="suite-kicker">{stat.label}</dt>
-              <dd className="text-lg font-medium text-foreground">{stat.value}</dd>
-            </Link>
-          </div>
-        ))}
-      </dl>
+      <StudioStatGrid stats={stats} />
 
       {scenes.length > 0 ? (
         <section className="suite-section" aria-labelledby="studio-scene-deck">
@@ -129,7 +137,12 @@ export function StudioOverview({
                 </MuralEmpty>
               )
             ) : mural ? (
-              <MuralPresence mural={mural} openHref={`/authority/${mural.master_id}`} openLabel="Open record" />
+              <MuralPresence
+                mural={mural}
+                openHref={`/authority/${mural.master_id}`}
+                openLabel="Open record"
+                canAuthor
+              />
             ) : null}
           </section>
 
