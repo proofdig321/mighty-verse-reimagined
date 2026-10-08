@@ -173,6 +173,8 @@ export function SceneObject({
           bindingId={scene.binding_id}
           startMs={scene.start_ms}
           endMs={scene.end_ms}
+          muxPlaybackId={muxPlaybackId}
+          durationMs={durationMs}
           canAuthor={canAuthorTiming}
           startOpen
           hideTrigger
@@ -336,6 +338,8 @@ export function SceneObject({
           bindingId={scene.binding_id}
           startMs={scene.start_ms}
           endMs={scene.end_ms}
+          muxPlaybackId={muxPlaybackId}
+          durationMs={durationMs}
           canAuthor={canAuthorTiming}
         />
         <SceneOrder

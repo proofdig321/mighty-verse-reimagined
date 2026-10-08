@@ -14,6 +14,7 @@ import { jobUiLabel } from "@/lib/ai/jobs";
 import { operatorGenerationMessage } from "@/lib/storyboard/operator-error";
 import { StoryboardHlsPreview } from "./storyboard-hls-preview";
 import { StudioAdvisor } from "./studio-advisor";
+import { PanelThumbnailPicker, PanelThumbnailTrigger } from "./panel-thumbnail-picker";
 import {
   resolveKind, intentAvailable,
   describeWorkflow, modeAvailable, clampVeoDuration, VEO_DURATIONS,
@@ -121,6 +122,7 @@ export function StudioCreationSurface({
   const [localLastFrame, setLocalLastFrame] = useState("");
   const [editVideoUri, setEditVideoUri] = useState("");
   const [selectedRefUrls, setSelectedRefUrls] = useState<Set<string>>(new Set());
+  const [panelThumbnailOpen, setPanelThumbnailOpen] = useState(false);
 
   function toggleRef(url: string) {
     setSelectedRefUrls((prev) => {
@@ -854,7 +856,30 @@ export function StudioCreationSurface({
                   {selected.time && (
                     <p className="mt-2 font-mono suite-kicker normal-case tracking-normal font-normal opacity-60">{selected.time}</p>
                   )}
-                  <p className="mt-4 text-xs text-muted-foreground/40">Write a directive above and generate →</p>
+                  {selectedPersisted && !panelThumbnailOpen && (
+                    <div className="mt-3">
+                      <PanelThumbnailTrigger
+                        currentUrl={selected.still}
+                        onClick={() => setPanelThumbnailOpen(true)}
+                      />
+                    </div>
+                  )}
+                  {selectedPersisted && panelThumbnailOpen && (
+                    <div className="mt-3">
+                      <PanelThumbnailPicker
+                        workId={work?.work_id ?? ""}
+                        panelId={selectedPersisted.panel_id}
+                        currentUrl={selected.still}
+                        muxPlaybackId={activeSource?.playback_id ?? null}
+                        durationMs={activeSource?.duration_ms ?? null}
+                        onSaved={(url) => { setPanelThumbnailOpen(false); onSetFirstFrame(url); }}
+                        onCancel={() => setPanelThumbnailOpen(false)}
+                      />
+                    </div>
+                  )}
+                  {!selectedPersisted && (
+                    <p className="mt-4 text-xs text-muted-foreground/40">Write a directive above and generate →</p>
+                  )}
                 </div>
               </div>
             ) : (

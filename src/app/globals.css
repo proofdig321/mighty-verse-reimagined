@@ -4435,3 +4435,60 @@ html[data-theme="paper"] {
   border-radius: 0.5rem;
   background: hsl(var(--card));
 }
+
+/* ── Scene timing scrubber ───────────────────────────────────────────────── */
+.scene-timing-scrubber {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scene-timing-bar {
+  position: relative;
+  height: 6px;
+  background: hsl(var(--muted));
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.scene-timing-window {
+  position: absolute;
+  top: 0;
+  height: 100%;
+  background: hsl(var(--primary));
+  border-radius: 3px;
+  min-width: 4px;
+}
+
+.scene-timing-handle-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.scene-timing-handle-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.scene-timing-thumb {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--muted));
+}
+
+.scene-timing-range {
+  width: 100%;
+  height: 4px;
+  cursor: pointer;
+}
+
+.scene-timing-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}

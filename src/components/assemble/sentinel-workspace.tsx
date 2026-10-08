@@ -75,6 +75,7 @@ export function SentinelWorkspace({
   onUseSelected,
   onAssociatePanel,
   associateEnabled,
+  onUseStillAsSceneThumbnail,
 }: {
   source: StoryboardSourceRecord | null;
   analysis: CinematicAnalysis | null;
@@ -94,6 +95,7 @@ export function SentinelWorkspace({
   onUseSelected?: () => void;
   onAssociatePanel?: () => void;
   associateEnabled?: boolean;
+  onUseStillAsSceneThumbnail?: (stillUrl: string) => void;
 }) {
   const [openId, setOpenId] = useState<string | null>(selectedShotId);
   const shots = analysis?.shots ?? [];
@@ -254,6 +256,16 @@ export function SentinelWorkspace({
               <Button type="button" size="sm" variant="outline" onClick={() => onSelectShot(selected)}>
                 Select this shot
               </Button>
+              {selected.still_url && onUseStillAsSceneThumbnail && (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onUseStillAsSceneThumbnail(selected.still_url!)}
+                >
+                  Use as Scene still
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

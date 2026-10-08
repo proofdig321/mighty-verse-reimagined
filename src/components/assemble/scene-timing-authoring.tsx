@@ -1,12 +1,12 @@
 "use client";
 
-import { useEffect, useId, useState, type FormEvent } from "react";
+import { useId, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { decideSceneTiming } from "@/lib/assemble/scene-timing";
-import { formatTimelineMs } from "@/lib/media/timing";
+import { formatOperatorSeconds, parseOperatorSeconds, formatTimelineMs } from "@/lib/media/timing";
 
 async function saveSceneTiming(input: {
   bindingId: string;
@@ -30,6 +30,79 @@ async function saveSceneTiming(input: {
   }
 }
 
+/** Compact scrubber — shows mural duration as a range with start/end handles */
+function TimingScrubber({
+  startSec,
+  endSec,
+  durationSec,
+  muxPlaybackId,
+  onStartChange,
+  onEndChange,
+}: {
+  startSec: number;
+  endSec: number;
+  durationSec: number;
+  muxPlaybackId: string;
+  onStartChange: (s: number) => void;
+  onEndChange: (s: number) => void;
+}) {
+  const startPct = durationSec > 0 ? (startSec / durationSec) * 100 : 0;
+  const endPct = durationSec > 0 ? (endSec / durationSec) * 100 : 100;
+  const thumbUrl = (sec: number) =>
+    `https://image.mux.com/${muxPlaybackId}/thumbnail.jpg?time=${Math.round(sec)}&width=160`;
+
+  return (
+    <div className="scene-timing-scrubber">
+      {/* Visual bar */}
+      <div className="scene-timing-bar">
+        <div
+          className="scene-timing-window"
+          style={{ left: `${startPct}%`, width: `${endPct - startPct}%` }}
+        />
+      </div>
+      {/* Start handle */}
+      <div className="scene-timing-handle-row">
+        <div className="scene-timing-handle-group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumbUrl(startSec)} alt="" className="scene-timing-thumb" />
+          <label className="text-[10px] text-muted-foreground">Start</label>
+          <input
+            type="range"
+            min={0}
+            max={durationSec}
+            step={0.5}
+            value={startSec}
+            className="scene-timing-range accent-primary"
+            aria-label="Scene start"
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v < endSec) onStartChange(v);
+            }}
+          />
+        </div>
+        <div className="scene-timing-handle-group">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={thumbUrl(endSec)} alt="" className="scene-timing-thumb" />
+          <label className="text-[10px] text-muted-foreground">End</label>
+          <input
+            type="range"
+            min={0}
+            max={durationSec}
+            step={0.5}
+            value={endSec}
+            className="scene-timing-range accent-primary"
+            aria-label="Scene end"
+            onChange={(e) => {
+              const v = Number(e.target.value);
+              if (v > startSec) onEndChange(v);
+            }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SceneTiming({
   universeId,
   sceneId,
@@ -38,6 +111,8 @@ export function SceneTiming({
   bindingId,
   startMs,
   endMs,
+  muxPlaybackId,
+  durationMs,
   canAuthor,
   startOpen = false,
   hideTrigger = false,
@@ -49,6 +124,8 @@ export function SceneTiming({
   bindingId: string | null;
   startMs: number | null;
   endMs: number | null;
+  muxPlaybackId?: string | null;
+  durationMs?: number | null;
   canAuthor: boolean;
   startOpen?: boolean;
   hideTrigger?: boolean;
@@ -58,21 +135,20 @@ export function SceneTiming({
   const startId = useId();
   const endId = useId();
   const [open, setOpen] = useState(startOpen);
-  const [nextStart, setNextStart] = useState(startMs != null ? formatTimelineMs(startMs) : "");
-  const [nextEnd, setNextEnd] = useState(endMs != null ? formatTimelineMs(endMs) : "");
+
+  // Seconds — the only unit shown to the user
+  const [startSec, setStartSec] = useState(startMs != null ? startMs / 1000 : 0);
+  const [endSec, setEndSec] = useState(endMs != null ? endMs / 1000 : 0);
+  const [startRaw, setStartRaw] = useState(startMs != null ? formatOperatorSeconds(startMs) : "");
+  const [endRaw, setEndRaw] = useState(endMs != null ? formatOperatorSeconds(endMs) : "");
+
   const [fieldError, setFieldError] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    function onKey(event: KeyboardEvent) {
-      if (event.key === "Escape") setOpen(false);
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open]);
+  const durationSec = durationMs ? durationMs / 1000 : 300;
+  const hasScrubber = Boolean(muxPlaybackId);
 
   if (!canAuthor) return null;
 
@@ -83,25 +159,36 @@ export function SceneTiming({
           Edit timing
         </Button>
         <p className="suite-presence-status">
-          This Scene has no media window yet. Bind mural media, then the start and end clocks can be shaped here.
+          No media window yet. Bind mural media first.
         </p>
       </div>
     );
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function syncFromScrubber(newStartSec: number, newEndSec: number) {
+    setStartSec(newStartSec);
+    setEndSec(newEndSec);
+    setStartRaw(String(Number(newStartSec.toFixed(1))));
+    setEndRaw(String(Number(newEndSec.toFixed(1))));
+    setFieldError(null);
+  }
+
+  async function handleSave() {
+    const startParsed = parseOperatorSeconds(startRaw);
+    const endParsed = parseOperatorSeconds(endRaw);
+    if (startParsed == null || endParsed == null) {
+      setFieldError("Enter start and end in seconds (e.g. 36 or 36.5).");
+      return;
+    }
     const decision = decideSceneTiming({
       universe_id: universeId,
       scene_master_id: sceneId,
       binding_id: bindingId,
-      start_ms: nextStart,
-      end_ms: nextEnd,
+      start_ms: startParsed,
+      end_ms: endParsed,
       scene: { master_id: sceneId, canonical_type: "scene", parent_master_id: muralId },
       mural: { master_id: muralId, canonical_type: "mural", parent_master_id: universeId },
-      binding: bindingId
-        ? { binding_id: bindingId, projection_id: sceneId, master_id: sceneId }
-        : null,
+      binding: { binding_id: bindingId!, projection_id: sceneId, master_id: sceneId },
     });
     if (!decision.ok) {
       setFieldError(decision.message);
@@ -129,11 +216,7 @@ export function SceneTiming({
 
   if (!open) {
     if (hideTrigger) {
-      return status ? (
-        <p className="suite-presence-status" role="status">
-          {status}
-        </p>
-      ) : null;
+      return status ? <p className="suite-presence-status" role="status">{status}</p> : null;
     }
     return (
       <div className="suite-identity-actions">
@@ -148,80 +231,85 @@ export function SceneTiming({
             setStatus(null);
             setFieldError(null);
             setSaveError(null);
-            setNextStart(startMs != null ? formatTimelineMs(startMs) : "");
-            setNextEnd(endMs != null ? formatTimelineMs(endMs) : "");
+            setStartSec(startMs != null ? startMs / 1000 : 0);
+            setEndSec(endMs != null ? endMs / 1000 : 0);
+            setStartRaw(startMs != null ? formatOperatorSeconds(startMs) : "");
+            setEndRaw(endMs != null ? formatOperatorSeconds(endMs) : "");
           }}
         >
           Edit timing
         </Button>
-        {status ? (
-          <p className="suite-presence-status" role="status">
-            {status}
-          </p>
-        ) : null}
+        {status && <p className="suite-presence-status" role="status">{status}</p>}
       </div>
     );
   }
 
   return (
-    <form
-      className="suite-identity-panel"
-      id={regionId}
-      aria-label={`Edit timing for ${sceneLabel}`}
-      onSubmit={(event) => void onSubmit(event)}
-    >
+    <div className="suite-identity-panel" id={regionId} aria-label={`Edit timing for ${sceneLabel}`}>
       <p className="suite-relation-kicker">When does this Scene live on the Mural?</p>
-      <div className="space-y-2">
-        <Label htmlFor={startId} className="text-xs">
-          Window start
-        </Label>
-        <Input
-          id={startId}
-          name="start_ms"
-          value={nextStart}
-          onChange={(event) => {
-            setNextStart(event.target.value);
-            if (fieldError) setFieldError(null);
-          }}
-          placeholder="0:36.000"
-          disabled={busy}
-          autoComplete="off"
-          aria-invalid={fieldError ? true : undefined}
-          aria-describedby={fieldError ? `${startId}-error` : `${startId}-hint`}
+
+      {hasScrubber && (
+        <TimingScrubber
+          startSec={startSec}
+          endSec={endSec}
+          durationSec={durationSec}
+          muxPlaybackId={muxPlaybackId!}
+          onStartChange={(s) => syncFromScrubber(s, endSec)}
+          onEndChange={(e) => syncFromScrubber(startSec, e)}
         />
+      )}
+
+      <div className="scene-timing-fields">
+        <div className="space-y-1">
+          <Label htmlFor={startId} className="text-xs">Start (seconds)</Label>
+          <Input
+            id={startId}
+            type="number"
+            min={0}
+            step={0.5}
+            value={startRaw}
+            onChange={(e) => {
+              setStartRaw(e.target.value);
+              const v = parseFloat(e.target.value);
+              if (!isNaN(v)) setStartSec(v);
+              setFieldError(null);
+            }}
+            placeholder="36"
+            disabled={busy}
+            autoComplete="off"
+            aria-invalid={fieldError ? true : undefined}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={endId} className="text-xs">End (seconds)</Label>
+          <Input
+            id={endId}
+            type="number"
+            min={0}
+            step={0.5}
+            value={endRaw}
+            onChange={(e) => {
+              setEndRaw(e.target.value);
+              const v = parseFloat(e.target.value);
+              if (!isNaN(v)) setEndSec(v);
+              setFieldError(null);
+            }}
+            placeholder="79"
+            disabled={busy}
+            autoComplete="off"
+          />
+        </div>
       </div>
-      <div className="space-y-2">
-        <Label htmlFor={endId} className="text-xs">
-          Window end
-        </Label>
-        <Input
-          id={endId}
-          name="end_ms"
-          value={nextEnd}
-          onChange={(event) => {
-            setNextEnd(event.target.value);
-            if (fieldError) setFieldError(null);
-          }}
-          placeholder="1:19.000"
-          disabled={busy}
-          autoComplete="off"
-        />
-        <p id={`${startId}-hint`} className="text-xs text-muted-foreground">
-          Use 0:36.000, 0:36, or milliseconds. This shapes the existing window. Sentinel does not create Scenes.
-        </p>
-        {fieldError ? (
-          <p id={`${startId}-error`} role="alert" className="text-xs text-destructive">
-            {fieldError}
-          </p>
-        ) : null}
-      </div>
-      {saveError ? (
-        <p role="alert" className="text-xs text-destructive">
-          {saveError}
-        </p>
-      ) : null}
+
+      <p className="text-xs text-muted-foreground">
+        Enter seconds. Storage stays milliseconds — no conversion needed.
+      </p>
+
+      {fieldError && <p role="alert" className="text-xs text-destructive">{fieldError}</p>}
+      {saveError && <p role="alert" className="text-xs text-destructive">{saveError}</p>}
+
       <div className="suite-presence-actions">
-        <Button type="submit" size="sm" disabled={busy}>
+        <Button type="button" size="sm" disabled={busy} onClick={() => void handleSave()}>
           {busy ? "Saving…" : "Save timing"}
         </Button>
         <Button
@@ -231,13 +319,13 @@ export function SceneTiming({
           disabled={busy}
           onClick={() => {
             setOpen(false);
-            setNextStart(startMs != null ? formatTimelineMs(startMs) : "");
-            setNextEnd(endMs != null ? formatTimelineMs(endMs) : "");
+            setStartRaw(startMs != null ? formatOperatorSeconds(startMs) : "");
+            setEndRaw(endMs != null ? formatOperatorSeconds(endMs) : "");
           }}
         >
           Cancel
         </Button>
       </div>
-    </form>
+    </div>
   );
 }

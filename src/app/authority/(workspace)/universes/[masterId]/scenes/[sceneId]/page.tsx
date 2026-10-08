@@ -53,6 +53,8 @@ export default async function UniverseSceneWorkspacePage({
           canAuthorOrder
           focusSceneId={sceneId}
           fromCurate={fromCurate}
+          muxPlaybackId={workspace.source?.provider === "mux" ? workspace.source.playback_id : null}
+          durationMs={workspace.source?.duration_ms}
         />
         <section className="suite-section" aria-labelledby="scene-production">
           <div className="suite-section-head">

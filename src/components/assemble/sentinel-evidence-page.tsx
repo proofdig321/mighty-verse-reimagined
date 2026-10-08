@@ -171,6 +171,9 @@ export function SentinelEvidencePage({
         }}
         onAssociatePanel={() => void addReferences(selectedShots, work?.selection?.panel_id ?? null)}
         associateEnabled={Boolean(work?.selection?.panel_id || work?.panels[0]?.panel_id)}
+        onUseStillAsSceneThumbnail={(stillUrl) => {
+          setMessage(`Sentinel frame copied. Go to Scenes workspace and use “Edit still” → URL tab to apply: ${stillUrl}`);
+        }}
       />
 
       {intelligence ? (
