@@ -8,6 +8,7 @@ import { MouseViewController, OrientationViewController } from "@/lib/experience
 import { NEUTRAL_VIEWER_POSE, type ViewerPose } from "@/lib/experience/spatial-types";
 import { useXRSession } from "@/lib/experience/use-xr-session";
 import { formatDuration } from "@/lib/media/timing";
+import { PlayerControls } from "@/components/player/player-controls";
 import { DepthIndex } from "@/lib/experience/depth-asset";
 import { decodeDepthMeta, decodeDepthFrame, depthAssetFromMeta } from "@/lib/experience/depth-format";
 
@@ -266,53 +267,24 @@ export function SpatialPresentation({
         ) : null}
       </div>
 
-      {/* Transport bar — minimal: play/pause, time, seek, fullscreen */}
+      {/* Transport bar */}
       <div className="holographic-transport-bar">
-        <div className="holographic-transport spatial-transport">
-          <button
-            type="button"
-            className="holographic-transport-play"
-            aria-pressed={playing}
-            onClick={toggle}
-          >
-            {playing ? "Pause" : "Play"}
-          </button>
-          <p className="holographic-transport-time">
-            {formatDuration(timeMs / 1000)}
-            {durationMs > 0 ? ` / ${formatDuration(durationMs / 1000)}` : ""}
-          </p>
-          <button
-            type="button"
-            className="holographic-mute"
-            aria-pressed={!muted}
-            aria-label={muted ? "Unmute" : "Mute"}
-            onClick={() => setMuted((m) => !m)}
-          >
-            {muted ? "Unmute" : "Mute"}
-          </button>
-          <button
-            type="button"
-            className="holographic-fullscreen"
-            aria-label="Fullscreen"
-            onClick={() => void cinemaRef.current?.requestFullscreen?.()}
-          >
-            <Maximize2 size={14} />
-          </button>
-          {durationMs > 0 ? (
-            <div
-              className="holographic-progress"
-              role="slider"
-              tabIndex={0}
-              aria-valuemin={0}
-              aria-valuemax={Math.round(durationMs)}
-              aria-valuenow={Math.round(timeMs)}
-              aria-label="2.5D playback progress"
-              onClick={(e) => seekFromProgress(e.clientX, e.currentTarget)}
-            >
-              <span style={{ width: `${progress * 100}%` }} />
-            </div>
-          ) : null}
-        </div>
+        <PlayerControls
+          currentMs={timeMs}
+          durationMs={durationMs}
+          playing={playing}
+          muted={muted}
+          volume={1}
+          variant="spatial"
+          showFullscreen
+          showVolume
+          containerRef={cinemaRef as React.RefObject<HTMLElement | null>}
+          onTogglePlay={toggle}
+          onRestart={() => { setTimeMs(0); }}
+          onSeek={(ms) => setTimeMs(ms)}
+          onMuteToggle={() => setMuted((m) => !m)}
+          onVolumeChange={() => {}}
+        />
       </div>
     </div>
   );

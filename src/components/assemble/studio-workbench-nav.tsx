@@ -9,10 +9,11 @@ import {
   Monitor,
   Smartphone,
   WandSparkles,
+  Film,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type WorkbenchPanel = "work" | "source" | "create" | "results" | "preview" | "mobile";
+export type WorkbenchPanel = "work" | "source" | "create" | "results" | "preview" | "timeline" | "mobile";
 
 const icons = {
   work: BookOpen,
@@ -20,6 +21,7 @@ const icons = {
   create: WandSparkles,
   results: Clapperboard,
   preview: Monitor,
+  timeline: Film,
   mobile: Smartphone,
 };
 
@@ -29,6 +31,7 @@ const labels: { id: WorkbenchPanel; label: string }[] = [
   { id: "create", label: "Create" },
   { id: "results", label: "Results" },
   { id: "preview", label: "Preview" },
+  { id: "timeline", label: "Timeline" },
   { id: "mobile", label: "Mobile View" },
 ];
 
@@ -52,6 +55,7 @@ export function StudioWorkbenchNav({
     create: editorHref ? `${editorHref}?panel=create${mobileQuery}#create` : null,
     results: editorHref ? `${editorHref}?panel=results${mobileQuery}#results` : null,
     preview: editorHref ? `${editorHref}/preview` : null,
+    timeline: editorHref ? `${editorHref}/timeline` : null,
     mobile: editorHref ? `${editorHref}?viewport=mobile` : null,
   };
 

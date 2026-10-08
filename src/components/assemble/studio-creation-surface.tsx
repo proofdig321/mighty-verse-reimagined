@@ -629,88 +629,83 @@ export function StudioCreationSurface({
                       {generateAudio ? <Volume2 size={11} /> : <VolumeX size={11} />}
                     </button>
                   )}
+                  {/* Resolution — always visible for video intent */}
+                  {isVideoIntent && resolutionOptionsFromCapability(capability, capability?.models?.video).map((opt) => (
+                    <button key={opt.value} type="button"
+                      disabled={opt.available === false}
+                      title={opt.available === null ? "Provider not configured" : opt.available === false ? "Not supported by this model" : opt.label}
+                      onClick={() => { if (opt.available !== false) { setSelectedPresetId("custom"); onSetResolution(opt.value); } }}
+                      className={cn(
+                        "studio-control-pill text-xs",
+                        resolution === opt.value && "border-primary/50 text-primary",
+                        opt.available === null && "opacity-50",
+                        opt.available === false && "opacity-25 cursor-not-allowed",
+                      )}>
+                      {opt.label}
+                    </button>
+                  ))}
+                  {/* Start / End frame chips — visible when set */}
+                  {isVideoIntent && canFirstLast && effectiveFirstFrame && (
+                    <button type="button" title="Start frame set — click to clear"
+                      onClick={() => { setLocalFirstFrame(""); onSetFirstFrame(""); }}
+                      className="studio-control-pill gap-1 border-primary/50 text-primary text-xs">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={effectiveFirstFrame} alt="" className="w-4 h-3 rounded object-cover" />
+                      S ×
+                    </button>
+                  )}
+                  {isVideoIntent && canFirstLast && !effectiveFirstFrame && (
+                    <button type="button" title="Set start frame — select a reference image above"
+                      onClick={() => setAdvancedOpen(true)}
+                      className="studio-control-pill text-xs opacity-50 hover:opacity-100">
+                      Start
+                    </button>
+                  )}
+                  {isVideoIntent && canFirstLast && effectiveLastFrame && (
+                    <button type="button" title="End frame set — click to clear"
+                      onClick={() => { setLocalLastFrame(""); onSetLastFrame(""); }}
+                      className="studio-control-pill gap-1 border-accent-mv/50 text-xs">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={effectiveLastFrame} alt="" className="w-4 h-3 rounded object-cover" />
+                      E ×
+                    </button>
+                  )}
+                  {isVideoIntent && canFirstLast && !effectiveLastFrame && (
+                    <button type="button" title="Set end frame — select a reference image above"
+                      onClick={() => setAdvancedOpen(true)}
+                      className="studio-control-pill text-xs opacity-50 hover:opacity-100">
+                      End
+                    </button>
+                  )}
                   {isVideoIntent && (
                     <button type="button"
                       className={cn("studio-control-pill text-xs", advancedOpen && "border-primary/50")}
                       onClick={() => setAdvancedOpen((v) => !v)}>
-                      Advanced
+                      {advancedOpen ? "Less" : "Edit URI"}
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Advanced controls */}
-              {advancedOpen && isVideoIntent && (
+              {/* Advanced — Edit video URI only (resolution + frames now inline) */}
+              {advancedOpen && isVideoIntent && canEdit && (
                 <div className="studio-advanced-controls">
-                  {/* Resolution */}
                   <div>
-                    <p className="suite-kicker mb-1">Resolution</p>
-                    <div className="flex gap-1.5">
-                      {resolutionOptionsFromCapability(capability, capability?.models?.video).map((opt) => (
-                        <button key={opt.value} type="button"
-                          disabled={opt.available === false}
-                          title={opt.available === null ? "Provider not configured" : opt.available === false ? "Not supported by this model" : opt.label}
-                          onClick={() => { if (opt.available !== false) { setSelectedPresetId("custom"); onSetResolution(opt.value); } }}
-                          className={cn(
-                            "studio-control-pill text-xs",
-                            resolution === opt.value && "border-primary/50 text-primary",
-                            opt.available === null && "opacity-50",
-                            opt.available === false && "opacity-25 cursor-not-allowed",
-                          )}>
-                          {opt.label}
-                        </button>
-                      ))}
+                    <p className="suite-kicker mb-1">Edit video — source URI</p>
+                    <div className="flex gap-2">
+                      <input
+                        className="flex-1 h-7 rounded border border-input bg-background px-2 text-xs text-foreground"
+                        placeholder="gs://… or https://… video URI to edit"
+                        value={editVideoUri}
+                        onChange={(e) => setEditVideoUri(e.target.value)}
+                      />
+                      {editVideoUri && (
+                        <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
+                          onClick={() => setEditVideoUri("")}>Clear</button>
+                      )}
                     </div>
+                    <p className="text-[10px] text-muted-foreground/50 mt-0.5">Write your edit directive in the prompt above.</p>
                   </div>
-                  {canFirstLast && (
-                    <div className="flex items-center gap-3">
-                      <div className="flex-1">
-                        <p className="suite-kicker mb-1">Start frame</p>
-                        {effectiveFirstFrame ? (
-                          <div className="flex items-center gap-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={effectiveFirstFrame} alt="" className="w-12 h-8 rounded object-cover" />
-                            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
-                              onClick={() => { setLocalFirstFrame(""); onSetFirstFrame(""); }}>Clear</button>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/50">Select from references above</p>
-                        )}
-                      </div>
-                      <div className="flex-1">
-                        <p className="suite-kicker mb-1">End frame</p>
-                        {effectiveLastFrame ? (
-                          <div className="flex items-center gap-2">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img src={effectiveLastFrame} alt="" className="w-12 h-8 rounded object-cover" />
-                            <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
-                              onClick={() => { setLocalLastFrame(""); onSetLastFrame(""); }}>Clear</button>
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground/50">Select from references above</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  {/* Edit video URI input */}
-                  {canEdit && (
-                    <div>
-                      <p className="suite-kicker mb-1">Edit video — source URI</p>
-                      <div className="flex gap-2">
-                        <input
-                          className="flex-1 h-7 rounded border border-input bg-background px-2 text-xs text-foreground"
-                          placeholder="gs://… or https://… video URI to edit"
-                          value={editVideoUri}
-                          onChange={(e) => setEditVideoUri(e.target.value)}
-                        />
-                        {editVideoUri && (
-                          <button type="button" className="text-[10px] text-muted-foreground hover:text-foreground"
-                            onClick={() => setEditVideoUri("")}>Clear</button>
-                        )}
-                      </div>
-                      <p className="text-[10px] text-muted-foreground/50 mt-0.5">Write your edit directive in the prompt above.</p>
-                    </div>
-                  )}
                 </div>
               )}
 

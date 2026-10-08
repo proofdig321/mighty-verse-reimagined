@@ -1867,6 +1867,506 @@ html[data-theme="paper"] {
     color: var(--muted-foreground);
   }
 
+  /* ── Reusable PlayerControls ── */
+  .player-controls {
+    display: grid;
+    grid-template-columns: auto auto auto minmax(0, 1fr) auto auto auto;
+    gap: 0.5rem 0.75rem;
+    align-items: center;
+    width: 100%;
+    padding: 0.75rem clamp(1rem, 3vw, 1.5rem);
+    pointer-events: auto;
+  }
+
+  .player-controls-holographic {
+    background: color-mix(in oklch, var(--card) 30%, transparent);
+    border-top: 1px solid var(--border);
+  }
+
+  .player-controls-spatial {
+    background: color-mix(in oklch, var(--card) 30%, transparent);
+    border-top: 1px solid var(--border);
+    grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  }
+
+  .player-controls-timeline {
+    background: color-mix(in oklch, var(--card) 60%, transparent);
+    border-bottom: 1px solid var(--border);
+    padding: 0.5rem 0.75rem;
+    grid-template-columns: auto auto auto auto minmax(0, 1fr) auto auto auto;
+    gap: 0.375rem 0.5rem;
+  }
+
+  .player-controls-minimal {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    padding: 0.375rem 0.5rem;
+  }
+
+  .player-controls-play {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.25rem;
+    height: 2.25rem;
+    border-radius: 50%;
+    border: 1px solid color-mix(in oklch, var(--accent-mv-gold) 40%, var(--border));
+    background: color-mix(in oklch, var(--card) 70%, black);
+    color: var(--foreground);
+    flex-shrink: 0;
+    transition: background 150ms;
+  }
+
+  .player-controls-play:hover { background: color-mix(in oklch, var(--accent-mv) 20%, var(--card)); }
+
+  .player-controls-play-timeline {
+    width: 1.75rem;
+    height: 1.75rem;
+  }
+
+  .player-controls-restart,
+  .player-controls-skip {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    border: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+    background: transparent;
+    color: var(--muted-foreground);
+    flex-shrink: 0;
+    transition: color 150ms, border-color 150ms;
+  }
+
+  .player-controls-restart:hover,
+  .player-controls-skip:hover { color: var(--foreground); border-color: var(--foreground); }
+
+  .player-controls-time {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .player-controls-time-sep { opacity: 0.6; }
+
+  .player-controls-progress {
+    position: relative;
+    height: 0.35rem;
+    border-radius: 999px;
+    background: color-mix(in oklch, var(--muted) 70%, transparent);
+    overflow: visible;
+    cursor: pointer;
+    min-width: 60px;
+  }
+
+  .player-controls-progress-fill {
+    display: block;
+    height: 100%;
+    border-radius: 999px;
+    background: var(--accent-mv-gold);
+    pointer-events: none;
+  }
+
+  .player-controls-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 2px;
+    height: 0.65rem;
+    border-radius: 1px;
+    background: color-mix(in oklch, white 60%, transparent);
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  .player-controls-marker:hover { background: white; }
+
+  .player-controls-context {
+    font-size: 0.75rem;
+    color: var(--foreground);
+    font-family: var(--font-display, inherit);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  .player-controls-volume {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .player-controls-mute {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--foreground);
+    background: transparent;
+    border: 0;
+    padding: 0.2rem;
+    cursor: pointer;
+  }
+
+  .player-controls-volume-slider {
+    width: 5rem;
+    accent-color: var(--accent-mv-gold);
+  }
+
+  .player-controls-fullscreen {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--foreground);
+    background: transparent;
+    border: 0;
+    padding: 0.2rem;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 640px) {
+    .player-controls-volume-slider { width: 3.5rem; }
+    .player-controls-context { display: none; }
+  }
+
+  /* ── Timeline Editor ── */
+  .timeline-editor {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    background: var(--background);
+  }
+
+  .timeline-editor-empty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem;
+  }
+
+  .timeline-editor-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: color-mix(in oklch, var(--card) 80%, transparent);
+  }
+
+  .timeline-editor-header-left,
+  .timeline-editor-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .timeline-editor-duration {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.75rem;
+    color: var(--foreground);
+  }
+
+  .timeline-editor-unsaved {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-mv);
+  }
+
+  .timeline-zoom-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted-foreground);
+    transition: color 150ms, border-color 150ms;
+  }
+  .timeline-zoom-btn:hover { color: var(--foreground); border-color: var(--foreground); }
+
+  .timeline-canvas {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .timeline-labels {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 70%, transparent);
+  }
+
+  .timeline-ruler-spacer {
+    height: 1.5rem;
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+  }
+
+  .timeline-label-row {
+    display: flex;
+    align-items: center;
+    padding: 0 0.5rem;
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 40%, transparent);
+  }
+
+  .timeline-label-text {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
+  .timeline-lane-scroll {
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(in oklch, var(--border) 60%, transparent) transparent;
+  }
+
+  .timeline-ruler-row {
+    height: 1.5rem;
+    position: relative;
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 50%, transparent);
+    cursor: pointer;
+    background: color-mix(in oklch, var(--card) 50%, transparent);
+  }
+
+  .timeline-ruler {
+    position: relative;
+    height: 100%;
+  }
+
+  .timeline-ruler-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: color-mix(in oklch, var(--border) 60%, transparent);
+  }
+
+  .timeline-ruler-label {
+    position: absolute;
+    top: 2px;
+    left: 3px;
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.5rem;
+    color: var(--muted-foreground);
+    white-space: nowrap;
+    pointer-events: none;
+  }
+
+  .timeline-tracks-area {
+    position: relative;
+  }
+
+  .timeline-track {
+    display: flex;
+    border-bottom: 1px solid color-mix(in oklch, var(--border) 40%, transparent);
+  }
+
+  .timeline-track-label { display: none; } /* labels are in the fixed column */
+
+  .timeline-track-lane {
+    display: flex;
+    align-items: center;
+    min-height: 72px;
+    padding: 4px 0;
+    gap: 2px;
+    position: relative;
+  }
+
+  .timeline-track-audio .timeline-track-lane {
+    background: color-mix(in oklch, var(--muted) 20%, transparent);
+  }
+
+  .timeline-track-empty {
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    height: 100%;
+    min-width: 200px;
+  }
+
+  /* Clip */
+  .timeline-clip {
+    position: relative;
+    height: 64px;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1.5px solid color-mix(in oklch, var(--accent-mv) 30%, var(--border));
+    background: color-mix(in oklch, var(--accent-mv) 12%, var(--card));
+    overflow: hidden;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: border-color 150ms, background 150ms;
+    user-select: none;
+  }
+
+  .timeline-clip:hover {
+    border-color: color-mix(in oklch, var(--accent-mv) 60%, var(--border));
+    background: color-mix(in oklch, var(--accent-mv) 18%, var(--card));
+  }
+
+  .timeline-clip-selected {
+    border-color: var(--primary) !important;
+    background: color-mix(in oklch, var(--primary) 14%, var(--card)) !important;
+    box-shadow: 0 0 0 1px color-mix(in oklch, var(--primary) 30%, transparent);
+  }
+
+  .timeline-clip-active {
+    border-color: var(--accent-mv-gold) !important;
+  }
+
+  .timeline-clip-has-motion {
+    border-color: color-mix(in oklch, var(--accent-mv) 50%, var(--border));
+  }
+
+  .timeline-clip-thumb {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.45;
+    pointer-events: none;
+  }
+
+  .timeline-clip-thumb-empty {
+    background: color-mix(in oklch, var(--muted) 40%, transparent);
+  }
+
+  .timeline-clip-label {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 0.25rem 0.375rem;
+    background: linear-gradient(to top, color-mix(in oklch, var(--background) 70%, transparent), transparent);
+    pointer-events: none;
+  }
+
+  .timeline-clip-seq {
+    font-family: var(--font-mono, ui-monospace, monospace);
+    font-size: 0.5rem;
+    color: var(--muted-foreground);
+    line-height: 1;
+  }
+
+  .timeline-clip-title {
+    font-size: 0.625rem;
+    font-weight: 600;
+    color: var(--foreground);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
+  .timeline-clip-badge {
+    font-size: 0.5rem;
+    color: var(--accent-mv);
+    line-height: 1;
+  }
+
+  .timeline-clip-resize {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 6px;
+    height: 100%;
+    cursor: ew-resize;
+    background: color-mix(in oklch, var(--foreground) 15%, transparent);
+    border-radius: 0 calc(var(--radius) - 2px) calc(var(--radius) - 2px) 0;
+    transition: background 150ms;
+  }
+
+  .timeline-clip-resize:hover { background: color-mix(in oklch, var(--primary) 50%, transparent); }
+
+  /* Playhead */
+  .timeline-playhead {
+    position: absolute;
+    top: 0;
+    width: 2px;
+    pointer-events: auto;
+    cursor: ew-resize;
+    z-index: 10;
+    transform: translateX(-1px);
+  }
+
+  .timeline-playhead-head {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--destructive);
+    margin-left: -4px;
+    flex-shrink: 0;
+  }
+
+  .timeline-playhead-line {
+    width: 2px;
+    height: 100%;
+    background: var(--destructive);
+    opacity: 0.8;
+  }
+
+  /* Inspector */
+  .timeline-inspector {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+    border-top: 1px solid var(--border);
+    background: color-mix(in oklch, var(--card) 70%, transparent);
+    flex-shrink: 0;
+  }
+
+  .timeline-inspector-meta {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .timeline-inspector-preview {
+    width: 12rem;
+    flex-shrink: 0;
+  }
+
+  .timeline-inspector-still {
+    width: 12rem;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .timeline-duration-input {
+    width: 4rem;
+    height: 1.75rem;
+    border-radius: calc(var(--radius) - 2px);
+    border: 1px solid var(--input);
+    background: var(--background);
+    color: var(--foreground);
+    font-size: 0.75rem;
+    padding: 0 0.375rem;
+    text-align: right;
+  }
+
   /* ── Storyboard preview player (visual stage + filmstrip) ── */
   .storyboard-preview-player {
     display: flex;

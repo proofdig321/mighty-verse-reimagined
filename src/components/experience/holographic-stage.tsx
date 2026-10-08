@@ -7,6 +7,7 @@ import type { HolographicLayer } from "@/lib/media/sentinel-intelligence";
 import { muxStillFromPlayback } from "@/lib/media/thumbnail";
 import { formatTimelineMs } from "@/lib/media/timing";
 import { sceneOrdinal, sceneShortTitle } from "@/lib/assemble/composition";
+import { PlayerControls } from "@/components/player/player-controls";
 import {
   activeWindow,
   audienceLayerTitle,
@@ -444,85 +445,24 @@ export function HolographicStage({
           </div>
 
           <div className="holographic-transport-bar">
-            <div className="holographic-transport">
-              <button
-                type="button"
-                className="holographic-transport-play"
-                aria-pressed={playing}
-                onClick={toggle}
-              >
-                {playing ? "Pause" : "Play"}
-              </button>
-              <button type="button" className="holographic-transport-restart" onClick={restart}>
-                Restart
-              </button>
-              <p className="holographic-transport-time">
-                {formatClock(timeMs)} / {formatClock(durationMs)}
-              </p>
-              <p className="holographic-transport-scene">
-                {current ? audienceLayerTitle(current.title, "Scene") : playing ? "Opening" : "Ready"}
-              </p>
-              <label className="holographic-volume">
-                <span className="sr-only">Volume</span>
-                <button
-                  type="button"
-                  className="holographic-mute"
-                  aria-pressed={!muted && volume > 0}
-                  aria-label={muted || volume === 0 ? "Unmute" : "Mute"}
-                  onClick={() => {
-                    setMuted((value) => {
-                      const next = !value;
-                      if (!next) unlockSpatialAudio();
-                      return next;
-                    });
-                  }}
-                >
-                  {muted || volume === 0 ? <VolumeX size={14} /> : <Volume2 size={14} />}
-                </button>
-                <input
-                  type="range"
-                  min={0}
-                  max={1}
-                  step={0.05}
-                  value={muted ? 0 : volume}
-                  aria-label="Volume"
-                  onChange={(event) => {
-                    const next = Number(event.target.value);
-                    setVolume(next);
-                    setMuted(next === 0);
-                    if (next > 0) unlockSpatialAudio();
-                  }}
-                />
-              </label>
-              <button
-                type="button"
-                className="holographic-fullscreen"
-                aria-label="Fullscreen"
-                onClick={() => void cinemaRef.current?.requestFullscreen?.()}
-              >
-                <Maximize2 size={14} />
-              </button>
-              <div
-                className="holographic-progress"
-                role="slider"
-                tabIndex={0}
-                aria-valuemin={0}
-                aria-valuemax={Math.round(durationMs)}
-                aria-valuenow={Math.round(timeMs)}
-                aria-label={mode === "public" ? "Holographic Experience progress" : "2.5D Experience progress"}
-                onClick={(event) => seekFromProgress(event.clientX, event.currentTarget)}
-              >
-                <span style={{ width: `${progress * 100}%` }} />
-                {program.windows.map((window) => (
-                  <i
-                    key={window.scene_master_id}
-                    className="holographic-progress-mark"
-                    style={{ left: `${(window.start_ms / durationMs) * 100}%` }}
-                    title={window.title}
-                  />
-                ))}
-              </div>
-            </div>
+            <PlayerControls
+              currentMs={timeMs}
+              durationMs={durationMs}
+              playing={playing}
+              muted={muted}
+              volume={volume}
+              markers={program.windows.map((w) => ({ id: w.scene_master_id, positionMs: w.start_ms, label: w.title }))}
+              contextLabel={current ? audienceLayerTitle(current.title, "Scene") : playing ? "Opening" : "Ready"}
+              variant="holographic"
+              showFullscreen
+              showVolume
+              containerRef={cinemaRef as React.RefObject<HTMLElement | null>}
+              onTogglePlay={toggle}
+              onRestart={restart}
+              onSeek={seekTo}
+              onMuteToggle={() => setMuted((v) => { const next = !v; if (!next) unlockSpatialAudio(); return next; })}
+              onVolumeChange={(v) => { setVolume(v); setMuted(v === 0); if (v > 0) unlockSpatialAudio(); }}
+            />
           </div>
         </>
       ) : null}
