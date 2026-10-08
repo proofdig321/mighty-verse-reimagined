@@ -78,8 +78,8 @@ export function StudioWorkspaceShell({
         <header className="studio-workspace-header">
           <HierarchyBreadcrumb items={items} />
           <div className="studio-workspace-heading">
-            <div className="min-w-0 space-y-1">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Studio</p>
+            <div className="min-w-0 space-y-1.5">
+              <p className="suite-kicker">Creative Studio</p>
               <h1
                 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl"
                 style={{ fontFamily: "var(--font-display, inherit)" }}
@@ -88,7 +88,7 @@ export function StudioWorkspaceShell({
               </h1>
               {description ? <p className="studio-workspace-lead">{description}</p> : null}
               <div className="studio-workspace-meta">
-                <Badge variant="outline">{workspaceLabel ?? "Source"}</Badge>
+                {workspaceLabel ? <Badge variant="outline">{workspaceLabel}</Badge> : null}
                 {typeof sceneCount === "number" ? (
                   <Badge variant="secondary">
                     {sceneCount} Scene{sceneCount === 1 ? "" : "s"}

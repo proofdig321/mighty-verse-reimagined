@@ -25,7 +25,7 @@ export function StudioRail({ children }: { children: ReactNode }) {
       </div>
 
       {/* Desktop rail — always visible at lg+ via CSS */}
-      <aside className="studio-workspace-rail">
+      <aside className="studio-workspace-rail pt-4 pb-6 px-3">
         {children}
       </aside>
 
