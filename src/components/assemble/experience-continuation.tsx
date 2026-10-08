@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export function ExperienceContinuation({
@@ -14,24 +13,18 @@ export function ExperienceContinuation({
 }) {
   return (
     <section className="suite-continuation" aria-labelledby="universe-experience-continuation">
-      <Card className="bg-card/80">
-        <CardHeader>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Public Experience</p>
-          <CardTitle>
-            <h2 id="universe-experience-continuation" className="text-base font-medium">
-              Holographic Experience
-            </h2>
-          </CardTitle>
-          <CardDescription>
-            Studio composes the work. Holographic Experience is what the audience sees. It is not a Studio editor.
-          </CardDescription>
-        </CardHeader>
-        <CardFooter className="flex flex-wrap items-center gap-3">
+      <div className="studio-composer">
+        <p className="suite-kicker">Public Experience</p>
+        <h2 id="universe-experience-continuation" className="text-base font-medium text-foreground">
+          Holographic Experience
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Studio composes the work. Holographic Experience is what the audience sees. It is not a Studio editor.
+        </p>
+        <div className="border-t border-border pt-3 flex flex-wrap items-center gap-3">
           <ol className="suite-continuation-flow mb-0">
             <li>Assemble</li>
-            <li className="suite-continuation-arrow" aria-hidden="true">
-              →
-            </li>
+            <li className="suite-continuation-arrow" aria-hidden="true">→</li>
             <li>Holographic Experience</li>
           </ol>
           <Link
@@ -47,8 +40,8 @@ export function ExperienceContinuation({
               Open Universe
             </Link>
           ) : null}
-        </CardFooter>
-      </Card>
+        </div>
+      </div>
     </section>
   );
 }

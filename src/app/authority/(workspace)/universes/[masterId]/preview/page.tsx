@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { StudioPreview } from "@/components/assemble/studio-preview";
+import { StudioSection } from "@/components/assemble/studio-section";
 import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 import { suiteScenes } from "@/lib/assemble/suite";
@@ -25,12 +26,7 @@ export default async function UniversePreviewPage({
 
   return (
     <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "preview", "2.5D Preview")}>
-      <section className="suite-section" aria-labelledby="universe-preview">
-        <div className="suite-section-head">
-          <h2 id="universe-preview" className="suite-section-title">
-            2.5D Preview
-          </h2>
-        </div>
+      <StudioSection id="universe-preview" label="2.5D Preview">
         <StudioPreview
           universeTitle={title}
           scenes={suiteScenes(workspace.data)}
@@ -41,7 +37,7 @@ export default async function UniversePreviewPage({
           universeId={workspace.data.master_id}
           moments={workspace.data.creative_moments}
         />
-      </section>
+      </StudioSection>
     </StudioWorkspaceShell>
   );
 }

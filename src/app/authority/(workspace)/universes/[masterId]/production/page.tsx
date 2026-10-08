@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { ProductionBriefs } from "@/components/assemble/production-briefs";
+import { StudioSection } from "@/components/assemble/studio-section";
 import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
 
@@ -18,18 +19,13 @@ export default async function UniverseProductionPage({
 
   return (
     <StudioWorkspaceShell {...studioShellFromWorkspace(workspace, "production", "Production")}>
-      <section className="suite-section" aria-labelledby="universe-production">
-        <div className="suite-section-head">
-          <h2 id="universe-production" className="suite-section-title">
-            Production
-          </h2>
-        </div>
+      <StudioSection id="universe-production" label="Production">
         <ProductionBriefs
           universeId={workspace.data.master_id}
           briefs={workspace.productionBriefs}
           proofExecutorAvailable={workspace.proofExecutorAvailable}
         />
-      </section>
+      </StudioSection>
     </StudioWorkspaceShell>
   );
 }

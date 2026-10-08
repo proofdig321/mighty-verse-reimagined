@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { notFound } from "next/navigation";
 import { ProductionBriefs } from "@/components/assemble/production-briefs";
 import { StudioPreview } from "@/components/assemble/studio-preview";
+import { StudioSection } from "@/components/assemble/studio-section";
 import { StudioScenesWorkspace } from "@/components/assemble/studio-scenes-workspace";
 import { StudioWorkspaceShell, studioShellFromWorkspace } from "@/components/assemble/studio-workspace-shell";
 import { requireStudioWorkspace } from "@/lib/assemble/studio-session";
@@ -56,24 +57,14 @@ export default async function UniverseSceneWorkspacePage({
           muxPlaybackId={workspace.source?.provider === "mux" ? workspace.source.playback_id : null}
           durationMs={workspace.source?.duration_ms}
         />
-        <section className="suite-section" aria-labelledby="scene-production">
-          <div className="suite-section-head">
-            <h2 id="scene-production" className="suite-section-title">
-              Production
-            </h2>
-          </div>
+        <StudioSection id="scene-production" label="Production">
           <ProductionBriefs
             universeId={workspace.data.master_id}
             briefs={workspace.productionBriefs.filter((brief) => brief.scene_master_id === sceneId)}
             proofExecutorAvailable={workspace.proofExecutorAvailable}
           />
-        </section>
-        <section className="suite-section" aria-labelledby="universe-preview">
-          <div className="suite-section-head">
-            <h2 id="universe-preview" className="suite-section-title">
-              2.5D Preview
-            </h2>
-          </div>
+        </StudioSection>
+        <StudioSection id="universe-preview" label="2.5D Preview">
           <StudioPreview
             universeTitle={s.title ?? title}
             scenes={[s]}
@@ -84,7 +75,7 @@ export default async function UniverseSceneWorkspacePage({
             universeId={workspace.data.master_id}
             moments={workspace.data.creative_moments}
           />
-        </section>
+        </StudioSection>
       </div>
     </StudioWorkspaceShell>
   );
