@@ -1,79 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import { heroConfig, type HeroConfig } from "@/lib/hero-config";
-
-type Field = {
-  key: keyof HeroConfig;
-  label: string;
-  hint: string;
-  type: "text" | "textarea" | "toggle" | "universe-id";
-};
-
-const FIELDS: Field[] = [
-  {
-    key: "eyebrow",
-    label: "Eyebrow",
-    hint: "Short uppercase line above the headline.",
-    type: "text",
-  },
-  {
-    key: "headline",
-    label: "Headline",
-    hint: "Main hero headline. Plain text — no cycling titles.",
-    type: "textarea",
-  },
-  {
-    key: "description",
-    label: "Description",
-    hint: "Supporting copy below the headline.",
-    type: "textarea",
-  },
-  {
-    key: "featuredUniverseId",
-    label: "Featured Universe ID",
-    hint: "Pin a specific Universe as the hero background video. Leave blank to auto-select the first Universe with a video.",
-    type: "universe-id",
-  },
-  {
-    key: "showTrailerCta",
-    label: "Show Trailer CTA",
-    hint: 'Show “Watch Trailer” button when a background video is available.',
-    type: "toggle",
-  },
-];
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import type { HeroConfig } from "@/lib/hero-config";
+import { heroConfig as defaults } from "@/lib/hero-config";
+import { StudioField, studioInputClass, studioTextareaClass, studioSelectClass } from "@/components/assemble/studio-field";
+import { StudioFeedback } from "@/components/assemble/studio-feedback";
 
 export function HeroConfigPanel({
   universes,
 }: {
   universes: { master_id: string; title: string | null }[];
 }) {
-  const [draft, setDraft] = useState<HeroConfig>({ ...heroConfig });
+  const [draft, setDraft] = useState<HeroConfig>({ ...defaults });
+  const [busy, setBusy] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/authority/site-config")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.config) setDraft(d.config as HeroConfig);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
 
   function set<K extends keyof HeroConfig>(key: K, value: HeroConfig[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
+    setMsg(null);
   }
 
-  // Preview: find the universe that would be selected
+  async function save() {
+    setBusy(true);
+    setMsg(null);
+    try {
+      const res = await fetch("/api/authority/site-config", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(draft),
+      });
+      const data = await res.json();
+      if (!res.ok) { setMsg(`Error: ${data.error ?? "Save failed"}`); return; }
+      setMsg("Saved. Home page will reflect this on next request.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const previewUniverse = draft.featuredUniverseId
     ? universes.find((u) => u.master_id === draft.featuredUniverseId)
     : universes[0] ?? null;
 
+  if (!loaded) {
+    return <div className="h-10 animate-pulse rounded bg-muted/40" />;
+  }
+
   return (
     <div className="studio-composer">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="suite-kicker">Home Hero</p>
-          <p className="text-sm font-medium text-foreground mt-0.5">Hero configuration</p>
-        </div>
-        {false && (
-          <p className="text-xs text-muted-foreground" role="status">
-            Config updated — redeploy to publish.
-          </p>
-        )}
-      </div>
-
-      {/* Live preview strip */}
+      {/* Live preview */}
       <div className="rounded border border-border bg-background/40 px-4 py-3 space-y-1">
         <p className="suite-kicker">Preview</p>
         <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-accent-mv">
@@ -104,71 +90,80 @@ export function HeroConfigPanel({
 
       {/* Fields */}
       <div className="grid gap-3 border-t border-border pt-3">
-        {FIELDS.map((field) => (
-          <div key={field.key} className="grid gap-1">
-            <label className="studio-authoring-label">{field.label}</label>
-            {field.type === "toggle" ? (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={draft.showTrailerCta}
-                  onClick={() => set("showTrailerCta", !draft.showTrailerCta)}
-                  className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-border bg-background/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring"
-                  style={draft.showTrailerCta ? { background: "var(--accent-mv)" } : undefined}
-                >
-                  <span
-                    className="pointer-events-none inline-block h-4 w-4 translate-x-0 rounded-full bg-foreground shadow transition-transform"
-                    style={{ transform: draft.showTrailerCta ? "translateX(1rem)" : "translateX(1px)", marginTop: "1px" }}
-                  />
-                </button>
-                <span className="text-xs text-muted-foreground">{field.hint}</span>
-              </div>
-            ) : field.type === "universe-id" ? (
-              <div className="grid gap-1">
-                <select
-                  value={draft.featuredUniverseId ?? ""}
-                  onChange={(e) => set("featuredUniverseId", e.target.value || null)}
-                  className="h-8 rounded border border-input bg-background/60 px-2 text-xs text-foreground"
-                >
-                  <option value="">Auto (first with video)</option>
-                  {universes.map((u) => (
-                    <option key={u.master_id} value={u.master_id}>
-                      {u.title ?? u.master_id}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-[10px] text-muted-foreground">{field.hint}</p>
-              </div>
-            ) : field.type === "textarea" ? (
-              <div className="grid gap-1">
-                <textarea
-                  value={String(draft[field.key] ?? "")}
-                  onChange={(e) => set(field.key as "headline" | "description", e.target.value)}
-                  rows={2}
-                  className="rounded border border-input bg-background/60 px-2 py-1.5 text-xs text-foreground resize-none"
-                />
-                <p className="text-[10px] text-muted-foreground">{field.hint}</p>
-              </div>
-            ) : (
-              <div className="grid gap-1">
-                <input
-                  type="text"
-                  value={String(draft[field.key] ?? "")}
-                  onChange={(e) => set(field.key as "eyebrow", e.target.value)}
-                  className="h-8 rounded border border-input bg-background/60 px-2 text-xs text-foreground"
-                />
-                <p className="text-[10px] text-muted-foreground">{field.hint}</p>
-              </div>
-            )}
+        <StudioField label="Eyebrow" hint="Short uppercase line above the headline">
+          <input
+            type="text"
+            value={draft.eyebrow}
+            onChange={(e) => set("eyebrow", e.target.value)}
+            disabled={busy}
+            className={studioInputClass}
+          />
+        </StudioField>
+
+        <StudioField label="Headline" hint="Main hero headline — plain text">
+          <textarea
+            value={draft.headline}
+            onChange={(e) => set("headline", e.target.value)}
+            rows={2}
+            disabled={busy}
+            className={studioTextareaClass}
+          />
+        </StudioField>
+
+        <StudioField label="Description" hint="Supporting copy below the headline">
+          <textarea
+            value={draft.description}
+            onChange={(e) => set("description", e.target.value)}
+            rows={2}
+            disabled={busy}
+            className={studioTextareaClass}
+          />
+        </StudioField>
+
+        <StudioField label="Featured Universe" hint="Pin a specific Universe as the hero background. Auto selects the first with a video.">
+          <select
+            value={draft.featuredUniverseId ?? ""}
+            onChange={(e) => set("featuredUniverseId", e.target.value || null)}
+            disabled={busy}
+            className={studioSelectClass}
+          >
+            <option value="">Auto (first with video)</option>
+            {universes.map((u) => (
+              <option key={u.master_id} value={u.master_id}>
+                {u.title ?? u.master_id}
+              </option>
+            ))}
+          </select>
+        </StudioField>
+
+        <StudioField label="Show Trailer CTA" hint='Show "Watch Trailer" button when a background video is available'>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              role="switch"
+              aria-checked={draft.showTrailerCta}
+              disabled={busy}
+              onClick={() => set("showTrailerCta", !draft.showTrailerCta)}
+              className="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-border bg-background/60 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-50"
+              style={draft.showTrailerCta ? { background: "var(--accent-mv)" } : undefined}
+            >
+              <span
+                className="pointer-events-none inline-block h-4 w-4 rounded-full bg-foreground shadow transition-transform mt-px"
+                style={{ transform: draft.showTrailerCta ? "translateX(1rem)" : "translateX(1px)" }}
+              />
+            </button>
+            <span className="text-xs text-muted-foreground">
+              {draft.showTrailerCta ? "Enabled" : "Disabled"}
+            </span>
           </div>
-        ))}
+        </StudioField>
       </div>
 
-      <div className="border-t border-border pt-3">
-        <p className="text-[10px] text-muted-foreground">
-          Changes here update <code className="font-mono">src/lib/hero-config.ts</code> and take effect on next deploy. A future release will persist this to the database without a redeploy.
-        </p>
+      <div className="flex items-center gap-3 border-t border-border pt-3">
+        <Button size="sm" disabled={busy} onClick={() => void save()}>
+          {busy ? "Saving…" : "Save"}
+        </Button>
+        <StudioFeedback message={msg} />
       </div>
     </div>
   );

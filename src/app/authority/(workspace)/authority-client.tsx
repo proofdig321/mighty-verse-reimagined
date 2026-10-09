@@ -137,6 +137,11 @@ export default function AuthorityClient() {
         </Link>
       </div>
 
+      {/* Public home — editorial surface, primary position */}
+      <StudioSection id="public-home" label="Public Home">
+        <HeroConfigPanel universes={universeOptions} />
+      </StudioSection>
+
       <Separator />
 
       {/* Work requiring attention */}
@@ -254,10 +259,6 @@ export default function AuthorityClient() {
         </dl>
       </StudioSection>
 
-      {/* Public home configuration */}
-      <StudioSection id="public-home" label="Public Home">
-        <HeroConfigPanel universes={universeOptions} />
-      </StudioSection>
     </div>
   );
 }

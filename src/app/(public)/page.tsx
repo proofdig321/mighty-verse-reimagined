@@ -10,7 +10,7 @@ import { HeroTrailerWire } from "@/components/hero-trailer-wire";
 import { UniverseCard } from "@/components/universe-card";
 import { Button } from "@/components/ui/button";
 import { muxStillFromPlayback } from "@/lib/media/thumbnail";
-import { heroConfig } from "@/lib/hero-config";
+import { loadHeroConfig } from "@/lib/site-config";
 
 export const metadata: Metadata = {
   title: "Mighty Verse",
@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 };
 
 export default async function HomePage() {
-  const universes = await getDiscovery();
+  const [universes, heroConfig] = await Promise.all([getDiscovery(), loadHeroConfig()]);
   const featured = universes.filter(
     (w: DiscoveryUniverse) => !!w.title && w.canonical_type === "universe"
   );
