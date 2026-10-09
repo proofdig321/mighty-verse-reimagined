@@ -20,6 +20,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
+import { HeroConfigPanel } from "@/components/assemble/hero-config-panel";
 
 const OPERATIONS = [
   { label: "Media Library", sub: "Incoming assets and Mux playback", href: "/authority/media", icon: Film },
@@ -202,6 +203,19 @@ export default function AuthorityClient() {
             })}
           </CardContent>
         </Card>
+      </section>
+
+      {/* Home hero configuration */}
+      <section className="space-y-3">
+        <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Public Home</p>
+        <HeroConfigPanel
+          universes={masters
+            .filter((m) => m.canonical_type === "universe")
+            .map((m) => ({
+              master_id: m.master_id,
+              title: presentations.find((p) => p.master_id === m.master_id)?.title ?? null,
+            }))}
+        />
       </section>
 
       {/* Scenes / Creative Moments quick counts from real data */}

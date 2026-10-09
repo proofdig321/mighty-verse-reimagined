@@ -5,12 +5,12 @@ import Link from "next/link";
 import type { DiscoveryUniverse } from "@/lib/discovery";
 import { getDiscovery } from "@/lib/discovery";
 import { PublicHero } from "@/components/public-hero";
-import { KineticCycler } from "@/components/kinetic-cycler";
 import { ScrollReveal } from "@/components/scroll-reveal";
 import { HeroTrailerWire } from "@/components/hero-trailer-wire";
 import { UniverseCard } from "@/components/universe-card";
 import { Button } from "@/components/ui/button";
 import { muxStillFromPlayback } from "@/lib/media/thumbnail";
+import { heroConfig } from "@/lib/hero-config";
 
 export const metadata: Metadata = {
   title: "Mighty Verse",
@@ -23,14 +23,12 @@ export default async function HomePage() {
     (w: DiscoveryUniverse) => !!w.title && w.canonical_type === "universe"
   );
 
-  const heroUniverse = featured.find((w) => w.visual_playback_id) ?? featured[0] ?? null;
+  const heroUniverse = heroConfig.featuredUniverseId
+    ? (featured.find((w) => w.master_id === heroConfig.featuredUniverseId) ?? featured.find((w) => w.visual_playback_id) ?? featured[0] ?? null)
+    : (featured.find((w) => w.visual_playback_id) ?? featured[0] ?? null);
+
   const heroVideoId = heroUniverse?.visual_playback_id ?? null;
   const heroStill = heroVideoId ? muxStillFromPlayback(heroVideoId, 4, 1920) : null;
-
-  const cyclerLabels =
-    featured.length > 0
-      ? featured.map((w) => w.title ?? "Universe").slice(0, 8)
-      : ["Universe", "Mural", "Legend", "Moment"];
 
   return (
     <div className="public-page">
@@ -38,19 +36,12 @@ export default async function HomePage() {
 
       <PublicHero
         size="display"
-        eyebrow="A living catalogue of Universes"
+        eyebrow={heroConfig.eyebrow}
         videoPlaybackId={heroVideoId}
         stillUrl={heroStill}
         universeTitle={heroUniverse?.title ?? "Mighty Verse"}
-        title={
-          <>
-            Every Song is a{" "}
-            <KineticCycler labels={cyclerLabels} />.{" "}
-            <span style={{ color: "var(--accent-mv)" }}>Every Moment</span>{" "}
-            is a Legend.
-          </>
-        }
-        description="Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience."
+        title={heroConfig.headline}
+        description={heroConfig.description}
         actions={
           <>
             <Link href="/universes">
@@ -61,7 +52,7 @@ export default async function HomePage() {
                 Explore Universes
               </Button>
             </Link>
-            {heroVideoId ? (
+            {heroConfig.showTrailerCta && heroVideoId ? (
               <Button
                 variant="outline"
                 className="h-11 px-6 text-sm"
