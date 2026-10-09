@@ -2507,6 +2507,8 @@ html[data-theme="paper"] {
     gap: 0.5rem;
     justify-content: space-between;
   }
+
+  .storyboard-header-identity {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
