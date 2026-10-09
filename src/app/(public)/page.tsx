@@ -56,6 +56,7 @@ export default async function HomePage() {
         universeTitle={heroUniverse?.title ?? "Mighty Verse"}
         title={heroConfig.headline}
         description={heroConfig.description}
+        textScheme={heroConfig.textScheme}
         actions={
           <>
             <Link href="/universes">

@@ -22,6 +22,8 @@ export type PublicHeroProps = {
   stillUrl?: string | null;
   /** Universe title used for trailer modal aria-label */
   universeTitle?: string;
+  /** Text colour scheme over the hero background */
+  textScheme?: "light" | "dark";
 };
 
 /**
@@ -41,9 +43,15 @@ export function PublicHero({
   videoPlaybackId,
   stillUrl,
   universeTitle = "Mighty Verse",
+  textScheme = "light",
 }: PublicHeroProps) {
   const display = size === "display";
   const hasVideo = display && Boolean(videoPlaybackId);
+
+  // When a video is present, override text colours based on scheme
+  const fg = hasVideo ? (textScheme === "dark" ? "#0a0a0a" : "#ffffff") : undefined;
+  const fgMuted = hasVideo ? (textScheme === "dark" ? "rgba(10,10,10,0.65)" : "rgba(255,255,255,0.72)") : undefined;
+  const borderColor = hasVideo ? (textScheme === "dark" ? "rgba(10,10,10,0.2)" : "rgba(255,255,255,0.2)") : undefined;
 
   return (
     <section
@@ -73,7 +81,7 @@ export function PublicHero({
             }
           >
             <div className={display ? "max-w-3xl space-y-7" : "max-w-3xl space-y-3"}>
-              {kicker ? <div className="text-xs text-muted-foreground">{kicker}</div> : null}
+              {kicker ? <div className="text-xs" style={fgMuted ? { color: fgMuted } : undefined}>{kicker}</div> : null}
               <p className="text-xs font-semibold uppercase tracking-[0.3em] text-accent-mv">
                 {eyebrow}
               </p>
@@ -83,7 +91,7 @@ export function PublicHero({
                     ? "text-5xl font-semibold leading-[1.05] tracking-tight text-foreground md:text-7xl lg:text-8xl"
                     : "text-3xl font-semibold tracking-tight text-foreground md:text-5xl"
                 }
-                style={{ fontFamily: "var(--font-display, inherit)" }}
+                style={{ fontFamily: "var(--font-display, inherit)", ...(fg ? { color: fg } : {}) }}
               >
                 {title}
               </h1>
@@ -94,6 +102,7 @@ export function PublicHero({
                       ? "max-w-lg text-lg leading-relaxed text-muted-foreground"
                       : "max-w-2xl text-sm text-muted-foreground"
                   }
+                  style={fgMuted ? { color: fgMuted } : undefined}
                 >
                   {description}
                 </div>
@@ -107,16 +116,16 @@ export function PublicHero({
             {aside ? <div className="flex shrink-0 flex-wrap items-center gap-2">{aside}</div> : null}
           </div>
           {stats && stats.length > 0 ? (
-            <div className="mt-16 flex flex-wrap gap-8 border-t border-border/40 pt-8">
+            <div className="mt-16 flex flex-wrap gap-8 border-t pt-8" style={borderColor ? { borderColor } : undefined}>
               {stats.map(({ n, label }) => (
                 <div key={label} className="flex items-baseline gap-2">
                   <span
                     className="text-3xl font-semibold text-foreground"
-                    style={{ fontFamily: "var(--font-display, inherit)" }}
+                    style={{ fontFamily: "var(--font-display, inherit)", ...(fg ? { color: fg } : {}) }}
                   >
                     {n}
                   </span>
-                  <span className="text-xs uppercase tracking-widest text-muted-foreground">
+                  <span className="text-xs uppercase tracking-widest" style={fgMuted ? { color: fgMuted } : undefined}>
                     {label}
                   </span>
                 </div>

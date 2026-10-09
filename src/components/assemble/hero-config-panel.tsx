@@ -133,6 +133,30 @@ export function HeroConfigPanel({
           </select>
         </StudioField>
 
+        <StudioField label="Text Colour" hint="Light = white text for dark videos. Dark = dark text for light/bright videos.">
+          <div className="flex gap-2">
+            {(["light", "dark"] as const).map((scheme) => (
+              <button
+                key={scheme}
+                type="button"
+                disabled={busy}
+                onClick={() => set("textScheme", scheme)}
+                className={`flex items-center gap-2 rounded border px-3 py-1.5 text-xs font-medium transition-colors disabled:opacity-50 ${
+                  draft.textScheme === scheme
+                    ? "border-foreground/60 bg-foreground text-background"
+                    : "border-border text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                <span
+                  className="inline-block h-3 w-3 rounded-full border border-border/60"
+                  style={{ background: scheme === "light" ? "#ffffff" : "#0a0a0a" }}
+                />
+                {scheme === "light" ? "Light (white)" : "Dark (black)"}
+              </button>
+            ))}
+          </div>
+        </StudioField>
+
         <StudioField label="Show Trailer CTA" hint='Show "Watch Trailer" button when a background video is available'>
           <div className="flex items-center gap-2">
             <button

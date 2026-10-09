@@ -18,6 +18,8 @@ export type HeroConfig = {
   description: string;
   /** Pin a specific media_asset asset_id as the hero background video. null = auto (first playable video) */
   heroMediaId: string | null;
+  /** Text colour scheme over the hero background — light = white text (dark video), dark = dark text (light video) */
+  textScheme: "light" | "dark";
   /** Show "Watch Trailer" CTA when a video is available */
   showTrailerCta: boolean;
 };
@@ -28,5 +30,6 @@ export const heroConfig: HeroConfig = {
   description:
     "Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience.",
   heroMediaId: null,
+  textScheme: "light",
   showTrailerCta: true,
 };

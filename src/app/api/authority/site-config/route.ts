@@ -46,6 +46,7 @@ export async function PATCH(req: Request) {
     headline: b.headline.trim(),
     description: b.description.trim(),
     heroMediaId: typeof b.heroMediaId === "string" && b.heroMediaId ? b.heroMediaId : null,
+    textScheme: b.textScheme === "dark" ? "dark" : "light",
     showTrailerCta: typeof b.showTrailerCta === "boolean" ? b.showTrailerCta : true,
   };
 
