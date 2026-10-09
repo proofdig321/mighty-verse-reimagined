@@ -19,3 +19,7 @@ insert into site_config (key, value) values (
     "showTrailerCta": true
   }'::jsonb
 ) on conflict (key) do nothing;
+
+-- Service role needs explicit DML grants (RLS is on but not forced;
+-- service role bypasses RLS only after grants are present).
+grant select, insert, update, delete on site_config to service_role;
