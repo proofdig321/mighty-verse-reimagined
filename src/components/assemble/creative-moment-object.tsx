@@ -78,25 +78,31 @@ export function CreativeMomentObject({
         <p className="suite-scene-description">{moment.description.trim()}</p>
       ) : null}
       {panel === "identity" || !compact ? (
-        <CreativeMomentIdentity
+        <div className={compact ? undefined : "studio-authoring-section"}>
+          {!compact && <p className="studio-authoring-label">Identity</p>}
+          <CreativeMomentIdentity
+            universeId={universeId}
+            momentId={moment.master_id}
+            momentLabel={title}
+            title={moment.title ?? ""}
+            description={moment.description ?? ""}
+            canAuthor={canAuthorIdentity}
+            startOpen={panel === "identity"}
+            hideTrigger={compact}
+          />
+        </div>
+      ) : null}
+      <div className={compact ? undefined : "studio-authoring-section"}>
+        {!compact && <p className="studio-authoring-label">Presence</p>}
+        <MomentPresence
           universeId={universeId}
           momentId={moment.master_id}
           momentLabel={title}
-          title={moment.title ?? ""}
-          description={moment.description ?? ""}
-          canAuthor={canAuthorIdentity}
-          startOpen={panel === "identity"}
-          hideTrigger={compact}
+          related={related}
+          candidates={candidates}
+          canAuthor={canAuthorPresence}
         />
-      ) : null}
-      <MomentPresence
-        universeId={universeId}
-        momentId={moment.master_id}
-        momentLabel={title}
-        related={related}
-        candidates={candidates}
-        canAuthor={canAuthorPresence}
-      />
+      </div>
       {!compact ? (
         <p className="suite-object-actions">
           <Link href={openHref} className="suite-open-link">

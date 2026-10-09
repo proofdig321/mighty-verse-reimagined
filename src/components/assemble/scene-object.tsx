@@ -307,58 +307,70 @@ export function SceneObject({
             <p className="suite-scene-description">{scene.description.trim()}</p>
           </details>
         ) : null}
-        <SceneIdentity
-          universeId={universeId}
-          sceneId={scene.master_id}
-          sceneLabel={shortTitle}
-          title={fullTitle ?? ""}
-          description={scene.description ?? ""}
-          muralId={scene.mural_id}
-          canAuthor={canAuthorIdentity}
-        />
-        <SceneArtwork
-          universeId={universeId}
-          sceneId={scene.master_id}
-          sceneLabel={shortTitle}
-          muralId={scene.mural_id}
-          projectionId={scene.projection_id}
-          provider={scene.provider}
-          storageRef={scene.storage_ref}
-          startMs={scene.start_ms}
-          artworkStorageRef={scene.artwork_storage_ref}
-          muxPlaybackId={muxPlaybackId}
-          durationMs={durationMs}
-          canAuthor={canAuthorIdentity}
-        />
-        <SceneTiming
-          universeId={universeId}
-          sceneId={scene.master_id}
-          sceneLabel={shortTitle}
-          muralId={scene.mural_id}
-          bindingId={scene.binding_id}
-          startMs={scene.start_ms}
-          endMs={scene.end_ms}
-          muxPlaybackId={muxPlaybackId}
-          durationMs={durationMs}
-          canAuthor={canAuthorTiming}
-        />
-        <SceneOrder
-          universeId={universeId}
-          muralId={scene.mural_id}
-          sceneId={scene.master_id}
-          sceneLabel={shortTitle}
-          orderedSceneIds={muralSceneIds}
-          canAuthor={canAuthorOrder}
-        />
-        <ScenePresence
-          universeId={universeId}
-          sceneId={scene.master_id}
-          sceneLabel={shortTitle}
-          related={related}
-          candidates={candidates}
-          sharedIds={sharedIds}
-          canAuthor={canAuthorPresence}
-        />
+        <div className="studio-authoring-section">
+          <p className="studio-authoring-label">Identity</p>
+          <SceneIdentity
+            universeId={universeId}
+            sceneId={scene.master_id}
+            sceneLabel={shortTitle}
+            title={fullTitle ?? ""}
+            description={scene.description ?? ""}
+            muralId={scene.mural_id}
+            canAuthor={canAuthorIdentity}
+          />
+          <SceneArtwork
+            universeId={universeId}
+            sceneId={scene.master_id}
+            sceneLabel={shortTitle}
+            muralId={scene.mural_id}
+            projectionId={scene.projection_id}
+            provider={scene.provider}
+            storageRef={scene.storage_ref}
+            startMs={scene.start_ms}
+            artworkStorageRef={scene.artwork_storage_ref}
+            muxPlaybackId={muxPlaybackId}
+            durationMs={durationMs}
+            canAuthor={canAuthorIdentity}
+          />
+        </div>
+        <div className="studio-authoring-section">
+          <p className="studio-authoring-label">Timing</p>
+          <SceneTiming
+            universeId={universeId}
+            sceneId={scene.master_id}
+            sceneLabel={shortTitle}
+            muralId={scene.mural_id}
+            bindingId={scene.binding_id}
+            startMs={scene.start_ms}
+            endMs={scene.end_ms}
+            muxPlaybackId={muxPlaybackId}
+            durationMs={durationMs}
+            canAuthor={canAuthorTiming}
+          />
+        </div>
+        <div className="studio-authoring-section">
+          <p className="studio-authoring-label">Order</p>
+          <SceneOrder
+            universeId={universeId}
+            muralId={scene.mural_id}
+            sceneId={scene.master_id}
+            sceneLabel={shortTitle}
+            orderedSceneIds={muralSceneIds}
+            canAuthor={canAuthorOrder}
+          />
+        </div>
+        <div className="studio-authoring-section">
+          <p className="studio-authoring-label">Presence</p>
+          <ScenePresence
+            universeId={universeId}
+            sceneId={scene.master_id}
+            sceneLabel={shortTitle}
+            related={related}
+            candidates={candidates}
+            sharedIds={sharedIds}
+            canAuthor={canAuthorPresence}
+          />
+        </div>
         {panelBody}
         <p className="suite-object-actions">
           <Link href={openHref} className="suite-open-link">

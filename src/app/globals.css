@@ -1043,6 +1043,23 @@ html[data-theme="paper"] {
     padding: 1.5rem;
   }
 
+  /* Authoring section — labeled group within a workspace object */
+  .studio-authoring-section {
+    display: grid;
+    gap: 0.55rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid color-mix(in oklch, var(--border) 60%, transparent);
+    min-width: 0;
+  }
+
+  .studio-authoring-label {
+    font-size: 0.625rem;
+    font-weight: 600;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+
 
   /* Unified workspace layout — full page, no nested scroll prison */
   .studio-unified-workspace {
@@ -3270,6 +3287,11 @@ html[data-theme="paper"] {
     border: 1px solid color-mix(in oklch, var(--accent-mv-gold) 35%, var(--border));
     border-radius: var(--radius);
     background: color-mix(in oklch, var(--card) 92%, var(--accent-mv) 8%);
+  }
+
+  .suite-identity-panel input,
+  .suite-identity-panel textarea {
+    background: color-mix(in oklch, var(--background) 60%, transparent);
   }
 
   .suite-presence-status {
