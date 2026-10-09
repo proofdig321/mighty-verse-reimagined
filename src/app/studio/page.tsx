@@ -8,7 +8,6 @@ import { loadUniverseCatalogue } from "@/lib/assemble/load-universe-catalogue";
 import { composeStudioLanding } from "@/lib/assemble/studio-landing";
 import { studioInteractionLabel } from "@/lib/assemble/studio-interaction";
 import { listStoryboardWorks } from "@/lib/storyboard/commands";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { StoryboardWorkList } from "@/components/assemble/storyboard-work-list";
 import { UniverseProjectList } from "@/components/assemble/universe-project-list";
 
@@ -43,35 +42,29 @@ export default async function StudioHomePage() {
         </p>
       </section>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        <Link href="/studio/work">
-          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
-            <CardHeader>
-              <Plus size={16} className="text-muted-foreground" />
-              <CardTitle>New creative work</CardTitle>
-              <CardDescription>Idea-first. Open the script and storyboard workspace.</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/authority/create">
-          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
-            <CardHeader>
-              <MonitorPlay size={16} className="text-muted-foreground" />
-              <CardTitle>Establish a Universe</CardTitle>
-              <CardDescription>Source-first. Create Work. YouTube is the primary ingest path.</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/authority/curate">
-          <Card className="h-full bg-card/80 transition-colors hover:bg-accent/20">
-            <CardHeader>
-              <Film size={16} className="text-muted-foreground" />
-              <CardTitle>Curate Hub</CardTitle>
-              <CardDescription>Associate ingested media, inspect, then continue in this workstation.</CardDescription>
-            </CardHeader>
-          </Card>
-        </Link>
-      </section>
+      <dl className="studio-command-grid">
+        <div className="studio-command-card">
+          <Link href="/studio/work">
+            <dt className="suite-kicker flex items-center gap-1.5"><Plus size={10} />New creative work</dt>
+            <dd className="text-sm font-medium text-foreground mt-1">Storyboard workspace</dd>
+            <dd className="text-xs text-muted-foreground mt-0.5">Idea-first. Open the script and storyboard workspace.</dd>
+          </Link>
+        </div>
+        <div className="studio-command-card">
+          <Link href="/authority/create">
+            <dt className="suite-kicker flex items-center gap-1.5"><MonitorPlay size={10} />Establish a Universe</dt>
+            <dd className="text-sm font-medium text-foreground mt-1">Create Work</dd>
+            <dd className="text-xs text-muted-foreground mt-0.5">Source-first. YouTube is the primary ingest path.</dd>
+          </Link>
+        </div>
+        <div className="studio-command-card">
+          <Link href="/authority/curate">
+            <dt className="suite-kicker flex items-center gap-1.5"><Film size={10} />Curate Hub</dt>
+            <dd className="text-sm font-medium text-foreground mt-1">Associate media</dd>
+            <dd className="text-xs text-muted-foreground mt-0.5">Associate ingested media, inspect, then continue in this workstation.</dd>
+          </Link>
+        </div>
+      </dl>
 
       {landing.standalone.length ? (
         <section className="space-y-3" aria-labelledby="studio-recent">

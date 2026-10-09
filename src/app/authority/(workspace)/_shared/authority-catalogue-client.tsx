@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { Activity, Archive, BarChart3, ChevronRight, Database, FileText, Image, MoreHorizontal, PlaySquare, Plus, Search, ShieldCheck, Upload, Video } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import MediaVisual from "@/components/media-visual";
 import { DiscardIntake } from "@/components/assemble/discard-intake";
@@ -22,6 +21,10 @@ import {
   StatusBadge, WorkJourney, PresentationPanel, ProjectionPresentationPanel,
   RealizationPanel, CreateExperiencePanel,
 } from "./authority-panels";
+import { CollectionPager } from "@/components/assemble/collection-pager";
+import { StudioFormPanel } from "@/components/assemble/studio-form-panel";
+import { StudioField, studioInputClass, studioSelectClass } from "@/components/assemble/studio-field";
+import { StudioFeedback } from "@/components/assemble/studio-feedback";
 
 // AuthorityData is imported from authority-utils — single canonical definition.
 
@@ -75,75 +78,73 @@ function WorkCard({
   const nextStep = getNextAction(master, status);
 
   return (
-    <Card size="sm">
-      <CardContent className="pt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="space-y-0.5 min-w-0">
-            <span className="text-foreground text-sm font-medium block truncate">
-              {presentation?.title ?? typeLabel}
-            </span>
-            <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} /><StatusBadge label={status.needs} good={status.ready} /></div>
-          </div>
-          {artworkUrl && <NextImage src={artworkUrl} alt="" width={80} height={48} className="h-12 w-20 shrink-0 rounded object-cover" />}
+    <div className="studio-composer">
+      <div className="flex items-center justify-between gap-3">
+        <div className="space-y-0.5 min-w-0">
+          <span className="text-foreground text-sm font-medium block truncate">
+            {presentation?.title ?? typeLabel}
+          </span>
+          <div className="flex flex-wrap gap-1.5 pt-1"><StatusBadge label={typeLabel} /><StatusBadge label={status.needs} good={status.ready} /></div>
         </div>
+        {artworkUrl && <NextImage src={artworkUrl} alt="" width={80} height={48} className="h-12 w-20 shrink-0 rounded object-cover" />}
+      </div>
 
-        <div className="space-y-2 rounded-md border border-border bg-muted/20 p-3">
-          <WorkJourney steps={journey} />
-          {!status.ready && <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Next step:</span> {nextStep}</p>}
-          {isCollectible && <Badge>Collectible</Badge>}
-        </div>
+      <div className="space-y-2 rounded border border-border bg-muted/20 p-3">
+        <WorkJourney steps={journey} />
+        {!status.ready && <p className="text-xs text-muted-foreground"><span className="font-medium text-foreground">Next step:</span> {nextStep}</p>}
+        {isCollectible && <Badge>Collectible</Badge>}
+      </div>
 
-        {!status.hasState && (
-          <Button size="sm" disabled={busy} onClick={() => onAuthorise(master.master_id)}>
-            Authorise work
-          </Button>
-        )}
+      {!status.hasState && (
+        <Button size="sm" disabled={busy} onClick={() => onAuthorise(master.master_id)}>
+          Authorise work
+        </Button>
+      )}
 
-        {status.hasState && !status.hasExperience && (
-          <CreateExperiencePanel stateId={state!.canonical_state_id} masterId={master.master_id} busy={busy} onCreate={onCreateExperience} />
-        )}
+      {status.hasState && !status.hasExperience && (
+        <CreateExperiencePanel stateId={state!.canonical_state_id} masterId={master.master_id} busy={busy} onCreate={onCreateExperience} />
+      )}
 
-        {status.hasExperience && (
-          <button
-            type="button"
-            onClick={() => onEditProjectionPresentation(projection!.projection_id, master.master_id)}
-            className="text-muted-foreground text-xs hover:text-foreground transition-colors"
-          >
-            {projectionPresentation ? "Edit moment title" : "Set moment title"}
-          </button>
-        )}
+      {status.hasExperience && (
+        <button
+          type="button"
+          onClick={() => onEditProjectionPresentation(projection!.projection_id, master.master_id)}
+          className="text-muted-foreground text-xs hover:text-foreground transition-colors"
+        >
+          {projectionPresentation ? "Edit moment title" : "Set moment title"}
+        </button>
+      )}
 
-        {status.hasExperience && master.canonical_type !== "creative-moment" && !status.hasMedia && (
-          <Button size="sm" disabled={busy} onClick={() => onAttachVideo(projection!.projection_id, master.master_id)}>
-            Attach media
-          </Button>
-        )}
+      {status.hasExperience && master.canonical_type !== "creative-moment" && !status.hasMedia && (
+        <Button size="sm" disabled={busy} onClick={() => onAttachVideo(projection!.projection_id, master.master_id)}>
+          Attach media
+        </Button>
+      )}
 
-        {status.hasExperience && status.hasMedia && !isCollectible && (
-          <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id, presentation?.title ?? projectionPresentation?.title ?? typeLabel)}>
-            Designate as Collectible
-          </Button>
-        )}
+      {status.hasExperience && status.hasMedia && !isCollectible && (
+        <Button size="sm" disabled={busy} onClick={() => onDesignate(projection!.projection_id, master.master_id, presentation?.title ?? projectionPresentation?.title ?? typeLabel)}>
+          Designate as Collectible
+        </Button>
+      )}
 
-        {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && (
-          <button
-            type="button"
-            onClick={() => onEditTimeline(binding!.binding_id, master.master_id)}
-            className="text-muted-foreground text-xs hover:text-foreground transition-colors"
-          >
-            {binding!.start_ms != null && binding!.end_ms != null ? "Adjust timeline" : "Set timeline"}
-          </button>
-        )}
+      {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && (
+        <button
+          type="button"
+          onClick={() => onEditTimeline(binding!.binding_id, master.master_id)}
+          className="text-muted-foreground text-xs hover:text-foreground transition-colors"
+        >
+          {binding!.start_ms != null && binding!.end_ms != null ? "Adjust timeline" : "Set timeline"}
+        </button>
+      )}
 
-        {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && !status.hasRealization && (
-          <button type="button" onClick={() => onEditRealization(binding!.binding_id, master.master_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
-            Record realization
-          </button>
-        )}
+      {status.hasExperience && status.hasMedia && master.canonical_type === "scene" && !status.hasRealization && (
+        <button type="button" onClick={() => onEditRealization(binding!.binding_id, master.master_id)} className="text-muted-foreground text-xs hover:text-foreground transition-colors">
+          Record realization
+        </button>
+      )}
 
-        {status.ready && <p className="text-muted-foreground text-xs">Ready</p>}
-      </CardContent>
-    </Card>
+      {status.ready && <p className="text-muted-foreground text-xs">Ready</p>}
+    </div>
   );
 }
 
@@ -271,21 +272,18 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
   }
 
   return (
-    <Card>
-      <CardContent className="pt-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-foreground text-sm font-medium block">Timeline realization</span>
-            <span className="text-muted-foreground text-xs">Capture boundaries from the actual video player.</span>
-          </div>
-          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
-        </div>
-        <video ref={videoRef} controls className="w-full aspect-video bg-black" />
+    <StudioFormPanel
+      title="Timeline realization"
+      description="Capture boundaries from the actual video player."
+      onCancel={!busy ? onCancel : undefined}
+    >
+      <div className="grid gap-3">
+        <video ref={videoRef} controls className="w-full aspect-video bg-black rounded" />
         {thumbnailUrl && (
-          <div className="space-y-2">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">Representative artwork preview</p>
+          <div className="grid gap-2">
+            <p className="suite-kicker">Representative artwork preview</p>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={thumbnailUrl} alt="Generated video thumbnail" className="w-32 aspect-video object-cover border border-border" />
+            <img src={thumbnailUrl} alt="Generated video thumbnail" className="w-32 aspect-video object-cover border border-border rounded" />
             <Button size="sm" variant="outline" onClick={selectThumbnail} disabled={busy}>Use thumbnail as artwork</Button>
           </div>
         )}
@@ -305,9 +303,9 @@ function TimelineEditor({ binding, masterId, onDone, onCancel }: TimelineEditorP
           <Button size="sm" variant="outline" onClick={() => { setStartMs(0); setEndMs(durationMs); setPreviewing(false); }}>Reset range</Button>
           <Button size="sm" onClick={saveRange} disabled={busy || endMs <= startMs}>Save exact range</Button>
         </div>
-        {message && <p className={`text-sm ${message.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{message}</p>}
-      </CardContent>
-    </Card>
+        <StudioFeedback message={message} />
+      </div>
+    </StudioFormPanel>
   );
 }
 
@@ -353,50 +351,41 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
       : "Upload status unknown.";
 
   return (
-    <Card>
-      <CardContent className="pt-4 space-y-4">
-        <div className="flex items-center justify-between">
-          <span className="text-foreground text-sm font-medium">Attach Media</span>
-          {!uploadBusy && (
-            <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Rights</p>
+    <StudioFormPanel title="Attach Media" onCancel={!uploadBusy ? onCancel : undefined}>
+      <div className="grid gap-3">
+        <StudioField label="Rights holder participant ID" hint="Required before a new file can enter the media pipeline">
           <input
             value={rightsHolderRef}
-            onChange={e => setRightsHolderRef(e.target.value)}
-            placeholder="Rights holder participant ID (required for new assets)"
+            onChange={(e) => setRightsHolderRef(e.target.value)}
+            placeholder="Rights holder participant ID"
             disabled={uploadBusy}
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+            className={studioInputClass}
           />
+        </StudioField>
+        <StudioField label="Rights basis" hint="e.g. owned, licensed">
           <input
             value={rightsBasis}
-            onChange={e => setRightsBasis(e.target.value)}
-            placeholder="Rights basis (for example: owned, licensed)"
+            onChange={(e) => setRightsBasis(e.target.value)}
+            placeholder="Rights basis"
             disabled={uploadBusy}
-            className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring/50"
+            className={studioInputClass}
           />
-          <p className="text-muted-foreground text-xs">Both fields are required before a new file can enter the media pipeline.</p>
-        </div>
+        </StudioField>
 
-        {/* File picker */}
-        <div className="space-y-1">
-          <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Choose video</p>
+        <StudioField label="Choose video">
           <input
             ref={fileInputRef}
             type="file"
             accept={ACCEPTED_TYPES}
             disabled={uploadBusy}
-            onChange={e => { setUploadFile(e.target.files?.[0] ?? null); setUploadMsg(null); }}
+            onChange={(e) => { setUploadFile(e.target.files?.[0] ?? null); setUploadMsg(null); }}
             className="sr-only"
           />
           <button
             type="button"
             disabled={uploadBusy}
             onClick={() => fileInputRef.current?.click()}
-            className={`w-full rounded-lg border-2 border-dashed px-4 py-5 text-center transition-colors
+            className={`w-full rounded border-2 border-dashed px-4 py-5 text-center transition-colors
               ${uploadFile ? "border-border bg-muted/30" : "border-border hover:border-foreground/30 hover:bg-muted/20 cursor-pointer"}
               disabled:pointer-events-none disabled:opacity-50`}
           >
@@ -412,11 +401,10 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
               </div>
             )}
           </button>
-        </div>
+        </StudioField>
 
-        {/* Progress */}
         {uploadBusy && (
-          <div className="space-y-2">
+          <div className="grid gap-1">
             {uploadProgress !== null && uploadProgress < 100 ? (
               <>
                 <p className="text-foreground text-sm">{statusMessage}</p>
@@ -466,7 +454,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
 
               await new Promise<void>((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
-                xhr.upload.onprogress = e => {
+                xhr.upload.onprogress = (e) => {
                   if (e.lengthComputable) setUploadProgress(Math.round(e.loaded / e.total * 100));
                 };
                 xhr.onload = () => xhr.status < 300 ? resolve() : reject(new Error(`Upload failed: ${xhr.status}`));
@@ -480,7 +468,7 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
 
               let phase = "uploading";
               for (let attempt = 0; phase !== "ingested" && phase !== "ready" && attempt < 60; attempt += 1) {
-                await new Promise(r => setTimeout(r, 5000));
+                await new Promise((r) => setTimeout(r, 5000));
                 const statusResponse = await fetch(`/api/authority/media/upload-session/${session_id}`);
                 const status = await responseData(statusResponse);
                 if (!statusResponse.ok || status.error) throw new Error(`${workTitle} — Media processing could not be verified. ${status.error ?? "The service returned an invalid processing status."} Next: retry or check the media service.`);
@@ -519,8 +507,8 @@ function AttachVideoPanel({ projId, masterId, workTitle, onDone, onCancel }: Att
         >
           Upload & Attach Video
         </Button>
-      </CardContent>
-    </Card>
+      </div>
+    </StudioFormPanel>
   );
 }
 
@@ -617,21 +605,17 @@ function MediaIntakePanel({ onDone, onCancel, participants, intake }: { onDone: 
   }
 
   return (
-    <Card>
-      <CardContent className="pt-4 space-y-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <span className="text-foreground text-sm font-medium block">New media intake</span>
-            <span className="text-muted-foreground text-xs">Identity, source, ISRC state, and provenance.</span>
-          </div>
-          {!busy && <button type="button" onClick={onCancel} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button>}
-        </div>
-        <div className="grid grid-cols-4 gap-1" role="tablist" aria-label="Intake steps">
-          {["Media & identity", "Presentation", "Credits & provenance", "Review"].map((label, index) => {
-            const stepNumber = index + 1;
-            return <button key={label} type="button" role="tab" aria-selected={step === stepNumber} onClick={() => setStep(stepNumber)} className={`border-b-2 px-1 py-2 text-[10px] font-medium sm:text-xs ${step === stepNumber ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{stepNumber}. {label}</button>;
-          })}
-        </div>
+    <StudioFormPanel
+      title="New media intake"
+      description="Identity, source, ISRC state, and provenance."
+      onCancel={!busy ? onCancel : undefined}
+    >
+      <div className="grid grid-cols-4 gap-1" role="tablist" aria-label="Intake steps">
+        {["Media & identity", "Presentation", "Credits & provenance", "Review"].map((label, index) => {
+          const stepNumber = index + 1;
+          return <button key={label} type="button" role="tab" aria-selected={step === stepNumber} onClick={() => setStep(stepNumber)} className={`border-b-2 px-1 py-2 text-[10px] font-medium sm:text-xs ${step === stepNumber ? "border-foreground text-foreground" : "border-transparent text-muted-foreground"}`}>{stepNumber}. {label}</button>;
+        })}
+      </div>
         <div hidden={step !== 1}>
         <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">Media & identity</p>
         <input value={title} onChange={e => setTitle(e.target.value)} placeholder="Title" disabled={busy} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm" />
@@ -713,8 +697,7 @@ function MediaIntakePanel({ onDone, onCancel, participants, intake }: { onDone: 
           {step < 4 ? <Button type="button" size="sm" disabled={busy || (step === 1 && !title.trim())} onClick={() => setStep(current => current + 1)}>Continue</Button> : <Button size="sm" disabled={busy || !title.trim() || (sourceType === "external-url" && !sourceUrl.trim())} onClick={submit}>Create intake record</Button>}
         </div>
         {message && <p role="alert" className="text-destructive text-sm">{message}</p>}
-      </CardContent>
-    </Card>
+    </StudioFormPanel>
   );
 }
 
@@ -853,15 +836,24 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
           </table>
           {visibleRecords.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">No works match this search.</p>}
         </div>
-        {cataloguePageCount > 1 && <div className="flex items-center justify-between"><Button size="sm" variant="outline" disabled={currentCataloguePage === 1} onClick={() => setCataloguePage(p => Math.max(1, p - 1))}>Previous</Button><span className="text-xs text-muted-foreground">Page {currentCataloguePage} of {cataloguePageCount}</span><Button size="sm" variant="outline" disabled={currentCataloguePage === cataloguePageCount} onClick={() => setCataloguePage(p => Math.min(cataloguePageCount, p + 1))}>Next</Button></div>}
+        <CollectionPager
+          page={currentCataloguePage - 1}
+          pageSize={cataloguePageSize}
+          total={matchingRecords.length}
+          onPage={(p) => setCataloguePage(p + 1)}
+          label="Works"
+        />
       </section>
 
       {showRegister && (
-        <Card><CardContent className="pt-4 space-y-3">
-          <div className="flex items-center justify-between"><span className="text-foreground text-sm font-medium">Register New Work</span><button type="button" onClick={() => setShowRegister(false)} className="text-muted-foreground text-xs hover:text-foreground">Cancel</button></div>
-          <select value={canonicalType} onChange={e => setCanonicalType(e.target.value)} className="border-input bg-background text-foreground w-full rounded-md border px-3 py-2 text-sm">{CANONICAL_TYPES.map(t => <option key={t} value={t}>{WORK_TYPE_LABELS[t]}</option>)}</select>
+        <StudioFormPanel title="Register New Work" onCancel={() => setShowRegister(false)}>
+          <StudioField label="Type">
+            <select value={canonicalType} onChange={(e) => setCanonicalType(e.target.value)} className={studioSelectClass}>
+              {CANONICAL_TYPES.map((t) => <option key={t} value={t}>{WORK_TYPE_LABELS[t]}</option>)}
+            </select>
+          </StudioField>
           <Button size="sm" disabled={busy} onClick={async () => { await act("Register Work", "/api/authority/masters", { canonical_type: canonicalType }); setShowRegister(false); }}>Register Work</Button>
-        </CardContent></Card>
+        </StudioFormPanel>
       )}
 
       {mediaIntakes.length > 0 && (
@@ -890,7 +882,7 @@ export default function AuthorityCatalogueClient({ filter = "all", heading, desc
         </section>
       )}
       {showIntake && <MediaIntakePanel intake={editingIntake} participants={participants} onDone={async () => { Object.keys(localStorage).filter(key => key.startsWith("mighty-verse-intake-")).forEach(key => localStorage.removeItem(key)); setEditingIntake(undefined); setShowIntake(false); await load(); }} onCancel={() => { setEditingIntake(undefined); setShowIntake(false); }} />}
-      {msg && <p className={`text-sm ${msg.startsWith("Error") ? "text-destructive" : "text-foreground"}`}>{msg}</p>}
+      <StudioFeedback message={msg} />
     </div>
   );
 }
