@@ -1330,6 +1330,8 @@ html[data-theme="paper"] {
   .studio-workbench-main-inner {
     display: contents; /* passes grid rows up to .studio-workbench-main */
   }
+
+  .studio-composer-half {
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
