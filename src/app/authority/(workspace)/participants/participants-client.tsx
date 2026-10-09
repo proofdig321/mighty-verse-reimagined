@@ -2,10 +2,13 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { ADMIN_CAPABILITIES, OPERATOR_CAPABILITIES, type OperationalAccess } from "@/lib/participants/names";
+import { ADMIN_CAPABILITIES, OPERATOR_CAPABILITIES, PARTICIPANT_ROLE_TYPES, type OperationalAccess } from "@/lib/participants/names";
 import { PaginatedItems } from "@/components/assemble/collection-pager";
+import { StudioSection } from "@/components/assemble/studio-section";
+import { StudioFormPanel } from "@/components/assemble/studio-form-panel";
+import { StudioField, studioInputClass, studioSelectClass } from "@/components/assemble/studio-field";
+import { StudioFeedback } from "@/components/assemble/studio-feedback";
+import { StudioEmptyState } from "@/components/assemble/studio-empty-state";
 
 type ParticipantRow = {
   participant_id: string;
@@ -15,16 +18,21 @@ type ParticipantRow = {
   access: OperationalAccess;
 };
 
-const ROLE_OPTIONS = [
+const ROLE_OPTIONS: { value: string; label: string }[] = [
   { value: "", label: "No role" },
-  { value: "canonical-creator", label: "Canonical creator" },
-  { value: "featured-artist", label: "Featured artist" },
-  { value: "director", label: "Director" },
-  { value: "collaborator", label: "Collaborator" },
-  { value: "interpretation-creator", label: "Interpretation creator" },
-  { value: "authorised-canonical-authority", label: "Admin" },
-  { value: "delegated-authority", label: "Operator" },
-  { value: "other", label: "Other" },
+  ...PARTICIPANT_ROLE_TYPES.map((r) => ({
+    value: r,
+    label: r
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" "),
+  })),
+];
+
+const ACCESS_OPTIONS: { value: OperationalAccess; label: string }[] = [
+  { value: "none", label: "None — catalogue only" },
+  { value: "operator", label: "Operator — Create, Curate, Studio" },
+  { value: "admin", label: "Admin — operators plus grant/revoke" },
 ];
 
 function accessLabel(access: OperationalAccess) {
@@ -75,9 +83,11 @@ export default function ParticipantsClient({ participants: initial }: { particip
     ]);
     setLabel(""); setIdentityRef(""); setRoleType(""); setAccess("none");
     setShowForm(false);
-    setMsg(data.grant_error
-      ? `Participant "${label.trim()}" registered, but access was not granted: ${data.grant_error}`
-      : `Participant "${label.trim()}" registered.`);
+    setMsg(
+      data.grant_error
+        ? `Participant "${label.trim()}" registered, but access was not granted: ${data.grant_error}`
+        : `Participant "${label.trim()}" registered.`,
+    );
   }
 
   async function saveEdit(participant: ParticipantRow) {
@@ -95,11 +105,13 @@ export default function ParticipantsClient({ participants: initial }: { particip
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setMsg(`Error: ${data.error}`); return; }
-    setParticipants((prev) => prev.map((row) => (
-      row.participant_id === participant.participant_id
-        ? { ...row, label: editLabel.trim() || row.label, role: editRole || null }
-        : row
-    )));
+    setParticipants((prev) =>
+      prev.map((row) =>
+        row.participant_id === participant.participant_id
+          ? { ...row, label: editLabel.trim() || row.label, role: editRole || null }
+          : row,
+      ),
+    );
     setEditingId(null);
     setMsg(`Updated ${editLabel.trim() || "participant"}.`);
   }
@@ -115,9 +127,11 @@ export default function ParticipantsClient({ participants: initial }: { particip
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setMsg(`Error: ${data.error}`); return; }
-    setParticipants((prev) => prev.map((row) => (
-      row.participant_id === participant.participant_id ? { ...row, status } : row
-    )));
+    setParticipants((prev) =>
+      prev.map((row) =>
+        row.participant_id === participant.participant_id ? { ...row, status } : row,
+      ),
+    );
     setMsg(`${participant.label ?? "Participant"} is now ${status}.`);
   }
 
@@ -137,178 +151,200 @@ export default function ParticipantsClient({ participants: initial }: { particip
     const data = await res.json();
     setBusy(false);
     if (!res.ok) { setMsg(`Error: ${data.error}`); return; }
-    setParticipants((prev) => prev.map((row) => (
-      row.participant_id === participant.participant_id ? { ...row, access: next } : row
-    )));
+    setParticipants((prev) =>
+      prev.map((row) =>
+        row.participant_id === participant.participant_id ? { ...row, access: next } : row,
+      ),
+    );
     setMsg(`${participant.label ?? "Participant"} is now ${next}.`);
   }
 
   return (
     <div className="space-y-8">
       <div className="space-y-1">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">Authority</p>
+        <p className="suite-kicker">Authority</p>
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">Participants</h1>
         <p className="text-sm text-muted-foreground">
           Add people, then grant operator or admin access. Registration alone does not open the dashboard.
         </p>
       </div>
 
-      {msg && (
-        <p className={`text-sm ${msg.startsWith("Error") || msg.includes("not granted") ? "text-destructive" : "text-emerald-400"}`}>{msg}</p>
-      )}
+      <StudioFeedback message={msg} />
 
       {!showForm ? (
         <Button size="sm" onClick={() => { setShowForm(true); setMsg(null); }}>
           Register participant
         </Button>
       ) : (
-        <Card>
-          <CardContent className="pt-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <p className="text-sm font-medium text-foreground">Register participant</p>
-              <button type="button" onClick={() => setShowForm(false)} className="text-xs text-muted-foreground hover:text-foreground">Cancel</button>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-widest">Display name (required)</label>
-              <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. Golden Shovel" disabled={busy} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-widest">Identity reference (optional)</label>
-              <Input value={identityRef} onChange={(e) => setIdentityRef(e.target.value)} placeholder="e.g. name@studio.org" disabled={busy} />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-widest">Role (optional)</label>
+        <StudioFormPanel
+          title="Register participant"
+          onCancel={() => setShowForm(false)}
+        >
+          <div className="grid gap-3">
+            <StudioField label="Display name" hint="Required — shown in the dashboard">
+              <input
+                type="text"
+                value={label}
+                onChange={(e) => setLabel(e.target.value)}
+                placeholder="e.g. Golden Shovel"
+                disabled={busy}
+                className={studioInputClass}
+              />
+            </StudioField>
+            <StudioField label="Identity reference" hint="Optional — e.g. name@studio.org">
+              <input
+                type="text"
+                value={identityRef}
+                onChange={(e) => setIdentityRef(e.target.value)}
+                placeholder="e.g. name@studio.org"
+                disabled={busy}
+                className={studioInputClass}
+              />
+            </StudioField>
+            <StudioField label="Role" hint="Optional — ignored when access is granted">
               <select
                 value={roleType}
                 onChange={(e) => setRoleType(e.target.value)}
                 disabled={busy || access !== "none"}
-                className="border-input bg-background text-foreground h-8 w-full rounded-md border px-2.5 text-sm"
+                className={studioSelectClass}
               >
                 {ROLE_OPTIONS.map((r) => (
                   <option key={r.value} value={r.value}>{r.label}</option>
                 ))}
               </select>
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs text-muted-foreground uppercase tracking-widest">Dashboard access</label>
+            </StudioField>
+            <StudioField
+              label="Dashboard access"
+              hint="Operator and admin grants use AuthorityRecord. They do not assign ISRC eligibility or rewrite canonical works."
+            >
               <select
                 value={access}
                 onChange={(e) => setAccess(e.target.value as OperationalAccess)}
                 disabled={busy}
-                className="border-input bg-background text-foreground h-8 w-full rounded-md border px-2.5 text-sm"
+                className={studioSelectClass}
               >
-                <option value="none">None — catalogue only</option>
-                <option value="operator">Operator — Create, Curate, Studio</option>
-                <option value="admin">Admin — operators plus grant/revoke</option>
+                {ACCESS_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
               </select>
-            </div>
-            <p className="text-[10px] text-muted-foreground/60">
-              Operator and admin grants use AuthorityRecord. They do not assign ISRC eligibility or rewrite canonical works.
-            </p>
+            </StudioField>
             <Button size="sm" disabled={busy || !label.trim()} onClick={() => void register()}>
               {busy ? "Registering…" : "Register"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </StudioFormPanel>
       )}
 
-      {participants.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No participants registered yet.</p>
-      ) : (
-        <PaginatedItems items={participants} pageSize={12} label="Participants">
-          {(page) => (
-        <div className="rounded-lg border border-border overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="border-b border-border bg-muted/20">
-              <tr>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Participant</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden sm:table-cell">Role</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Access</th>
-                <th className="px-4 py-2.5 text-left text-[10px] font-semibold uppercase tracking-widest text-muted-foreground hidden md:table-cell">Status</th>
-                <th className="px-4 py-2.5 text-right text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Manage</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {page.map((p) => (
-                <tr key={p.participant_id} className="hover:bg-muted/20 transition-colors">
-                  <td className="px-4 py-3 font-medium text-foreground">
-                    {editingId === p.participant_id ? (
-                      <Input value={editLabel} onChange={(e) => setEditLabel(e.target.value)} className="max-w-xs" />
-                    ) : (
-                      p.label ?? <span className="text-muted-foreground italic">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
-                    {editingId === p.participant_id ? (
-                      <select
-                        value={editRole}
-                        onChange={(e) => setEditRole(e.target.value)}
-                        className="border-input bg-background h-8 rounded-md border px-2 text-sm"
-                      >
-                        {ROLE_OPTIONS.map((r) => (
-                          <option key={r.value} value={r.value}>{r.label}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      p.role ?? <span className="italic text-muted-foreground/50">—</span>
-                    )}
-                  </td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">{accessLabel(p.access)}</td>
-                  <td className="px-4 py-3 text-muted-foreground hidden md:table-cell capitalize">
-                    {p.status ?? <span className="italic text-muted-foreground/50">—</span>}
-                  </td>
-                  <td className="px-4 py-3">
-                    <div className="flex justify-end gap-2 flex-wrap">
-                      {editingId === p.participant_id ? (
-                        <>
-                          <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditingId(null)}>Cancel</Button>
-                          <Button size="sm" disabled={busy} onClick={() => void saveEdit(p)}>Save</Button>
-                        </>
-                      ) : (
-                        <>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={busy}
-                            onClick={() => {
-                              setEditingId(p.participant_id);
-                              setEditLabel(p.label ?? "");
-                              setEditRole(p.role ?? "");
-                            }}
-                          >
-                            Edit
-                          </Button>
-                          {p.access === "none" ? (
-                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void grantAccess(p, "operator")}>
-                              Make operator
-                            </Button>
-                          ) : null}
-                          {p.access !== "admin" ? (
-                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void grantAccess(p, "admin")}>
-                              Make admin
-                            </Button>
-                          ) : null}
-                          {p.status === "suspended" ? (
-                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "active")}>
-                              Activate
-                            </Button>
+      <StudioSection id="participants-list" label="Registered participants">
+        {participants.length === 0 ? (
+          <StudioEmptyState
+            kicker="Participants"
+            title="No participants registered yet."
+            body="Register a participant above to get started."
+          />
+        ) : (
+          <PaginatedItems items={participants} pageSize={12} label="Participants">
+            {(page) => (
+              <div className="rounded-lg border border-border overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead className="border-b border-border bg-muted/20">
+                    <tr>
+                      <th className="px-4 py-2.5 text-left suite-kicker">Participant</th>
+                      <th className="px-4 py-2.5 text-left suite-kicker hidden sm:table-cell">Role</th>
+                      <th className="px-4 py-2.5 text-left suite-kicker hidden md:table-cell">Access</th>
+                      <th className="px-4 py-2.5 text-left suite-kicker hidden md:table-cell">Status</th>
+                      <th className="px-4 py-2.5 text-right suite-kicker">Manage</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border">
+                    {page.map((p) => (
+                      <tr key={p.participant_id} className="hover:bg-muted/20 transition-colors">
+                        <td className="px-4 py-3 font-medium text-foreground">
+                          {editingId === p.participant_id ? (
+                            <input
+                              value={editLabel}
+                              onChange={(e) => setEditLabel(e.target.value)}
+                              className={`${studioInputClass} max-w-xs`}
+                            />
                           ) : (
-                            <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "suspended")}>
-                              Suspend
-                            </Button>
+                            p.label ?? <span className="text-muted-foreground italic">—</span>
                           )}
-                        </>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-          )}
-        </PaginatedItems>
-      )}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground hidden sm:table-cell">
+                          {editingId === p.participant_id ? (
+                            <select
+                              value={editRole}
+                              onChange={(e) => setEditRole(e.target.value)}
+                              className={studioSelectClass}
+                              style={{ maxWidth: "12rem" }}
+                            >
+                              {ROLE_OPTIONS.map((r) => (
+                                <option key={r.value} value={r.value}>{r.label}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            p.role ?? <span className="italic text-muted-foreground/50">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell">
+                          {accessLabel(p.access)}
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground hidden md:table-cell capitalize">
+                          {p.status ?? <span className="italic text-muted-foreground/50">—</span>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-2 flex-wrap">
+                            {editingId === p.participant_id ? (
+                              <>
+                                <Button size="sm" variant="outline" disabled={busy} onClick={() => setEditingId(null)}>Cancel</Button>
+                                <Button size="sm" disabled={busy} onClick={() => void saveEdit(p)}>Save</Button>
+                              </>
+                            ) : (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={busy}
+                                  onClick={() => {
+                                    setEditingId(p.participant_id);
+                                    setEditLabel(p.label ?? "");
+                                    setEditRole(p.role ?? "");
+                                  }}
+                                >
+                                  Edit
+                                </Button>
+                                {p.access === "none" ? (
+                                  <Button size="sm" variant="outline" disabled={busy} onClick={() => void grantAccess(p, "operator")}>
+                                    Make operator
+                                  </Button>
+                                ) : null}
+                                {p.access !== "admin" ? (
+                                  <Button size="sm" variant="outline" disabled={busy} onClick={() => void grantAccess(p, "admin")}>
+                                    Make admin
+                                  </Button>
+                                ) : null}
+                                {p.status === "suspended" ? (
+                                  <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "active")}>
+                                    Activate
+                                  </Button>
+                                ) : (
+                                  <Button size="sm" variant="outline" disabled={busy} onClick={() => void setStatus(p, "suspended")}>
+                                    Suspend
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PaginatedItems>
+        )}
+      </StudioSection>
     </div>
   );
 }
