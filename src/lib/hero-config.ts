@@ -16,8 +16,8 @@ export type HeroConfig = {
   headline: string;
   /** Supporting description below the headline */
   description: string;
-  /** Pin a specific universe master_id as the hero background. null = auto */
-  featuredUniverseId: string | null;
+  /** Pin a specific media_asset asset_id as the hero background video. null = auto (first playable video) */
+  heroMediaId: string | null;
   /** Show "Watch Trailer" CTA when a video is available */
   showTrailerCta: boolean;
 };
@@ -27,6 +27,6 @@ export const heroConfig: HeroConfig = {
   headline: "Every Song is a Universe. Every Moment is a Legend.",
   description:
     "Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience.",
-  featuredUniverseId: null,
+  heroMediaId: null,
   showTrailerCta: true,
 };

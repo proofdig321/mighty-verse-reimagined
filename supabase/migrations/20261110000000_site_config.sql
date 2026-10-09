@@ -15,7 +15,7 @@ insert into site_config (key, value) values (
     "eyebrow": "A living catalogue of Universes",
     "headline": "Every Song is a Universe. Every Moment is a Legend.",
     "description": "Discover a Universe, reveal its Mural, Scenes, and Creative Moments, then enter 2.5D or Holographic Experience.",
-    "featuredUniverseId": null,
+    "heroMediaId": null,
     "showTrailerCta": true
   }'::jsonb
 ) on conflict (key) do nothing;

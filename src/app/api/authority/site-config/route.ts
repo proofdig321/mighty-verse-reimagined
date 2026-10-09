@@ -45,7 +45,7 @@ export async function PATCH(req: Request) {
     eyebrow: b.eyebrow.trim(),
     headline: b.headline.trim(),
     description: b.description.trim(),
-    featuredUniverseId: typeof b.featuredUniverseId === "string" && b.featuredUniverseId ? b.featuredUniverseId : null,
+    heroMediaId: typeof b.heroMediaId === "string" && b.heroMediaId ? b.heroMediaId : null,
     showTrailerCta: typeof b.showTrailerCta === "boolean" ? b.showTrailerCta : true,
   };
 

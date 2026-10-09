@@ -10,6 +10,7 @@ import {
   Layers,
   MonitorPlay,
   Plus,
+  Settings2,
   ShieldCheck,
   Sparkles,
   Upload,
@@ -42,6 +43,7 @@ export default function AuthorityShell({ children }: { children: ReactNode }) {
             { href: "/authority/murals", label: "Murals", icon: Layers },
             { href: "/authority/scenes", label: "Scenes", icon: Clapperboard },
             { href: "/authority/creative-moments", label: "Creative Moments", icon: Sparkles },
+            { href: "/authority/site-config", label: "Site Config", icon: Settings2 },
           ],
         },
         {

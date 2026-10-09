@@ -23,11 +23,25 @@ export default async function HomePage() {
     (w: DiscoveryUniverse) => !!w.title && w.canonical_type === "universe"
   );
 
-  const heroUniverse = heroConfig.featuredUniverseId
-    ? (featured.find((w) => w.master_id === heroConfig.featuredUniverseId) ?? featured.find((w) => w.visual_playback_id) ?? featured[0] ?? null)
-    : (featured.find((w) => w.visual_playback_id) ?? featured[0] ?? null);
+  // Resolve hero video: pinned asset → auto first universe with video
+  let heroVideoId: string | null = null;
+  if (heroConfig.heroMediaId) {
+    const { getServiceClient } = await import("@/lib/authority/validate");
+    const svc = getServiceClient();
+    const { data: asset } = await svc
+      .from("media_asset")
+      .select("storage_ref")
+      .eq("asset_id", heroConfig.heroMediaId)
+      .single();
+    heroVideoId = asset?.storage_ref ?? null;
+  } else {
+    heroVideoId = featured.find((w) => w.visual_playback_id)?.visual_playback_id ?? null;
+  }
 
-  const heroVideoId = heroUniverse?.visual_playback_id ?? null;
+  const heroUniverse = featured.find((w) => w.visual_playback_id === heroVideoId)
+    ?? featured.find((w) => w.visual_playback_id)
+    ?? featured[0]
+    ?? null;
   const heroStill = heroVideoId ? muxStillFromPlayback(heroVideoId, 4, 1920) : null;
 
   return (

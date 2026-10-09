@@ -19,7 +19,6 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { HeroConfigPanel } from "@/components/assemble/hero-config-panel";
 import { StudioSection } from "@/components/assemble/studio-section";
 import { StudioEmptyState } from "@/components/assemble/studio-empty-state";
 
@@ -105,13 +104,6 @@ export default function AuthorityClient() {
   const needsAttention = workItems.filter((w) => !w.status.ready);
   const ready = workItems.filter((w) => w.status.ready);
 
-  const universeOptions = masters
-    .filter((m) => m.canonical_type === "universe")
-    .map((m) => ({
-      master_id: m.master_id,
-      title: presentations.find((p) => p.master_id === m.master_id)?.title ?? null,
-    }));
-
   return (
     <div className="space-y-8">
       {/* Page header */}
@@ -136,11 +128,6 @@ export default function AuthorityClient() {
           Creative Studio
         </Link>
       </div>
-
-      {/* Public home — editorial surface, primary position */}
-      <StudioSection id="public-home" label="Public Home">
-        <HeroConfigPanel universes={universeOptions} />
-      </StudioSection>
 
       <Separator />
 

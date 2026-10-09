@@ -1,31 +1,28 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { HeroConfig } from "@/lib/hero-config";
-import { heroConfig as defaults } from "@/lib/hero-config";
-import { StudioField, studioInputClass, studioTextareaClass, studioSelectClass } from "@/components/assemble/studio-field";
+import { StudioField, studioInputClass, studioTextareaClass } from "@/components/assemble/studio-field";
 import { StudioFeedback } from "@/components/assemble/studio-feedback";
 
-export function HeroConfigPanel({
-  universes,
-}: {
-  universes: { master_id: string; title: string | null }[];
-}) {
-  const [draft, setDraft] = useState<HeroConfig>({ ...defaults });
-  const [busy, setBusy] = useState(false);
-  const [loaded, setLoaded] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
+type VideoAsset = {
+  asset_id: string;
+  title: string | null;
+  provider: string | null;
+  storage_ref: string;
+};
 
-  useEffect(() => {
-    fetch("/api/authority/site-config")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.config) setDraft(d.config as HeroConfig);
-        setLoaded(true);
-      })
-      .catch(() => setLoaded(true));
-  }, []);
+export function HeroConfigPanel({
+  videoAssets,
+  initialConfig,
+}: {
+  videoAssets: VideoAsset[];
+  initialConfig: HeroConfig;
+}) {
+  const [draft, setDraft] = useState<HeroConfig>(initialConfig);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
   function set<K extends keyof HeroConfig>(key: K, value: HeroConfig[K]) {
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -49,13 +46,9 @@ export function HeroConfigPanel({
     }
   }
 
-  const previewUniverse = draft.featuredUniverseId
-    ? universes.find((u) => u.master_id === draft.featuredUniverseId)
-    : universes[0] ?? null;
-
-  if (!loaded) {
-    return <div className="h-10 animate-pulse rounded bg-muted/40" />;
-  }
+  const selectedAsset = draft.heroMediaId
+    ? videoAssets.find((a) => a.asset_id === draft.heroMediaId)
+    : null;
 
   return (
     <div className="studio-composer">
@@ -81,11 +74,14 @@ export function HeroConfigPanel({
             </span>
           )}
         </div>
-        {previewUniverse ? (
+        {selectedAsset ? (
           <p className="text-[10px] text-muted-foreground pt-1">
-            Background: {previewUniverse.title ?? previewUniverse.master_id}
+            Background: {selectedAsset.title ?? selectedAsset.asset_id}
+            {selectedAsset.provider ? ` · ${selectedAsset.provider}` : ""}
           </p>
-        ) : null}
+        ) : (
+          <p className="text-[10px] text-muted-foreground/50 pt-1">Background: auto (first playable video)</p>
+        )}
       </div>
 
       {/* Fields */}
@@ -120,17 +116,18 @@ export function HeroConfigPanel({
           />
         </StudioField>
 
-        <StudioField label="Featured Universe" hint="Pin a specific Universe as the hero background. Auto selects the first with a video.">
+        <StudioField label="Hero Background Video" hint="Pin a specific video asset. Leave blank to auto-select the first playable video.">
           <select
-            value={draft.featuredUniverseId ?? ""}
-            onChange={(e) => set("featuredUniverseId", e.target.value || null)}
+            value={draft.heroMediaId ?? ""}
+            onChange={(e) => set("heroMediaId", e.target.value || null)}
             disabled={busy}
-            className={studioSelectClass}
+            className="w-full rounded border border-border bg-background/60 px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:opacity-50"
           >
-            <option value="">Auto (first with video)</option>
-            {universes.map((u) => (
-              <option key={u.master_id} value={u.master_id}>
-                {u.title ?? u.master_id}
+            <option value="">Auto (first playable video)</option>
+            {videoAssets.map((a) => (
+              <option key={a.asset_id} value={a.asset_id}>
+                {a.title ?? a.asset_id}
+                {a.provider ? ` · ${a.provider}` : ""}
               </option>
             ))}
           </select>

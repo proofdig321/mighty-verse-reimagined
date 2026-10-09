@@ -23,7 +23,7 @@ export async function loadHeroConfig(): Promise<HeroConfig> {
       eyebrow: typeof v.eyebrow === "string" ? v.eyebrow : heroDefaults.eyebrow,
       headline: typeof v.headline === "string" ? v.headline : heroDefaults.headline,
       description: typeof v.description === "string" ? v.description : heroDefaults.description,
-      featuredUniverseId: v.featuredUniverseId ?? heroDefaults.featuredUniverseId,
+      heroMediaId: v.heroMediaId ?? heroDefaults.heroMediaId,
       showTrailerCta: typeof v.showTrailerCta === "boolean" ? v.showTrailerCta : heroDefaults.showTrailerCta,
     };
   } catch {
